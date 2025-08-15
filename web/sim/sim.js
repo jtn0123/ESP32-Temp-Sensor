@@ -61,6 +61,7 @@
   }
 
   function draw(data){
+    console.log('[sim] draw()', data);
     clear();
     // Header
     ctx.fillStyle = '#000';
@@ -94,8 +95,10 @@
     try{
       const res = await fetch('sample_data.json');
       const data = await res.json();
+      console.log('[sim] loaded sample_data.json');
       draw(data);
     } catch(e){
+      console.warn('[sim] falling back to defaults', e);
       draw({});
     }
   }
