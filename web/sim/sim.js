@@ -69,7 +69,7 @@
     const w = x1-x0, h=y1-y0; const cx=x0+w/2, cy=y0+h/2;
     const kind = (weather||'').toLowerCase();
     // Try SVG first
-    const name = mapWeatherToIconName(kind);
+    const name = kind.startsWith('moon_') ? kind : mapWeatherToIconName(kind);
     const svg = await loadSvgIcon(name);
     if(svg){
       // draw centered at native size (24x24) scaled to fit
@@ -131,7 +131,8 @@
 
     text(OUT_TEMP[0], OUT_TEMP[1], `${data.outside_temp||'68.4'}° F`, 14, 'bold');
     text(OUT_RH[0], OUT_RH[1], `${data.outside_hum||'53'}% RH`, 10);
-    weatherIcon(OUT_ICON, data.weather||'Cloudy');
+    const iconSelector = (data.moon_phase ? `moon_${(data.moon_phase||'').toLowerCase().replace(/\s+/g,'_')}` : (data.weather||'Cloudy'));
+    weatherIcon(OUT_ICON, iconSelector);
 
     const status = `IP ${data.ip||'192.168.1.42'}  Batt ${data.voltage||'4.01'}V ${data.percent||'76'}%  ~${data.days||'128'}d`;
     text(STATUS[0], STATUS[1], status, 10);
