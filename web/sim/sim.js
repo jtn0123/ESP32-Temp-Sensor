@@ -8,8 +8,10 @@
   const INSIDE_TIME = [  6, 82, 118, 12];
   const OUT_TEMP    = [131, 36,  90, 28];
   const OUT_RH      = [131, 66,  90, 14];
+  const OUT_WIND    = [131, 52, 113, 12];
   const OUT_ICON    = [224, 22,  20, 20];
   const OUT_COND    = [131, 82, 113, 12];
+  const OUT_HILO    = [131, 94, 113, 12];
   const STATUS      = [  6, 96, 238, 20];
 
   const canvas = document.getElementById('epd');
@@ -147,22 +149,29 @@
     const deg = '°';
     const unit = 'F';
     ctx.font = `bold 22px "DM Mono", "Roboto Mono", monospace`;
-    // Left-justify number; keep units column fixed for alignment
+    // Left-justify number; place degree and F immediately after the number
     text(INSIDE_TEMP[0], INSIDE_TEMP[1], numIn, 22, 'bold');
-    text(INSIDE_TEMP[0] + INSIDE_TEMP[2] + 2, INSIDE_TEMP[1]+4, deg, 12);
-    text(INSIDE_TEMP[0] + INSIDE_TEMP[2] + 8, INSIDE_TEMP[1]+4, unit, 12);
+    const nwi = ctx.measureText(numIn).width;
+    text(INSIDE_TEMP[0] + nwi + 2, INSIDE_TEMP[1]+4, deg, 12);
+    text(INSIDE_TEMP[0] + nwi + 8, INSIDE_TEMP[1]+4, unit, 12);
     text(INSIDE_RH[0], INSIDE_RH[1], `${data.inside_hum||'47'}% RH`, 10);
     text(INSIDE_TIME[0], INSIDE_TIME[1], data.time||'10:32', 10);
 
     const numOut = `${data.outside_temp||'68.4'}`;
     text(OUT_TEMP[0], OUT_TEMP[1], numOut, 22, 'bold');
-    text(OUT_TEMP[0] + OUT_TEMP[2] + 2, OUT_TEMP[1]+4, deg, 12);
-    text(OUT_TEMP[0] + OUT_TEMP[2] + 8, OUT_TEMP[1]+4, unit, 12);
+    const nwo = ctx.measureText(numOut).width;
+    text(OUT_TEMP[0] + nwo + 2, OUT_TEMP[1]+4, deg, 12);
+    text(OUT_TEMP[0] + nwo + 8, OUT_TEMP[1]+4, unit, 12);
+    // wind and humidity
+    const wind = (data.wind || '4.2') + ' m/s';
+    text(OUT_WIND[0], OUT_WIND[1], wind, 10);
     text(OUT_RH[0], OUT_RH[1], `${data.outside_hum||'53'}% RH`, 10);
     const iconSelector = (data.moon_phase ? `moon_${(data.moon_phase||'').toLowerCase().replace(/\s+/g,'_')}` : (data.weather||'Cloudy'));
     weatherIcon([OUT_ICON[0],OUT_ICON[1],OUT_ICON[0]+OUT_ICON[2],OUT_ICON[1]+OUT_ICON[3]], iconSelector);
-    // condition text
+    // condition and hi/lo
     text(OUT_COND[0], OUT_COND[1], (data.weather||'Cloudy'), 10);
+    const hilo = `H ${data.high||'75.0'}°  L ${data.low||'60.0'}°`;
+    text(OUT_HILO[0], OUT_HILO[1], hilo, 10);
 
     // Battery glyph + status text with IP, voltage, percent, ETA days
     const pct = parseInt(data.percent||'76', 10);

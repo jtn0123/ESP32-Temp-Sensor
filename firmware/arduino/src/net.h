@@ -10,9 +10,15 @@ struct OutsideReadings {
     float temperatureC = NAN;
     float humidityPct = NAN;
     String weather;
+    float windMps = NAN;
+    float highTempC = NAN;
+    float lowTempC = NAN;
     bool validTemp = false;
     bool validHum = false;
     bool validWeather = false;
+    bool validWind = false;
+    bool validHigh = false;
+    bool validLow = false;
 };
 
 static WiFiClient g_wifi_client;
@@ -33,6 +39,18 @@ inline void mqtt_callback(char* topic, uint8_t* payload, unsigned int length) {
     } else if (t.endsWith("/weather")) {
         g_outside.weather = v;
         g_outside.validWeather = v.length() > 0;
+    } else if (t.endsWith("/wind") || t.endsWith("/wind_mps") || t.endsWith("/wind_mph")) {
+        // Accept m/s by default; if mph, convert to m/s by dividing by 2.237 when topic endswith wind_mph
+        float w = v.toFloat();
+        if (t.endsWith("/wind_mph")) w = w / 2.237f;
+        g_outside.windMps = w;
+        g_outside.validWind = isfinite(w);
+    } else if (t.endsWith("/hi") || t.endsWith("/high")) {
+        g_outside.highTempC = v.toFloat();
+        g_outside.validHigh = isfinite(g_outside.highTempC);
+    } else if (t.endsWith("/lo") || t.endsWith("/low")) {
+        g_outside.lowTempC = v.toFloat();
+        g_outside.validLow = isfinite(g_outside.lowTempC);
     }
 }
 
@@ -71,6 +89,13 @@ inline void ensure_mqtt_connected() {
         g_mqtt.subscribe((base + "/hum").c_str());
         g_mqtt.subscribe((base + "/rh").c_str());
         g_mqtt.subscribe((base + "/weather").c_str());
+        g_mqtt.subscribe((base + "/wind").c_str());
+        g_mqtt.subscribe((base + "/wind_mps").c_str());
+        g_mqtt.subscribe((base + "/wind_mph").c_str());
+        g_mqtt.subscribe((base + "/high").c_str());
+        g_mqtt.subscribe((base + "/hi").c_str());
+        g_mqtt.subscribe((base + "/low").c_str());
+        g_mqtt.subscribe((base + "/lo").c_str());
     }
 }
 

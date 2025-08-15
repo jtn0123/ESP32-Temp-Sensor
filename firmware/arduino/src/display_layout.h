@@ -20,6 +20,8 @@ static const int OUT_TEMP[4]    = {131, 36,  90, 28};
 static const int OUT_RH[4]      = {131, 66,  90, 14};
 static const int OUT_ICON[4]    = {224, 22,  20, 20};
 static const int OUT_COND[4]    = {131, 82, 113, 12};
+static const int OUT_WIND[4]    = {131, 52, 113, 12};
+static const int OUT_HILO[4]    = {131, 94, 113, 12};
 
 static const int STATUS_[4]     = {  6, 96, 238, 20};
 

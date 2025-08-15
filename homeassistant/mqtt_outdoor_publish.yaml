@@ -20,6 +20,9 @@ action:
       t: "{{ states('sensor.outdoor_temperature') }}"
       h: "{{ states('sensor.outdoor_humidity') }}"
       w: "{{ state_attr('weather.home','state') or states('weather.home') }}"
+      wind: "{{ states('sensor.outdoor_wind_speed') }}"
+      hi: "{{ states('sensor.outdoor_high_temperature') }}"
+      lo: "{{ states('sensor.outdoor_low_temperature') }}"
   - service: mqtt.publish
     data:
       topic: "{{ base }}/temp"
@@ -34,6 +37,21 @@ action:
     data:
       topic: "{{ base }}/weather"
       payload: "{{ w }}"
+      retain: true
+  - service: mqtt.publish
+    data:
+      topic: "{{ base }}/wind"
+      payload: "{{ wind }}"
+      retain: true
+  - service: mqtt.publish
+    data:
+      topic: "{{ base }}/high"
+      payload: "{{ hi }}"
+      retain: true
+  - service: mqtt.publish
+    data:
+      topic: "{{ base }}/low"
+      payload: "{{ lo }}"
       retain: true
 
 

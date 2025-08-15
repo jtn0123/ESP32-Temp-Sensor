@@ -144,10 +144,12 @@ static void draw_values(const char* in_temp_f, const char* in_rh,
         display.setTextSize(2);
         display.setCursor(x, y);
         display.print(in_temp_f);
+        // measure width using default font approximation (6 px per char at size 1, doubled for size 2)
+        int16_t tw2 = text_width_default_font(in_temp_f, 2);
         display.setTextSize(1);
-        display.setCursor(x + w + 2, y + 4);
+        display.setCursor(x + tw2 + 2, y + 4);
         display.print("\xF8");
-        display.setCursor(x + w + 8, y + 4);
+        display.setCursor(x + tw2 + 8, y + 4);
         display.print("F");
     }
 
@@ -170,10 +172,11 @@ static void draw_values(const char* in_temp_f, const char* in_rh,
         display.setTextSize(2);
         display.setCursor(x, y);
         display.print(out_temp_f);
+        int16_t tw2b = text_width_default_font(out_temp_f, 2);
         display.setTextSize(1);
-        display.setCursor(x + w + 2, y + 4);
+        display.setCursor(x + tw2b + 2, y + 4);
         display.print("\xF8");
-        display.setCursor(x + w + 8, y + 4);
+        display.setCursor(x + tw2b + 8, y + 4);
         display.print("F");
     }
 
@@ -182,6 +185,7 @@ static void draw_values(const char* in_temp_f, const char* in_rh,
     display.setCursor(OUT_RH[0], OUT_RH[1]);
     display.print(out_rh);
     display.print("% RH");
+    // Outside wind (if available via net_get_outside in calling contexts)
 
     // Status line drawn separately by partial
 }
@@ -248,10 +252,11 @@ static void partial_update_inside_temp(const char* in_temp_f, char trend)
         display.setTextSize(2);
         display.setCursor(x, y);
         display.print(in_temp_f);
+        int16_t tw2 = text_width_default_font(in_temp_f, 2);
         display.setTextSize(1);
-        display.setCursor(x + w + 2, y + 4);
+        display.setCursor(x + tw2 + 2, y + 4);
         display.print("\xF8");
-        display.setCursor(x + w + 8, y + 4);
+        display.setCursor(x + tw2 + 8, y + 4);
         display.print("F");
         // Trend arrow/simple indicator at left
         if (trend == '+') { display.setCursor(x + 2, y); display.print("^"); }
@@ -273,10 +278,11 @@ static void partial_update_outside_temp(const char* out_temp_f, char trend)
         display.setTextSize(2);
         display.setCursor(x, y);
         display.print(out_temp_f);
+        int16_t tw2b = text_width_default_font(out_temp_f, 2);
         display.setTextSize(1);
-        display.setCursor(x + w + 2, y + 4);
+        display.setCursor(x + tw2b + 2, y + 4);
         display.print("\xF8");
-        display.setCursor(x + w + 8, y + 4);
+        display.setCursor(x + tw2b + 8, y + 4);
         display.print("F");
         if (trend == '+') { display.setCursor(x + 2, y); display.print("^"); }
         else if (trend == '-') { display.setCursor(x + 2, y); display.print("v"); }
@@ -311,6 +317,46 @@ static void partial_update_weather_icon(const String& weather)
         display.fillScreen(GxEPD_WHITE);
         // draw icon at region origin (may clip if larger than region)
         draw_weather_icon_region(weather);
+    } while (display.nextPage());
+}
+
+static void partial_update_outside_wind(const char* wind_str)
+{
+    const int16_t x = OUT_WIND[0];
+    const int16_t y = OUT_WIND[1];
+    const int16_t w = OUT_WIND[2];
+    const int16_t h = OUT_WIND[3];
+    display.setPartialWindow(x, y, w, h);
+    display.firstPage();
+    do {
+        display.fillScreen(GxEPD_WHITE);
+        display.setTextColor(GxEPD_BLACK);
+        display.setTextSize(1);
+        display.setCursor(x, y);
+        display.print(wind_str);
+    } while (display.nextPage());
+}
+
+static void partial_update_outside_hilo(float highC, float lowC)
+{
+    const int16_t x = OUT_HILO[0];
+    const int16_t y = OUT_HILO[1];
+    const int16_t w = OUT_HILO[2];
+    const int16_t h = OUT_HILO[3];
+    display.setPartialWindow(x, y, w, h);
+    display.firstPage();
+    do {
+        display.fillScreen(GxEPD_WHITE);
+        display.setTextColor(GxEPD_BLACK);
+        display.setTextSize(1);
+        display.setCursor(x, y);
+        if (isfinite(highC) && isfinite(lowC)) {
+            char buf[40];
+            float hf = highC * 9.0f/5.0f + 32.0f;
+            float lf = lowC * 9.0f/5.0f + 32.0f;
+            snprintf(buf, sizeof(buf), "H %.1f\xF8  L %.1f\xF8", hf, lf);
+            display.print(buf);
+        }
     } while (display.nextPage());
 }
 
@@ -378,6 +424,15 @@ void setup() {
         }
         if (o.validWeather) {
             partial_update_weather_icon(o.weather);
+        }
+        if (o.validWind) {
+            char ws[24];
+            // show wind in m/s
+            snprintf(ws, sizeof(ws), "%.1f m/s", o.windMps);
+            partial_update_outside_wind(ws);
+        }
+        if (o.validHigh || o.validLow) {
+            partial_update_outside_hilo(o.highTempC, o.lowTempC);
         }
         // Update header time and status every wake
         draw_header_time("10:32");
