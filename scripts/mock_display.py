@@ -89,11 +89,11 @@ def draw_layout(draw: ImageDraw.ImageDraw, data: dict):
     INSIDE_TIME = (6, 82, 118, 94)
     OUT_TEMP    = (131, 36, 221, 64)
     OUT_RH      = (131, 66, 221, 80)
-    OUT_WIND    = (131, 66, 244, 78)
-    OUT_RH      = (131, 78, 221, 90)
     OUT_ICON    = (224, 22, 244, 42)
-    OUT_COND    = (131, 90, 244, 102)
-    OUT_HILO    = (131, 102, 244, 114)
+    OUT_ROW1_L  = (131, 86, 175, 98)
+    OUT_ROW1_R  = (177, 86, 221, 98)
+    OUT_ROW2_L  = (131, 98, 175, 110)
+    OUT_ROW2_R  = (177, 98, 221, 110)
     STATUS      = (6, 96, 244, 118)
 
     # Frame and header
@@ -131,11 +131,11 @@ def draw_layout(draw: ImageDraw.ImageDraw, data: dict):
     nwo = len(num_out)*6
     draw.text((OUT_TEMP[0]+nwo+2, OUT_TEMP[1]+2), "°", font=load_font(10), fill=0)
     draw.text((OUT_TEMP[0]+nwo+8, OUT_TEMP[1]+2), "F", font=load_font(10), fill=0)
-    draw.text((OUT_WIND[0], OUT_WIND[1]), f"{data.get('wind','4.2')} m/s", font=font_sm, fill=0)
-    draw.text((OUT_RH[0], OUT_RH[1]), f"{data.get('outside_hum','53')}% RH", font=font_sm, fill=0)
+    draw.text((OUT_ROW1_L[0], OUT_ROW1_L[1]), data.get('weather','Cloudy'), font=font_sm, fill=0)
+    draw.text((OUT_ROW1_R[0], OUT_ROW1_R[1]), f"{data.get('outside_hum','53')}% RH", font=font_sm, fill=0)
     draw_weather_icon(draw, OUT_ICON, data.get('weather','Cloudy'))
-    draw.text((OUT_COND[0], OUT_COND[1]), data.get('weather','Cloudy'), font=font_sm, fill=0)
-    draw.text((OUT_HILO[0], OUT_HILO[1]), f"H {data.get('high','75.0')}°  L {data.get('low','60.0')}°", font=font_sm, fill=0)
+    draw.text((OUT_ROW2_L[0], OUT_ROW2_L[1]), f"{data.get('wind','4.2')} m/s", font=font_sm, fill=0)
+    draw.text((OUT_ROW2_R[0], OUT_ROW2_R[1]), f"H {data.get('high','75.0')}°  L {data.get('low','60.0')}°", font=font_sm, fill=0)
 
     # Status
     # Battery glyph

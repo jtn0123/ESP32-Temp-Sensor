@@ -7,11 +7,11 @@
   const INSIDE_RH   = [  6, 66, 118, 14];
   const INSIDE_TIME = [  6, 82, 118, 12];
   const OUT_TEMP    = [131, 36,  90, 28];
-  const OUT_WIND    = [131, 66, 113, 12];
-  const OUT_RH      = [131, 78, 113, 12];
   const OUT_ICON    = [224, 22,  20, 20];
-  const OUT_COND    = [131, 90, 113, 12];
-  const OUT_HILO    = [131, 102, 113, 12];
+  const OUT_ROW1_L  = [131, 86,  44, 12];
+  const OUT_ROW1_R  = [177, 86,  44, 12];
+  const OUT_ROW2_L  = [131, 98,  44, 12];
+  const OUT_ROW2_R  = [177, 98,  44, 12];
   const STATUS      = [  6, 96, 238, 20];
 
   const canvas = document.getElementById('epd');
@@ -162,10 +162,13 @@
     const nwo = ctx.measureText(numOut).width;
     text(OUT_TEMP[0] + nwo + 2, OUT_TEMP[1]+4, deg, 12);
     text(OUT_TEMP[0] + nwo + 8, OUT_TEMP[1]+4, unit, 12);
-    // wind and humidity
+    // two-column lower info
+    text(OUT_ROW1_L[0], OUT_ROW1_L[1], (data.weather||'Cloudy'), 10);
+    text(OUT_ROW1_R[0], OUT_ROW1_R[1], `${data.outside_hum||'53'}% RH`, 10);
     const wind = (data.wind || '4.2') + ' m/s';
-    text(OUT_WIND[0], OUT_WIND[1], wind, 10);
-    text(OUT_RH[0], OUT_RH[1], `${data.outside_hum||'53'}% RH`, 10);
+    text(OUT_ROW2_L[0], OUT_ROW2_L[1], wind, 10);
+    const hilo = `H ${data.high||'75.0'}°  L ${data.low||'60.0'}°`;
+    text(OUT_ROW2_R[0], OUT_ROW2_R[1], hilo, 10);
     const iconSelector = (data.moon_phase ? `moon_${(data.moon_phase||'').toLowerCase().replace(/\s+/g,'_')}` : (data.weather||'Cloudy'));
     weatherIcon([OUT_ICON[0],OUT_ICON[1],OUT_ICON[0]+OUT_ICON[2],OUT_ICON[1]+OUT_ICON[3]], iconSelector);
     // condition and hi/lo
@@ -195,7 +198,7 @@
     // partial window overlay
     if (showWindows){
       ctx.strokeStyle = '#aaa';
-      const rects = [HEADER_NAME, HEADER_TIME, INSIDE_TEMP, INSIDE_RH, INSIDE_TIME, OUT_TEMP, OUT_RH, OUT_ICON, OUT_COND, STATUS];
+      const rects = [HEADER_NAME, HEADER_TIME, INSIDE_TEMP, INSIDE_RH, INSIDE_TIME, OUT_TEMP, OUT_ICON, OUT_ROW1_L, OUT_ROW1_R, OUT_ROW2_L, OUT_ROW2_R, STATUS];
       rects.forEach(([x,y,w,h])=>{ ctx.strokeRect(x,y,w,h); });
     }
   }

@@ -180,9 +180,9 @@ static void draw_values(const char* in_temp_f, const char* in_rh,
         display.print("F");
     }
 
-    // Outside RH
+    // Outside RH (right column row 1)
     display.setTextSize(1);
-    display.setCursor(OUT_RH[0], OUT_RH[1]);
+    display.setCursor(OUT_ROW1_R[0], OUT_ROW1_R[1]);
     display.print(out_rh);
     display.print("% RH");
     // Outside wind (if available via net_get_outside in calling contexts)
@@ -291,10 +291,10 @@ static void partial_update_outside_temp(const char* out_temp_f, char trend)
 
 static void partial_update_outside_rh(const char* out_rh)
 {
-    const int16_t x = OUT_RH[0];
-    const int16_t y = OUT_RH[1];
-    const int16_t w = OUT_RH[2];
-    const int16_t h = OUT_RH[3];
+    const int16_t x = OUT_ROW1_R[0];
+    const int16_t y = OUT_ROW1_R[1];
+    const int16_t w = OUT_ROW1_R[2];
+    const int16_t h = OUT_ROW1_R[3];
     display.setPartialWindow(x, y, w, h);
     display.firstPage();
     do {
@@ -322,10 +322,10 @@ static void partial_update_weather_icon(const String& weather)
 
 static void partial_update_outside_wind(const char* wind_str)
 {
-    const int16_t x = OUT_WIND[0];
-    const int16_t y = OUT_WIND[1];
-    const int16_t w = OUT_WIND[2];
-    const int16_t h = OUT_WIND[3];
+    const int16_t x = OUT_ROW2_L[0];
+    const int16_t y = OUT_ROW2_L[1];
+    const int16_t w = OUT_ROW2_L[2];
+    const int16_t h = OUT_ROW2_L[3];
     display.setPartialWindow(x, y, w, h);
     display.firstPage();
     do {
@@ -339,10 +339,10 @@ static void partial_update_outside_wind(const char* wind_str)
 
 static void partial_update_outside_hilo(float highC, float lowC)
 {
-    const int16_t x = OUT_HILO[0];
-    const int16_t y = OUT_HILO[1];
-    const int16_t w = OUT_HILO[2];
-    const int16_t h = OUT_HILO[3];
+    const int16_t x = OUT_ROW2_R[0];
+    const int16_t y = OUT_ROW2_R[1];
+    const int16_t w = OUT_ROW2_R[2];
+    const int16_t h = OUT_ROW2_R[3];
     display.setPartialWindow(x, y, w, h);
     display.firstPage();
     do {
