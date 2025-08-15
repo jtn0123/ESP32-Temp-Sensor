@@ -1,0 +1,15 @@
+{
+  "room_name": "Office",
+  "inside_temp": "72.5",
+  "inside_hum": "47",
+  "outside_temp": "68.4",
+  "outside_hum": "53",
+  "weather": "Cloudy",
+  "time": "10:32",
+  "ip": "192.168.1.42",
+  "voltage": "4.01",
+  "percent": "76",
+  "days": "128"
+}
+
+
