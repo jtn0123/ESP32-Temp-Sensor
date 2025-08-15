@@ -165,8 +165,19 @@
     // condition text
     text(OUT_COND[0], OUT_COND[1], (data.weather||'Cloudy'), 10);
 
-    const status = `IP ${data.ip||'192.168.1.42'}  |  Batt ${data.voltage||'4.01'}V ${data.percent||'76'}%  |  ~${data.days||'128'}d`;
-    text(STATUS[0], STATUS[1], status, 10);
+    // Battery glyph + status text with IP, voltage, percent, ETA days
+    const pct = parseInt(data.percent||'76', 10);
+    const bx = STATUS[0];
+    const by = STATUS[1]+2;
+    const bw = 14, bh = 8;
+    ctx.strokeStyle = '#000';
+    ctx.strokeRect(bx, by, bw, bh);
+    ctx.fillStyle = '#000';
+    ctx.fillRect(bx + bw, by + 2, 2, 4); // terminal
+    const fillw = Math.max(0, Math.min(bw-2, Math.round((bw-2) * (pct/100))));
+    if (fillw > 0) ctx.fillRect(bx+1, by+1, fillw, bh-2);
+    const status = `IP ${data.ip||'192.168.1.42'}  |  Batt ${data.voltage||'4.01'}V ${pct||76}%  |  ~${data.days||'128'}d`;
+    text(STATUS[0] + bw + 8, STATUS[1], status, 10);
 
     // partial window overlay
     if (showWindows){

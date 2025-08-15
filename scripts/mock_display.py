@@ -131,8 +131,16 @@ def draw_layout(draw: ImageDraw.ImageDraw, data: dict):
     draw.text((OUT_COND[0], OUT_COND[1]), data.get('weather','Cloudy'), font=font_sm, fill=0)
 
     # Status
-    status_text = f"IP {data.get('ip','192.168.1.42')}  |  Batt {data.get('voltage','4.01')}V {data.get('percent','76')}%  |  ~{data.get('days','128')}d"
-    draw.text((STATUS[0], STATUS[1]), status_text, font=font_sm, fill=0)
+    # Battery glyph
+    pct = int(str(data.get('percent','76')))
+    bx, by, bw, bh = STATUS[0], STATUS[1]+2, 14, 8
+    draw.rectangle([(bx,by),(bx+bw,by+bh)], outline=0, width=1)
+    draw.rectangle([(bx+bw,by+2),(bx+bw+2,by+6)], fill=0)
+    fillw = max(0, min(bw-2, int((bw-2)*(pct/100))))
+    if fillw>0:
+        draw.rectangle([(bx+1,by+1),(bx+1+fillw,by+bh-1)], fill=0)
+    status_text = f"IP {data.get('ip','192.168.1.42')}  |  Batt {data.get('voltage','4.01')}V {pct}%  |  ~{data.get('days','128')}d"
+    draw.text((STATUS[0]+bw+8, STATUS[1]), status_text, font=font_sm, fill=0)
 
 def render(data: dict) -> Image.Image:
     img = Image.new('1', (WIDTH, HEIGHT), color=1)
