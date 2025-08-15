@@ -28,6 +28,7 @@
 - **ESPHome path**: uses `homeassistant:` to read outdoor entities and native sensors to publish.
 - **MQTT path**: subscribe to retained `home/outdoor/...` topics; publish inside readings to `sensors/<room>/...`.
   - Supports optional MQTT auth: set `mqtt.user` and `mqtt.password` in `config/device.yaml`.
+  - Example HA automation to publish outdoor values is provided in `homeassistant/mqtt_outdoor_publish.yaml`.
 
 ### Configuration
 
