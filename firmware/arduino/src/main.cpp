@@ -3,8 +3,8 @@
 #include "icons.h"
 #include "display_layout.h"
 #include "sensors.h"
-#include "net.h"
 #include "generated_config.h"
+#include "net.h"
 #include "power.h"
 
 // Feather ESP32-S2 + 2.13" FeatherWing (adjust if needed)
@@ -26,6 +26,15 @@
 GxEPD2_BW<GxEPD2_213_B74, GxEPD2_213_B74::HEIGHT> display(GxEPD2_213_B74(EINK_CS, EINK_DC, EINK_RST, EINK_BUSY));
 
 RTC_DATA_ATTR static uint16_t partial_counter = 0;
+
+static void pump_network_ms(uint32_t duration_ms)
+{
+    unsigned long start = millis();
+    while (millis() - start < duration_ms) {
+        net_loop();
+        delay(10);
+    }
+}
 
 static void draw_static_chrome()
 {
@@ -209,14 +218,16 @@ void setup() {
     display.init(0);
     display.setRotation(1); // landscape 250x122 coordinate system
     net_begin();
-    full_refresh();
-}
+    pump_network_ms(800); // allow retained MQTT to arrive
 
-void loop() {
-    net_loop();
-    go_deep_sleep_seconds(WAKE_INTERVAL_SEC);
-    partial_counter++;
-    if (partial_counter % FULL_REFRESH_EVERY == 0) {
+    bool do_full = false;
+    if (partial_counter == 0) {
+        do_full = true; // first ever boot
+    } else if ((partial_counter % FULL_REFRESH_EVERY) == 0) {
+        do_full = true; // periodic full clears
+    }
+
+    if (do_full) {
         full_refresh();
     } else {
         InsideReadings r = read_inside_sensors();
@@ -227,34 +238,34 @@ void loop() {
             snprintf(in_temp, sizeof(in_temp), "--");
         }
         partial_update_inside_temp(in_temp);
-        // publish inside readings
         if (isfinite(r.temperatureC) && isfinite(r.humidityPct)) {
             net_publish_inside(r.temperatureC, r.humidityPct);
         }
 
-        // Update outside regions if new data present
         OutsideReadings o = net_get_outside();
-        static float last_out_c = NAN;
-        static float last_out_rh = NAN;
-        static IconId last_icon = ICON_WEATHER_SUNNY;
-        if (o.validTemp && (isnan(last_out_c) || fabs(o.temperatureC - last_out_c) >= 0.1f)) {
+        if (o.validTemp) {
             char out_temp[16];
             snprintf(out_temp, sizeof(out_temp), "%.1f", o.temperatureC * 9.0/5.0 + 32.0);
             partial_update_outside_temp(out_temp);
-            last_out_c = o.temperatureC;
         }
-        if (o.validHum && (isnan(last_out_rh) || fabs(o.humidityPct - last_out_rh) >= 1.0f)) {
+        if (o.validHum) {
             char out_rh[16];
             snprintf(out_rh, sizeof(out_rh), "%.0f", o.humidityPct);
             partial_update_outside_rh(out_rh);
-            last_out_rh = o.humidityPct;
         }
-        IconId icon_now = map_weather_to_icon(o.weather);
-        if (icon_now != last_icon) {
+        if (o.validWeather) {
             partial_update_weather_icon(o.weather);
-            last_icon = icon_now;
         }
     }
+
+    partial_counter++;
+    go_deep_sleep_seconds(WAKE_INTERVAL_SEC);
 }
+
+void loop() {
+    // not used; we deep-sleep from setup
+    delay(1000);
+}
+
 
 

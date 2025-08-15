@@ -1,21 +1,36 @@
-# Pin Map — Feather ESP32‑S2 + 2.13" e‑ink FeatherWing
+# Pin Map — Feather ESP32‑S2 + 2.13" mono e‑ink FeatherWing (250×122)
 
-- SPI: SCK, MOSI, MISO → Feather defaults
-- e‑ink control: EINK_CS=D9, EINK_DC=D10, EINK_BUSY=D7, EINK_RST=D8 (confirm Wing rev)
-- I²C: SDA, SCL → sensors
-- Optional EINK_EN: GPIO to load‑switch enable if you power‑gate display VCC
+- **SPI**: `SCK`, `MOSI`, `MISO` → Feather hardware SPI
+- **E‑ink control**: `EINK_CS=D9`, `EINK_DC=D10`
+- **Optional**: `EINK_BUSY=D7` (for precise waits; otherwise library delays)
+- **RST**: handled by the Wing’s auto‑reset (also tied to Feather `RESET`), typically no GPIO needed
+- **SRAM_CS=D6** (present on Wing; unused initially)
+- **SD_CS=D5** (on Wing; cut trace or leave unconnected if not using SD)
+- **I²C**: `SDA`, `SCL` → sensors
 
-| Signal     | Pin  | Notes                  |
-|------------|------|------------------------|
-| EINK_CS    | D9   | Chip select            |
-| EINK_DC    | D10  | Data/Command           |
-| EINK_BUSY  | D7   | Busy (input)           |
-| EINK_RST   | D8   | Reset                  |
-| SPI_SCK    | SCK  | SPI clock              |
-| SPI_MOSI   | MOSI | SPI data out           |
-| SPI_MISO   | MISO | Not used by panel      |
-| I2C_SDA    | SDA  | Sensors                |
-| I2C_SCL    | SCL  | Sensors                |
-| EINK_EN    | TBD  | Optional load switch   |
+| Signal     | Pin  | Notes                                 |
+|------------|------|---------------------------------------|
+| EINK_CS    | D9   | Panel chip select                     |
+| EINK_DC    | D10  | Panel data/command                    |
+| EINK_BUSY  | D7   | Busy (input), optional                |
+| EINK_RST   | —    | Not required (Wing auto‑reset)        |
+| SRAM_CS    | D6   | On‑Wing SRAM; not used for v1         |
+| SD_CS      | D5   | On‑Wing microSD; leave NC for v1      |
+| SPI_SCK    | SCK  | SPI clock                             |
+| SPI_MOSI   | MOSI | SPI data out                          |
+| SPI_MISO   | MISO | Not used by panel                     |
+| I2C_SDA    | SDA  | Sensors                               |
+| I2C_SCL    | SCL  | Sensors                               |
 
-Adjust in firmware if your stack or revision differs.
+Wing power note: pulling the Wing’s `EN` pin low cuts power to the panel/SRAM/SD for true low sleep; you must re‑init the display after wake.
+
+## GxEPD2 driver class (SSD1680 122×250)
+
+This Wing uses a 2.13" 122×250 panel driven by SSD1680. Start with:
+
+- `GxEPD2_213_B74` (GDEM0213B74)
+- or `GxEPD2_213_DEPG0213BN`
+
+Both are 122×250 SSD1680 families. If needed, try other 2.13" 122×250 entries listed in `GxEPD2_display_selection.h` until the HelloWorld example renders correctly (no mirroring, correct resolution). Record which class worked in `README.md`.
+
+Adjust in firmware if your stack or Wing revision differs.

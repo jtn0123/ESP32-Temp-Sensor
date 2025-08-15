@@ -15,6 +15,7 @@
 - Resolution: **250×122**, mono 1‑bit.
 - Regions & partial windows: see `firmware/arduino/src/display_layout.h`.
 - Refresh: **partial** each wake; **full** every N cycles to clear ghosting.
+ - Panel driver (GxEPD2): start with `GxEPD2_213_B74` (SSD1680 122×250). If your Wing revision differs, try `GxEPD2_213_DEPG0213BN` and other 122×250 classes listed in `GxEPD2_display_selection.h`.
 
 ### Power & Duty Cycle (example)
 
@@ -73,7 +74,7 @@ lib_deps =
   adafruit/Adafruit BusIO @ ^1.16.1
   bblanchon/ArduinoJson @ ^7
   knolleary/PubSubClient @ ^2.8
-  adafruit/Adafruit SHT4x @ ^1.1.4
+  adafruit/Adafruit BME280 Library @ ^2.2.4
   adafruit/Adafruit Unified Sensor @ ^1.1.14
 build_flags =
   -DCORE_DEBUG_LEVEL=1
