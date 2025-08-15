@@ -29,6 +29,37 @@
     ctx.strokeRect(x0,y0,x1-x0,y1-y0);
   }
 
+  function weatherIcon(box, weather){
+    const [x0,y0,x1,y1] = box;
+    const w = x1-x0, h=y1-y0; const cx=x0+w/2, cy=y0+h/2;
+    const kind = (weather||'').toLowerCase();
+    ctx.strokeStyle = '#000';
+    if(kind.includes('sun') || kind.includes('clear')){
+      const r = Math.min(w,h)/3;
+      ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2); ctx.stroke();
+      const spikes = [[0,-r-4],[0,r+4],[-r-4,0],[r+4,0],[-3,-3],[3,3],[-3,3],[3,-3]];
+      spikes.forEach(([dx,dy])=>{ ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(cx+dx,cy+dy); ctx.stroke(); });
+    } else if(kind.includes('part')){
+      ctx.beginPath(); ctx.arc(x0+10,y0+10,8,0,Math.PI*2); ctx.stroke();
+      ctx.strokeRect(x0+2,y0+h/2,x1-x0-4,y1-y0-6);
+    } else if(kind.includes('cloud')){
+      ctx.strokeRect(x0+2,y0+8,x1-x0-4,y1-y0-12);
+      ctx.beginPath(); ctx.arc(x0+12,y0+10,8,0,Math.PI*2); ctx.stroke();
+      ctx.beginPath(); ctx.arc(x0+24,y0+8,8,0,Math.PI*2); ctx.stroke();
+    } else if(kind.includes('rain')){
+      weatherIcon(box,'cloudy');
+      for(let i=0;i<3;i++){ ctx.beginPath(); ctx.moveTo(x0+8+i*6,y0+18); ctx.lineTo(x0+4+i*6,y0+26); ctx.stroke(); }
+    } else if(kind.includes('snow')){
+      weatherIcon(box,'cloudy');
+      ctx.fillText('*', x0+10, y0+18);
+      ctx.fillText('*', x0+18, y0+18);
+    } else if(kind.includes('fog')){
+      for(let i=0;i<3;i++){ ctx.beginPath(); ctx.moveTo(x0+2,y0+8+i*6); ctx.lineTo(x1-2,y0+8+i*6); ctx.stroke(); }
+    } else {
+      rect(x0,y0,x1,y1);
+    }
+  }
+
   function draw(data){
     clear();
     // Header
@@ -49,8 +80,7 @@
 
     text(OUT_TEMP[0], OUT_TEMP[1], `${data.outside_temp||'68.4'}° F`, 14, 'bold');
     text(OUT_RH[0], OUT_RH[1], `${data.outside_hum||'53'}% RH`, 10);
-    rect(OUT_ICON[0], OUT_ICON[1], OUT_ICON[2], OUT_ICON[3]);
-    text(OUT_ICON[0]+2, OUT_ICON[1]+6, (data.weather||'Cloudy').slice(0,4), 10);
+    weatherIcon(OUT_ICON, data.weather||'Cloudy');
 
     const status = `IP ${data.ip||'192.168.1.42'}  Batt ${data.voltage||'4.01'}V ${data.percent||'76'}%  ~${data.days||'128'}d`;
     text(STATUS[0], STATUS[1], status, 10);

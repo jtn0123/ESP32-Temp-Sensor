@@ -71,10 +71,6 @@ lib_deps =
   ZinggJM/GxEPD2 @ ^1.5.0
   adafruit/Adafruit GFX Library @ ^1.11.9
   adafruit/Adafruit BusIO @ ^1.16.1
-  adafruit/Adafruit SHT4x @ ^1.0.5
-  adafruit/Adafruit BME280 Library @ ^2.2.4
-  adafruit/Adafruit Unified Sensor @ ^1.1.14
-  adafruit/Adafruit MAX1704X @ ^1.2.0
   bblanchon/ArduinoJson @ ^7
   knolleary/PubSubClient @ ^2.8
 build_flags =
@@ -97,6 +93,25 @@ void loop() {
   // placeholder loop
   delay(1000);
 }
+```
+
+### Display Simulators
+
+- Python PNG mock: renders a 250×122 preview to `out/display_mock.png`.
+
+```bash
+# optional: use the repo venv if created
+source .venv/bin/activate 2>/dev/null || true
+python scripts/mock_display.py
+open out/display_mock.png  # macOS
+```
+
+- Web Canvas simulator: static page drawing the layout.
+
+```bash
+cd web/sim
+python3 -m http.server 8080
+# open http://localhost:8080 in your browser
 ```
 
 ### ESPHome (optional path)

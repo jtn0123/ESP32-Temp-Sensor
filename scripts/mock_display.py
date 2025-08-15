@@ -1,14 +1,54 @@
 #!/usr/bin/env python3
 from PIL import Image, ImageDraw, ImageFont
 import os
+import hashlib
 
 WIDTH, HEIGHT = 250, 122
 
-def load_font(size: int):
-    try:
-        return ImageFont.truetype("Arial.ttf", size)
-    except Exception:
-        return ImageFont.load_default()
+def load_font(_size: int):
+    # Use PIL's built-in font for deterministic rendering across environments
+    return ImageFont.load_default()
+
+def draw_weather_icon(draw: ImageDraw.ImageDraw, box: tuple[int,int,int,int], weather: str):
+    x0,y0,x1,y1 = box
+    w = x1 - x0
+    h = y1 - y0
+    cx = x0 + w//2
+    cy = y0 + h//2
+    kind = (weather or '').strip().lower()
+    # simple vector icons for 1-bit display
+    if 'sun' in kind or 'clear' in kind:
+        r = min(w,h)//3
+        draw.ellipse((cx-r, cy-r, cx+r, cy+r), outline=0, width=1)
+        for dx,dy in [(0,-r-4),(0,r+4),(-r-4,0),(r+4,0),(-3,-3),(3,3),(-3,3),(3,-3)]:
+            draw.line((cx,cy,cx+dx,cy+dy), fill=0, width=1)
+    elif 'part' in kind:
+        # sun peeking over cloud
+        r = min(w,h)//4
+        draw.ellipse((x0+4, y0+4, x0+4+2*r, y0+4+2*r), outline=0, width=1)
+        draw.rounded_rectangle((x0+2, y0+h//2, x1-2, y1-4), radius=4, outline=0, width=1)
+    elif 'cloud' in kind:
+        draw.rounded_rectangle((x0+2, y0+8, x1-2, y1-4), radius=6, outline=0, width=1)
+        draw.ellipse((x0+4, y0+2, x0+20, y0+18), outline=0, width=1)
+        draw.ellipse((x0+14, y0, x0+30, y0+18), outline=0, width=1)
+    elif 'rain' in kind:
+        draw_weather_icon(draw, box, 'cloudy')
+        for i in range(3):
+            draw.line((x0+8+i*6, y0+18, x0+4+i*6, y0+26), fill=0, width=1)
+    elif 'storm' in kind or 'thunder' in kind:
+        draw_weather_icon(draw, box, 'cloudy')
+        draw.line((cx-6, cy+6, cx, cy+2, cx-2, cy+10, cx+6, cy+6), fill=0, width=1)
+    elif 'snow' in kind:
+        draw_weather_icon(draw, box, 'cloudy')
+        for i in range(2):
+            xi = x0+8+i*8
+            yi = y0+18
+            draw.text((xi, yi), '*', font=load_font(8), fill=0)
+    elif 'fog' in kind:
+        for i in range(3):
+            draw.line((x0+2, y0+8+i*6, x1-2, y0+8+i*6), fill=0, width=1)
+    else:
+        draw.rectangle([(x0,y0),(x1,y1)], outline=0, width=1)
 
 def draw_layout(draw: ImageDraw.ImageDraw, data: dict):
     # Regions
@@ -20,10 +60,15 @@ def draw_layout(draw: ImageDraw.ImageDraw, data: dict):
     OUT_ICON    = (218, 22, 242, 46)
     STATUS      = (6, 96, 244, 118)
 
-    # Header
-    draw.rectangle([(0,0),(WIDTH-1,18)], fill=1, outline=0)
+    # Frame and header
+    draw.rectangle([(0,0),(WIDTH-1,HEIGHT-1)], outline=0, width=1)
+    draw.rectangle([(1,1),(WIDTH-2,18)], fill=1, outline=0)
     font_hdr = load_font(12)
     draw.text((4,4), data.get("room_name","Room"), font=font_hdr, fill=0)
+    # Column separator
+    draw.line((125,18,125,95), fill=0, width=1)
+    # Header underline
+    draw.line((1,18,WIDTH-2,18), fill=0, width=1)
 
     # Section labels
     font_lbl = load_font(10)
@@ -39,16 +84,25 @@ def draw_layout(draw: ImageDraw.ImageDraw, data: dict):
 
     draw.text((OUT_TEMP[0], OUT_TEMP[1]), f"{data.get('outside_temp','68.4')}° F", font=font_big, fill=0)
     draw.text((OUT_RH[0], OUT_RH[1]), f"{data.get('outside_hum','53')}% RH", font=font_sm, fill=0)
-    # Icon placeholder box
-    draw.rectangle([(OUT_ICON[0], OUT_ICON[1]), (OUT_ICON[2], OUT_ICON[3])], outline=0, width=1)
-    draw.text((OUT_ICON[0]+1, OUT_ICON[1]+6), data.get('weather','Cloudy')[:4], font=font_sm, fill=0)
+    draw_weather_icon(draw, OUT_ICON, data.get('weather','Cloudy'))
 
     # Status
     status_text = f"IP {data.get('ip','192.168.1.42')}  Batt {data.get('voltage','4.01')}V {data.get('percent','76')}%  ~{data.get('days','128')}d"
     draw.text((STATUS[0], STATUS[1]), status_text, font=font_sm, fill=0)
 
+def render(data: dict) -> Image.Image:
+    img = Image.new('1', (WIDTH, HEIGHT), color=1)
+    draw = ImageDraw.Draw(img)
+    draw_layout(draw, data)
+    return img
+
+def image_md5(img: Image.Image) -> str:
+    buf = img.tobytes()
+    return hashlib.md5(buf).hexdigest()
+
 def main():
-    img = Image.new('1', (WIDTH, HEIGHT), color=1)  # 1-bit, white background
+    # 1-bit, white background
+    img = Image.new('1', (WIDTH, HEIGHT), color=1)
     draw = ImageDraw.Draw(img)
     sample = {
         "room_name": "Office",
