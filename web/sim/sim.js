@@ -7,11 +7,11 @@
   const INSIDE_RH   = [  6, 66, 118, 14];
   const INSIDE_TIME = [  6, 82, 118, 12];
   const OUT_TEMP    = [131, 36,  90, 28];
-  const OUT_RH      = [131, 66,  90, 14];
-  const OUT_WIND    = [131, 52, 113, 12];
+  const OUT_WIND    = [131, 66, 113, 12];
+  const OUT_RH      = [131, 78, 113, 12];
   const OUT_ICON    = [224, 22,  20, 20];
-  const OUT_COND    = [131, 82, 113, 12];
-  const OUT_HILO    = [131, 94, 113, 12];
+  const OUT_COND    = [131, 90, 113, 12];
+  const OUT_HILO    = [131, 102, 113, 12];
   const STATUS      = [  6, 96, 238, 20];
 
   const canvas = document.getElementById('epd');

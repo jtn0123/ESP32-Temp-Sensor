@@ -89,10 +89,11 @@ def draw_layout(draw: ImageDraw.ImageDraw, data: dict):
     INSIDE_TIME = (6, 82, 118, 94)
     OUT_TEMP    = (131, 36, 221, 64)
     OUT_RH      = (131, 66, 221, 80)
-    OUT_WIND    = (131, 52, 244, 64)
+    OUT_WIND    = (131, 66, 244, 78)
+    OUT_RH      = (131, 78, 221, 90)
     OUT_ICON    = (224, 22, 244, 42)
-    OUT_COND    = (131, 82, 244, 94)
-    OUT_HILO    = (131, 94, 244, 106)
+    OUT_COND    = (131, 90, 244, 102)
+    OUT_HILO    = (131, 102, 244, 114)
     STATUS      = (6, 96, 244, 118)
 
     # Frame and header
