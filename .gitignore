@@ -1,0 +1,28 @@
+# macOS
+.DS_Store
+
+# Editors
+.vscode/
+.idea/
+
+# PlatformIO
+.pio/
+.pioenvs/
+.piolibdeps/
+
+# ESPHome
+firmware/esphome/.esphome/
+
+# Rust
+firmware/rust/target/
+Cargo.lock
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# Local config
+config/device.yaml
+
+

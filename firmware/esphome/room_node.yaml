@@ -1,0 +1,58 @@
+esphome:
+  name: room-office
+  platform: ESP32
+  board: featheresp32-s2
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  fast_connect: true
+
+api:
+logger:
+ota:
+
+i2c:
+spi:
+  clk_pin: GPIO36
+  mosi_pin: GPIO35
+  miso_pin: GPIO37
+
+sensor:
+  - platform: sht4x
+    temperature:
+      name: "Office Temperature"
+    humidity:
+      name: "Office Humidity"
+  - platform: homeassistant
+    entity_id: sensor.outdoor_temperature
+    id: outside_temp
+  - platform: homeassistant
+    entity_id: sensor.outdoor_humidity
+    id: outside_hum
+
+font:
+  - file: "gfonts://Roboto@bold"
+    id: font_big
+    size: 22
+  - file: "gfonts://Roboto"
+    id: font_small
+    size: 12
+
+display:
+  - platform: waveshare_epaper
+    model: 2.13in-ttgo
+    cs_pin: GPIO9
+    dc_pin: GPIO10
+    busy_pin: GPIO7
+    reset_pin: GPIO8
+    rotation: 0
+    lambda: |-
+      // draw header, inside/outside values, icon mapping
+
+sleep:
+  id: deep_sleep_control
+  run_duration: 30s
+  sleep_duration: 2h
+
+

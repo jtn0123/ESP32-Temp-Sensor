@@ -1,0 +1,25 @@
+room_name: "Office"
+wake_interval: "2h"           # 1h|2h|4h
+full_refresh_every: 12         # partials between full clears
+outside_source: "ha"          # ha|mqtt
+ha_entities:
+  outdoor_temp: sensor.outdoor_temperature
+  outdoor_hum:  sensor.outdoor_humidity
+  weather:      weather.home
+mqtt:
+  host: 192.168.1.10
+  base_topics:
+    publish: sensors/office
+    subscribe: home/outdoor
+wifi:
+  ssid: YOUR_SSID
+  password: YOUR_PASS
+thresholds:
+  temp_degC: 0.1
+  rh_pct: 1
+battery:
+  capacity_mAh: 3500
+  sleep_current_mA: 0.09
+  active_current_mA: 80
+
+
