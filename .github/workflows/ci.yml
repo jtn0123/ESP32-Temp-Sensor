@@ -24,4 +24,19 @@ jobs:
         run: |
           pip install -U pillow pytest pyyaml
           pytest -q
+  lint-esphome:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      - name: Install ESPHome
+        run: pip install -U esphome
+      - name: Validate ESPHome config
+        working-directory: firmware/esphome
+        run: |
+          cp secrets.example.yaml secrets.yaml
+          esphome config room_node.yaml
 
