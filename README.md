@@ -142,6 +142,14 @@ pytest -q
 
 See `firmware/esphome/room_node.yaml` for a starting YAML.
 
+ESPHome Quickstart:
+
+1. Install ESPHome and add a new device using board `featheresp32-s2`.
+2. Copy `firmware/esphome/room_node.yaml` into your ESPHome configuration.
+3. If the e‑ink renders incorrectly, change `display.model:` between `2.13in`, `2.13in-ttgo`, or `2.13in_v2`.
+4. Provide `secrets.yaml` with `wifi_ssid` and `wifi_password`.
+5. Flash and verify the layout matches the Arduino build (250×122).
+
 ### Rust (optional path)
 
 See `firmware/rust/` for a sketch `Cargo.toml` and `src/main.rs`.
