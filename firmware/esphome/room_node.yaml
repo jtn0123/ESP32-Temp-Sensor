@@ -7,10 +7,14 @@ wifi:
   ssid: !secret wifi_ssid
   password: !secret wifi_password
   fast_connect: true
+  ap:
+    ssid: "room-node-setup"
+    password: "roomnode1234"
 
 api:
 logger:
 ota:
+  password: !secret ota_password
 
 i2c:
 spi:
@@ -80,6 +84,8 @@ display:
     dc_pin: GPIO10
     busy_pin: GPIO7
     rotation: 90
+    partial_updates: true
+    full_update_every: 12
     lambda: |-
       const int WIDTH = 250, HEIGHT = 122;
       const int INSIDE_TEMP_X = 6,  INSIDE_TEMP_Y = 38;

@@ -148,7 +148,8 @@ ESPHome Quickstart:
 2. Copy `firmware/esphome/room_node.yaml` into your ESPHome configuration.
 3. If the e‑ink renders incorrectly, change `display.model:` between `2.13in`, `2.13in-ttgo`, or `2.13in_v2`.
 4. Provide `secrets.yaml` with `wifi_ssid` and `wifi_password`.
-5. Flash and verify the layout matches the Arduino build (250×122).
+5. Optionally set `ota_password` in `secrets.yaml`.
+6. Flash and verify the layout matches the Arduino build (250×122).
 
 ### Rust (optional path)
 
