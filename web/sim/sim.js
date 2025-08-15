@@ -29,10 +29,56 @@
     ctx.strokeRect(x0,y0,x1-x0,y1-y0);
   }
 
-  function weatherIcon(box, weather){
+  // ---- SVG icon support (crisper icons) ----
+  const iconCache = new Map(); // name -> HTMLImageElement or 'pending'
+  async function loadSvgIcon(name){
+    if(iconCache.has(name)) return iconCache.get(name);
+    iconCache.set(name, 'pending');
+    try{
+      const res = await fetch(`../icons/${name}.svg`);
+      if(!res.ok) throw new Error('not ok');
+      const svgText = await res.text();
+      const blob = new Blob([svgText], { type: 'image/svg+xml' });
+      const url = URL.createObjectURL(blob);
+      const img = new Image();
+      const ready = new Promise((resolve)=>{ img.onload = ()=>resolve(img); });
+      img.src = url;
+      await ready;
+      iconCache.set(name, img);
+      return img;
+    }catch(e){
+      iconCache.delete(name);
+      return null;
+    }
+  }
+
+  function mapWeatherToIconName(w){
+    const s = (w||'').toLowerCase();
+    if(s.includes('clear')||s.includes('sun')) return 'clear';
+    if(s.includes('part')) return 'partly';
+    if(s.includes('cloud')) return 'cloudy';
+    if(s.includes('rain')) return 'rain';
+    if(s.includes('snow')) return 'snow';
+    if(s.includes('storm')||s.includes('thunder')) return 'storm';
+    if(s.includes('fog')||s.includes('mist')||s.includes('haze')) return 'fog';
+    return 'cloudy';
+  }
+
+  async function weatherIcon(box, weather){
     const [x0,y0,x1,y1] = box;
     const w = x1-x0, h=y1-y0; const cx=x0+w/2, cy=y0+h/2;
     const kind = (weather||'').toLowerCase();
+    // Try SVG first
+    const name = mapWeatherToIconName(kind);
+    const svg = await loadSvgIcon(name);
+    if(svg){
+      // draw centered at native size (24x24) scaled to fit
+      const iw = Math.min(24, w), ih = Math.min(24, h);
+      const px = x0 + (w - iw)/2;
+      const py = y0 + (h - ih)/2;
+      ctx.drawImage(svg, px, py, iw, ih);
+      return;
+    }
     ctx.strokeStyle = '#000';
     if(kind.includes('sun') || kind.includes('clear')){
       const r = Math.min(w,h)/3;
