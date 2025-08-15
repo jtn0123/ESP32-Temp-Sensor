@@ -24,6 +24,10 @@ jobs:
         run: |
           pip install -U pillow pytest pyyaml
           pytest -q
+      - name: Parse sample awake log (example)
+        run: |
+          echo -e "ESP32 eInk Room Node boot\nAwake ms: 32000\nSleeping for 7200s" > sample_serial.txt
+          python3 scripts/parse_awake_log.py sample_serial.txt --max-awake-ms 45000 --sleep-s 7200
   lint-esphome:
     runs-on: ubuntu-latest
     steps:

@@ -259,6 +259,9 @@ void setup() {
     }
 
     partial_counter++;
+    // Log awake duration and planned sleep for diagnostics
+    Serial.printf("Awake ms: %lu\n", (unsigned long)millis());
+    Serial.printf("Sleeping for %us\n", (unsigned)WAKE_INTERVAL_SEC);
     go_deep_sleep_seconds(WAKE_INTERVAL_SEC);
 }
 
