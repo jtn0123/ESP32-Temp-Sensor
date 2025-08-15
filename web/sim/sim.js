@@ -113,6 +113,12 @@
   function draw(data){
     console.log('[sim] draw()', data);
     clear();
+    // Frame (crisp 1px border)
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0,0,WIDTH,1);
+    ctx.fillRect(0,HEIGHT-1,WIDTH,1);
+    ctx.fillRect(0,0,1,HEIGHT);
+    ctx.fillRect(WIDTH-1,0,1,HEIGHT);
     // Header
     ctx.fillStyle = '#000';
     ctx.fillRect(0,0,WIDTH,18);

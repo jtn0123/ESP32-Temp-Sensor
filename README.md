@@ -139,6 +139,14 @@ python -m pip install -U pytest pillow
 pytest -q
 ```
 
+Optional: Web simulator pixel test (requires Playwright):
+
+```bash
+python -m pip install -U playwright pytest-playwright
+python -m playwright install --with-deps chromium
+pytest -q -k web_sim
+```
+
 ### ESPHome (optional path)
 
 See `firmware/esphome/room_node.yaml` for a starting YAML.

@@ -29,6 +29,20 @@ jobs:
           echo -e "ESP32 eInk Room Node boot\nAwake ms: 32000\nSleeping for 7200s" > sample_serial.txt
           python3 scripts/parse_awake_log.py sample_serial.txt --max-awake-ms 45000 --sleep-s 7200
   lint-esphome:
+  web-sim:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      - name: Install Playwright deps
+        run: |
+          pip install -U pytest playwright pytest-playwright
+          python -m playwright install --with-deps chromium
+      - name: Run web simulator test
+        run: pytest -q -k web_sim
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
