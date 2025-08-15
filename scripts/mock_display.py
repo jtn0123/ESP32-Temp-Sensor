@@ -139,8 +139,13 @@ def draw_layout(draw: ImageDraw.ImageDraw, data: dict):
     fillw = max(0, min(bw-2, int((bw-2)*(pct/100))))
     if fillw>0:
         draw.rectangle([(bx+1,by+1),(bx+1+fillw,by+bh-1)], fill=0)
-    status_text = f"IP {data.get('ip','192.168.1.42')}  |  Batt {data.get('voltage','4.01')}V {pct}%  |  ~{data.get('days','128')}d"
-    draw.text((STATUS[0]+bw+8, STATUS[1]), status_text, font=font_sm, fill=0)
+    # Left text (Batt + ETA)
+    left = f"Batt {data.get('voltage','4.01')}V {pct}%  |  ~{data.get('days','128')}d"
+    draw.text((STATUS[0]+bw+8, STATUS[1]), left, font=font_sm, fill=0)
+    # Right-aligned IP
+    ip = f"IP {data.get('ip','192.168.1.42')}"
+    ip_w = len(ip)*6
+    draw.text((STATUS[2]-2 - ip_w, STATUS[1]), ip, font=font_sm, fill=0)
 
 def render(data: dict) -> Image.Image:
     img = Image.new('1', (WIDTH, HEIGHT), color=1)

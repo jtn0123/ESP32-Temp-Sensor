@@ -114,11 +114,18 @@ static void draw_status_line(const BatteryStatus& bs, const String& ip)
             if (fillw > 0) display.fillRect(bx + 1, by + 1, fillw, bh - 2, GxEPD_BLACK);
             cx += bw + 6;
         }
-        char line[96];
-        snprintf(line, sizeof(line), "IP %s  |  Batt %.2fV %d%%  |  ~%dd",
-                 ip.c_str(), bs.voltage, bs.percent, bs.estimatedDays);
+        // Left text: Batt and ETA
+        char left[64];
+        snprintf(left, sizeof(left), "Batt %.2fV %d%%  |  ~%dd", bs.voltage, bs.percent, bs.estimatedDays);
         display.setCursor(cx, cy);
-        display.print(line);
+        display.print(left);
+        // Right-aligned IP
+        char right[48];
+        snprintf(right, sizeof(right), "IP %s", ip.c_str());
+        int16_t tw = text_width_default_font(right, 1);
+        int16_t rx = x + w - 2 - tw;
+        display.setCursor(rx, cy);
+        display.print(right);
     } while (display.nextPage());
 }
 
