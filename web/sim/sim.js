@@ -1,12 +1,16 @@
 (function(){
   const WIDTH = 250, HEIGHT = 122;
-  const INSIDE_TEMP = [6,38,124,64];
-  const INSIDE_RH   = [6,64,124,80];
-  const INSIDE_TIME = [6,78,124,92];
-  const OUT_TEMP    = [131,38,220,64];
-  const OUT_RH      = [131,64,220,80];
-  const OUT_ICON    = [218,22,242,46];
-  const STATUS      = [6,96,244,118];
+  // Rectangles use [x, y, w, h]
+  const HEADER_NAME = [  6,  2, 160, 14];
+  const HEADER_TIME = [172,  2,  72, 14];
+  const INSIDE_TEMP = [  6, 36, 118, 28];
+  const INSIDE_RH   = [  6, 66, 118, 14];
+  const INSIDE_TIME = [  6, 82, 118, 12];
+  const OUT_TEMP    = [131, 36,  90, 28];
+  const OUT_RH      = [131, 66,  90, 14];
+  const OUT_ICON    = [224, 22,  20, 20];
+  const OUT_COND    = [131, 82, 113, 12];
+  const STATUS      = [  6, 96, 238, 20];
 
   const canvas = document.getElementById('epd');
   const ctx = canvas.getContext('2d');
@@ -128,10 +132,10 @@
     ctx.fillRect(125,18,1,77);
     // left name, right time
     ctx.fillStyle = '#000';
-    text(6,3,data.room_name || 'Room',12,'bold');
+    text(HEADER_NAME[0], HEADER_NAME[1]+1, data.room_name || 'Room',12,'bold');
     const t = data.time || '10:32';
     const tw = ctx.measureText(t).width;
-    text(WIDTH-6-tw,3,t,10);
+    text(HEADER_TIME[0] + HEADER_TIME[2] - 2 - tw, HEADER_TIME[1]+1, t, 10);
 
     // Labels
     ctx.fillStyle = '#000';
@@ -144,24 +148,24 @@
     const unit = 'F';
     ctx.font = `bold 22px "DM Mono", "Roboto Mono", monospace`;
     const numWidth = ctx.measureText(numIn).width;
-    const numRight = 118;
+    const numRight = INSIDE_TEMP[0] + INSIDE_TEMP[2];
     const numX = numRight - numWidth;
     text(numX, INSIDE_TEMP[1], numIn, 22, 'bold');
-    text(120, INSIDE_TEMP[1]+4, deg, 12);
-    text(126, INSIDE_TEMP[1]+4, unit, 12);
+    text(INSIDE_TEMP[0] + INSIDE_TEMP[2] + 2, INSIDE_TEMP[1]+4, deg, 12);
+    text(INSIDE_TEMP[0] + INSIDE_TEMP[2] + 8, INSIDE_TEMP[1]+4, unit, 12);
     text(INSIDE_RH[0], INSIDE_RH[1], `${data.inside_hum||'47'}% RH`, 10);
     text(INSIDE_TIME[0], INSIDE_TIME[1], data.time||'10:32', 10);
 
     const numOut = `${data.outside_temp||'68.4'}`;
     const numW2 = ctx.measureText(numOut).width;
-    const numRight2 = 131+90;
+    const numRight2 = OUT_TEMP[0] + OUT_TEMP[2];
     const numX2 = numRight2 - numW2;
     text(numX2, OUT_TEMP[1], numOut, 22, 'bold');
-    text(131+92, OUT_TEMP[1]+4, deg, 12);
-    text(131+98, OUT_TEMP[1]+4, unit, 12);
+    text(OUT_TEMP[0] + OUT_TEMP[2] + 2, OUT_TEMP[1]+4, deg, 12);
+    text(OUT_TEMP[0] + OUT_TEMP[2] + 8, OUT_TEMP[1]+4, unit, 12);
     text(OUT_RH[0], OUT_RH[1], `${data.outside_hum||'53'}% RH`, 10);
     const iconSelector = (data.moon_phase ? `moon_${(data.moon_phase||'').toLowerCase().replace(/\s+/g,'_')}` : (data.weather||'Cloudy'));
-    weatherIcon([OUT_ICON[0],OUT_ICON[1],OUT_ICON[0]+20,OUT_ICON[1]+20], iconSelector);
+    weatherIcon([OUT_ICON[0],OUT_ICON[1],OUT_ICON[0]+OUT_ICON[2],OUT_ICON[1]+OUT_ICON[3]], iconSelector);
     // condition text
     text(OUT_COND[0], OUT_COND[1], (data.weather||'Cloudy'), 10);
 
@@ -182,7 +186,7 @@
     // partial window overlay
     if (showWindows){
       ctx.strokeStyle = '#aaa';
-      const rects = [HEADER_NAME, HEADER_TIME, INSIDE_TEMP, INSIDE_RH, INSIDE_TIME, OUT_TEMP, OUT_RH, [OUT_ICON[0],OUT_ICON[1],OUT_ICON[0]+20,OUT_ICON[1]+20], OUT_COND, STATUS];
+      const rects = [HEADER_NAME, HEADER_TIME, INSIDE_TEMP, INSIDE_RH, INSIDE_TIME, OUT_TEMP, OUT_RH, OUT_ICON, OUT_COND, STATUS];
       rects.forEach(([x,y,w,h])=>{ ctx.strokeRect(x,y,w,h); });
     }
   }
@@ -206,13 +210,13 @@
       const data = await res.json();
       data.time = new Date().toTimeString().slice(0,5);
       // clear the time box and redraw just that region
-      const [x0,y0,x1,y1] = INSIDE_TIME;
+      const [x0,y0,w,h] = INSIDE_TIME;
       ctx.fillStyle = '#fff';
-      ctx.fillRect(x0,y0,x1-x0,y1-y0);
-      text(INSIDE_TIME[0], INSIDE_TIME[1], data.time, 10);
+      ctx.fillRect(x0,y0,w,h);
+      text(x0,y0, data.time, 10);
       // brief outline to show the partial region
       ctx.strokeStyle = '#000';
-      ctx.strokeRect(x0,y0,x1-x0,y1-y0);
+      ctx.strokeRect(x0,y0,w,h);
       setTimeout(()=>{ /* no-op */ }, 100);
     }catch(e){
       load();
