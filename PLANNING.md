@@ -25,9 +25,20 @@
 - Power estimator script runs locally
 
 ### Next Steps (after scaffold)
-- Implement display partial windows with GxEPD2
-- Add sensor drivers (SHT40/BME280) and net stack (Wi‑Fi, MQTT/ESPHome)
-- Implement deep sleep and power math
-- Integrate icon assets
+‑ Implement display partial windows with GxEPD2
+‑ Add sensor drivers (SHT40/BME280) and net stack (Wi‑Fi, MQTT/ESPHome)
+‑ Implement deep sleep and power math
+‑ Integrate icon assets
+
+### Backlog / Do‑Next Checklist
+‑ Firmware: bring up GxEPD2 with FeatherWing 4195 (pin map + panel ID; draw header + inside/outside blocks; partial windows).
+‑ Firmware: deep sleep loop (RTC wake, Wi‑Fi fast_connect/BSSID, static IP optional).
+‑ Firmware: sensor driver (choose SHT4x or BME280; expose °F/°C and RH).
+‑ Firmware: outside data (ESPHome `homeassistant:` or MQTT retained subscribe; fallback to last value).
+‑ Firmware: status line (IP, V, %, est days).
+‑ Firmware: full refresh cadence (every N partials or daily).
+‑ Power: gate e‑ink VCC via EN or TPS22910A; verify sleep current.
+‑ Tests: UI snapshot — golden PNG compare for typical values.
+‑ Docs: `hardware/pinmap.md` exact pins; `hardware/bom.md` purchase links.
 
 

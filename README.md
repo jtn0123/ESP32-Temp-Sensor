@@ -73,6 +73,8 @@ lib_deps =
   adafruit/Adafruit BusIO @ ^1.16.1
   bblanchon/ArduinoJson @ ^7
   knolleary/PubSubClient @ ^2.8
+  adafruit/Adafruit SHT4x @ ^1.1.4
+  adafruit/Adafruit Unified Sensor @ ^1.1.14
 build_flags =
   -DCORE_DEBUG_LEVEL=1
   -DEINK_WIDTH=250 -DEINK_HEIGHT=122

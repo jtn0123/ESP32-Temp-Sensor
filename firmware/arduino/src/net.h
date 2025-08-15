@@ -1,6 +1,115 @@
 #pragma once
 
-// TODO: Wi-Fi join, MQTT/ESPHome stubs
-inline void net_begin() {}
+#include <Arduino.h>
+#include <WiFi.h>
+#include <PubSubClient.h>
+
+#ifndef WIFI_SSID
+#define WIFI_SSID ""
+#endif
+#ifndef WIFI_PASS
+#define WIFI_PASS ""
+#endif
+
+#ifndef MQTT_HOST
+#define MQTT_HOST ""
+#endif
+#ifndef MQTT_PORT
+#define MQTT_PORT 1883
+#endif
+#ifndef MQTT_SUB_BASE
+#define MQTT_SUB_BASE "home/outdoor"
+#endif
+#ifndef MQTT_PUB_BASE
+#define MQTT_PUB_BASE "sensors/room"
+#endif
+
+struct OutsideReadings {
+    float temperatureC = NAN;
+    float humidityPct = NAN;
+    String weather;
+    bool validTemp = false;
+    bool validHum = false;
+    bool validWeather = false;
+};
+
+static WiFiClient g_wifi_client;
+static PubSubClient g_mqtt(g_wifi_client);
+static OutsideReadings g_outside;
+
+inline void mqtt_callback(char* topic, uint8_t* payload, unsigned int length) {
+    String t(topic);
+    String v;
+    v.reserve(length + 1);
+    for (unsigned int i = 0; i < length; i++) v += (char)payload[i];
+    if (t.endsWith("/temp")) {
+        g_outside.temperatureC = v.toFloat();
+        g_outside.validTemp = true;
+    } else if (t.endsWith("/hum") || t.endsWith("/rh")) {
+        g_outside.humidityPct = v.toFloat();
+        g_outside.validHum = true;
+    } else if (t.endsWith("/weather")) {
+        g_outside.weather = v;
+        g_outside.validWeather = v.length() > 0;
+    }
+}
+
+inline void ensure_wifi_connected() {
+    if (WiFi.isConnected()) return;
+    if (strlen(WIFI_SSID) == 0) return;
+    WiFi.mode(WIFI_STA);
+    WiFi.begin(WIFI_SSID, WIFI_PASS);
+    unsigned long start = millis();
+    while (!WiFi.isConnected() && millis() - start < 10000) {
+        delay(100);
+    }
+}
+
+inline void ensure_mqtt_connected() {
+    if (g_mqtt.connected()) return;
+    if (strlen(MQTT_HOST) == 0) return;
+    g_mqtt.setServer(MQTT_HOST, MQTT_PORT);
+    g_mqtt.setCallback(mqtt_callback);
+    String clientId = String("esp32-room-") + String((uint32_t)ESP.getEfuseMac(), HEX);
+    unsigned long start = millis();
+    while (!g_mqtt.connect(clientId.c_str()) && millis() - start < 5000) {
+        delay(200);
+    }
+    if (g_mqtt.connected()) {
+        String base = MQTT_SUB_BASE;
+        g_mqtt.subscribe((base + "/temp").c_str());
+        g_mqtt.subscribe((base + "/hum").c_str());
+        g_mqtt.subscribe((base + "/rh").c_str());
+        g_mqtt.subscribe((base + "/weather").c_str());
+    }
+}
+
+inline void net_begin() {
+    ensure_wifi_connected();
+    ensure_mqtt_connected();
+}
+
+inline void net_loop() {
+    if (!WiFi.isConnected()) ensure_wifi_connected();
+    if (WiFi.isConnected() && !g_mqtt.connected()) ensure_mqtt_connected();
+    if (g_mqtt.connected()) g_mqtt.loop();
+}
+
+inline String net_ip() {
+    if (!WiFi.isConnected()) return String("0.0.0.0");
+    return WiFi.localIP().toString();
+}
+
+inline OutsideReadings net_get_outside() { return g_outside; }
+
+inline void net_publish_inside(float tempC, float rhPct) {
+    if (!g_mqtt.connected()) return;
+    String base = MQTT_PUB_BASE;
+    char buf[32];
+    dtostrf(tempC, 0, 2, buf);
+    g_mqtt.publish((base + "/inside/temp").c_str(), buf, true);
+    dtostrf(rhPct, 0, 0, buf);
+    g_mqtt.publish((base + "/inside/hum").c_str(), buf, true);
+}
 
 
