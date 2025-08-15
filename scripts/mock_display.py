@@ -9,6 +9,27 @@ def load_font(_size: int):
     # Use PIL's built-in font for deterministic rendering across environments
     return ImageFont.load_default()
 
+def try_load_icon_png(weather: str):
+    base = os.path.join('config','icons')
+    key = (weather or '').strip().lower()
+    candidates = [key, 'clear' if 'clear' in key or 'sun' in key else None,
+                  'partly' if 'part' in key else None,
+                  'cloudy' if 'cloud' in key else None,
+                  'rain' if 'rain' in key else None,
+                  'storm' if 'storm' in key or 'thunder' in key else None,
+                  'snow' if 'snow' in key else None,
+                  'fog' if 'fog' in key else None]
+    for c in candidates:
+        if not c: continue
+        p = os.path.join(base, f'{c}.png')
+        if os.path.exists(p):
+            try:
+                img = Image.open(p).convert('1')
+                return img
+            except Exception:
+                continue
+    return None
+
 def draw_weather_icon(draw: ImageDraw.ImageDraw, box: tuple[int,int,int,int], weather: str):
     x0,y0,x1,y1 = box
     w = x1 - x0
@@ -16,6 +37,14 @@ def draw_weather_icon(draw: ImageDraw.ImageDraw, box: tuple[int,int,int,int], we
     cx = x0 + w//2
     cy = y0 + h//2
     kind = (weather or '').strip().lower()
+    icon = try_load_icon_png(kind)
+    if icon is not None:
+        iw, ih = icon.size
+        # center paste
+        px = x0 + (w - iw)//2
+        py = y0 + (h - ih)//2
+        draw.bitmap((px, py), icon, fill=0)
+        return
     # simple vector icons for 1-bit display
     if 'sun' in kind or 'clear' in kind:
         r = min(w,h)//3

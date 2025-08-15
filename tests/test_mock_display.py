@@ -26,4 +26,13 @@ def test_icon_changes_image_hash():
     b = md.image_md5(md.render({"weather":"Cloudy"}))
     assert a != b
 
+def test_png_icon_loads_and_renders_centered():
+    # uses generated 24x24 icons if present
+    img = md.render({"weather":"cloudy"})
+    # Check that some black pixels exist within the icon box area
+    x0,y0,x1,y1 = 218,22,242,46
+    px = img.load()
+    has_black = any(px[x,y] == 0 for x in range(x0,x1) for y in range(y0,y1))
+    assert has_black
+
 

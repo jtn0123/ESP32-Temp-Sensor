@@ -114,6 +114,25 @@ python3 -m http.server 8080
 # open http://localhost:8080 in your browser
 ```
 
+#### Weather Icons (24×24 PNG)
+
+- Generated into `config/icons/` via:
+
+```bash
+source .venv/bin/activate 2>/dev/null || true
+python scripts/gen_icons.py
+```
+
+#### Simulator Tests
+
+Run Python tests (image checks + snapshot):
+
+```bash
+source .venv/bin/activate 2>/dev/null || true
+python -m pip install -U pytest pillow
+pytest -q
+```
+
 ### ESPHome (optional path)
 
 See `firmware/esphome/room_node.yaml` for a starting YAML.

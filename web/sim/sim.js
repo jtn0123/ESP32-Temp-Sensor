@@ -67,6 +67,10 @@
     ctx.fillRect(0,0,WIDTH,18);
     ctx.fillStyle = '#fff';
     text(4,4,data.room_name || 'Room',12,'bold');
+    // header underline and column separator
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0,18,WIDTH,1);
+    ctx.fillRect(125,18,1,77);
 
     // Labels
     ctx.fillStyle = '#000';
@@ -96,7 +100,25 @@
     }
   }
 
-  document.getElementById('refresh').addEventListener('click', load);
+  // Partial update demo on refresh: only redraw time region
+  document.getElementById('refresh').addEventListener('click', async ()=>{
+    try{
+      const res = await fetch('sample_data.json');
+      const data = await res.json();
+      data.time = new Date().toTimeString().slice(0,5);
+      // clear the time box and redraw just that region
+      const [x0,y0,x1,y1] = INSIDE_TIME;
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(x0,y0,x1-x0,y1-y0);
+      text(INSIDE_TIME[0], INSIDE_TIME[1], data.time, 10);
+      // brief outline to show the partial region
+      ctx.strokeStyle = '#000';
+      ctx.strokeRect(x0,y0,x1-x0,y1-y0);
+      setTimeout(()=>{ /* no-op */ }, 100);
+    }catch(e){
+      load();
+    }
+  });
   load();
 })();
 
