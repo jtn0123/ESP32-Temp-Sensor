@@ -63,6 +63,8 @@ def main():
     wifi_pass = wifi.get('password', '')
     mqtt_host = mqtt.get('host', '')
     mqtt_port = int(mqtt.get('port', 1883) or 1883)
+    mqtt_user = str(mqtt.get('user', '') or '')
+    mqtt_pass = str(mqtt.get('password', '') or '')
     mqtt_pub = base_topics.get('publish', 'sensors/' + room_name.lower())
     mqtt_sub = base_topics.get('subscribe', 'home/outdoor')
     # battery
@@ -92,6 +94,8 @@ def main():
         f.write(f'#define MQTT_PORT {mqtt_port}\n')
         f.write(f'#define MQTT_PUB_BASE {c_string(mqtt_pub)}\n')
         f.write(f'#define MQTT_SUB_BASE {c_string(mqtt_sub)}\n')
+        f.write(f'#define MQTT_USER {c_string(mqtt_user)}\n')
+        f.write(f'#define MQTT_PASS {c_string(mqtt_pass)}\n')
         f.write(f'#define BATTERY_CAPACITY_MAH {capacity_mAh}\n')
         f.write(f'#define SLEEP_CURRENT_MA {sleep_current_mA}\n')
         f.write(f'#define ACTIVE_CURRENT_MA {active_current_mA}\n')

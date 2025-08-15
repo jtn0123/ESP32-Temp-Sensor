@@ -4,25 +4,7 @@
 #include <WiFi.h>
 #include <PubSubClient.h>
 
-#ifndef WIFI_SSID
-#define WIFI_SSID ""
-#endif
-#ifndef WIFI_PASS
-#define WIFI_PASS ""
-#endif
-
-#ifndef MQTT_HOST
-#define MQTT_HOST ""
-#endif
-#ifndef MQTT_PORT
-#define MQTT_PORT 1883
-#endif
-#ifndef MQTT_SUB_BASE
-#define MQTT_SUB_BASE "home/outdoor"
-#endif
-#ifndef MQTT_PUB_BASE
-#define MQTT_PUB_BASE "sensors/room"
-#endif
+// All configuration should come from generated_config.h
 
 struct OutsideReadings {
     float temperatureC = NAN;
@@ -72,7 +54,15 @@ inline void ensure_mqtt_connected() {
     g_mqtt.setCallback(mqtt_callback);
     String clientId = String("esp32-room-") + String((uint32_t)ESP.getEfuseMac(), HEX);
     unsigned long start = millis();
-    while (!g_mqtt.connect(clientId.c_str()) && millis() - start < 5000) {
+    const char* user = nullptr;
+    const char* pass = nullptr;
+    #ifdef MQTT_USER
+    if (strlen(MQTT_USER) > 0) user = MQTT_USER;
+    #endif
+    #ifdef MQTT_PASS
+    if (strlen(MQTT_PASS) > 0) pass = MQTT_PASS;
+    #endif
+    while (!g_mqtt.connect(clientId.c_str(), user, pass) && millis() - start < 5000) {
         delay(200);
     }
     if (g_mqtt.connected()) {

@@ -27,6 +27,7 @@
 
 - **ESPHome path**: uses `homeassistant:` to read outdoor entities and native sensors to publish.
 - **MQTT path**: subscribe to retained `home/outdoor/...` topics; publish inside readings to `sensors/<room>/...`.
+  - Supports optional MQTT auth: set `mqtt.user` and `mqtt.password` in `config/device.yaml`.
 
 ### Configuration
 
@@ -76,6 +77,7 @@ lib_deps =
   knolleary/PubSubClient @ ^2.8
   adafruit/Adafruit BME280 Library @ ^2.2.4
   adafruit/Adafruit Unified Sensor @ ^1.1.14
+  adafruit/Adafruit MAX1704X @ ^1.0.3   ; optional, set USE_MAX17048 1
 build_flags =
   -DCORE_DEBUG_LEVEL=1
   -DEINK_WIDTH=250 -DEINK_HEIGHT=122
