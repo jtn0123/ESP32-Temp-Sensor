@@ -152,6 +152,8 @@ ESPHome Quickstart:
 5. Optionally set `ota_password` in `secrets.yaml`.
 6. Flash and verify the layout matches the Arduino build (250×122).
 
+See `firmware/esphome/secrets.example.yaml` for a sample secrets file.
+
 ### Rust (optional path)
 
 See `firmware/rust/` for a sketch `Cargo.toml` and `src/main.rs`.
