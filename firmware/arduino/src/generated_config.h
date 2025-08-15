@@ -11,3 +11,11 @@
 #define MQTT_PORT 1883
 #define MQTT_PUB_BASE "sensors/office"
 #define MQTT_SUB_BASE "home/outdoor"
+#define BATTERY_CAPACITY_MAH 3500
+#define SLEEP_CURRENT_MA 0.09
+#define ACTIVE_CURRENT_MA 80.0
+#define ACTIVE_SECONDS 10
+#define VBAT_ADC_PIN -1
+#define VBAT_DIVIDER 2.0
+#define ADC_MAX_COUNTS 4095
+#define ADC_REF_V 3.3
