@@ -1,7 +1,10 @@
 esphome:
   name: room-office
-  platform: ESP32
+
+esp32:
   board: featheresp32-s2
+  framework:
+    type: arduino
 
 wifi:
   ssid: !secret wifi_ssid
@@ -14,6 +17,7 @@ wifi:
 api:
 logger:
 ota:
+  platform: esphome
   password: !secret ota_password
 
 i2c:
@@ -84,7 +88,6 @@ display:
     dc_pin: GPIO10
     busy_pin: GPIO7
     rotation: 90
-    partial_updates: true
     full_update_every: 12
     update_interval: never
     lambda: |-
