@@ -10,6 +10,8 @@
 
   const canvas = document.getElementById('epd');
   const ctx = canvas.getContext('2d');
+  canvas.style.imageRendering = 'pixelated';
+  let showWindows = false;
 
   function clear(){
     ctx.fillStyle = '#fff';
@@ -121,31 +123,57 @@
     ctx.fillRect(WIDTH-1,0,1,HEIGHT);
     // Header
     ctx.fillStyle = '#000';
-    ctx.fillRect(0,0,WIDTH,18);
-    ctx.fillStyle = '#fff';
-    text(4,4,data.room_name || 'Room',12,'bold');
-    // header underline and column separator
-    ctx.fillStyle = '#000';
+    // thin rules only
     ctx.fillRect(0,18,WIDTH,1);
     ctx.fillRect(125,18,1,77);
+    // left name, right time
+    ctx.fillStyle = '#000';
+    text(6,3,data.room_name || 'Room',12,'bold');
+    const t = data.time || '10:32';
+    const tw = ctx.measureText(t).width;
+    text(WIDTH-6-tw,3,t,10);
 
     // Labels
     ctx.fillStyle = '#000';
     text(6,22,'INSIDE',10,'bold');
     text(131,22,'OUTSIDE',10,'bold');
 
-    // Values
-    text(INSIDE_TEMP[0], INSIDE_TEMP[1], `${data.inside_temp||'72.5'}° F`, 14, 'bold');
+    // Values: right-align degrees and unit
+    const numIn = `${data.inside_temp||'72.5'}`;
+    const deg = '°';
+    const unit = 'F';
+    ctx.font = `bold 22px "DM Mono", "Roboto Mono", monospace`;
+    const numWidth = ctx.measureText(numIn).width;
+    const numRight = 118;
+    const numX = numRight - numWidth;
+    text(numX, INSIDE_TEMP[1], numIn, 22, 'bold');
+    text(120, INSIDE_TEMP[1]+4, deg, 12);
+    text(126, INSIDE_TEMP[1]+4, unit, 12);
     text(INSIDE_RH[0], INSIDE_RH[1], `${data.inside_hum||'47'}% RH`, 10);
     text(INSIDE_TIME[0], INSIDE_TIME[1], data.time||'10:32', 10);
 
-    text(OUT_TEMP[0], OUT_TEMP[1], `${data.outside_temp||'68.4'}° F`, 14, 'bold');
+    const numOut = `${data.outside_temp||'68.4'}`;
+    const numW2 = ctx.measureText(numOut).width;
+    const numRight2 = 131+90;
+    const numX2 = numRight2 - numW2;
+    text(numX2, OUT_TEMP[1], numOut, 22, 'bold');
+    text(131+92, OUT_TEMP[1]+4, deg, 12);
+    text(131+98, OUT_TEMP[1]+4, unit, 12);
     text(OUT_RH[0], OUT_RH[1], `${data.outside_hum||'53'}% RH`, 10);
     const iconSelector = (data.moon_phase ? `moon_${(data.moon_phase||'').toLowerCase().replace(/\s+/g,'_')}` : (data.weather||'Cloudy'));
-    weatherIcon(OUT_ICON, iconSelector);
+    weatherIcon([OUT_ICON[0],OUT_ICON[1],OUT_ICON[0]+20,OUT_ICON[1]+20], iconSelector);
+    // condition text
+    text(OUT_COND[0], OUT_COND[1], (data.weather||'Cloudy'), 10);
 
-    const status = `IP ${data.ip||'192.168.1.42'}  Batt ${data.voltage||'4.01'}V ${data.percent||'76'}%  ~${data.days||'128'}d`;
+    const status = `IP ${data.ip||'192.168.1.42'}  |  Batt ${data.voltage||'4.01'}V ${data.percent||'76'}%  |  ~${data.days||'128'}d`;
     text(STATUS[0], STATUS[1], status, 10);
+
+    // partial window overlay
+    if (showWindows){
+      ctx.strokeStyle = '#aaa';
+      const rects = [HEADER_NAME, HEADER_TIME, INSIDE_TEMP, INSIDE_RH, INSIDE_TIME, OUT_TEMP, OUT_RH, [OUT_ICON[0],OUT_ICON[1],OUT_ICON[0]+20,OUT_ICON[1]+20], OUT_COND, STATUS];
+      rects.forEach(([x,y,w,h])=>{ ctx.strokeRect(x,y,w,h); });
+    }
   }
 
   async function load(){
@@ -178,6 +206,11 @@
     }catch(e){
       load();
     }
+  });
+  document.getElementById('showWindows').addEventListener('change', (e)=>{
+    showWindows = !!e.target.checked;
+    clear();
+    draw({});
   });
   load();
 })();

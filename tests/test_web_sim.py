@@ -53,8 +53,8 @@ def test_web_sim_basic_pixels():
                 r, g, b, a = _canvas_rgba(page, x, y)
                 assert (r, g, b) == (0, 0, 0)
 
-            # Header bar at y=5 should be black background
-            r, g, b, a = _canvas_rgba(page, 5, 5)
+            # Header underline at y=18 should be black
+            r, g, b, a = _canvas_rgba(page, 5, 18)
             assert (r, g, b) == (0, 0, 0)
 
             # Icon box should contain at least some non-white pixel

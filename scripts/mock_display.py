@@ -81,23 +81,30 @@ def draw_weather_icon(draw: ImageDraw.ImageDraw, box: tuple[int,int,int,int], we
 
 def draw_layout(draw: ImageDraw.ImageDraw, data: dict):
     # Regions
-    INSIDE_TEMP = (6, 38, 124, 64)
-    INSIDE_RH   = (6, 64, 124, 80)
-    INSIDE_TIME = (6, 78, 124, 92)
-    OUT_TEMP    = (131, 38, 220, 64)
-    OUT_RH      = (131, 64, 220, 80)
-    OUT_ICON    = (218, 22, 242, 46)
+    HEADER_NAME = (6, 2, 160, 14)
+    HEADER_TIME = (172, 2, 72, 14)
+
+    INSIDE_TEMP = (6, 36, 118, 64)
+    INSIDE_RH   = (6, 66, 118, 80)
+    INSIDE_TIME = (6, 82, 118, 94)
+    OUT_TEMP    = (131, 36, 221, 64)
+    OUT_RH      = (131, 66, 221, 80)
+    OUT_ICON    = (224, 22, 244, 42)
+    OUT_COND    = (131, 82, 244, 94)
     STATUS      = (6, 96, 244, 118)
 
     # Frame and header
     draw.rectangle([(0,0),(WIDTH-1,HEIGHT-1)], outline=0, width=1)
-    draw.rectangle([(1,1),(WIDTH-2,18)], fill=1, outline=0)
     font_hdr = load_font(12)
-    draw.text((4,4), data.get("room_name","Room"), font=font_hdr, fill=0)
+    draw.text((6,3), data.get("room_name","Room"), font=font_hdr, fill=0)
+    # Header rules
     # Column separator
     draw.line((125,18,125,95), fill=0, width=1)
     # Header underline
     draw.line((1,18,WIDTH-2,18), fill=0, width=1)
+    # Header right time
+    t = data.get('time','10:32')
+    draw.text((WIDTH-6- len(t)*6, 3), t, font=load_font(10), fill=0)
 
     # Section labels
     font_lbl = load_font(10)
@@ -107,16 +114,24 @@ def draw_layout(draw: ImageDraw.ImageDraw, data: dict):
     # Values
     font_big = load_font(14)
     font_sm = load_font(10)
-    draw.text((INSIDE_TEMP[0], INSIDE_TEMP[1]), f"{data.get('inside_temp','72.5')}° F", font=font_big, fill=0)
+    # right-align numeric, then small degree + unit to the right
+    num_in = str(data.get('inside_temp','72.5'))
+    draw.text((INSIDE_TEMP[2]-len(num_in)*6, INSIDE_TEMP[1]), num_in, font=font_big, fill=0)
+    draw.text((INSIDE_TEMP[2]+2, INSIDE_TEMP[1]+2), "°", font=load_font(10), fill=0)
+    draw.text((INSIDE_TEMP[2]+8, INSIDE_TEMP[1]+2), "F", font=load_font(10), fill=0)
     draw.text((INSIDE_RH[0], INSIDE_RH[1]), f"{data.get('inside_hum','47')}% RH", font=font_sm, fill=0)
     draw.text((INSIDE_TIME[0], INSIDE_TIME[1]), f"{data.get('time','10:32')}", font=font_sm, fill=0)
 
-    draw.text((OUT_TEMP[0], OUT_TEMP[1]), f"{data.get('outside_temp','68.4')}° F", font=font_big, fill=0)
+    num_out = str(data.get('outside_temp','68.4'))
+    draw.text((OUT_TEMP[2]-len(num_out)*6, OUT_TEMP[1]), num_out, font=font_big, fill=0)
+    draw.text((OUT_TEMP[2]+2, OUT_TEMP[1]+2), "°", font=load_font(10), fill=0)
+    draw.text((OUT_TEMP[2]+8, OUT_TEMP[1]+2), "F", font=load_font(10), fill=0)
     draw.text((OUT_RH[0], OUT_RH[1]), f"{data.get('outside_hum','53')}% RH", font=font_sm, fill=0)
     draw_weather_icon(draw, OUT_ICON, data.get('weather','Cloudy'))
+    draw.text((OUT_COND[0], OUT_COND[1]), data.get('weather','Cloudy'), font=font_sm, fill=0)
 
     # Status
-    status_text = f"IP {data.get('ip','192.168.1.42')}  Batt {data.get('voltage','4.01')}V {data.get('percent','76')}%  ~{data.get('days','128')}d"
+    status_text = f"IP {data.get('ip','192.168.1.42')}  |  Batt {data.get('voltage','4.01')}V {data.get('percent','76')}%  |  ~{data.get('days','128')}d"
     draw.text((STATUS[0], STATUS[1]), status_text, font=font_sm, fill=0)
 
 def render(data: dict) -> Image.Image:

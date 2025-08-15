@@ -8,14 +8,20 @@
 #define EINK_HEIGHT 122
 #endif
 
-// Partial update windows (x0, y0, x1, y1)
-static const int INSIDE_TEMP[4] = {6, 38, 124, 64};
-static const int INSIDE_RH[4]   = {6, 64, 124, 80};
-static const int INSIDE_TIME[4] = {6, 78, 124, 92};
-static const int OUT_TEMP[4]    = {131, 38, 220, 64};
-static const int OUT_RH[4]      = {131, 64, 220, 80};
-static const int OUT_ICON[4]    = {218, 22, 242, 46}; // 24x24
-static const int STATUS_[4]     = {6, 96, 244, 118};
+// Partial update windows (x, y, w, h) — 2px grid, non-overlapping
+static const int HEADER_NAME[4] = {  6,  2, 160, 14};
+static const int HEADER_TIME[4] = {172,  2,  72, 14};
+
+static const int INSIDE_TEMP[4] = {  6, 36, 118, 28};
+static const int INSIDE_RH[4]   = {  6, 66, 118, 14};
+static const int INSIDE_TIME[4] = {  6, 82, 118, 12};
+
+static const int OUT_TEMP[4]    = {131, 36,  90, 28};
+static const int OUT_RH[4]      = {131, 66,  90, 14};
+static const int OUT_ICON[4]    = {224, 22,  20, 20};
+static const int OUT_COND[4]    = {131, 82, 113, 12};
+
+static const int STATUS_[4]     = {  6, 96, 238, 20};
 
 enum WeatherIconId {
     ICON_CLEAR = 0,
