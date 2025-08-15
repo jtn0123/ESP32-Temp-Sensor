@@ -114,16 +114,16 @@ def draw_layout(draw: ImageDraw.ImageDraw, data: dict):
     # Values
     font_big = load_font(14)
     font_sm = load_font(10)
-    # right-align numeric, then small degree + unit to the right
+    # left-justify numeric, fixed units column right of box
     num_in = str(data.get('inside_temp','72.5'))
-    draw.text((INSIDE_TEMP[2]-len(num_in)*6, INSIDE_TEMP[1]), num_in, font=font_big, fill=0)
+    draw.text((INSIDE_TEMP[0], INSIDE_TEMP[1]), num_in, font=font_big, fill=0)
     draw.text((INSIDE_TEMP[2]+2, INSIDE_TEMP[1]+2), "°", font=load_font(10), fill=0)
     draw.text((INSIDE_TEMP[2]+8, INSIDE_TEMP[1]+2), "F", font=load_font(10), fill=0)
     draw.text((INSIDE_RH[0], INSIDE_RH[1]), f"{data.get('inside_hum','47')}% RH", font=font_sm, fill=0)
     draw.text((INSIDE_TIME[0], INSIDE_TIME[1]), f"{data.get('time','10:32')}", font=font_sm, fill=0)
 
     num_out = str(data.get('outside_temp','68.4'))
-    draw.text((OUT_TEMP[2]-len(num_out)*6, OUT_TEMP[1]), num_out, font=font_big, fill=0)
+    draw.text((OUT_TEMP[0], OUT_TEMP[1]), num_out, font=font_big, fill=0)
     draw.text((OUT_TEMP[2]+2, OUT_TEMP[1]+2), "°", font=load_font(10), fill=0)
     draw.text((OUT_TEMP[2]+8, OUT_TEMP[1]+2), "F", font=load_font(10), fill=0)
     draw.text((OUT_RH[0], OUT_RH[1]), f"{data.get('outside_hum','53')}% RH", font=font_sm, fill=0)

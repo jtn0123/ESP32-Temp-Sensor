@@ -147,20 +147,15 @@
     const deg = '°';
     const unit = 'F';
     ctx.font = `bold 22px "DM Mono", "Roboto Mono", monospace`;
-    const numWidth = ctx.measureText(numIn).width;
-    const numRight = INSIDE_TEMP[0] + INSIDE_TEMP[2];
-    const numX = numRight - numWidth;
-    text(numX, INSIDE_TEMP[1], numIn, 22, 'bold');
+    // Left-justify number; keep units column fixed for alignment
+    text(INSIDE_TEMP[0], INSIDE_TEMP[1], numIn, 22, 'bold');
     text(INSIDE_TEMP[0] + INSIDE_TEMP[2] + 2, INSIDE_TEMP[1]+4, deg, 12);
     text(INSIDE_TEMP[0] + INSIDE_TEMP[2] + 8, INSIDE_TEMP[1]+4, unit, 12);
     text(INSIDE_RH[0], INSIDE_RH[1], `${data.inside_hum||'47'}% RH`, 10);
     text(INSIDE_TIME[0], INSIDE_TIME[1], data.time||'10:32', 10);
 
     const numOut = `${data.outside_temp||'68.4'}`;
-    const numW2 = ctx.measureText(numOut).width;
-    const numRight2 = OUT_TEMP[0] + OUT_TEMP[2];
-    const numX2 = numRight2 - numW2;
-    text(numX2, OUT_TEMP[1], numOut, 22, 'bold');
+    text(OUT_TEMP[0], OUT_TEMP[1], numOut, 22, 'bold');
     text(OUT_TEMP[0] + OUT_TEMP[2] + 2, OUT_TEMP[1]+4, deg, 12);
     text(OUT_TEMP[0] + OUT_TEMP[2] + 8, OUT_TEMP[1]+4, unit, 12);
     text(OUT_RH[0], OUT_RH[1], `${data.outside_hum||'53'}% RH`, 10);

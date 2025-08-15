@@ -142,9 +142,7 @@ static void draw_values(const char* in_temp_f, const char* in_rh,
         const int16_t w = INSIDE_TEMP[2];
         const int16_t h = INSIDE_TEMP[3];
         display.setTextSize(2);
-        int16_t tw = text_width_default_font(in_temp_f, 2);
-        int16_t rx = x + w - 2 - tw;
-        display.setCursor(rx, y);
+        display.setCursor(x, y);
         display.print(in_temp_f);
         display.setTextSize(1);
         display.setCursor(x + w + 2, y + 4);
@@ -170,9 +168,7 @@ static void draw_values(const char* in_temp_f, const char* in_rh,
         const int16_t w = OUT_TEMP[2];
         const int16_t h = OUT_TEMP[3];
         display.setTextSize(2);
-        int16_t tw = text_width_default_font(out_temp_f, 2);
-        int16_t rx = x + w - 2 - tw;
-        display.setCursor(rx, y);
+        display.setCursor(x, y);
         display.print(out_temp_f);
         display.setTextSize(1);
         display.setCursor(x + w + 2, y + 4);
@@ -250,9 +246,7 @@ static void partial_update_inside_temp(const char* in_temp_f, char trend)
         display.fillScreen(GxEPD_WHITE);
         display.setTextColor(GxEPD_BLACK);
         display.setTextSize(2);
-        int16_t tw = text_width_default_font(in_temp_f, 2);
-        int16_t rx = x + w - 2 - tw;
-        display.setCursor(rx, y);
+        display.setCursor(x, y);
         display.print(in_temp_f);
         display.setTextSize(1);
         display.setCursor(x + w + 2, y + 4);
@@ -277,9 +271,7 @@ static void partial_update_outside_temp(const char* out_temp_f, char trend)
         display.fillScreen(GxEPD_WHITE);
         display.setTextColor(GxEPD_BLACK);
         display.setTextSize(2);
-        int16_t tw = text_width_default_font(out_temp_f, 2);
-        int16_t rx = x + w - 2 - tw;
-        display.setCursor(rx, y);
+        display.setCursor(x, y);
         display.print(out_temp_f);
         display.setTextSize(1);
         display.setCursor(x + w + 2, y + 4);
