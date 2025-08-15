@@ -15,7 +15,7 @@
 #define EINK_DC   10  // D10
 #endif
 #ifndef EINK_RST
-#define EINK_RST  8   // D8
+#define EINK_RST  -1  // not used; Wing auto-reset ties to Feather RESET
 #endif
 #ifndef EINK_BUSY
 #define EINK_BUSY 7   // D7
