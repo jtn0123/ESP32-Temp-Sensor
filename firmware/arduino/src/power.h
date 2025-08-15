@@ -3,6 +3,7 @@
 #include <Arduino.h>
 #include <esp_sleep.h>
 #include "generated_config.h"
+#include "config.h"
 
 struct BatteryStatus {
     float voltage = NAN;
@@ -12,22 +13,33 @@ struct BatteryStatus {
 
 inline BatteryStatus read_battery_status() {
     BatteryStatus b;
-    if (VBAT_ADC_PIN >= 0) {
+#if USE_MAX17048
+    // Optional MAX17048 fuel gauge via I2C
+    // Lazy include to avoid dependency unless enabled
+    #include <Adafruit_MAX1704X.h>
+    static Adafruit_MAX17048 maxfg;
+    static bool fg_init = false;
+    if (!fg_init) {
+        Wire.begin();
+        fg_init = maxfg.begin();
+    }
+    if (fg_init) {
+        b.voltage = maxfg.cellVoltage();
+        b.percent = (int)(maxfg.cellPercent() + 0.5f);
+    }
+#endif
+    if (!isfinite(b.voltage) && VBAT_ADC_PIN >= 0) {
         // Configure ADC once per wake (simple mode)
         analogReadResolution(12);
         uint16_t raw = analogRead(VBAT_ADC_PIN);
         float v = (raw / (float)ADC_MAX_COUNTS) * ADC_REF_V * VBAT_DIVIDER;
         b.voltage = v;
-    } else {
-        b.voltage = NAN;
     }
     // Rough SOC estimate from voltage (linear placeholder 3.3V→0%, 4.2V→100%)
-    if (isfinite(b.voltage)) {
+    if (b.percent < 0 && isfinite(b.voltage)) {
         float pct = (b.voltage - 3.3f) / (4.2f - 3.3f);
         if (pct < 0) pct = 0; if (pct > 1) pct = 1;
         b.percent = (int)(pct * 100.0f + 0.5f);
-    } else {
-        b.percent = -1;
     }
     // Days estimate from duty cycle
     // Average current ~ (active_current * active_fraction + sleep_current * sleep_fraction)
