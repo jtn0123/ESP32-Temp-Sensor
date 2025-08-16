@@ -17,9 +17,17 @@
   const canvas = document.getElementById('epd');
   const ctx = canvas.getContext('2d');
   canvas.style.imageRendering = 'pixelated';
+  ctx.imageSmoothingEnabled = false;
   let showWindows = false;
   let stressMode = false;
   let oneBitMode = true;
+
+  const FONT_STACK = 'Menlo, Consolas, "DM Mono", "Roboto Mono", monospace';
+  const SIZE_SMALL = 11; // bump to improve legibility
+  const SIZE_LABEL = 11;
+  const SIZE_TIME = 11;
+  const SIZE_BIG = 22;
+  const THRESH = 176;
 
   function clear(){
     ctx.fillStyle = '#fff';
@@ -29,7 +37,7 @@
 
   function text(x,y,str,size=10,weight='normal'){
     ctx.fillStyle = '#000';
-    ctx.font = `${weight} ${size}px "DM Mono", "Roboto Mono", monospace`;
+    ctx.font = `${weight} ${size}px ${FONT_STACK}`;
     ctx.textBaseline = 'top';
     ctx.fillText(str, x, y);
   }
@@ -135,28 +143,28 @@
     ctx.fillRect(125,18,1,77);
     // left name, right time
     ctx.fillStyle = '#000';
-    text(HEADER_NAME[0], HEADER_NAME[1]+1, data.room_name || 'Room',12,'bold');
+    text(HEADER_NAME[0], HEADER_NAME[1]+1, data.room_name || 'Room', 12, 'bold');
     const t = data.time || '10:32';
     const tw = ctx.measureText(t).width;
-    text(HEADER_TIME[0] + HEADER_TIME[2] - 2 - tw, HEADER_TIME[1]+1, t, 10);
+    text(HEADER_TIME[0] + HEADER_TIME[2] - 2 - tw, HEADER_TIME[1]+1, t, SIZE_TIME);
 
     // Labels
     ctx.fillStyle = '#000';
-    text(6,22,'INSIDE',10,'bold');
-    text(131,22,'OUTSIDE',10,'bold');
+    text(6,22,'INSIDE',SIZE_LABEL,'bold');
+    text(131,22,'OUTSIDE',SIZE_LABEL,'bold');
 
     // Values: right-align degrees and unit
     const numIn = `${data.inside_temp||'72.5'}`;
     const deg = '°';
     const unit = 'F';
-    ctx.font = `bold 22px "DM Mono", "Roboto Mono", monospace`;
+    ctx.font = `bold ${SIZE_BIG}px ${FONT_STACK}`;
     // Left-justify number; place degree and F immediately after the number
     text(INSIDE_TEMP[0], INSIDE_TEMP[1], numIn, 22, 'bold');
     const nwi = ctx.measureText(numIn).width;
     text(INSIDE_TEMP[0] + nwi + 2, INSIDE_TEMP[1]+4, deg, 12);
     text(INSIDE_TEMP[0] + nwi + 8, INSIDE_TEMP[1]+4, unit, 12);
-    text(INSIDE_RH[0], INSIDE_RH[1], `${data.inside_hum||'47'}% RH`, 10);
-    text(INSIDE_TIME[0], INSIDE_TIME[1], data.time||'10:32', 10);
+    text(INSIDE_RH[0], INSIDE_RH[1], `${data.inside_hum||'47'}% RH`, SIZE_SMALL);
+    text(INSIDE_TIME[0], INSIDE_TIME[1], data.time||'10:32', SIZE_SMALL);
 
     const numOut = `${data.outside_temp||'68.4'}`;
     text(OUT_TEMP[0], OUT_TEMP[1], numOut, 22, 'bold');
@@ -164,12 +172,12 @@
     text(OUT_TEMP[0] + nwo + 2, OUT_TEMP[1]+4, deg, 12);
     text(OUT_TEMP[0] + nwo + 8, OUT_TEMP[1]+4, unit, 12);
     // two-column lower info
-    text(OUT_ROW1_L[0], OUT_ROW1_L[1], (data.weather||'Cloudy'), 10);
-    text(OUT_ROW1_R[0], OUT_ROW1_R[1], `${data.outside_hum||'53'}% RH`, 10);
+    text(OUT_ROW1_L[0], OUT_ROW1_L[1], (data.weather||'Cloudy'), SIZE_SMALL);
+    text(OUT_ROW1_R[0], OUT_ROW1_R[1], `${data.outside_hum||'53'}% RH`, SIZE_SMALL);
     const wind = (data.wind || '4.2') + ' m/s';
-    text(OUT_ROW2_L[0], OUT_ROW2_L[1], wind, 10);
+    text(OUT_ROW2_L[0], OUT_ROW2_L[1], wind, SIZE_SMALL);
     const hilo = `H ${data.high||'75.0'}°  L ${data.low||'60.0'}°`;
-    text(OUT_ROW2_R[0], OUT_ROW2_R[1], hilo, 10);
+    text(OUT_ROW2_R[0], OUT_ROW2_R[1], hilo, SIZE_SMALL);
     const iconSelector = (data.moon_phase ? `moon_${(data.moon_phase||'').toLowerCase().replace(/\s+/g,'_')}` : (data.weather||'Cloudy'));
     weatherIcon([OUT_ICON[0],OUT_ICON[1],OUT_ICON[0]+OUT_ICON[2],OUT_ICON[1]+OUT_ICON[3]], iconSelector);
 
@@ -194,12 +202,22 @@
       ctx.fill();
     }
     // Left status (Batt and ETA) with separators; right-aligned IP
-    const left = `Batt ${data.voltage||'4.01'}V ${pct||76}%  |  ~${data.days||'128'}d`;
-    text(STATUS[0] + bw + 8, STATUS[1], left, 10);
+    let left = `Batt ${data.voltage||'4.01'}V ${pct||76}%  |  ~${data.days||'128'}d`;
+    let leftX = STATUS[0] + bw + 8;
     // Right-aligned IP
     const ip = `IP ${data.ip||'192.168.1.42'}`;
     const iw = ctx.measureText(ip).width;
-    text(STATUS[0] + STATUS[2] - 2 - iw, STATUS[1], ip, 10);
+    const ipX = STATUS[0] + STATUS[2] - 2 - iw;
+    // Clamp left text to avoid overlap with IP
+    const maxLeftWidth = ipX - leftX - 4;
+    if (ctx.measureText(left).width > maxLeftWidth) {
+      while (left.length > 0 && ctx.measureText(left + '…').width > maxLeftWidth) {
+        left = left.slice(0, -1);
+      }
+      left = left + '…';
+    }
+    text(leftX, STATUS[1], left, SIZE_SMALL);
+    text(ipX, STATUS[1], ip, SIZE_SMALL);
 
     // partial window overlay
     if (showWindows){
@@ -218,7 +236,7 @@
       for (let i=0;i<d.length;i+=4){
         const r=d[i], g=d[i+1], b=d[i+2];
         const y = 0.2126*r + 0.7152*g + 0.0722*b;
-        const v = y < 192 ? 0 : 255; // threshold tuned for legibility
+        const v = y < THRESH ? 0 : 255; // slightly lighter to reduce blotting
         d[i]=d[i+1]=d[i+2]=v;
         d[i+3]=255;
       }
