@@ -345,7 +345,8 @@
     ctx.fillRect(125, STATUS[1]-18, WIDTH-125-1, STATUS[3]+22);
     ctx.fillStyle = '#000';
     const pct = parseInt(data.percent||'76', 10);
-    const bx = STATUS[0] + 1, bw = 13, bh = 7;
+    let   bx = STATUS[0] + 1; // will be adjusted to center the whole battery group
+    const bw = 13, bh = 7;
     const baseY = STATUS[1] - 18;
     // horizontal rule above status
     ctx.fillStyle = '#000';
@@ -353,18 +354,29 @@
     ctx.fillStyle = '#000';
     // ensure center divider reaches bottom
     ctx.fillRect(125, 18, 1, HEIGHT-18-1);
+    // Compute centering for the entire battery group (icon + two text rows)
+    const line1 = `Batt ${data.voltage||'4.01'}V`;
+    const line2 = `~${data.days||'128'}d   ${pct}%`;
+    ctx.font = `${SIZE_STATUS}px ${FONT_STACK}`;
+    const textMaxW = Math.max(ctx.measureText(line1).width, ctx.measureText(line2).width);
+    const iconTotalW = bw + 2; // include the battery cap
+    const statusGap = 6; // space between icon and text (distinct from weather gap)
+    const groupW = iconTotalW + statusGap + textMaxW;
+    const leftColLeft = STATUS[0] + 1;
+    const leftColRight = 125 - 2;
+    const groupLeft = leftColLeft + Math.max(0, Math.floor((leftColRight - leftColLeft - groupW) / 2));
+    bx = groupLeft; // shift icon to center the whole group
+
     // Battery glyph (vertically centered between the two top status rows)
     const by = Math.round(baseY + 8 - bh/2);
     ctx.strokeStyle = '#000'; ctx.strokeRect(bx, by, bw, bh); ctx.fillStyle = '#000';
     ctx.fillRect(bx + bw, by + 2, 2, 4);
     const fillw3 = Math.max(0, Math.min(bw-2, Math.round((bw-2) * (pct/100)))); if (fillw3>0) ctx.fillRect(bx+1, by+1, fillw3, bh-2);
-    // Rows
-    const leftTextX = bx + bw + 6;
-    text(leftTextX, baseY-2, `Batt ${data.voltage||'4.01'}V`, SIZE_STATUS);
-    text(leftTextX, baseY+8, `~${data.days||'128'}d   ${pct}%`, SIZE_STATUS);
+    // Rows (positioned after centering calculation)
+    const leftTextX = bx + iconTotalW + statusGap;
+    text(leftTextX, baseY-2, line1, SIZE_STATUS);
+    text(leftTextX, baseY+8, line2, SIZE_STATUS);
     const ip = `IP ${data.ip||'192.168.1.42'}`; const iw = ctx.measureText(ip).width;
-    const leftColLeft = STATUS[0] + 1; // include battery icon area for centering
-    const leftColRight = 125 - 2;
     const ipAreaLeft = leftColLeft; const ipAreaRight = leftColRight;
     const ipCenterLeft = ipAreaLeft + Math.max(0, Math.floor((ipAreaRight - ipAreaLeft - iw) / 2));
     ctx.fillStyle = '#fff'; ctx.fillRect(ipAreaLeft-1, baseY+17, ipAreaRight-ipAreaLeft+2, SIZE_STATUS+2);
