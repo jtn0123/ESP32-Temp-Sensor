@@ -374,6 +374,8 @@
       ctx.fillStyle = '#000';
       ctx.fillRect(0, baseY - 2, WIDTH, 1);
       ctx.fillStyle = '#000';
+      // Re-draw the center divider after the clears so it reaches the bottom
+      ctx.fillRect(125, 18, 1, HEIGHT-18-1);
       // Battery glyph
       ctx.strokeStyle = '#000'; ctx.strokeRect(bx, baseY, bw, bh); ctx.fillStyle = '#000';
       ctx.fillRect(bx + bw, baseY + 2, 2, 4);
@@ -416,6 +418,8 @@
       weatherIcon([startX, barY, startX+iconW, barY+iconH], iconSelector);
       const labelTop = barY + Math.max(0, Math.floor((iconH - SIZE_SMALL)/2)) + 1; // drop by 1px optically
       text(startX + iconW + gap, labelTop, label, SIZE_SMALL);
+      // Ensure the divider is still visible on top (some icons may overlap)
+      ctx.fillRect(125, 18, 1, HEIGHT-18-1);
     } else if (mode === 'icon') {
       // icon-dominant: big icon area, shift outside label left edge to align with OUT_TEMP
       const ICON = [204, 50, 44, 44];
