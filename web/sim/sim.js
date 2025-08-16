@@ -54,8 +54,9 @@
     const rx = x + Math.max(0, Math.floor((numW - tw) / 2));
     text(rx, y, valueStr, SIZE_BIG, 'bold');
     // units drawn inside fixed strip on the right
-    text(x + (w - unitsW) + 1, y + 4, '°', 12);
-    text(x + (w - unitsW) + 7, y + 4, 'F', 12);
+    const unitY = y + (SIZE_BIG - 12); // align bottoms with big digits
+    text(x + (w - unitsW) + 1, unitY, '°', 12);
+    text(x + (w - unitsW) + 7, unitY, 'F', 12);
   }
 
   function rect(x0,y0,x1,y1){
