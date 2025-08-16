@@ -348,35 +348,26 @@
 
     // Battery glyph + status text with IP, voltage, percent, ETA days
     const pct = parseInt(data.percent||'76', 10);
-    const bx = STATUS[0];
-    const by = STATUS[1]; // moved down 1px for better centering
-    const bw = 13, bh = 7; // slightly smaller (~10%) for better balance
-    ctx.strokeStyle = '#000';
-    ctx.strokeRect(bx, by, bw, bh);
-    ctx.fillStyle = '#000';
-    ctx.fillRect(bx + bw, by + 2, 2, 4); // terminal
-    const fillw = Math.max(0, Math.min(bw-2, Math.round((bw-2) * (pct/100))));
-    if (fillw > 0) ctx.fillRect(bx+1, by+1, fillw, bh-2);
-    // Low-battery glyph if <20%
-    if (pct < 20) {
-      ctx.beginPath();
-      ctx.moveTo(bx + bw + 4, by + 1);
-      ctx.lineTo(bx + bw + 8, by + 5);
-      ctx.lineTo(bx + bw + 0, by + 5);
-      ctx.closePath();
-      ctx.fill();
-    }
-    // Left status (Batt and ETA) with separators; right-aligned IP
-    const days = `${data.days||'128'}`;
-    const voltageText = `${data.voltage||'4.01'}`;
-    const pctText = `${pct||76}%`;
-    const leftX = STATUS[0] + bw + 6;
-    const statusTextY = STATUS[1] - 1;
-    const ip = `IP ${data.ip||'192.168.1.42'}`;
-    ctx.font = `${SIZE_STATUS}px ${FONT_STACK}`;
-    const iw = ctx.measureText(ip).width;
-    const ipX = STATUS[0] + STATUS[2] - 2 - iw;
     if (mode !== 'split2') {
+      const bx = STATUS[0];
+      const by = STATUS[1]; // baseline
+      const bw = 13, bh = 7;
+      ctx.strokeStyle = '#000';
+      ctx.strokeRect(bx, by, bw, bh);
+      ctx.fillStyle = '#000';
+      ctx.fillRect(bx + bw, by + 2, 2, 4);
+      const fillw = Math.max(0, Math.min(bw-2, Math.round((bw-2) * (pct/100))));
+      if (fillw > 0) ctx.fillRect(bx+1, by+1, fillw, bh-2);
+      if (pct < 20) { ctx.beginPath(); ctx.moveTo(bx + bw + 4, by + 1); ctx.lineTo(bx + bw + 8, by + 5); ctx.lineTo(bx + bw + 0, by + 5); ctx.closePath(); ctx.fill(); }
+      const days = `${data.days||'128'}`;
+      const voltageText = `${data.voltage||'4.01'}`;
+      const pctText = `${pct||76}%`;
+      const leftX = STATUS[0] + bw + 6;
+      const statusTextY = STATUS[1] - 1;
+      const ip = `IP ${data.ip||'192.168.1.42'}`;
+      ctx.font = `${SIZE_STATUS}px ${FONT_STACK}`;
+      const iw = ctx.measureText(ip).width;
+      const ipX = STATUS[0] + STATUS[2] - 2 - iw;
       const maxLeftWidth = ipX - leftX - 2;
       const leftFull = `Batt ${voltageText}V ${pctText} | ~${days}d`;
       const leftNoBatt = `${voltageText}V ${pctText} | ~${days}d`;
