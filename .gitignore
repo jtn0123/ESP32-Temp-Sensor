@@ -3,6 +3,14 @@
 /out
 __pycache__/
 *.pyc
+# Python caches and tooling
+.pytest_cache/
+.mypy_cache/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+*.log
 # macOS
 .DS_Store
 
@@ -17,6 +25,7 @@ __pycache__/
 
 # ESPHome
 firmware/esphome/.esphome/
+firmware/esphome/secrets.yaml
 
 # Rust
 firmware/rust/target/
@@ -29,5 +38,9 @@ __pycache__/
 
 # Local config
 config/device.yaml
+firmware/arduino/src/generated_config.h
+
+# Golden test artifacts that may be generated locally per Pillow major version
+tests/golden_default_pil*.md5
 
 
