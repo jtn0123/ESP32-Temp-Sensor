@@ -347,7 +347,9 @@
       const pct = parseInt(data.percent||'76', 10);
       // Slight right inset for cleaner left margin and subtle vertical lift
       const bx = STATUS[0] + 1, bw = 13, bh = 7;
-      const baseY = STATUS[1] - 14; // sit 2px below divider with even row rhythm
+      // Lift the left stack so the IP row fits fully within 122px height
+      // baseY + 18 (IP row top) + 10 (font height) <= 122 → baseY <= 94
+      const baseY = STATUS[1] - 18; // 112-18 = 94
       // Battery glyph
       ctx.strokeStyle = '#000'; ctx.strokeRect(bx, baseY, bw, bh); ctx.fillStyle = '#000';
       ctx.fillRect(bx + bw, baseY + 2, 2, 4);
