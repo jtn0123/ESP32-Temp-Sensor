@@ -168,8 +168,11 @@
     }
   }
 
+  let lastData = {};
+
   function draw(data){
     console.log('[sim] draw()', data);
+    if (data && typeof data === 'object') lastData = data;
     clear();
     // Frame (crisp 1px border)
     ctx.fillStyle = '#000';
@@ -313,13 +316,14 @@
 
   async function load(){
     // Draw defaults immediately for instant feedback
-    draw({});
+    draw(lastData || {});
     try{
       const res = await fetch('sample_data.json');
       if(!res.ok) throw new Error('fetch failed');
       const data = await res.json();
       console.log('[sim] loaded sample_data.json');
-      draw(data);
+      lastData = data;
+      draw(lastData);
     } catch(e){
       console.warn('[sim] using defaults', e);
     }
@@ -352,7 +356,7 @@
   });
   document.getElementById('stressMode').addEventListener('change', (e)=>{
   const layoutSel = document.getElementById('layoutMode');
-  if (layoutSel){ layoutSel.addEventListener('change', ()=>{ clear(); draw({}); }); }
+  if (layoutSel){ layoutSel.addEventListener('change', ()=>{ clear(); draw(lastData); }); }
     stressMode = !!e.target.checked;
     // draw immediately with extreme values to reveal layout issues
     const stress = {
