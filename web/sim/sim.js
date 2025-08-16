@@ -323,6 +323,36 @@
       ctx.fillStyle = '#fff';
       ctx.fillRect(OUT_ROW2_L[0], OUT_ROW2_L[1]-1, OUT_ROW2_L[2], OUT_ROW2_L[3]+2);
       ctx.fillStyle = '#000';
+    } else if (mode === 'split3') {
+      // Three-row left status: row1 Batt V %, row2 ~days, row3 IP; right: taller weather area
+      ctx.fillStyle = '#000'; ctx.fillRect(125, 98, 119, 1); ctx.fillStyle = '#000';
+      const pct = parseInt(data.percent||'76', 10);
+      const bx = STATUS[0], bw = 13, bh = 7;
+      const baseY = STATUS[1] - 14; // shift up a bit to fit 3 rows comfortably
+      // Battery glyph
+      ctx.strokeStyle = '#000'; ctx.strokeRect(bx, baseY, bw, bh); ctx.fillStyle = '#000';
+      ctx.fillRect(bx + bw, baseY + 2, 2, 4);
+      const fillw = Math.max(0, Math.min(bw-2, Math.round((bw-2) * (pct/100)))); if (fillw>0) ctx.fillRect(bx+1, baseY+1, fillw, bh-2);
+      // Row 1: Batt V %
+      text(bx + bw + 6, baseY-2, `Batt ${data.voltage||'4.01'}V ${pct}%`, SIZE_STATUS);
+      // Row 2: ~days left-aligned within left column
+      text(bx + bw + 6, baseY+6, `~${data.days||'128'}d`, SIZE_STATUS);
+      // Row 3: IP right-aligned within left column
+      const ip = `IP ${data.ip||'192.168.1.42'}`; const iw = ctx.measureText(ip).width;
+      const leftColRight = 125 - 2; const ipLeft = Math.max(bx + bw + 6, leftColRight - iw);
+      text(ipLeft, baseY+14, ip, SIZE_STATUS);
+      // Right: larger icon + condition centered
+      const cond = shortConditionLabel(data.weather||'Cloudy');
+      // Allocate more height for icon
+      const barX = 130, barW = 114, iconW = 22, iconH = 22, gap = 8, barY = 96;
+      let label = cond; const maxTextW = barW - iconW - gap;
+      while (ctx.measureText(label).width > maxTextW && label.length > 1) label = label.slice(0,-1);
+      if (label !== cond && label.length>1) label = label.slice(0,-1)+'…';
+      const totalW = iconW + gap + ctx.measureText(label).width;
+      const startX = barX + Math.max(0, Math.floor((barW - totalW)/2));
+      const iconSelector = (data.moon_phase ? `moon_${(data.moon_phase||'').toLowerCase().replace(/\s+/g,'_')}` : (data.weather||'Cloudy'));
+      weatherIcon([startX, barY, startX+iconW, barY+iconH], iconSelector);
+      text(startX + iconW + gap, barY+2, label, SIZE_SMALL);
     } else if (mode === 'icon') {
       // icon-dominant: big icon area, shift outside label left edge to align with OUT_TEMP
       const ICON = [204, 50, 44, 44];
