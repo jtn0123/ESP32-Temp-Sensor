@@ -132,7 +132,10 @@ inline void ensure_mqtt_connected() {
     if (strlen(MQTT_HOST) == 0) return;
     g_mqtt.setServer(MQTT_HOST, MQTT_PORT);
     g_mqtt.setCallback(mqtt_callback);
-    String clientId = String("esp32-room-") + String((uint32_t)ESP.getEfuseMac(), HEX);
+    char clientId[40];
+    uint64_t mac = ESP.getEfuseMac();
+    // Use lower 24 bits
+    snprintf(clientId, sizeof(clientId), "esp32-room-%06x", (unsigned int)(mac & 0xFFFFFF));
     unsigned long start = millis();
     const char* user = nullptr;
     const char* pass = nullptr;
@@ -142,22 +145,27 @@ inline void ensure_mqtt_connected() {
     #ifdef MQTT_PASS
     if (strlen(MQTT_PASS) > 0) pass = MQTT_PASS;
     #endif
-    while (!g_mqtt.connect(clientId.c_str(), user, pass) && millis() - start < MQTT_CONNECT_TIMEOUT_MS) {
+    while (!g_mqtt.connect(clientId, user, pass) && millis() - start < MQTT_CONNECT_TIMEOUT_MS) {
         delay(200);
     }
     if (g_mqtt.connected()) {
-        String base = MQTT_SUB_BASE;
-        g_mqtt.subscribe((base + "/temp").c_str());
-        g_mqtt.subscribe((base + "/hum").c_str());
-        g_mqtt.subscribe((base + "/rh").c_str());
-        g_mqtt.subscribe((base + "/weather").c_str());
-        g_mqtt.subscribe((base + "/wind").c_str());
-        g_mqtt.subscribe((base + "/wind_mps").c_str());
-        g_mqtt.subscribe((base + "/wind_mph").c_str());
-        g_mqtt.subscribe((base + "/high").c_str());
-        g_mqtt.subscribe((base + "/hi").c_str());
-        g_mqtt.subscribe((base + "/low").c_str());
-        g_mqtt.subscribe((base + "/lo").c_str());
+        char topic[128];
+        const char* base = MQTT_SUB_BASE;
+        auto sub = [&](const char* suffix){
+            snprintf(topic, sizeof(topic), "%s%s", base, suffix);
+            g_mqtt.subscribe(topic);
+        };
+        sub("/temp");
+        sub("/hum");
+        sub("/rh");
+        sub("/weather");
+        sub("/wind");
+        sub("/wind_mps");
+        sub("/wind_mph");
+        sub("/high");
+        sub("/hi");
+        sub("/low");
+        sub("/lo");
     }
 }
 
@@ -191,12 +199,15 @@ inline OutsideReadings net_get_outside() { return g_outside; }
 
 inline void net_publish_inside(float tempC, float rhPct) {
     if (!g_mqtt.connected()) return;
-    String base = MQTT_PUB_BASE;
-    char buf[32];
-    dtostrf(tempC, 0, 2, buf);
-    g_mqtt.publish((base + "/inside/temp").c_str(), buf, true);
-    dtostrf(rhPct, 0, 0, buf);
-    g_mqtt.publish((base + "/inside/hum").c_str(), buf, true);
+    char topic[128];
+    char payload[32];
+    const char* base = MQTT_PUB_BASE;
+    snprintf(topic, sizeof(topic), "%s/inside/temp", base);
+    dtostrf(tempC, 0, 2, payload);
+    g_mqtt.publish(topic, payload, true);
+    snprintf(topic, sizeof(topic), "%s/inside/hum", base);
+    dtostrf(rhPct, 0, 0, payload);
+    g_mqtt.publish(topic, payload, true);
 }
 
 
