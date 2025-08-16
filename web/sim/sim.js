@@ -10,7 +10,8 @@
   const OUT_ICON    = [210, 66,  28, 28];
   // Move outside non-temp rows up by one row (12px) to close white space
   const OUT_ROW1_L  = [131, 66,  44, 12]; // top row: outside RH
-  const OUT_ROW1_R  = [177, 66,  44, 12]; // top row: wind mph
+  // widen right-top box so "99.9 mph" never truncates
+  const OUT_ROW1_R  = [177, 66,  64, 12]; // top row: wind mph (widened)
   const OUT_ROW2_L  = [131, 84,  44, 12]; // bottom row: condition (spaced)
   const OUT_ROW2_R  = [177, 84,  44, 12]; // bottom row: reserved (H/L)
   const STATUS      = [  6, 112, 238, 10];
@@ -267,7 +268,11 @@
     const wind = `${(windMps*2.237).toFixed(1)} mph`;
     // Left/right small rows within clipped boxes to prevent overlap
     drawTextInRect(OUT_ROW1_L, rhText, SIZE_SMALL, 'normal', 'left', 1);
-    drawTextInRect(OUT_ROW1_R, wind, SIZE_SMALL, 'normal', 'right', 1);
+    // keep wind fully readable; prefer full text over ellipsis
+    ctx.font = `${SIZE_SMALL}px ${FONT_STACK}`;
+    const wBox = OUT_ROW1_R; const needed = ctx.measureText(wind).width + 2;
+    const windRect = [wBox[0], wBox[1], Math.max(wBox[2], needed), wBox[3]];
+    drawTextInRect(windRect, wind, SIZE_SMALL, 'normal', 'right', 1);
     const mode = (document.getElementById('layoutMode')||{value:'classic'}).value;
     if (mode === 'banner') {
       // Full-height right banner for weather: large icon + condition stacked

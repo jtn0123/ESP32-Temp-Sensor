@@ -23,7 +23,7 @@ static constexpr int OUT_ICON[4]    = {224, 58,  24, 24};
 // moved up by 12 px to close space
 // Align outside RH/wind with inside RH row; put condition below; move icon down
 static constexpr int OUT_ROW1_L[4]  = {131, 66,  44, 12}; // outside RH
-static constexpr int OUT_ROW1_R[4]  = {177, 66,  44, 12}; // wind mph
+static constexpr int OUT_ROW1_R[4]  = {177, 66,  64, 12}; // wind mph (wider to fit "mph")
 static constexpr int OUT_ROW2_L[4]  = {131, 78,  44, 12}; // condition
 static constexpr int OUT_ROW2_R[4]  = {177, 78,  44, 12}; // reserved (H/L)
 
