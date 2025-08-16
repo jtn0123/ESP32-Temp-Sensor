@@ -17,6 +17,15 @@ mqtt:
 wifi:
   ssid: YOUR_SSID
   password: YOUR_PASS
+  # Optional: improve connect speed and stability
+  # static:
+  #   ip: 192.168.1.50
+  #   gateway: 192.168.1.1
+  #   subnet: 255.255.255.0
+  #   dns1: 1.1.1.1
+  #   dns2: 8.8.8.8
+  # bssid: "aa:bb:cc:dd:ee:ff"  # AP MAC to fast connect
+  # channel: 6                   # AP channel to fast connect
 thresholds:
   temp_degC: 0.1
   rh_pct: 1

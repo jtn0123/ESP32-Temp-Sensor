@@ -29,6 +29,14 @@ RTC_DATA_ATTR static uint16_t partial_counter = 0;
 RTC_DATA_ATTR static float last_inside_f = NAN;
 RTC_DATA_ATTR static float last_outside_f = NAN;
 RTC_DATA_ATTR static float last_outside_rh = NAN;
+RTC_DATA_ATTR static int32_t last_icon_id = -1;
+RTC_DATA_ATTR static float last_published_inside_tempC = NAN;
+RTC_DATA_ATTR static float last_published_inside_rh = NAN;
+RTC_DATA_ATTR static uint32_t last_status_crc = 0;
+
+static constexpr float THRESH_TEMP_F = 0.2f; // redraw/publish threshold in F
+static constexpr float THRESH_TEMP_C_FROM_F = THRESH_TEMP_F / 1.8f; // ~0.111C
+static constexpr float THRESH_RH = 1.0f; // percent
 
 static void pump_network_ms(uint32_t duration_ms)
 {
@@ -68,6 +76,106 @@ static inline int16_t text_width_default_font(const char* s, uint8_t size)
     return count * 6 * size;
 }
 
+// Forward declaration for status drawing used by maybe_redraw_status
+static void draw_status_line(const BatteryStatus& bs, const String& ip);
+
+template<typename DrawFn>
+static inline void draw_in_region(const int rect[4], DrawFn drawFn)
+{
+    const int16_t x = rect[0];
+    const int16_t y = rect[1];
+    const int16_t w = rect[2];
+    const int16_t h = rect[3];
+    display.setPartialWindow(x, y, w, h);
+    display.firstPage();
+    do {
+        display.fillScreen(GxEPD_WHITE);
+        drawFn(x, y, w, h);
+    } while (display.nextPage());
+}
+
+static inline void draw_right_aligned_text_in_rect(const int rect[4], const char* text, uint8_t textSize, int16_t paddingRight, int16_t baselineOffset)
+{
+    draw_in_region(rect, [&](int16_t x, int16_t y, int16_t w, int16_t h){
+        display.setTextColor(GxEPD_BLACK);
+        display.setTextSize(textSize);
+        int16_t tw = text_width_default_font(text, textSize);
+        int16_t rx = x + w - paddingRight - tw;
+        int16_t by = y + h - baselineOffset;
+        display.setCursor(rx, by);
+        display.print(text);
+    });
+}
+
+static inline void draw_temp_number_and_units(const int rect[4], const char* temp_f)
+{
+    // Reserve a small units strip on the right so units do not shift as number width changes
+    const int16_t units_w = 14; // pixels
+    int num_rect[4] = { rect[0], rect[1], rect[2] - units_w, rect[3] };
+    int units_rect[4] = { rect[0] + rect[2] - units_w, rect[1], units_w, rect[3] };
+
+    // Right-align numeric in its sub-rect
+    draw_right_aligned_text_in_rect(num_rect, temp_f, 2, 2, 4);
+
+    // Draw degree symbol and F in small font inside the units sub-rect
+    draw_in_region(units_rect, [&](int16_t x, int16_t y, int16_t w, int16_t h){
+        display.setTextColor(GxEPD_BLACK);
+        display.setTextSize(1);
+        int16_t by = y + h - 4;
+        display.setCursor(x + 1, by);
+        display.print("\xF8");
+        display.setCursor(x + 7, by);
+        display.print("F");
+    });
+}
+
+static inline uint32_t fast_crc32(const uint8_t* data, size_t len)
+{
+    // Tiny CRC32 (polynomial 0xEDB88320), suitable for short status strings
+    uint32_t crc = 0xFFFFFFFFu;
+    for (size_t i = 0; i < len; ++i) {
+        uint32_t byte = data[i];
+        crc ^= byte;
+        for (int k = 0; k < 8; ++k) {
+            uint32_t mask = -(crc & 1u);
+            crc = (crc >> 1) ^ (0xEDB88320u & mask);
+        }
+    }
+    return ~crc;
+}
+
+static inline bool maybe_redraw_float(float current, float& last, float threshold, void (*drawFn)())
+{
+    if (isnan(current)) return false;
+    if (!isfinite(last) || fabsf(current - last) >= threshold) {
+        drawFn();
+        last = current;
+        return true;
+    }
+    return false;
+}
+
+template<typename DrawFn>
+static inline bool maybe_redraw_bool(bool shouldDraw, DrawFn drawFn)
+{
+    if (shouldDraw) { drawFn(); return true; }
+    return false;
+}
+
+static inline bool maybe_redraw_status(const BatteryStatus& bs, const String& ip, const int rect[4])
+{
+    char buf[96];
+    snprintf(buf, sizeof(buf), "IP %s  Batt %.2fV %d%%  ~%dd",
+             ip.c_str(), bs.voltage, bs.percent, bs.estimatedDays);
+    uint32_t crc = fast_crc32((const uint8_t*)buf, strlen(buf));
+    if (crc != last_status_crc) {
+        draw_status_line(bs, ip);
+        last_status_crc = crc;
+        return true;
+    }
+    return false;
+}
+
 static String make_short_condition(const String& weather)
 {
     String s = weather;
@@ -91,18 +199,15 @@ static void draw_header_time(const char* time_str)
     const int16_t y = HEADER_TIME[1];
     const int16_t w = HEADER_TIME[2];
     const int16_t h = HEADER_TIME[3];
-    display.setPartialWindow(x, y, w, h);
-    display.firstPage();
-    do {
-        display.fillScreen(GxEPD_WHITE);
+    draw_in_region(HEADER_TIME, [&](int16_t xx, int16_t yy, int16_t ww, int16_t hh){
         display.setTextColor(GxEPD_BLACK);
         display.setTextSize(1);
         int16_t tw = text_width_default_font(time_str, 1);
-        int16_t rx = x + w - 2 - tw;
-        int16_t by = y + h - 2; // baseline
+        int16_t rx = xx + ww - 2 - tw;
+        int16_t by = yy + hh - 2; // baseline
         display.setCursor(rx, by);
         display.print(time_str);
-    } while (display.nextPage());
+    });
 }
 
 static void draw_status_line(const BatteryStatus& bs, const String& ip)
@@ -111,18 +216,15 @@ static void draw_status_line(const BatteryStatus& bs, const String& ip)
     const int16_t y = STATUS_[1];
     const int16_t w = STATUS_[2];
     const int16_t h = STATUS_[3];
-    display.setPartialWindow(x, y, w, h);
-    display.firstPage();
-    do {
-        display.fillScreen(GxEPD_WHITE);
+    draw_in_region(STATUS_, [&](int16_t xx, int16_t yy, int16_t ww, int16_t hh){
         display.setTextColor(GxEPD_BLACK);
         display.setTextSize(1);
-        int16_t cx = x + 2;
-        int16_t cy = y + h - 4;
+        int16_t cx = xx + 2;
+        int16_t cy = yy + hh - 4;
         // Low battery cue: draw battery if percent known
         if (bs.percent >= 0) {
             int16_t bx = cx;
-            int16_t by = y + 1; // nudge up 1px to center
+            int16_t by = yy + 1; // nudge up 1px to center
             int16_t bw = 13;
             int16_t bh = 7;
             display.drawRect(bx, by, bw, bh, GxEPD_BLACK);
@@ -142,7 +244,7 @@ static void draw_status_line(const BatteryStatus& bs, const String& ip)
         char right[48];
         snprintf(right, sizeof(right), "IP %s", ip.c_str());
         int16_t tw = text_width_default_font(right, 1);
-        int16_t rx = x + w - 2 - tw;
+        int16_t rx = xx + ww - 2 - tw;
         // Choose which left label to print based on available width
         int16_t available = rx - cx - 2;
         const char* to_print = left_full;
@@ -163,7 +265,7 @@ static void draw_status_line(const BatteryStatus& bs, const String& ip)
         display.print(to_print);
         display.setCursor(rx, cy);
         display.print(right);
-    } while (display.nextPage());
+    });
 }
 
 static void draw_values(const char* in_temp_f, const char* in_rh,
@@ -172,23 +274,8 @@ static void draw_values(const char* in_temp_f, const char* in_rh,
                         const char* status)
 {
     display.setTextColor(GxEPD_BLACK);
-    // Inside temp big, right-aligned, degree+F small to the right
-    {
-        const int16_t x = INSIDE_TEMP[0];
-        const int16_t y = INSIDE_TEMP[1];
-        const int16_t w = INSIDE_TEMP[2];
-        const int16_t h = INSIDE_TEMP[3];
-        display.setTextSize(2);
-        display.setCursor(x, y);
-        display.print(in_temp_f);
-        // measure width using default font approximation (6 px per char at size 1, doubled for size 2)
-        int16_t tw2 = text_width_default_font(in_temp_f, 2);
-        display.setTextSize(1);
-        display.setCursor(x + tw2 + 2, y + 4);
-        display.print("\xF8");
-        display.setCursor(x + tw2 + 8, y + 4);
-        display.print("F");
-    }
+    // Inside temp: numeric right-aligned, units drawn separately
+    draw_temp_number_and_units(INSIDE_TEMP, in_temp_f);
 
     // Inside RH
     display.setTextSize(1);
@@ -198,22 +285,8 @@ static void draw_values(const char* in_temp_f, const char* in_rh,
 
     // No duplicate inside time; header time is drawn by draw_header_time
 
-    // Outside temp big, right-aligned, degree+F small to the right
-    {
-        const int16_t x = OUT_TEMP[0];
-        const int16_t y = OUT_TEMP[1];
-        const int16_t w = OUT_TEMP[2];
-        const int16_t h = OUT_TEMP[3];
-        display.setTextSize(2);
-        display.setCursor(x, y);
-        display.print(out_temp_f);
-        int16_t tw2b = text_width_default_font(out_temp_f, 2);
-        display.setTextSize(1);
-        display.setCursor(x + tw2b + 2, y + 4);
-        display.print("\xF8");
-        display.setCursor(x + tw2b + 8, y + 4);
-        display.print("F");
-    }
+    // Outside temp: numeric right-aligned, units drawn separately
+    draw_temp_number_and_units(OUT_TEMP, out_temp_f);
 
     // Other fields (condition, RH, wind) drawn with their partial updaters
 
@@ -260,14 +333,38 @@ static void full_refresh()
         OutsideReadings o = net_get_outside();
         char out_temp[16];
         char out_rh[16];
-        snprintf(out_temp, sizeof(out_temp), (o.validTemp && isfinite(o.temperatureC)) ? "%.1f" : "--", o.temperatureC * 9.0/5.0 + 32.0);
-        snprintf(out_rh, sizeof(out_rh), (o.validHum && isfinite(o.humidityPct)) ? "%.0f" : "--", o.humidityPct);
+        if (o.validTemp && isfinite(o.temperatureC)) {
+            snprintf(out_temp, sizeof(out_temp), "%.1f", o.temperatureC * 9.0/5.0 + 32.0);
+        } else if (isfinite(last_outside_f)) {
+            snprintf(out_temp, sizeof(out_temp), "%.1f", last_outside_f);
+        } else {
+            snprintf(out_temp, sizeof(out_temp), "--");
+        }
+        if (o.validHum && isfinite(o.humidityPct)) {
+            snprintf(out_rh, sizeof(out_rh), "%.0f", o.humidityPct);
+        } else if (isfinite(last_outside_rh)) {
+            snprintf(out_rh, sizeof(out_rh), "%.0f", last_outside_rh);
+        } else {
+            snprintf(out_rh, sizeof(out_rh), "--");
+        }
         BatteryStatus bs = read_battery_status();
         char status[64];
         snprintf(status, sizeof(status), "IP %s  Batt %.2fV %d%%  ~%dd",
                  net_ip().c_str(), bs.voltage, bs.percent, bs.estimatedDays);
         draw_values(in_temp, in_rh, out_temp, out_rh, "", status);
-        draw_weather_icon_region(o.weather);
+        if (o.validWeather) {
+            draw_weather_icon_region(o.weather);
+            last_icon_id = (int32_t)map_weather_to_icon(o.weather);
+        } else if (last_icon_id >= 0) {
+            // Draw last known icon
+            int16_t x = OUT_ICON[0];
+            int16_t y = OUT_ICON[1];
+            int16_t w = OUT_ICON[2];
+            int16_t h = OUT_ICON[3];
+            int16_t ix = x + (w - ICON_W) / 2;
+            int16_t iy = y + (h - ICON_H) / 2;
+            draw_icon(display, ix, iy, (IconId)last_icon_id, GxEPD_BLACK);
+        }
         // Outside condition short token (left-top)
         if (o.validWeather) {
             String sc = make_short_condition(o.weather);
@@ -277,7 +374,7 @@ static void full_refresh()
             display.print(sc);
         }
         // Outside RH (left-bottom)
-        if (o.validHum) {
+        if (o.validHum || isfinite(last_outside_rh)) {
             display.setTextColor(GxEPD_BLACK);
             display.setTextSize(1);
             display.setCursor(OUT_ROW2_L[0], OUT_ROW2_L[1]);
@@ -299,117 +396,93 @@ static void full_refresh()
 
 static void partial_update_inside_temp(const char* in_temp_f, char trend)
 {
-    const int16_t x = INSIDE_TEMP[0];
-    const int16_t y = INSIDE_TEMP[1];
-    const int16_t w = INSIDE_TEMP[2];
-    const int16_t h = INSIDE_TEMP[3];
-    display.setPartialWindow(x, y, w, h);
-    display.firstPage();
-    do {
-        display.fillScreen(GxEPD_WHITE);
+    draw_in_region(INSIDE_TEMP, [&](int16_t x, int16_t y, int16_t w, int16_t h){
+        // Numeric + units split: redraw both sub-rects from this region pass
+        // Numeric
+        const int16_t units_w = 14;
+        int num_rect[4] = { x, y, w - units_w, h };
+        int units_rect[4] = { x + w - units_w, y, units_w, h };
+        // numeric
         display.setTextColor(GxEPD_BLACK);
         display.setTextSize(2);
-        display.setCursor(x, y);
-        display.print(in_temp_f);
         int16_t tw2 = text_width_default_font(in_temp_f, 2);
+        int16_t rx = num_rect[0] + num_rect[2] - 2 - tw2;
+        int16_t by = num_rect[1] + num_rect[3] - 4;
+        display.setCursor(rx, by);
+        display.print(in_temp_f);
+        // units
         display.setTextSize(1);
-        display.setCursor(x + tw2 + 2, y + 4);
+        int16_t uby = units_rect[1] + units_rect[3] - 4;
+        display.setCursor(units_rect[0] + 1, uby);
         display.print("\xF8");
-        display.setCursor(x + tw2 + 8, y + 4);
+        display.setCursor(units_rect[0] + 7, uby);
         display.print("F");
         // Trend arrow/simple indicator at left
         if (trend == '+') { display.setCursor(x + 2, y); display.print("^"); }
         else if (trend == '-') { display.setCursor(x + 2, y); display.print("v"); }
-    } while (display.nextPage());
+    });
 }
 
 static void partial_update_outside_temp(const char* out_temp_f, char trend)
 {
-    const int16_t x = OUT_TEMP[0];
-    const int16_t y = OUT_TEMP[1];
-    const int16_t w = OUT_TEMP[2];
-    const int16_t h = OUT_TEMP[3];
-    display.setPartialWindow(x, y, w, h);
-    display.firstPage();
-    do {
-        display.fillScreen(GxEPD_WHITE);
+    draw_in_region(OUT_TEMP, [&](int16_t x, int16_t y, int16_t w, int16_t h){
+        const int16_t units_w = 14;
+        int num_rect[4] = { x, y, w - units_w, h };
+        int units_rect[4] = { x + w - units_w, y, units_w, h };
         display.setTextColor(GxEPD_BLACK);
         display.setTextSize(2);
-        display.setCursor(x, y);
-        display.print(out_temp_f);
         int16_t tw2b = text_width_default_font(out_temp_f, 2);
+        int16_t rx = num_rect[0] + num_rect[2] - 2 - tw2b;
+        int16_t by = num_rect[1] + num_rect[3] - 4;
+        display.setCursor(rx, by);
+        display.print(out_temp_f);
         display.setTextSize(1);
-        display.setCursor(x + tw2b + 2, y + 4);
+        int16_t uby = units_rect[1] + units_rect[3] - 4;
+        display.setCursor(units_rect[0] + 1, uby);
         display.print("\xF8");
-        display.setCursor(x + tw2b + 8, y + 4);
+        display.setCursor(units_rect[0] + 7, uby);
         display.print("F");
         if (trend == '+') { display.setCursor(x + 2, y); display.print("^"); }
         else if (trend == '-') { display.setCursor(x + 2, y); display.print("v"); }
-    } while (display.nextPage());
+    });
 }
 
 static void partial_update_outside_rh(const char* out_rh)
 {
-    const int16_t x = OUT_ROW2_L[0];
-    const int16_t y = OUT_ROW2_L[1];
-    const int16_t w = OUT_ROW2_L[2];
-    const int16_t h = OUT_ROW2_L[3];
-    display.setPartialWindow(x, y, w, h);
-    display.firstPage();
-    do {
-        display.fillScreen(GxEPD_WHITE);
+    draw_in_region(OUT_ROW2_L, [&](int16_t x, int16_t y, int16_t w, int16_t h){
         display.setTextColor(GxEPD_BLACK);
         display.setTextSize(1);
         display.setCursor(x, y);
         display.print(out_rh);
         display.print("% RH");
-    } while (display.nextPage());
+    });
 }
 
 static void partial_update_weather_icon(const String& weather)
 {
-    const int16_t w = OUT_ICON[2];
-    const int16_t h = OUT_ICON[3];
-    display.setPartialWindow(OUT_ICON[0], OUT_ICON[1], w, h);
-    display.firstPage();
-    do {
-        display.fillScreen(GxEPD_WHITE);
+    draw_in_region(OUT_ICON, [&](int16_t, int16_t, int16_t, int16_t){
         draw_weather_icon_region(weather);
-    } while (display.nextPage());
+    });
 }
 
 static void partial_update_outside_wind(const char* wind_str)
 {
-    const int16_t x = OUT_ROW2_R[0];
-    const int16_t y = OUT_ROW2_R[1];
-    const int16_t w = OUT_ROW2_R[2];
-    const int16_t h = OUT_ROW2_R[3];
-    display.setPartialWindow(x, y, w, h);
-    display.firstPage();
-    do {
-        display.fillScreen(GxEPD_WHITE);
+    draw_in_region(OUT_ROW2_R, [&](int16_t x, int16_t y, int16_t, int16_t){
         display.setTextColor(GxEPD_BLACK);
         display.setTextSize(1);
         display.setCursor(x, y);
         display.print(wind_str);
-    } while (display.nextPage());
+    });
 }
 
 static void partial_update_outside_condition(const char* short_condition)
 {
-    const int16_t x = OUT_ROW1_L[0];
-    const int16_t y = OUT_ROW1_L[1];
-    const int16_t w = OUT_ROW1_L[2];
-    const int16_t h = OUT_ROW1_L[3];
-    display.setPartialWindow(x, y, w, h);
-    display.firstPage();
-    do {
-        display.fillScreen(GxEPD_WHITE);
+    draw_in_region(OUT_ROW1_L, [&](int16_t x, int16_t y, int16_t, int16_t){
         display.setTextColor(GxEPD_BLACK);
         display.setTextSize(1);
         display.setCursor(x, y);
         display.print(short_condition);
-    } while (display.nextPage());
+    });
 }
 
 static void partial_update_outside_hilo(float highC, float lowC)
@@ -443,7 +516,7 @@ void setup() {
     display.init(0);
     display.setRotation(1); // landscape 250x122 coordinate system
     net_begin();
-    pump_network_ms(800); // allow retained MQTT to arrive
+    pump_network_ms(800); // allow retained MQTT to arrive quickly
 
     bool do_full = false;
     if (partial_counter == 0) {
@@ -466,12 +539,22 @@ void setup() {
         float now_in_f = isfinite(r.temperatureC) ? (r.temperatureC * 9.0f/5.0f + 32.0f) : NAN;
         if (isfinite(now_in_f) && isfinite(last_inside_f)) {
             float d = now_in_f - last_inside_f;
-            if (d >= 0.3f) trend_in = '+'; else if (d <= -0.3f) trend_in = '-';
+            if (d >= THRESH_TEMP_F) trend_in = '+'; else if (d <= -THRESH_TEMP_F) trend_in = '-';
         }
-        partial_update_inside_temp(in_temp, trend_in);
-        if (isfinite(now_in_f)) last_inside_f = now_in_f;
+        // Only redraw inside temp when changed beyond threshold
+        if (!isfinite(last_inside_f) || fabsf(now_in_f - last_inside_f) >= THRESH_TEMP_F) {
+            partial_update_inside_temp(in_temp, trend_in);
+            if (isfinite(now_in_f)) last_inside_f = now_in_f;
+        }
+        // Publish only when changed beyond thresholds
         if (isfinite(r.temperatureC) && isfinite(r.humidityPct)) {
-            net_publish_inside(r.temperatureC, r.humidityPct);
+            bool temp_changed = (!isfinite(last_published_inside_tempC)) || fabsf(r.temperatureC - last_published_inside_tempC) >= THRESH_TEMP_C_FROM_F;
+            bool rh_changed = (!isfinite(last_published_inside_rh)) || fabsf(r.humidityPct - last_published_inside_rh) >= THRESH_RH;
+            if (temp_changed || rh_changed) {
+                net_publish_inside(r.temperatureC, r.humidityPct);
+                last_published_inside_tempC = r.temperatureC;
+                last_published_inside_rh = r.humidityPct;
+            }
         }
 
         OutsideReadings o = net_get_outside();
@@ -482,9 +565,9 @@ void setup() {
             float now_out_f = o.temperatureC * 9.0f/5.0f + 32.0f;
             if (isfinite(last_outside_f)) {
                 float d = now_out_f - last_outside_f;
-                if (d >= 0.3f) trend_out = '+'; else if (d <= -0.3f) trend_out = '-';
+                if (d >= THRESH_TEMP_F) trend_out = '+'; else if (d <= -THRESH_TEMP_F) trend_out = '-';
             }
-            if (!isfinite(last_outside_f) || fabs(o.temperatureC - (last_outside_f - 32.0f) * 5.0f/9.0f) >= THRESH_TEMP_C) {
+            if (!isfinite(last_outside_f) || fabs(o.temperatureC - (last_outside_f - 32.0f) * 5.0f/9.0f) >= THRESH_TEMP_C_FROM_F) {
                 partial_update_outside_temp(out_temp, trend_out);
                 last_outside_f = now_out_f;
             }
@@ -492,13 +575,17 @@ void setup() {
         if (o.validHum) {
             char out_rh[16];
             snprintf(out_rh, sizeof(out_rh), "%.0f", o.humidityPct);
-            if (!isfinite(last_outside_rh) || fabs(o.humidityPct - last_outside_rh) >= THRESH_RH_PCT) {
+            if (!isfinite(last_outside_rh) || fabs(o.humidityPct - last_outside_rh) >= THRESH_RH) {
                 partial_update_outside_rh(out_rh);
                 last_outside_rh = o.humidityPct;
             }
         }
         if (o.validWeather) {
-            partial_update_weather_icon(o.weather);
+            IconId id = map_weather_to_icon(o.weather);
+            if (last_icon_id != (int32_t)id) {
+                partial_update_weather_icon(o.weather);
+                last_icon_id = (int32_t)id;
+            }
             String sc = make_short_condition(o.weather);
             partial_update_outside_condition(sc.c_str());
         }
@@ -509,10 +596,10 @@ void setup() {
             partial_update_outside_wind(ws);
         }
         // H/L omitted to avoid overlap with wind in right-bottom
-        // Update header time and status every wake
+        // Update header time and status every wake (status only if changed)
         draw_header_time("10:32");
         BatteryStatus bs = read_battery_status();
-        draw_status_line(bs, net_ip());
+        maybe_redraw_status(bs, net_ip(), STATUS_);
     }
 
     partial_counter++;

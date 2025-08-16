@@ -61,6 +61,9 @@ def main():
     base_topics = mqtt.get('base_topics', {})
     wifi_ssid = wifi.get('ssid', '')
     wifi_pass = wifi.get('password', '')
+    wifi_static = wifi.get('static', {}) or {}
+    wifi_bssid = str(wifi.get('bssid', '') or '')
+    wifi_channel = wifi.get('channel', None)
     mqtt_host = mqtt.get('host', '')
     mqtt_port = int(mqtt.get('port', 1883) or 1883)
     mqtt_user = str(mqtt.get('user', '') or '')
@@ -94,6 +97,29 @@ def main():
         f.write(f'#define OUTSIDE_SOURCE {c_string(outside_source)}\n')
         f.write(f'#define WIFI_SSID {c_string(wifi_ssid)}\n')
         f.write(f'#define WIFI_PASS {c_string(wifi_pass)}\n')
+        # Optional Wi-Fi static IP config
+        sip = str(wifi_static.get('ip', '') or '')
+        sgw = str(wifi_static.get('gateway', '') or '')
+        ssn = str(wifi_static.get('subnet', '') or '')
+        sd1 = str(wifi_static.get('dns1', '') or '')
+        sd2 = str(wifi_static.get('dns2', '') or '')
+        if sip and sgw and ssn:
+            f.write(f'#define WIFI_STATIC_IP {c_string(sip)}\n')
+            f.write(f'#define WIFI_STATIC_GATEWAY {c_string(sgw)}\n')
+            f.write(f'#define WIFI_STATIC_SUBNET {c_string(ssn)}\n')
+            if sd1:
+                f.write(f'#define WIFI_STATIC_DNS1 {c_string(sd1)}\n')
+            if sd2:
+                f.write(f'#define WIFI_STATIC_DNS2 {c_string(sd2)}\n')
+        # Optional BSSID/channel fast-connect
+        if wifi_bssid:
+            f.write(f'#define WIFI_BSSID {c_string(wifi_bssid)}\n')
+        try:
+            ch = int(wifi_channel)
+            if ch > 0:
+                f.write(f'#define WIFI_CHANNEL {ch}\n')
+        except Exception:
+            pass
         f.write(f'#define MQTT_HOST {c_string(mqtt_host)}\n')
         f.write(f'#define MQTT_PORT {mqtt_port}\n')
         f.write(f'#define MQTT_PUB_BASE {c_string(mqtt_pub)}\n')

@@ -25,6 +25,22 @@ static WiFiClient g_wifi_client;
 static PubSubClient g_mqtt(g_wifi_client);
 static OutsideReadings g_outside;
 
+#ifndef WIFI_CONNECT_TIMEOUT_MS
+#define WIFI_CONNECT_TIMEOUT_MS 6000
+#endif
+#ifndef MQTT_CONNECT_TIMEOUT_MS
+#define MQTT_CONNECT_TIMEOUT_MS 4000
+#endif
+
+inline bool parse_bssid(const char* str, uint8_t out[6]) {
+    if (!str) return false;
+    int vals[6];
+    int n = sscanf(str, "%x:%x:%x:%x:%x:%x", &vals[0], &vals[1], &vals[2], &vals[3], &vals[4], &vals[5]);
+    if (n != 6) return false;
+    for (int i = 0; i < 6; ++i) out[i] = (uint8_t)vals[i];
+    return true;
+}
+
 inline void mqtt_callback(char* topic, uint8_t* payload, unsigned int length) {
     String t(topic);
     String v;
@@ -58,9 +74,48 @@ inline void ensure_wifi_connected() {
     if (WiFi.isConnected()) return;
     if (strlen(WIFI_SSID) == 0) return;
     WiFi.mode(WIFI_STA);
+    WiFi.persistent(false);
+    WiFi.setAutoReconnect(true);
+    // Optional static IP configuration
+    #ifdef WIFI_STATIC_IP
+    {
+        IPAddress ip, gw, sn;
+        IPAddress d1(0,0,0,0), d2(0,0,0,0);
+        bool ok = ip.fromString(WIFI_STATIC_IP) && gw.fromString(WIFI_STATIC_GATEWAY) && sn.fromString(WIFI_STATIC_SUBNET);
+        #ifdef WIFI_STATIC_DNS1
+        d1.fromString(WIFI_STATIC_DNS1);
+        #endif
+        #ifdef WIFI_STATIC_DNS2
+        d2.fromString(WIFI_STATIC_DNS2);
+        #endif
+        if (ok) {
+            WiFi.config(ip, gw, sn, d1, d2);
+        }
+    }
+    #endif
+    // Optional fast connect via channel/BSSID
+    #ifdef WIFI_BSSID
+    {
+        uint8_t bssid[6];
+        int channel = 0;
+        #ifdef WIFI_CHANNEL
+        channel = WIFI_CHANNEL;
+        #endif
+        if (parse_bssid(WIFI_BSSID, bssid)) {
+            WiFi.begin(WIFI_SSID, WIFI_PASS, channel, bssid, true);
+        } else {
+            WiFi.begin(WIFI_SSID, WIFI_PASS);
+        }
+    }
+    #else
+    #ifdef WIFI_CHANNEL
+    WiFi.begin(WIFI_SSID, WIFI_PASS, WIFI_CHANNEL);
+    #else
     WiFi.begin(WIFI_SSID, WIFI_PASS);
+    #endif
+    #endif
     unsigned long start = millis();
-    while (!WiFi.isConnected() && millis() - start < 10000) {
+    while (!WiFi.isConnected() && millis() - start < WIFI_CONNECT_TIMEOUT_MS) {
         delay(100);
     }
 }
@@ -80,7 +135,7 @@ inline void ensure_mqtt_connected() {
     #ifdef MQTT_PASS
     if (strlen(MQTT_PASS) > 0) pass = MQTT_PASS;
     #endif
-    while (!g_mqtt.connect(clientId.c_str(), user, pass) && millis() - start < 5000) {
+    while (!g_mqtt.connect(clientId.c_str(), user, pass) && millis() - start < MQTT_CONNECT_TIMEOUT_MS) {
         delay(200);
     }
     if (g_mqtt.connected()) {
