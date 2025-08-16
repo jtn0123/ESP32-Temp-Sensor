@@ -273,6 +273,30 @@
       weatherIcon([ICON[0],ICON[1],ICON[0]+ICON[2],ICON[1]+ICON[3]], iconSelector);
       const cond = shortConditionLabel(data.weather||'Cloudy');
       text(ICON[0]+ICON[2]+6, 100, cond, SIZE_SMALL);
+    } else if (mode === 'splitxl') {
+      // Full bottom-right corner as weather panel: keep IP/status intact
+      ctx.fillStyle = '#000'; ctx.fillRect(125, 98, 119, 1); ctx.fillStyle = '#000';
+      const PANEL_X = 170, PANEL_Y = 96, PANEL_W = 74, PANEL_H = 24;
+      const ICON = [PANEL_X, PANEL_Y+4, 18, 18];
+      const iconSelector = (data.moon_phase ? `moon_${(data.moon_phase||'').toLowerCase().replace(/\s+/g,'_')}` : (data.weather||'Cloudy'));
+      weatherIcon([ICON[0],ICON[1],ICON[0]+ICON[2],ICON[1]+ICON[3]], iconSelector);
+      text(ICON[0]+ICON[2]+6, PANEL_Y+4, condition, SIZE_SMALL);
+    } else if (mode === 'split2') {
+      // Two-row status at bottom; bottom-right weather icon+cond
+      ctx.fillStyle = '#000'; ctx.fillRect(125, 98, 119, 1); ctx.fillStyle = '#000';
+      const pct = parseInt(data.percent||'76', 10);
+      const bx = STATUS[0], by = STATUS[1]; const bw = 13, bh = 7;
+      ctx.strokeStyle = '#000'; ctx.strokeRect(bx, by, bw, bh); ctx.fillStyle = '#000';
+      ctx.fillRect(bx + bw, by + 2, 2, 4);
+      const fillw = Math.max(0, Math.min(bw-2, Math.round((bw-2) * (pct/100)))); if (fillw>0) ctx.fillRect(bx+1, by+1, fillw, bh-2);
+      text(bx + bw + 6, STATUS[1]-1, `Batt ${data.voltage||'4.01'}V ${pct}%`, SIZE_STATUS);
+      const rightText = `~${data.days||'128'}d    IP ${data.ip||'192.168.1.42'}`;
+      const rw = ctx.measureText(rightText).width;
+      text(STATUS[0] + STATUS[2] - 2 - rw, STATUS[1]+8, rightText, SIZE_STATUS);
+      const ICON = [177, 100, 16, 16];
+      const iconSelector = (data.moon_phase ? `moon_${(data.moon_phase||'').toLowerCase().replace(/\s+/g,'_')}` : (data.weather||'Cloudy'));
+      weatherIcon([ICON[0],ICON[1],ICON[0]+ICON[2],ICON[1]+ICON[3]], iconSelector);
+      text(ICON[0]+ICON[2]+6, 100, condition, SIZE_SMALL);
     } else if (mode === 'icon') {
       // icon-dominant: big icon area, shift outside label left edge to align with OUT_TEMP
       const ICON = [204, 50, 44, 44];
