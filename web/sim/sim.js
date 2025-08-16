@@ -66,7 +66,7 @@
     // Place units right after the number for tighter look
     const degX = rx + tw + 2;
     const fX = degX + 6;
-    const unitY = y + 4; // visually aligned with big digits
+    const unitY = y + 5; // drop by 1px for better baseline alignment
     text(degX, unitY, '°', 12);
     text(fX, unitY, 'F', 12);
   }
@@ -211,11 +211,13 @@
     ctx.fillRect(125,18,1,77);
     // left name, right time
     ctx.fillStyle = '#000';
-    // Truncate room name to fit its box with ellipsis so it never collides with time
-    textTruncated(HEADER_NAME[0], HEADER_NAME[1]+1, HEADER_NAME[2]-2, data.room_name || 'Room', 12, 'bold');
     const t = data.time || '10:32';
     const tw = ctx.measureText(t).width;
-    text(HEADER_TIME[0] + HEADER_TIME[2] - 2 - tw, HEADER_TIME[1]+1, t, SIZE_TIME);
+    const timeX = HEADER_TIME[0] + HEADER_TIME[2] - 2 - tw;
+    // Reserve a hard 4px gap before the time block
+    const maxNameW = Math.max(0, timeX - 4 - HEADER_NAME[0]);
+    textTruncated(HEADER_NAME[0], HEADER_NAME[1]+1, Math.min(maxNameW, HEADER_NAME[2]-2), data.room_name || 'Room', 12, 'bold');
+    text(timeX, HEADER_TIME[1]+1, t, SIZE_TIME);
 
     // Labels centered above their columns
     ctx.fillStyle = '#000';
@@ -345,32 +347,43 @@
       const pct = parseInt(data.percent||'76', 10);
       // Slight right inset for cleaner left margin and subtle vertical lift
       const bx = STATUS[0] + 1, bw = 13, bh = 7;
-      const baseY = STATUS[1] - 15; // lift by 1px; improves balance with divider above
+      const baseY = STATUS[1] - 14; // sit 2px below divider with even row rhythm
       // Battery glyph
       ctx.strokeStyle = '#000'; ctx.strokeRect(bx, baseY, bw, bh); ctx.fillStyle = '#000';
       ctx.fillRect(bx + bw, baseY + 2, 2, 4);
       const fillw = Math.max(0, Math.min(bw-2, Math.round((bw-2) * (pct/100)))); if (fillw>0) ctx.fillRect(bx+1, baseY+1, fillw, bh-2);
       // Row 1: Batt V %
       const leftTextX = bx + bw + 6;
-      text(leftTextX, baseY-3, `Batt ${data.voltage||'4.01'}V ${pct}%`, SIZE_STATUS);
-      // Row 2: ~days left-aligned within left column; add a touch more inter-row space
-      text(leftTextX, baseY+7, `~${data.days||'128'}d`, SIZE_STATUS);
+      text(leftTextX, baseY-2, `Batt ${data.voltage||'4.01'}V ${pct}%`, SIZE_STATUS);
+      // Row 2: ~days left-aligned within left column
+      text(leftTextX, baseY+8, `~${data.days||'128'}d`, SIZE_STATUS);
       // Row 3: IP right-aligned within left column with 2px right padding
       const ip = `IP ${data.ip||'192.168.1.42'}`; const iw = ctx.measureText(ip).width;
       const leftColRight = 125 - 2; const ipLeft = Math.max(leftTextX, leftColRight - iw);
-      text(ipLeft, baseY+17, ip, SIZE_STATUS);
+      text(ipLeft, baseY+18, ip, SIZE_STATUS);
       // Right: larger icon + condition centered
       const cond = shortConditionLabel(data.weather||'Cloudy');
       // Allocate more height for icon
-      const barX = 130, barW = 114, iconW = 24, iconH = 24, gap = 8, barY = 95;
-      let label = cond; const maxTextW = barW - iconW - gap - 2; // keep 2px right padding
-      while (ctx.measureText(label).width > maxTextW && label.length > 1) label = label.slice(0,-1);
-      if (label !== cond && label.length>1) label = label.slice(0,-1)+'…';
+      const barX = 130, barW = 114, gap = 8, barY = 95;
+      // Dynamically choose largest icon size that fits with label and 2px right padding
+      let candidateIcon = 26; // try up to 26px tall
+      let label = cond;
+      // choose icon size and possibly shorten label
+      function fitLabel(iconSize){
+        const maxText = barW - iconSize - gap - 2;
+        let s = cond;
+        while (ctx.measureText(s).width > maxText && s.length > 1) s = s.slice(0,-1);
+        if (s !== cond && s.length>1) s = s.slice(0,-1) + '…';
+        return {label:s, fits: ctx.measureText(s).width <= maxText, icon: iconSize};
+      }
+      let fit = fitLabel(candidateIcon);
+      while (!fit.fits && candidateIcon > 18){ candidateIcon--; fit = fitLabel(candidateIcon); }
+      label = fit.label; const iconW = candidateIcon, iconH = candidateIcon;
       const totalW = iconW + gap + ctx.measureText(label).width;
       const startX = barX + Math.max(0, Math.floor((barW - totalW)/2));
       const iconSelector = (data.moon_phase ? `moon_${(data.moon_phase||'').toLowerCase().replace(/\s+/g,'_')}` : (data.weather||'Cloudy'));
       weatherIcon([startX, barY, startX+iconW, barY+iconH], iconSelector);
-      const labelTop = barY + Math.max(0, Math.floor((iconH - SIZE_SMALL)/2));
+      const labelTop = barY + Math.max(0, Math.floor((iconH - SIZE_SMALL)/2)) + 1; // drop by 1px optically
       text(startX + iconW + gap, labelTop, label, SIZE_SMALL);
     } else if (mode === 'icon') {
       // icon-dominant: big icon area, shift outside label left edge to align with OUT_TEMP
@@ -389,8 +402,8 @@
       weatherIcon([ICON[0],ICON[1],ICON[0]+ICON[2],ICON[1]+ICON[3]], iconSelector);
       text(OUT_ROW2_L[0], OUT_ROW2_L[1], condition, SIZE_SMALL);
     } else {
-      const iconSelector = (data.moon_phase ? `moon_${(data.moon_phase||'').toLowerCase().replace(/\s+/g,'_')}` : (data.weather||'Cloudy'));
-      weatherIcon([OUT_ICON[0],OUT_ICON[1],OUT_ICON[0]+OUT_ICON[2],OUT_ICON[1]+OUT_ICON[3]], iconSelector);
+    const iconSelector = (data.moon_phase ? `moon_${(data.moon_phase||'').toLowerCase().replace(/\s+/g,'_')}` : (data.weather||'Cloudy'));
+    weatherIcon([OUT_ICON[0],OUT_ICON[1],OUT_ICON[0]+OUT_ICON[2],OUT_ICON[1]+OUT_ICON[3]], iconSelector);
       text(OUT_ROW2_L[0], OUT_ROW2_L[1], condition, SIZE_SMALL);
     }
     // Draw OUTSIDE label once with possibly adjusted x
@@ -399,24 +412,24 @@
     // Battery glyph + status text with IP, voltage, percent, ETA days
     const pct = parseInt(data.percent||'76', 10);
     if (mode !== 'split2' && mode !== 'split3') {
-      const bx = STATUS[0];
+    const bx = STATUS[0];
       const by = STATUS[1]; // baseline
       const bw = 13, bh = 7;
-      ctx.strokeStyle = '#000';
-      ctx.strokeRect(bx, by, bw, bh);
-      ctx.fillStyle = '#000';
+    ctx.strokeStyle = '#000';
+    ctx.strokeRect(bx, by, bw, bh);
+    ctx.fillStyle = '#000';
       ctx.fillRect(bx + bw, by + 2, 2, 4);
-      const fillw = Math.max(0, Math.min(bw-2, Math.round((bw-2) * (pct/100))));
-      if (fillw > 0) ctx.fillRect(bx+1, by+1, fillw, bh-2);
+    const fillw = Math.max(0, Math.min(bw-2, Math.round((bw-2) * (pct/100))));
+    if (fillw > 0) ctx.fillRect(bx+1, by+1, fillw, bh-2);
       if (pct < 20) { ctx.beginPath(); ctx.moveTo(bx + bw + 4, by + 1); ctx.lineTo(bx + bw + 8, by + 5); ctx.lineTo(bx + bw + 0, by + 5); ctx.closePath(); ctx.fill(); }
-      const days = `${data.days||'128'}`;
-      const voltageText = `${data.voltage||'4.01'}`;
-      const pctText = `${pct||76}%`;
+    const days = `${data.days||'128'}`;
+    const voltageText = `${data.voltage||'4.01'}`;
+    const pctText = `${pct||76}%`;
       const leftX = STATUS[0] + bw + 6;
       const statusTextY = STATUS[1] - 1;
-      const ip = `IP ${data.ip||'192.168.1.42'}`;
+    const ip = `IP ${data.ip||'192.168.1.42'}`;
       ctx.font = `${SIZE_STATUS}px ${FONT_STACK}`;
-      const iw = ctx.measureText(ip).width;
+    const iw = ctx.measureText(ip).width;
       const ipX = STATUS[0] + STATUS[2] - 2 - iw;
       const maxLeftWidth = ipX - leftX - 2;
       const leftFull = `Batt ${voltageText}V ${pctText} | ~${days}d`;
