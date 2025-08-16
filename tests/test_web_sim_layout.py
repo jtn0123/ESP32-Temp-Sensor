@@ -135,3 +135,155 @@ def test_layout_centering_and_clipping():
         server.terminate(); server.wait(timeout=2)
 
 
+
+@pytest.mark.skipif(not bool(__import__("importlib").util.find_spec("playwright")), reason="playwright not installed")
+def test_web_sim_backend_integration_full_reload():
+    from playwright.sync_api import sync_playwright  # type: ignore
+
+    web_root = os.path.join(os.path.dirname(os.path.dirname(__file__)), "web", "sim")
+    port = _find_free_port()
+    server = _start_http_server(web_root, port)
+    try:
+        time.sleep(0.4)
+        with sync_playwright() as p:
+            browser = p.chromium.launch()
+            page = browser.new_page(viewport={"width": 250, "height": 122})
+
+            # Serve two different backend payloads on successive requests
+            payloads = [
+                {
+                    "room_name": "Office",
+                    "inside_temp": "72.5",
+                    "inside_hum": "47",
+                    "outside_temp": "68.4",
+                    "outside_hum": "53",
+                    "weather": "Cloudy",
+                    "time": "10:32",
+                    "ip": "192.168.1.42",
+                    "voltage": "4.01",
+                    "percent": 76,
+                    "days": "128",
+                    "wind": "4.2",
+                },
+                {
+                    "room_name": "Office",
+                    "inside_temp": "72.5",
+                    "inside_hum": "47",
+                    "outside_temp": "68.4",
+                    "outside_hum": "53",
+                    "weather": "Rain",
+                    "time": "10:32",
+                    "ip": "192.168.1.42",
+                    "voltage": "4.01",
+                    "percent": 76,
+                    "days": "128",
+                    "wind": "4.2",
+                },
+            ]
+            idx = {"i": 0}
+
+            def handle_route(route):
+                if idx["i"] < len(payloads):
+                    data = payloads[idx["i"]]
+                    idx["i"] += 1
+                else:
+                    data = payloads[-1]
+                route.fulfill(status=200, content_type="application/json", body=json.dumps(data))
+
+            page.route("**/sample_data.json", handle_route)
+
+            page.goto(f"http://127.0.0.1:{port}/index.html", wait_until="load")
+            page.wait_for_timeout(300)
+
+            # Count non-white pixels in the bottom-right weather bar area
+            def count_nonwhite(x0, y0, w, h):
+                return page.evaluate(
+                    "([x0,y0,w,h])=>{const c=document.getElementById('epd');const ctx=c.getContext('2d');const d=ctx.getImageData(x0,y0,w,h).data;let cnt=0;for(let i=0;i<d.length;i+=4){if(!(d[i]===255&&d[i+1]===255&&d[i+2]===255))cnt++;}return cnt;}",
+                    [x0, y0, w, h],
+                )
+
+            area = (130, 95, 114, 24)
+            cnt_cloudy = count_nonwhite(*area)
+
+            # Full reload → second payload (Rain)
+            page.reload(wait_until="load")
+            page.wait_for_timeout(300)
+            cnt_rain = count_nonwhite(*area)
+
+            # Expect a visual change in the weather area between Cloudy and Rain
+            assert cnt_cloudy != cnt_rain
+            browser.close()
+    finally:
+        server.terminate(); server.wait(timeout=2)
+
+
+@pytest.mark.skipif(not bool(__import__("importlib").util.find_spec("playwright")), reason="playwright not installed")
+def test_web_sim_partial_refresh_only_updates_header_time():
+    from playwright.sync_api import sync_playwright  # type: ignore
+
+    web_root = os.path.join(os.path.dirname(os.path.dirname(__file__)), "web", "sim")
+    port = _find_free_port()
+    server = _start_http_server(web_root, port)
+    try:
+        time.sleep(0.4)
+        with sync_playwright() as p:
+            browser = p.chromium.launch()
+            page = browser.new_page(viewport={"width": 250, "height": 122})
+
+            # First payload for initial load; second payload changes outside_temp
+            payloads = [
+                {"outside_temp": "68.4"},
+                {"outside_temp": "100.0"},
+            ]
+            idx = {"i": 0}
+
+            def handle_route(route):
+                if idx["i"] < len(payloads):
+                    base = {
+                        "room_name": "Office",
+                        "inside_temp": "72.5",
+                        "inside_hum": "47",
+                        "outside_hum": "53",
+                        "weather": "Cloudy",
+                        "time": "10:32",
+                        "ip": "192.168.1.42",
+                        "voltage": "4.01",
+                        "percent": 76,
+                        "days": "128",
+                        "wind": "4.2",
+                    }
+                    base.update(payloads[idx["i"]])
+                    data = base
+                    idx["i"] += 1
+                else:
+                    data = base  # type: ignore[name-defined]
+                route.fulfill(status=200, content_type="application/json", body=json.dumps(data))
+
+            page.route("**/sample_data.json", handle_route)
+
+            page.goto(f"http://127.0.0.1:{port}/index.html", wait_until="load")
+            page.wait_for_timeout(300)
+
+            # Capture OUT_TEMP rectangle pixels before refresh
+            OUT_TEMP = [131, 36, 90, 28]
+            before = page.evaluate(
+                "([x,y,w,h])=>{const c=document.getElementById('epd');const ctx=c.getContext('2d');return Array.from(ctx.getImageData(x,y,w,h).data);}",
+                OUT_TEMP,
+            )
+
+            # Click Refresh → fetches sample_data.json again but only redraws header time region
+            page.click('#refresh')
+            page.wait_for_timeout(400)
+
+            after = page.evaluate(
+                "([x,y,w,h])=>{const c=document.getElementById('epd');const ctx=c.getContext('2d');return Array.from(ctx.getImageData(x,y,w,h).data);}",
+                OUT_TEMP,
+            )
+
+            # The OUT_TEMP area should be unchanged by the partial refresh
+            assert before == after
+            browser.close()
+    finally:
+        server.terminate(); server.wait(timeout=2)
+
+
