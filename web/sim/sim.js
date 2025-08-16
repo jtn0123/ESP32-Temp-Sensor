@@ -231,10 +231,8 @@
     let windMps = parseFloat(data.wind || '4.2');
     if (!isFinite(windMps)) windMps = 4.2;
     const wind = `${(windMps*2.237).toFixed(1)} mph`;
-    // Left column
+    // Left/right small rows: draw RH and wind now; condition is drawn per-mode below
     text(OUT_ROW1_L[0], OUT_ROW1_L[1], rhText, SIZE_SMALL);
-    text(OUT_ROW2_L[0], OUT_ROW2_L[1], condition, SIZE_SMALL);
-    // Right column
     text(OUT_ROW1_R[0], OUT_ROW1_R[1], wind, SIZE_SMALL);
     const mode = (document.getElementById('layoutMode')||{value:'classic'}).value;
     if (mode === 'banner') {
@@ -281,6 +279,10 @@
       const iconSelector = (data.moon_phase ? `moon_${(data.moon_phase||'').toLowerCase().replace(/\s+/g,'_')}` : (data.weather||'Cloudy'));
       weatherIcon([ICON[0],ICON[1],ICON[0]+ICON[2],ICON[1]+ICON[3]], iconSelector);
       text(ICON[0]+ICON[2]+6, PANEL_Y+4, condition, SIZE_SMALL);
+      // Clear any prior condition above to avoid duplicates
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(OUT_ROW2_L[0], OUT_ROW2_L[1]-1, OUT_ROW2_L[2], OUT_ROW2_L[3]+2);
+      ctx.fillStyle = '#000';
     } else if (mode === 'split2') {
       // Two-row status at bottom; bottom-right weather icon+cond
       ctx.fillStyle = '#000'; ctx.fillRect(125, 98, 119, 1); ctx.fillStyle = '#000';
@@ -297,6 +299,10 @@
       const iconSelector = (data.moon_phase ? `moon_${(data.moon_phase||'').toLowerCase().replace(/\s+/g,'_')}` : (data.weather||'Cloudy'));
       weatherIcon([ICON[0],ICON[1],ICON[0]+ICON[2],ICON[1]+ICON[3]], iconSelector);
       text(ICON[0]+ICON[2]+6, 100, condition, SIZE_SMALL);
+      // Clear any prior condition above to avoid duplicates
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(OUT_ROW2_L[0], OUT_ROW2_L[1]-1, OUT_ROW2_L[2], OUT_ROW2_L[3]+2);
+      ctx.fillStyle = '#000';
     } else if (mode === 'icon') {
       // icon-dominant: big icon area, shift outside label left edge to align with OUT_TEMP
       const ICON = [204, 50, 44, 44];
@@ -347,24 +353,21 @@
     const pctText = `${pct||76}%`;
     const leftX = STATUS[0] + bw + 6;
     const statusTextY = STATUS[1] - 1;
-    // Right-aligned IP
     const ip = `IP ${data.ip||'192.168.1.42'}`;
     ctx.font = `${SIZE_STATUS}px ${FONT_STACK}`;
     const iw = ctx.measureText(ip).width;
     const ipX = STATUS[0] + STATUS[2] - 2 - iw;
-    const maxLeftWidth = ipX - leftX - 2;
-    const leftFull = `Batt ${voltageText}V ${pctText} | ~${days}d`;
-    const leftNoBatt = `${voltageText}V ${pctText} | ~${days}d`;
-    const leftTail = `${pctText} | ~${days}d`;
-    let chosen = leftFull;
-    if (ctx.measureText(chosen).width > maxLeftWidth) {
-      chosen = leftNoBatt;
+    if (mode !== 'split2') {
+      const maxLeftWidth = ipX - leftX - 2;
+      const leftFull = `Batt ${voltageText}V ${pctText} | ~${days}d`;
+      const leftNoBatt = `${voltageText}V ${pctText} | ~${days}d`;
+      const leftTail = `${pctText} | ~${days}d`;
+      let chosen = leftFull;
+      if (ctx.measureText(chosen).width > maxLeftWidth) chosen = leftNoBatt;
+      if (ctx.measureText(chosen).width > maxLeftWidth) chosen = ctx.measureText(leftTail).width <= maxLeftWidth ? leftTail : '';
+      text(leftX, statusTextY, chosen, SIZE_STATUS);
+      text(ipX, statusTextY, ip, SIZE_STATUS);
     }
-    if (ctx.measureText(chosen).width > maxLeftWidth) {
-      chosen = ctx.measureText(leftTail).width <= maxLeftWidth ? leftTail : '';
-    }
-    text(leftX, statusTextY, chosen, SIZE_STATUS);
-    text(ipX, statusTextY, ip, SIZE_STATUS);
 
     // partial window overlay
     if (showWindows){
