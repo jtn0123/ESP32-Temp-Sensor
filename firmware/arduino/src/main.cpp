@@ -33,6 +33,7 @@ RTC_DATA_ATTR static int32_t last_icon_id = -1;
 RTC_DATA_ATTR static float last_published_inside_tempC = NAN;
 RTC_DATA_ATTR static float last_published_inside_rh = NAN;
 RTC_DATA_ATTR static uint32_t last_status_crc = 0;
+RTC_DATA_ATTR static float last_inside_rh = NAN;
 
 static constexpr float THRESH_TEMP_F = 0.2f; // redraw/publish threshold in F
 static constexpr float THRESH_TEMP_C_FROM_F = THRESH_TEMP_F / 1.8f; // ~0.111C
@@ -174,9 +175,9 @@ static inline bool maybe_redraw_status(const BatteryStatus& bs, const char* ip_c
     return false;
 }
 
-static String make_short_condition(const String& weather)
+static String make_short_condition(const char* weather)
 {
-    String s = weather;
+    String s(weather);
     s.trim();
     if (s.length() == 0) return String("");
     s.replace(" with ", " ");
@@ -291,9 +292,9 @@ static void draw_values(const char* in_temp_f, const char* in_rh,
     // Status line drawn separately by partial
 }
 
-static IconId map_weather_to_icon(const String& w)
+static IconId map_weather_to_icon(const char* w)
 {
-    String s = w;
+    String s(w);
     s.toLowerCase();
     if (s.indexOf("storm") >= 0 || s.indexOf("thunder") >= 0 || s.indexOf("lightning") >= 0) return ICON_WEATHER_LIGHTNING;
     if (s.indexOf("pour") >= 0 || s.indexOf("rain") >= 0 || s.indexOf("shower") >= 0) return ICON_WEATHER_POURING;
@@ -305,7 +306,7 @@ static IconId map_weather_to_icon(const String& w)
     return ICON_WEATHER_SUNNY;
 }
 
-static void draw_weather_icon_region(const String& weather)
+static void draw_weather_icon_region(const char* weather)
 {
     const int16_t x = OUT_ICON[0];
     const int16_t y = OUT_ICON[1];
@@ -456,7 +457,18 @@ static void partial_update_outside_rh(const char* out_rh)
     });
 }
 
-static void partial_update_weather_icon(const String& weather)
+static void partial_update_inside_rh(const char* in_rh)
+{
+    draw_in_region(INSIDE_RH, [&](int16_t x, int16_t y, int16_t w, int16_t h){
+        display.setTextColor(GxEPD_BLACK);
+        display.setTextSize(1);
+        display.setCursor(x, y);
+        display.print(in_rh);
+        display.print("% RH");
+    });
+}
+
+static void partial_update_weather_icon(const char* weather)
 {
     draw_in_region(OUT_ICON, [&](int16_t, int16_t, int16_t, int16_t){
         draw_weather_icon_region(weather);
@@ -543,7 +555,14 @@ void setup() {
         maybe_redraw_numeric(INSIDE_TEMP, now_in_f, last_inside_f, THRESH_TEMP_F, [&](){
             partial_update_inside_temp(in_temp, trend_in);
         });
-        // Publish only when changed beyond thresholds
+        // Inside RH partial update + publish only when changed beyond thresholds
+        if (isfinite(r.humidityPct)) {
+            char in_rh_str[16];
+            snprintf(in_rh_str, sizeof(in_rh_str), "%.0f", r.humidityPct);
+            maybe_redraw_numeric(INSIDE_RH, r.humidityPct, last_inside_rh, THRESH_RH, [&](){
+                partial_update_inside_rh(in_rh_str);
+            });
+        }
         if (isfinite(r.temperatureC) && isfinite(r.humidityPct)) {
             bool temp_changed = (!isfinite(last_published_inside_tempC)) || fabsf(r.temperatureC - last_published_inside_tempC) >= THRESH_TEMP_C_FROM_F;
             bool rh_changed = (!isfinite(last_published_inside_rh)) || fabsf(r.humidityPct - last_published_inside_rh) >= THRESH_RH;

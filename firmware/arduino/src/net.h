@@ -9,7 +9,7 @@
 struct OutsideReadings {
     float temperatureC = NAN;
     float humidityPct = NAN;
-    String weather;
+    char weather[64];
     float windMps = NAN;
     float highTempC = NAN;
     float lowTempC = NAN;
@@ -41,31 +41,38 @@ inline bool parse_bssid(const char* str, uint8_t out[6]) {
     return true;
 }
 
+inline bool ends_with(const char* s, const char* suffix) {
+    size_t ls = strlen(s);
+    size_t lf = strlen(suffix);
+    if (lf > ls) return false;
+    return strcmp(s + (ls - lf), suffix) == 0;
+}
+
 inline void mqtt_callback(char* topic, uint8_t* payload, unsigned int length) {
-    String t(topic);
-    String v;
-    v.reserve(length + 1);
-    for (unsigned int i = 0; i < length; i++) v += (char)payload[i];
-    if (t.endsWith("/temp")) {
-        g_outside.temperatureC = v.toFloat();
+    char val[128];
+    unsigned int n = length < (sizeof(val) - 1) ? length : (unsigned int)(sizeof(val) - 1);
+    for (unsigned int i = 0; i < n; ++i) val[i] = (char)payload[i];
+    val[n] = '\0';
+    if (ends_with(topic, "/temp")) {
+        g_outside.temperatureC = atof(val);
         g_outside.validTemp = true;
-    } else if (t.endsWith("/hum") || t.endsWith("/rh")) {
-        g_outside.humidityPct = v.toFloat();
+    } else if (ends_with(topic, "/hum") || ends_with(topic, "/rh")) {
+        g_outside.humidityPct = atof(val);
         g_outside.validHum = true;
-    } else if (t.endsWith("/weather")) {
-        g_outside.weather = v;
-        g_outside.validWeather = v.length() > 0;
-    } else if (t.endsWith("/wind") || t.endsWith("/wind_mps") || t.endsWith("/wind_mph")) {
-        // Accept m/s by default; if mph, convert to m/s by dividing by 2.237 when topic endswith wind_mph
-        float w = v.toFloat();
-        if (t.endsWith("/wind_mph")) w = w / 2.237f;
+    } else if (ends_with(topic, "/weather")) {
+        strncpy(g_outside.weather, val, sizeof(g_outside.weather) - 1);
+        g_outside.weather[sizeof(g_outside.weather) - 1] = '\0';
+        g_outside.validWeather = g_outside.weather[0] != '\0';
+    } else if (ends_with(topic, "/wind") || ends_with(topic, "/wind_mps") || ends_with(topic, "/wind_mph")) {
+        float w = atof(val);
+        if (ends_with(topic, "/wind_mph")) w = w / 2.237f;
         g_outside.windMps = w;
         g_outside.validWind = isfinite(w);
-    } else if (t.endsWith("/hi") || t.endsWith("/high")) {
-        g_outside.highTempC = v.toFloat();
+    } else if (ends_with(topic, "/hi") || ends_with(topic, "/high")) {
+        g_outside.highTempC = atof(val);
         g_outside.validHigh = isfinite(g_outside.highTempC);
-    } else if (t.endsWith("/lo") || t.endsWith("/low")) {
-        g_outside.lowTempC = v.toFloat();
+    } else if (ends_with(topic, "/lo") || ends_with(topic, "/low")) {
+        g_outside.lowTempC = atof(val);
         g_outside.validLow = isfinite(g_outside.lowTempC);
     }
 }
