@@ -216,7 +216,6 @@
     const ilx = INSIDE_TEMP[0] + Math.floor((INSIDE_TEMP[2] - ilw) / 2);
     let olx = OUT_TEMP[0] + Math.floor((OUT_TEMP[2] - olw) / 2);
     text(ilx, 22, insideLabel, SIZE_LABEL, 'bold');
-    text(olx, 22, outsideLabel, SIZE_LABEL, 'bold');
 
     // Values: numeric right-aligned with fixed units strip
     const numIn = `${data.inside_temp||'72.5'}`;
@@ -289,10 +288,14 @@
       const ICON = [212, 60,  34, 34];
       const iconSelector = (data.moon_phase ? `moon_${(data.moon_phase||'').toLowerCase().replace(/\s+/g,'_')}` : (data.weather||'Cloudy'));
       weatherIcon([ICON[0],ICON[1],ICON[0]+ICON[2],ICON[1]+ICON[3]], iconSelector);
+      text(OUT_ROW2_L[0], OUT_ROW2_L[1], condition, SIZE_SMALL);
     } else {
       const iconSelector = (data.moon_phase ? `moon_${(data.moon_phase||'').toLowerCase().replace(/\s+/g,'_')}` : (data.weather||'Cloudy'));
       weatherIcon([OUT_ICON[0],OUT_ICON[1],OUT_ICON[0]+OUT_ICON[2],OUT_ICON[1]+OUT_ICON[3]], iconSelector);
+      text(OUT_ROW2_L[0], OUT_ROW2_L[1], condition, SIZE_SMALL);
     }
+    // Draw OUTSIDE label once with possibly adjusted x
+    text(olx, 22, outsideLabel, SIZE_LABEL, 'bold');
 
     // Battery glyph + status text with IP, voltage, percent, ETA days
     const pct = parseInt(data.percent||'76', 10);
