@@ -44,6 +44,16 @@
     ctx.fillText(str, x, y);
   }
 
+  function textTruncated(x, y, maxWidth, str, size=10, weight='normal'){
+    ctx.fillStyle = '#000';
+    ctx.font = `${weight} ${size}px ${FONT_STACK}`;
+    ctx.textBaseline = 'top';
+    let s = String(str||'');
+    if (ctx.measureText(s).width <= maxWidth){ ctx.fillText(s, x, y); return; }
+    while (s.length>1 && ctx.measureText(s + '…').width > maxWidth){ s = s.slice(0,-1); }
+    ctx.fillText(s + '…', x, y);
+  }
+
   function drawTempWithUnits(rect, valueStr){
     const [x, y, w, h] = rect;
     const unitsW = 14;
@@ -201,7 +211,8 @@
     ctx.fillRect(125,18,1,77);
     // left name, right time
     ctx.fillStyle = '#000';
-    text(HEADER_NAME[0], HEADER_NAME[1]+1, data.room_name || 'Room', 12, 'bold');
+    // Truncate room name to fit its box with ellipsis so it never collides with time
+    textTruncated(HEADER_NAME[0], HEADER_NAME[1]+1, HEADER_NAME[2]-2, data.room_name || 'Room', 12, 'bold');
     const t = data.time || '10:32';
     const tw = ctx.measureText(t).width;
     text(HEADER_TIME[0] + HEADER_TIME[2] - 2 - tw, HEADER_TIME[1]+1, t, SIZE_TIME);
@@ -332,32 +343,35 @@
       ctx.fillRect(125, STATUS[1]-18, WIDTH-125-1, STATUS[3]+22);
       ctx.fillStyle = '#000';
       const pct = parseInt(data.percent||'76', 10);
-      const bx = STATUS[0], bw = 13, bh = 7;
-      const baseY = STATUS[1] - 14; // shift up a bit to fit 3 rows comfortably
+      // Slight right inset for cleaner left margin and subtle vertical lift
+      const bx = STATUS[0] + 1, bw = 13, bh = 7;
+      const baseY = STATUS[1] - 15; // lift by 1px; improves balance with divider above
       // Battery glyph
       ctx.strokeStyle = '#000'; ctx.strokeRect(bx, baseY, bw, bh); ctx.fillStyle = '#000';
       ctx.fillRect(bx + bw, baseY + 2, 2, 4);
       const fillw = Math.max(0, Math.min(bw-2, Math.round((bw-2) * (pct/100)))); if (fillw>0) ctx.fillRect(bx+1, baseY+1, fillw, bh-2);
       // Row 1: Batt V %
-      text(bx + bw + 6, baseY-2, `Batt ${data.voltage||'4.01'}V ${pct}%`, SIZE_STATUS);
-      // Row 2: ~days left-aligned within left column
-      text(bx + bw + 6, baseY+6, `~${data.days||'128'}d`, SIZE_STATUS);
-      // Row 3: IP right-aligned within left column
+      const leftTextX = bx + bw + 6;
+      text(leftTextX, baseY-3, `Batt ${data.voltage||'4.01'}V ${pct}%`, SIZE_STATUS);
+      // Row 2: ~days left-aligned within left column; add a touch more inter-row space
+      text(leftTextX, baseY+7, `~${data.days||'128'}d`, SIZE_STATUS);
+      // Row 3: IP right-aligned within left column with 2px right padding
       const ip = `IP ${data.ip||'192.168.1.42'}`; const iw = ctx.measureText(ip).width;
-      const leftColRight = 125 - 2; const ipLeft = Math.max(bx + bw + 6, leftColRight - iw);
-      text(ipLeft, baseY+14, ip, SIZE_STATUS);
+      const leftColRight = 125 - 2; const ipLeft = Math.max(leftTextX, leftColRight - iw);
+      text(ipLeft, baseY+17, ip, SIZE_STATUS);
       // Right: larger icon + condition centered
       const cond = shortConditionLabel(data.weather||'Cloudy');
       // Allocate more height for icon
-      const barX = 130, barW = 114, iconW = 22, iconH = 22, gap = 8, barY = 96;
-      let label = cond; const maxTextW = barW - iconW - gap;
+      const barX = 130, barW = 114, iconW = 24, iconH = 24, gap = 8, barY = 95;
+      let label = cond; const maxTextW = barW - iconW - gap - 2; // keep 2px right padding
       while (ctx.measureText(label).width > maxTextW && label.length > 1) label = label.slice(0,-1);
       if (label !== cond && label.length>1) label = label.slice(0,-1)+'…';
       const totalW = iconW + gap + ctx.measureText(label).width;
       const startX = barX + Math.max(0, Math.floor((barW - totalW)/2));
       const iconSelector = (data.moon_phase ? `moon_${(data.moon_phase||'').toLowerCase().replace(/\s+/g,'_')}` : (data.weather||'Cloudy'));
       weatherIcon([startX, barY, startX+iconW, barY+iconH], iconSelector);
-      text(startX + iconW + gap, barY+2, label, SIZE_SMALL);
+      const labelTop = barY + Math.max(0, Math.floor((iconH - SIZE_SMALL)/2));
+      text(startX + iconW + gap, labelTop, label, SIZE_SMALL);
     } else if (mode === 'icon') {
       // icon-dominant: big icon area, shift outside label left edge to align with OUT_TEMP
       const ICON = [204, 50, 44, 44];
