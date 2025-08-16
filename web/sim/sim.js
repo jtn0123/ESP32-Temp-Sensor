@@ -207,13 +207,13 @@
     const voltageText = `${data.voltage||'4.01'}`;
     const pctText = `${pct||76}%`;
     let prefix = `Batt ${voltageText}V`;
-    const tail = ` ${pctText}  |  ~${days}d`;
-    let leftX = STATUS[0] + bw + 8;
+    const tail = ` ${pctText} | ~${days}d`;
+    let leftX = STATUS[0] + bw + 6; // tighter left margin
     const statusTextY = STATUS[1] - 1; // nudge up 1px to avoid bottom clip
     // Right-aligned IP
     const ip = `IP ${data.ip||'192.168.1.42'}`;
     const iw = ctx.measureText(ip).width;
-    const ipX = STATUS[0] + STATUS[2] - iw; // shift IP 2px right for more left-space
+    const ipX = STATUS[0] + STATUS[2] - 1 - iw; // nudge 1px closer to right edge
     // Clamp left text to avoid overlap with IP, preserving the tail ( ~Xd)
     const maxLeftWidth = ipX - leftX - 4;
     let left;
