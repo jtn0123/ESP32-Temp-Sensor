@@ -33,6 +33,20 @@
   const SIZE_BIG = 22;
   const THRESH = 176;
 
+  function applyOneBitThreshold(){
+    if (!oneBitMode) return;
+    const img = ctx.getImageData(0,0,WIDTH,HEIGHT);
+    const d = img.data;
+    for (let i=0;i<d.length;i+=4){
+      const r=d[i], g=d[i+1], b=d[i+2];
+      const y = 0.2126*r + 0.7152*g + 0.0722*b;
+      const v = y < THRESH ? 0 : 255;
+      d[i]=d[i+1]=d[i+2]=v;
+      d[i+3]=255;
+    }
+    ctx.putImageData(img,0,0);
+  }
+
   function clear(){
     ctx.fillStyle = '#fff';
     ctx.fillRect(0,0,WIDTH,HEIGHT);
@@ -76,19 +90,41 @@
     ctx.restore();
   }
 
-  function drawTempWithUnits(rect, valueStr){
+  function drawTempRightAligned(rect, valueF){
     const [x, y, w, h] = rect;
-    const unitsW = 14;
-    // measure numeric width with big font and center within numeric sub-rect
+    const pad = 2;           // inner padding to keep to 2px grid inside boxes
+    const unitsW = 14;       // fixed strip for degree + unit to prevent jitter
+    const unitsLeft = x + w - unitsW;
+    // prepare value string (allow caller to pass number or string)
+    let s = String(valueF ?? '');
+    // use bold, monospaced stack for rock-solid digits
     ctx.font = `bold ${SIZE_BIG}px ${FONT_STACK}`;
-    const tw = ctx.measureText(valueStr).width;
-    const numW = w - unitsW;
-    const rx = x + Math.max(0, Math.floor((numW - tw) / 2));
-    text(rx, y, valueStr, SIZE_BIG, 'bold');
-    // Place units right after the number for tighter look
-    const degX = rx + tw + 2;
+    ctx.textBaseline = 'top';
+    const maxNumW = Math.max(0, unitsLeft - (x + pad));
+    // If too wide, prefer dropping fractional part first
+    let tw = ctx.measureText(s).width;
+    if (tw > maxNumW){
+      const noFrac = s.replace(/(\.|,).*/, '');
+      if (noFrac !== s){
+        s = noFrac;
+        tw = ctx.measureText(s).width;
+      }
+    }
+    // As final fallback, truncate from the right
+    while (tw > maxNumW && s.length > 1){
+      s = s.slice(0, -1);
+      // avoid dangling minus or dot at end
+      if (/[\-\.+]$/.test(s)) s = s.slice(0, -1);
+      tw = ctx.measureText(s).width;
+    }
+    const numRight = unitsLeft - pad;
+    const numLeft = Math.max(x + pad, Math.floor(numRight - tw));
+    // draw number on 2px baseline grid (y is already even in layout)
+    text(numLeft, y, s, SIZE_BIG, 'bold');
+    // draw units inside the fixed strip, horizontally compact
+    const degX = unitsLeft + 2;
     const fX = degX + 6;
-    const unitY = y + 5; // drop by 1px for better baseline alignment
+    const unitY = y + 4; // keep even baseline offset
     text(degX, unitY, '°', 12);
     text(fX, unitY, 'F', 12);
   }
@@ -255,25 +291,22 @@
 
     // Values: numeric right-aligned with fixed units strip
     const numIn = `${data.inside_temp||'72.5'}`;
-    drawTempWithUnits(INSIDE_TEMP, numIn);
+    drawTempRightAligned(INSIDE_TEMP, numIn);
     text(INSIDE_RH[0], INSIDE_RH[1], `${data.inside_hum||'47'}% RH`, SIZE_SMALL);
     // Omit duplicate time here; header shows time
 
     const numOut = `${data.outside_temp||'68.4'}`;
-    drawTempWithUnits(OUT_TEMP, numOut);
-    // two-column lower info: move condition to left-top, swap wind/humidity positions, show wind in mph
+    drawTempRightAligned(OUT_TEMP, numOut);
+    // Outside details: split RH and wind into two rows to avoid collisions
     const condition = shortConditionLabel(data.weather || 'Cloudy');
     const rhText = `${data.outside_hum||'53'}% RH`;
     let windMps = parseFloat(data.wind || '4.2');
     if (!isFinite(windMps)) windMps = 4.2;
     const wind = `${(windMps*2.237).toFixed(1)} mph`;
-    // Left/right small rows within clipped boxes to prevent overlap
+    // Row 1 (left): RH
     drawTextInRect(OUT_ROW1_L, rhText, SIZE_SMALL, 'normal', 'left', 1);
-    // keep wind fully readable; prefer full text over ellipsis
-    ctx.font = `${SIZE_SMALL}px ${FONT_STACK}`;
-    const wBox = OUT_ROW1_R; const needed = ctx.measureText(wind).width + 2;
-    const windRect = [wBox[0], wBox[1], Math.max(wBox[2], needed), wBox[3]];
-    drawTextInRect(windRect, wind, SIZE_SMALL, 'normal', 'right', 1);
+    // Row 2 (left): wind (mph)
+    drawTextInRect(OUT_ROW2_L, wind, SIZE_SMALL, 'normal', 'left', 1);
     // Unified layout: split + three-row status
     // Three-row left status and right weather area
     ctx.fillStyle = '#fff';
@@ -339,19 +372,7 @@
     }
 
     // Optional: convert to 1-bit threshold rendering pass
-    if (oneBitMode){
-      const img = ctx.getImageData(0,0,WIDTH,HEIGHT);
-      const d = img.data;
-      // Simple luminance threshold; e-ink tends to dither, but we do hard threshold for clarity
-      for (let i=0;i<d.length;i+=4){
-        const r=d[i], g=d[i+1], b=d[i+2];
-        const y = 0.2126*r + 0.7152*g + 0.0722*b;
-        const v = y < THRESH ? 0 : 255; // slightly lighter to reduce blotting
-        d[i]=d[i+1]=d[i+2]=v;
-        d[i+3]=255;
-      }
-      ctx.putImageData(img,0,0);
-    }
+    applyOneBitThreshold();
   }
 
   async function load(){
@@ -384,6 +405,8 @@
       // brief outline to show the partial region
       ctx.strokeStyle = '#000';
       ctx.strokeRect(hx,hy,hw,hh);
+      // Re-apply 1-bit threshold to ensure no grayscale AA from partial update
+      applyOneBitThreshold();
       setTimeout(()=>{ /* no-op */ }, 100);
     }catch(e){
       load();

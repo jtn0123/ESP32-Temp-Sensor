@@ -131,11 +131,17 @@ def draw_layout(draw: ImageDraw.ImageDraw, data: dict):
     nwo = len(num_out)*6
     draw.text((OUT_TEMP[0]+nwo+2, OUT_TEMP[1]+2), "°", font=load_font(10), fill=0)
     draw.text((OUT_TEMP[0]+nwo+8, OUT_TEMP[1]+2), "F", font=load_font(10), fill=0)
-    draw.text((OUT_ROW1_L[0], OUT_ROW1_L[1]), data.get('weather','Cloudy'), font=font_sm, fill=0)
-    draw.text((OUT_ROW1_R[0], OUT_ROW1_R[1]), f"{data.get('outside_hum','53')}% RH", font=font_sm, fill=0)
+    # Outside details: split RH and wind into separate rows to avoid collisions
+    draw.text((OUT_ROW1_L[0], OUT_ROW1_L[1]), f"{data.get('outside_hum','53')}% RH", font=font_sm, fill=0)
     draw_weather_icon(draw, OUT_ICON, data.get('weather','Cloudy'))
-    draw.text((OUT_ROW2_L[0], OUT_ROW2_L[1]), f"{data.get('wind','4.2')} m/s", font=font_sm, fill=0)
-    draw.text((OUT_ROW2_R[0], OUT_ROW2_R[1]), f"H {data.get('high','75.0')}°  L {data.get('low','60.0')}°", font=font_sm, fill=0)
+    # Wind in mph
+    try:
+        wind_val = float(str(data.get('wind','4.2')))
+    except Exception:
+        wind_val = 4.2
+    wind_text = f"{wind_val*2.237:.1f} mph"
+    draw.text((OUT_ROW2_L[0], OUT_ROW2_L[1]), wind_text, font=font_sm, fill=0)
+    # Keep right column free for future data (H/L or others)
 
     # Status
     # Battery glyph

@@ -51,6 +51,10 @@ Done:
 - Outside icon/status caching; partial redraws only on change.
 - Wi‑Fi fast connect: optional static IP, BSSID/channel; connection timeouts for early exit.
 
+New:
+- `web/sim/sim.js`: Added `drawTempRightAligned(rect, valueF)` using a monospaced font stack and a fixed units strip to make digits rock‑solid. Enforces a 2‑px baseline grid and respects 6‑px outer margins via the existing layout rects.
+- Switched inside/outside temps to the new helper. Mirror this in firmware (`display_draw.cpp`) for aligned partial windows.
+
 Open follow‑ups:
 - Tune partial window merges when both outside temp/RH change (Phase 3).
 - Persist partial refresh cadence in NVS (Phase 3).
