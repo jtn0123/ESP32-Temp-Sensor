@@ -287,18 +287,35 @@
       // Two-row status at bottom; bottom-right weather icon+cond
       ctx.fillStyle = '#000'; ctx.fillRect(125, 98, 119, 1); ctx.fillStyle = '#000';
       const pct = parseInt(data.percent||'76', 10);
-      const bx = STATUS[0], by = STATUS[1]; const bw = 13, bh = 7;
+      // Move entire status block up by one row (approx 10px)
+      const baseY = STATUS[1] - 10;
+      const bx = STATUS[0], by = baseY; const bw = 13, bh = 7;
       ctx.strokeStyle = '#000'; ctx.strokeRect(bx, by, bw, bh); ctx.fillStyle = '#000';
       ctx.fillRect(bx + bw, by + 2, 2, 4);
       const fillw = Math.max(0, Math.min(bw-2, Math.round((bw-2) * (pct/100)))); if (fillw>0) ctx.fillRect(bx+1, by+1, fillw, bh-2);
-      text(bx + bw + 6, STATUS[1]-1, `Batt ${data.voltage||'4.01'}V ${pct}%`, SIZE_STATUS);
+      // top row: Batt V %
+      text(bx + bw + 6, baseY-1, `Batt ${data.voltage||'4.01'}V ${pct}%`, SIZE_STATUS);
+      // bottom row: ~days and IP right-aligned, also moved up by one row
       const rightText = `~${data.days||'128'}d    IP ${data.ip||'192.168.1.42'}`;
       const rw = ctx.measureText(rightText).width;
-      text(STATUS[0] + STATUS[2] - 2 - rw, STATUS[1]+8, rightText, SIZE_STATUS);
-      const ICON = [177, 100, 16, 16];
+      text(STATUS[0] + STATUS[2] - 2 - rw, baseY+8, rightText, SIZE_STATUS);
+      // Bottom-right bar: center icon+condition within a right-side panel to avoid clipping
+      const barX = 170, barW = 78, iconW = 16, iconH = 16, gap = 6, barY = 100;
       const iconSelector = (data.moon_phase ? `moon_${(data.moon_phase||'').toLowerCase().replace(/\s+/g,'_')}` : (data.weather||'Cloudy'));
-      weatherIcon([ICON[0],ICON[1],ICON[0]+ICON[2],ICON[1]+ICON[3]], iconSelector);
-      text(ICON[0]+ICON[2]+6, 100, condition, SIZE_SMALL);
+      // Fit condition text to available width
+      let label = condition;
+      const maxTextW = barW - iconW - gap;
+      while (ctx.measureText(label).width > maxTextW && label.length > 1) {
+        label = label.slice(0, -1);
+      }
+      if (label !== condition && label.length > 1) label = label.slice(0, -1) + '…';
+      const totalW = iconW + gap + ctx.measureText(label).width;
+      const startX = barX + Math.max(0, Math.floor((barW - totalW)/2));
+      // Clear any prior condition above to avoid duplicates
+      ctx.fillStyle = '#fff'; ctx.fillRect(OUT_ROW2_L[0], OUT_ROW2_L[1]-1, OUT_ROW2_L[2], OUT_ROW2_L[3]+2);
+      ctx.fillStyle = '#000';
+      weatherIcon([startX, barY, startX+iconW, barY+iconH], iconSelector);
+      text(startX + iconW + gap, barY, label, SIZE_SMALL);
       // Clear any prior condition above to avoid duplicates
       ctx.fillStyle = '#fff';
       ctx.fillRect(OUT_ROW2_L[0], OUT_ROW2_L[1]-1, OUT_ROW2_L[2], OUT_ROW2_L[3]+2);
