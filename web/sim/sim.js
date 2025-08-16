@@ -208,7 +208,8 @@
     ctx.fillStyle = '#000';
     // thin rules only
     ctx.fillRect(0,18,WIDTH,1);
-    ctx.fillRect(125,18,1,77);
+    // extend center divider all the way to the bottom frame
+    ctx.fillRect(125,18,1,HEIGHT-18-1);
     // left name, right time
     ctx.fillStyle = '#000';
     const t = data.time || '10:32';
@@ -278,7 +279,7 @@
       text(OUT_ROW2_L[0], OUT_ROW2_L[1]+2, shortConditionLabel(data.weather||'Cloudy'), SIZE_SMALL);
     } else if (mode === 'split') {
       // Bottom split bar dedicated to icon + condition spanning width
-      ctx.fillStyle = '#000'; ctx.fillRect(125, 98, 119, 1); ctx.fillStyle = '#000';
+      ctx.fillStyle = '#000'; ctx.fillRect(0, 98, WIDTH, 1); ctx.fillStyle = '#000';
       const ICON = [130, 100, 16, 16];
       const iconSelector = (data.moon_phase ? `moon_${(data.moon_phase||'').toLowerCase().replace(/\s+/g,'_')}` : (data.weather||'Cloudy'));
       weatherIcon([ICON[0],ICON[1],ICON[0]+ICON[2],ICON[1]+ICON[3]], iconSelector);
@@ -286,7 +287,7 @@
       text(ICON[0]+ICON[2]+6, 100, cond, SIZE_SMALL);
     } else if (mode === 'splitxl') {
       // Full bottom-right corner as weather panel: keep IP/status intact
-      ctx.fillStyle = '#000'; ctx.fillRect(125, 98, 119, 1); ctx.fillStyle = '#000';
+      ctx.fillStyle = '#000'; ctx.fillRect(0, 98, WIDTH, 1); ctx.fillStyle = '#000';
       const PANEL_X = 170, PANEL_Y = 96, PANEL_W = 74, PANEL_H = 24;
       const ICON = [PANEL_X, PANEL_Y+4, 18, 18];
       const iconSelector = (data.moon_phase ? `moon_${(data.moon_phase||'').toLowerCase().replace(/\s+/g,'_')}` : (data.weather||'Cloudy'));
@@ -298,7 +299,7 @@
       ctx.fillStyle = '#000';
     } else if (mode === 'split2') {
       // Two-row status at bottom; bottom-right weather icon+cond
-      ctx.fillStyle = '#000'; ctx.fillRect(125, 98, 119, 1); ctx.fillStyle = '#000';
+      ctx.fillStyle = '#000'; ctx.fillRect(0, 98, WIDTH, 1); ctx.fillStyle = '#000';
       const pct = parseInt(data.percent||'76', 10);
       // Move entire status block up by one row (approx 10px)
       const baseY = STATUS[1] - 10; // move whole two-row block up one row
@@ -338,7 +339,7 @@
       ctx.fillStyle = '#000';
     } else if (mode === 'split3') {
       // Three-row left status: row1 Batt V %, row2 ~days, row3 IP; right: taller weather area
-      ctx.fillStyle = '#000'; ctx.fillRect(125, 98, 119, 1); ctx.fillStyle = '#000';
+      ctx.fillStyle = '#000'; ctx.fillRect(0, 98, WIDTH, 1); ctx.fillStyle = '#000';
       // Clear previous single-row status artifacts in left & right halves
       ctx.fillStyle = '#fff';
       ctx.fillRect(STATUS[0], STATUS[1]-18, 125-STATUS[0], STATUS[3]+22);
@@ -354,14 +355,16 @@
       ctx.strokeStyle = '#000'; ctx.strokeRect(bx, baseY, bw, bh); ctx.fillStyle = '#000';
       ctx.fillRect(bx + bw, baseY + 2, 2, 4);
       const fillw = Math.max(0, Math.min(bw-2, Math.round((bw-2) * (pct/100)))); if (fillw>0) ctx.fillRect(bx+1, baseY+1, fillw, bh-2);
-      // Row 1: Batt V %
+      // Row 1: Batt V (percent moved to row 2 per request)
       const leftTextX = bx + bw + 6;
-      text(leftTextX, baseY-2, `Batt ${data.voltage||'4.01'}V ${pct}%`, SIZE_STATUS);
-      // Row 2: ~days left-aligned within left column
-      text(leftTextX, baseY+8, `~${data.days||'128'}d`, SIZE_STATUS);
-      // Row 3: IP right-aligned within left column with 2px right padding
+      text(leftTextX, baseY-2, `Batt ${data.voltage||'4.01'}V`, SIZE_STATUS);
+      // Row 2: ~days plus percent
+      text(leftTextX, baseY+8, `~${data.days||'128'}d   ${pct}%`, SIZE_STATUS);
+      // Row 3: IP centered within the usable left column (avoid battery glyph area)
       const ip = `IP ${data.ip||'192.168.1.42'}`; const iw = ctx.measureText(ip).width;
-      const leftColRight = 125 - 2; const ipLeft = Math.max(leftTextX, leftColRight - iw);
+      const leftColRight = 125 - 2;
+      const ipAreaLeft = leftTextX; const ipAreaRight = leftColRight;
+      const ipLeft = Math.max(ipAreaLeft, Math.floor(ipAreaLeft + (ipAreaRight - ipAreaLeft - iw) / 2));
       text(ipLeft, baseY+18, ip, SIZE_STATUS);
       // Right: larger icon + condition centered
       const cond = shortConditionLabel(data.weather||'Cloudy');
