@@ -77,7 +77,7 @@ static inline int16_t text_width_default_font(const char* s, uint8_t size)
 }
 
 // Forward declaration for status drawing used by maybe_redraw_status
-static void draw_status_line(const BatteryStatus& bs, const String& ip);
+static void draw_status_line(const BatteryStatus& bs, const char* ip_cstr);
 
 template<typename DrawFn>
 static inline void draw_in_region(const int rect[4], DrawFn drawFn)
@@ -144,32 +144,30 @@ static inline uint32_t fast_crc32(const uint8_t* data, size_t len)
     return ~crc;
 }
 
-static inline bool maybe_redraw_float(float current, float& last, float threshold, void (*drawFn)())
-{
-    if (isnan(current)) return false;
-    if (!isfinite(last) || fabsf(current - last) >= threshold) {
-        drawFn();
-        last = current;
-        return true;
-    }
-    return false;
-}
-
 template<typename DrawFn>
-static inline bool maybe_redraw_bool(bool shouldDraw, DrawFn drawFn)
+static inline bool maybe_redraw_numeric(const int rect[4], float currentValue, float& lastValue, float threshold, DrawFn drawFn)
 {
-    if (shouldDraw) { drawFn(); return true; }
+    bool should = false;
+    if (!isnan(currentValue) && (!isfinite(lastValue) || fabsf(currentValue - lastValue) >= threshold)) should = true;
+    if (should) { drawFn(); lastValue = currentValue; return true; }
     return false;
 }
 
-static inline bool maybe_redraw_status(const BatteryStatus& bs, const String& ip, const int rect[4])
+template<typename T, typename DrawFn>
+static inline bool maybe_redraw_value(const int rect[4], const T& currentValue, T& lastValue, DrawFn drawFn)
+{
+    if (currentValue != lastValue) { drawFn(); lastValue = currentValue; return true; }
+    return false;
+}
+
+static inline bool maybe_redraw_status(const BatteryStatus& bs, const char* ip_cstr, const int rect[4])
 {
     char buf[96];
     snprintf(buf, sizeof(buf), "IP %s  Batt %.2fV %d%%  ~%dd",
-             ip.c_str(), bs.voltage, bs.percent, bs.estimatedDays);
+             ip_cstr, bs.voltage, bs.percent, bs.estimatedDays);
     uint32_t crc = fast_crc32((const uint8_t*)buf, strlen(buf));
     if (crc != last_status_crc) {
-        draw_status_line(bs, ip);
+        draw_status_line(bs, ip_cstr);
         last_status_crc = crc;
         return true;
     }
@@ -210,7 +208,7 @@ static void draw_header_time(const char* time_str)
     });
 }
 
-static void draw_status_line(const BatteryStatus& bs, const String& ip)
+static void draw_status_line(const BatteryStatus& bs, const char* ip_cstr)
 {
     const int16_t x = STATUS_[0];
     const int16_t y = STATUS_[1];
@@ -233,29 +231,29 @@ static void draw_status_line(const BatteryStatus& bs, const String& ip)
             if (fillw > 0) display.fillRect(bx + 1, by + 1, fillw, bh - 2, GxEPD_BLACK);
             cx += bw + 6;
         }
-        // Build left strings with truncation strategy
+        // Right-aligned IP using bounds for exact fitting
+        char right[48];
+        snprintf(right, sizeof(right), "IP %s", ip_cstr);
+        int16_t bx, by; uint16_t bw, bh;
+        display.getTextBounds(right, 0, 0, &bx, &by, &bw, &bh);
+        int16_t rx = xx + ww - 2 - (int16_t)bw;
+        // Choose, using bounds, which left label to print based on available width
         char left_full[64];
         char left_nobatt[64];
         char left_tail[32];
         snprintf(left_full, sizeof(left_full), "Batt %.2fV %d%% | ~%dd", bs.voltage, bs.percent, bs.estimatedDays);
         snprintf(left_nobatt, sizeof(left_nobatt), "%.2fV %d%% | ~%dd", bs.voltage, bs.percent, bs.estimatedDays);
         snprintf(left_tail, sizeof(left_tail), "%d%% | ~%dd", bs.percent, bs.estimatedDays);
-        // Right-aligned IP
-        char right[48];
-        snprintf(right, sizeof(right), "IP %s", ip.c_str());
-        int16_t tw = text_width_default_font(right, 1);
-        int16_t rx = xx + ww - 2 - tw;
-        // Choose which left label to print based on available width
         int16_t available = rx - cx - 2;
         const char* to_print = left_full;
-        int16_t lw = text_width_default_font(to_print, 1);
-        if (lw > available) {
+        display.getTextBounds(to_print, 0, 0, &bx, &by, &bw, &bh);
+        if ((int16_t)bw > available) {
             to_print = left_nobatt;
-            lw = text_width_default_font(to_print, 1);
+            display.getTextBounds(to_print, 0, 0, &bx, &by, &bw, &bh);
         }
-        if (lw > available) {
-            int16_t tailw = text_width_default_font(left_tail, 1);
-            if (tailw <= available) {
+        if ((int16_t)bw > available) {
+            display.getTextBounds(left_tail, 0, 0, &bx, &by, &bw, &bh);
+            if ((int16_t)bw <= available) {
                 to_print = left_tail;
             } else {
                 to_print = "";
@@ -542,10 +540,9 @@ void setup() {
             if (d >= THRESH_TEMP_F) trend_in = '+'; else if (d <= -THRESH_TEMP_F) trend_in = '-';
         }
         // Only redraw inside temp when changed beyond threshold
-        if (!isfinite(last_inside_f) || fabsf(now_in_f - last_inside_f) >= THRESH_TEMP_F) {
+        maybe_redraw_numeric(INSIDE_TEMP, now_in_f, last_inside_f, THRESH_TEMP_F, [&](){
             partial_update_inside_temp(in_temp, trend_in);
-            if (isfinite(now_in_f)) last_inside_f = now_in_f;
-        }
+        });
         // Publish only when changed beyond thresholds
         if (isfinite(r.temperatureC) && isfinite(r.humidityPct)) {
             bool temp_changed = (!isfinite(last_published_inside_tempC)) || fabsf(r.temperatureC - last_published_inside_tempC) >= THRESH_TEMP_C_FROM_F;
@@ -567,25 +564,22 @@ void setup() {
                 float d = now_out_f - last_outside_f;
                 if (d >= THRESH_TEMP_F) trend_out = '+'; else if (d <= -THRESH_TEMP_F) trend_out = '-';
             }
-            if (!isfinite(last_outside_f) || fabs(o.temperatureC - (last_outside_f - 32.0f) * 5.0f/9.0f) >= THRESH_TEMP_C_FROM_F) {
+            maybe_redraw_numeric(OUT_TEMP, now_out_f, last_outside_f, THRESH_TEMP_F, [&](){
                 partial_update_outside_temp(out_temp, trend_out);
-                last_outside_f = now_out_f;
-            }
+            });
         }
         if (o.validHum) {
             char out_rh[16];
             snprintf(out_rh, sizeof(out_rh), "%.0f", o.humidityPct);
-            if (!isfinite(last_outside_rh) || fabs(o.humidityPct - last_outside_rh) >= THRESH_RH) {
+            maybe_redraw_numeric(OUT_ROW2_L, o.humidityPct, last_outside_rh, THRESH_RH, [&](){
                 partial_update_outside_rh(out_rh);
-                last_outside_rh = o.humidityPct;
-            }
+            });
         }
         if (o.validWeather) {
             IconId id = map_weather_to_icon(o.weather);
-            if (last_icon_id != (int32_t)id) {
+            maybe_redraw_value<int32_t>(OUT_ICON, (int32_t)id, last_icon_id, [&](){
                 partial_update_weather_icon(o.weather);
-                last_icon_id = (int32_t)id;
-            }
+            });
             String sc = make_short_condition(o.weather);
             partial_update_outside_condition(sc.c_str());
         }
@@ -599,7 +593,9 @@ void setup() {
         // Update header time and status every wake (status only if changed)
         draw_header_time("10:32");
         BatteryStatus bs = read_battery_status();
-        maybe_redraw_status(bs, net_ip(), STATUS_);
+        char ip_c[32];
+        net_ip_cstr(ip_c, sizeof(ip_c));
+        maybe_redraw_status(bs, ip_c, STATUS_);
     }
 
     partial_counter++;

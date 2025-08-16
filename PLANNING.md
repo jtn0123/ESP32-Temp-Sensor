@@ -42,3 +42,16 @@
 ‑ Docs: `hardware/pinmap.md` exact pins; `hardware/bom.md` purchase links.
 
 
+### Phase 1 — Wake time & stability
+
+Done:
+- Right‑aligned numeric temps; units drawn separately to prevent digit jitter.
+- Added `draw_in_region(rect, fn)` helper and applied across temp/RH/icon/status.
+- Threshold/caching: RTC‑persisted last values and publish thresholds (0.2°F, 1% RH). Skips unchanged MQTT publishes.
+- Outside icon/status caching; partial redraws only on change.
+- Wi‑Fi fast connect: optional static IP, BSSID/channel; connection timeouts for early exit.
+
+Open follow‑ups:
+- Tune partial window merges when both outside temp/RH change (Phase 3).
+- Persist partial refresh cadence in NVS (Phase 3).
+

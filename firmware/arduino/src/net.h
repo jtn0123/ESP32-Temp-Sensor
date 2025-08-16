@@ -170,6 +170,16 @@ inline String net_ip() {
     return WiFi.localIP().toString();
 }
 
+inline void net_ip_cstr(char* out, size_t out_size) {
+    if (!out || out_size == 0) return;
+    if (!WiFi.isConnected()) {
+        snprintf(out, out_size, "%s", "0.0.0.0");
+        return;
+    }
+    IPAddress ip = WiFi.localIP();
+    snprintf(out, out_size, "%u.%u.%u.%u", (unsigned)ip[0], (unsigned)ip[1], (unsigned)ip[2], (unsigned)ip[3]);
+}
+
 inline OutsideReadings net_get_outside() { return g_outside; }
 
 inline void net_publish_inside(float tempC, float rhPct) {
