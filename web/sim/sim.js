@@ -45,11 +45,10 @@
     if(iconCache.has(name)) return iconCache.get(name);
     iconCache.set(name, 'pending');
     try{
-      // Prefer MDI icons when available, fallback to our basic icons
-      let res = await fetch(`../icons/mdi/${name}.svg`);
-      if(!res.ok){
-        res = await fetch(`../icons/${name}.svg`);
-      }
+      // Prefer local sim icons, then web/icons/mdi, then web/icons basic
+      let res = await fetch(`icons/${name}.svg`);
+      if(!res.ok){ res = await fetch(`../icons/mdi/${name}.svg`); }
+      if(!res.ok){ res = await fetch(`../icons/${name}.svg`); }
       if(!res.ok) throw new Error('not ok');
       const svgText = await res.text();
       const blob = new Blob([svgText], { type: 'image/svg+xml' });
