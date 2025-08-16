@@ -87,6 +87,22 @@
     return 'cloudy';
   }
 
+  function shortConditionLabel(w){
+    const s = String(w||'').trim();
+    if (!s) return 'Cloudy';
+    // Split on common separators/qualifiers and keep the first token/word
+    const lowered = s.toLowerCase();
+    const cutPhrases = [' with ', ' and ', ',', '/', ' - '];
+    let cutIndex = s.length;
+    for (const sep of cutPhrases){
+      const idx = lowered.indexOf(sep);
+      if (idx >= 0 && idx < cutIndex) cutIndex = idx;
+    }
+    const first = s.slice(0, cutIndex).trim();
+    // Additionally reduce to the first word to guarantee a single token like "Cloudy"
+    return first.split(/\s+/)[0] || 'Cloudy';
+  }
+
   async function weatherIcon(box, weather){
     const [x0,y0,x1,y1] = box;
     const w = x1-x0, h=y1-y0; const cx=x0+w/2, cy=y0+h/2;
@@ -183,7 +199,7 @@
     // Left column: condition (top), wind (bottom)
     // Right column: humidity (top), hi/lo (bottom)
     const wind = (data.wind || '4.2') + 'm/s';
-    const condition = (data.weather || 'Cloudy');
+    const condition = shortConditionLabel(data.weather || 'Cloudy');
     const hilo = `H ${data.high||'75.0'}° | L ${data.low||'60.0'}°`;
     text(OUT_ROW1_L[0], OUT_ROW1_L[1], condition, SIZE_SMALL);
     text(OUT_ROW2_L[0], OUT_ROW2_L[1], wind, SIZE_SMALL);
