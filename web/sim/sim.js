@@ -208,7 +208,7 @@
     ctx.fillStyle = '#000';
     // thin rules only
     ctx.fillRect(0,18,WIDTH,1);
-    // extend center divider all the way to the bottom frame
+    // extend center divider all the way to the bottom frame (to y=HEIGHT-1)
     ctx.fillRect(125,18,1,HEIGHT-18-1);
     // left name, right time
     ctx.fillStyle = '#000';
@@ -339,7 +339,6 @@
       ctx.fillStyle = '#000';
     } else if (mode === 'split3') {
       // Three-row left status: row1 Batt V %, row2 ~days, row3 IP; right: taller weather area
-      ctx.fillStyle = '#000'; ctx.fillRect(0, 98, WIDTH, 1); ctx.fillStyle = '#000';
       // Clear previous single-row status artifacts in left & right halves
       ctx.fillStyle = '#fff';
       ctx.fillRect(STATUS[0], STATUS[1]-18, 125-STATUS[0], STATUS[3]+22);
@@ -351,6 +350,10 @@
       // Lift the left stack so the IP row fits fully within 122px height
       // baseY + 18 (IP row top) + 10 (font height) <= 122 → baseY <= 94
       const baseY = STATUS[1] - 18; // 112-18 = 94
+      // Draw the horizontal rule just above the battery row across the entire screen
+      ctx.fillStyle = '#000';
+      ctx.fillRect(0, baseY - 2, WIDTH, 1);
+      ctx.fillStyle = '#000';
       // Battery glyph
       ctx.strokeStyle = '#000'; ctx.strokeRect(bx, baseY, bw, bh); ctx.fillStyle = '#000';
       ctx.fillRect(bx + bw, baseY + 2, 2, 4);
