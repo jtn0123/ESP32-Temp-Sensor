@@ -8,10 +8,11 @@
   const INSIDE_TIME = [  6, 82, 118, 12];
   const OUT_TEMP    = [131, 36,  90, 28];
   const OUT_ICON    = [224, 22,  20, 20];
-  const OUT_ROW1_L  = [131, 86,  44, 12];
-  const OUT_ROW1_R  = [177, 86,  44, 12];
-  const OUT_ROW2_L  = [131, 98,  44, 12];
-  const OUT_ROW2_R  = [177, 98,  44, 12];
+  // Move outside non-temp rows up by one row (12px) to close white space
+  const OUT_ROW1_L  = [131, 74,  44, 12];
+  const OUT_ROW1_R  = [177, 74,  44, 12];
+  const OUT_ROW2_L  = [131, 86,  44, 12];
+  const OUT_ROW2_R  = [177, 86,  44, 12];
   const STATUS      = [  6, 112, 238, 10];
 
   const canvas = document.getElementById('epd');
@@ -89,42 +90,48 @@
   async function weatherIcon(box, weather){
     const [x0,y0,x1,y1] = box;
     const w = x1-x0, h=y1-y0; const cx=x0+w/2, cy=y0+h/2;
+    const scale = 1.2; // make icon ~20% larger without moving neighboring text
+    const effW = Math.round(Math.min(24, w*scale));
+    const effH = Math.round(Math.min(24, h*scale));
+    const ex0 = Math.round(x0 + (w - effW)/2);
+    const ey0 = Math.round(y0 + (h - effH)/2);
+    const ex1 = ex0 + effW;
+    const ey1 = ey0 + effH;
     const kind = (weather||'').toLowerCase();
     // Try SVG first
     const name = kind.startsWith('moon_') ? kind : mapWeatherToIconName(kind);
     const svg = await loadSvgIcon(name);
     if(svg){
-      // draw centered at native size (24x24) scaled to fit
-      const iw = Math.min(24, w), ih = Math.min(24, h);
-      const px = x0 + (w - iw)/2;
-      const py = y0 + (h - ih)/2;
-      ctx.drawImage(svg, px, py, iw, ih);
+      // draw centered, allow to extend up to 24x24 (about 20% larger than 20x20 box)
+      ctx.drawImage(svg, ex0, ey0, effW, effH);
       return;
     }
     ctx.strokeStyle = '#000';
     if(kind.includes('sun') || kind.includes('clear')){
-      const r = Math.min(w,h)/3;
-      ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2); ctx.stroke();
-      const spikes = [[0,-r-4],[0,r+4],[-r-4,0],[r+4,0],[-3,-3],[3,3],[-3,3],[3,-3]];
-      spikes.forEach(([dx,dy])=>{ ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(cx+dx,cy+dy); ctx.stroke(); });
+      const rc = Math.min(effW,effH)/3;
+      const ccx = (ex0+ex1)/2, ccy = (ey0+ey1)/2;
+      ctx.beginPath(); ctx.arc(ccx,ccy,rc,0,Math.PI*2); ctx.stroke();
+      const spikes = [[0,-rc-4],[0,rc+4],[-rc-4,0],[rc+4,0],[-3,-3],[3,3],[-3,3],[3,-3]];
+      spikes.forEach(([dx,dy])=>{ ctx.beginPath(); ctx.moveTo(ccx,ccy); ctx.lineTo(ccx+dx,ccy+dy); ctx.stroke(); });
     } else if(kind.includes('part')){
-      ctx.beginPath(); ctx.arc(x0+10,y0+10,8,0,Math.PI*2); ctx.stroke();
-      ctx.strokeRect(x0+2,y0+h/2,x1-x0-4,y1-y0-6);
+      const rr = Math.min(effW,effH)/3;
+      ctx.beginPath(); ctx.arc(ex0+rr+2,ey0+rr+2,rr,0,Math.PI*2); ctx.stroke();
+      ctx.strokeRect(ex0+2,ey0+effH/2,effW-4,effH-6);
     } else if(kind.includes('cloud')){
-      ctx.strokeRect(x0+2,y0+8,x1-x0-4,y1-y0-12);
-      ctx.beginPath(); ctx.arc(x0+12,y0+10,8,0,Math.PI*2); ctx.stroke();
-      ctx.beginPath(); ctx.arc(x0+24,y0+8,8,0,Math.PI*2); ctx.stroke();
+      ctx.strokeRect(ex0+2,ey0+8,effW-4,effH-12);
+      ctx.beginPath(); ctx.arc(ex0+Math.min(12,effW/2),ey0+10,8,0,Math.PI*2); ctx.stroke();
+      ctx.beginPath(); ctx.arc(ex0+Math.min(24,effW-2),ey0+8,8,0,Math.PI*2); ctx.stroke();
     } else if(kind.includes('rain')){
-      weatherIcon(box,'cloudy');
-      for(let i=0;i<3;i++){ ctx.beginPath(); ctx.moveTo(x0+8+i*6,y0+18); ctx.lineTo(x0+4+i*6,y0+26); ctx.stroke(); }
+      weatherIcon([ex0,ey0,ex1,ey1],'cloudy');
+      for(let i=0;i<3;i++){ ctx.beginPath(); ctx.moveTo(ex0+8+i*6,ey0+effH-6); ctx.lineTo(ex0+4+i*6,ey0+effH+2); ctx.stroke(); }
     } else if(kind.includes('snow')){
-      weatherIcon(box,'cloudy');
-      ctx.fillText('*', x0+10, y0+18);
-      ctx.fillText('*', x0+18, y0+18);
+      weatherIcon([ex0,ey0,ex1,ey1],'cloudy');
+      ctx.fillText('*', ex0+10, ey0+effH-6);
+      ctx.fillText('*', ex0+18, ey0+effH-6);
     } else if(kind.includes('fog')){
-      for(let i=0;i<3;i++){ ctx.beginPath(); ctx.moveTo(x0+2,y0+8+i*6); ctx.lineTo(x1-2,y0+8+i*6); ctx.stroke(); }
+      for(let i=0;i<3;i++){ ctx.beginPath(); ctx.moveTo(ex0+2,ey0+8+i*6); ctx.lineTo(ex1-2,ey0+8+i*6); ctx.stroke(); }
     } else {
-      rect(x0,y0,x1,y1);
+      rect(ex0,ey0,ex1,ey1);
     }
   }
 
@@ -175,9 +182,9 @@
     // two-column lower info
     text(OUT_ROW1_L[0], OUT_ROW1_L[1], (data.weather||'Cloudy'), SIZE_SMALL);
     text(OUT_ROW1_R[0], OUT_ROW1_R[1], `${data.outside_hum||'53'}% RH`, SIZE_SMALL);
-    const wind = (data.wind || '4.2') + ' m/s';
+    const wind = (data.wind || '4.2') + 'm/s';
     text(OUT_ROW2_L[0], OUT_ROW2_L[1], wind, SIZE_SMALL);
-    const hilo = `H ${data.high||'75.0'}°  L ${data.low||'60.0'}°`;
+    const hilo = `H ${data.high||'75.0'}° | L ${data.low||'60.0'}°`;
     text(OUT_ROW2_R[0], OUT_ROW2_R[1], hilo, SIZE_SMALL);
     const iconSelector = (data.moon_phase ? `moon_${(data.moon_phase||'').toLowerCase().replace(/\s+/g,'_')}` : (data.weather||'Cloudy'));
     weatherIcon([OUT_ICON[0],OUT_ICON[1],OUT_ICON[0]+OUT_ICON[2],OUT_ICON[1]+OUT_ICON[3]], iconSelector);
