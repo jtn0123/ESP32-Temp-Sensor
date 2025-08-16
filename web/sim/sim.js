@@ -90,9 +90,9 @@
   async function weatherIcon(box, weather){
     const [x0,y0,x1,y1] = box;
     const w = x1-x0, h=y1-y0; const cx=x0+w/2, cy=y0+h/2;
-    const scale = 1.2; // make icon ~20% larger without moving neighboring text
-    const effW = Math.round(Math.min(24, w*scale));
-    const effH = Math.round(Math.min(24, h*scale));
+    const scale = 1.3; // ~30% larger so the change is clearly visible
+    const effW = Math.round(Math.min(28, w*scale));
+    const effH = Math.round(Math.min(28, h*scale));
     const ex0 = Math.round(x0 + (w - effW)/2);
     const ey0 = Math.round(y0 + (h - effH)/2);
     const ex1 = ex0 + effW;
@@ -193,7 +193,7 @@
     const pct = parseInt(data.percent||'76', 10);
     const bx = STATUS[0];
     const by = STATUS[1]-1; // raised 3px total for perfect centering
-    const bw = 14, bh = 8;
+    const bw = 13, bh = 7; // slightly smaller (~10%) for better balance
     ctx.strokeStyle = '#000';
     ctx.strokeRect(bx, by, bw, bh);
     ctx.fillStyle = '#000';
