@@ -7,12 +7,12 @@
   const INSIDE_RH   = [  6, 66, 118, 14];
   const INSIDE_TIME = [  6, 82, 118, 12];
   const OUT_TEMP    = [131, 36,  90, 28];
-  const OUT_ICON    = [224, 72,  24, 24];
+  const OUT_ICON    = [210, 66,  28, 28];
   // Move outside non-temp rows up by one row (12px) to close white space
   const OUT_ROW1_L  = [131, 66,  44, 12]; // top row: outside RH
   const OUT_ROW1_R  = [177, 66,  44, 12]; // top row: wind mph
-  const OUT_ROW2_L  = [131, 78,  44, 12]; // bottom row: condition
-  const OUT_ROW2_R  = [177, 78,  44, 12]; // bottom row: reserved (H/L)
+  const OUT_ROW2_L  = [131, 84,  44, 12]; // bottom row: condition (spaced)
+  const OUT_ROW2_R  = [177, 84,  44, 12]; // bottom row: reserved (H/L)
   const STATUS      = [  6, 112, 238, 10];
 
   const canvas = document.getElementById('epd');
@@ -197,7 +197,7 @@
     const ilw = ctx.measureText(insideLabel).width;
     const olw = ctx.measureText(outsideLabel).width;
     const ilx = INSIDE_TEMP[0] + Math.floor((INSIDE_TEMP[2] - ilw) / 2);
-    const olx = OUT_TEMP[0] + Math.floor((OUT_TEMP[2] - olw) / 2);
+    let olx = OUT_TEMP[0] + Math.floor((OUT_TEMP[2] - olw) / 2);
     text(ilx, 22, insideLabel, SIZE_LABEL, 'bold');
     text(olx, 22, outsideLabel, SIZE_LABEL, 'bold');
 
@@ -220,13 +220,31 @@
     text(OUT_ROW2_L[0], OUT_ROW2_L[1], condition, SIZE_SMALL);
     // Right column
     text(OUT_ROW1_R[0], OUT_ROW1_R[1], wind, SIZE_SMALL);
-    const iconSelector = (data.moon_phase ? `moon_${(data.moon_phase||'').toLowerCase().replace(/\s+/g,'_')}` : (data.weather||'Cloudy'));
-    weatherIcon([OUT_ICON[0],OUT_ICON[1],OUT_ICON[0]+OUT_ICON[2],OUT_ICON[1]+OUT_ICON[3]], iconSelector);
+    const mode = (document.getElementById('layoutMode')||{value:'classic'}).value;
+    if (mode === 'icon') {
+      // icon-dominant: big icon area, shift outside label left edge to align with OUT_TEMP
+      const ICON = [204, 50, 44, 44];
+      const iconSelector = (data.moon_phase ? `moon_${(data.moon_phase||'').toLowerCase().replace(/\s+/g,'_')}` : (data.weather||'Cloudy'));
+      weatherIcon([ICON[0],ICON[1],ICON[0]+ICON[2],ICON[1]+ICON[3]], iconSelector);
+      // draw a faint separator line between RH/mph and condition
+      ctx.strokeStyle = '#000';
+      ctx.globalAlpha = 0.25;
+      ctx.beginPath(); ctx.moveTo(OUT_TEMP[0], 82); ctx.lineTo(OUT_TEMP[0]+OUT_TEMP[2], 82); ctx.stroke();
+      ctx.globalAlpha = 1.0;
+    } else if (mode === 'spacious') {
+      // spacious: slightly larger icon and more breathing room for text
+      const ICON = [212, 60,  34, 34];
+      const iconSelector = (data.moon_phase ? `moon_${(data.moon_phase||'').toLowerCase().replace(/\s+/g,'_')}` : (data.weather||'Cloudy'));
+      weatherIcon([ICON[0],ICON[1],ICON[0]+ICON[2],ICON[1]+ICON[3]], iconSelector);
+    } else {
+      const iconSelector = (data.moon_phase ? `moon_${(data.moon_phase||'').toLowerCase().replace(/\s+/g,'_')}` : (data.weather||'Cloudy'));
+      weatherIcon([OUT_ICON[0],OUT_ICON[1],OUT_ICON[0]+OUT_ICON[2],OUT_ICON[1]+OUT_ICON[3]], iconSelector);
+    }
 
     // Battery glyph + status text with IP, voltage, percent, ETA days
     const pct = parseInt(data.percent||'76', 10);
     const bx = STATUS[0];
-    const by = STATUS[1]-1; // raised 3px total for perfect centering
+    const by = STATUS[1]; // moved down 1px for better centering
     const bw = 13, bh = 7; // slightly smaller (~10%) for better balance
     ctx.strokeStyle = '#000';
     ctx.strokeRect(bx, by, bw, bh);
@@ -333,6 +351,8 @@
     draw({});
   });
   document.getElementById('stressMode').addEventListener('change', (e)=>{
+  const layoutSel = document.getElementById('layoutMode');
+  if (layoutSel){ layoutSel.addEventListener('change', ()=>{ clear(); draw({}); }); }
     stressMode = !!e.target.checked;
     // draw immediately with extreme values to reveal layout issues
     const stress = {
