@@ -49,6 +49,8 @@ static inline void nvs_load_cache_if_unset() {
     if (last_status_crc == 0) last_status_crc = g_prefs.getUInt("st_crc", 0);
     if (!isfinite(last_published_inside_tempC)) last_published_inside_tempC = g_prefs.getFloat("pi_t", NAN);
     if (!isfinite(last_published_inside_rh)) last_published_inside_rh = g_prefs.getFloat("pi_rh", NAN);
+    uint16_t pc = g_prefs.getUShort("pcount", 0);
+    if (pc > 0) partial_counter = pc;
 }
 static inline void nvs_store_float(const char* key, float v) { g_prefs.putFloat(key, v); }
 static inline void nvs_store_int(const char* key, int32_t v) { g_prefs.putInt(key, v); }
@@ -611,9 +613,21 @@ void setup() {
                 float d = now_out_f - last_outside_f;
                 if (d >= THRESH_TEMP_F) trend_out = '+'; else if (d <= -THRESH_TEMP_F) trend_out = '-';
             }
-            maybe_redraw_numeric(OUT_TEMP, now_out_f, last_outside_f, THRESH_TEMP_F, [&](){
-                partial_update_outside_temp(out_temp, trend_out);
-            });
+            bool temp_changed = !isfinite(last_outside_f) || fabsf(now_out_f - last_outside_f) >= THRESH_TEMP_F;
+            if (temp_changed && o.validHum && isfinite(o.humidityPct)) {
+                // Merge redraws: update temp and RH in same wake when both changed
+                maybe_redraw_numeric(OUT_TEMP, now_out_f, last_outside_f, THRESH_TEMP_F, [&](){
+                    partial_update_outside_temp(out_temp, trend_out);
+                });
+                char out_rh2[16]; snprintf(out_rh2, sizeof(out_rh2), "%.0f", o.humidityPct);
+                maybe_redraw_numeric(OUT_ROW2_L, o.humidityPct, last_outside_rh, THRESH_RH, [&](){
+                    partial_update_outside_rh(out_rh2);
+                });
+            } else {
+                maybe_redraw_numeric(OUT_TEMP, now_out_f, last_outside_f, THRESH_TEMP_F, [&](){
+                    partial_update_outside_temp(out_temp, trend_out);
+                });
+            }
             if (isfinite(last_outside_f)) nvs_store_float("lo_f", last_outside_f);
         }
         if (o.validHum) {
@@ -652,6 +666,8 @@ void setup() {
     }
 
     partial_counter++;
+    // Persist partial refresh cadence so it survives reset
+    g_prefs.putUShort("pcount", partial_counter);
     // Log awake duration and planned sleep for diagnostics
     Serial.printf("Awake ms: %lu\n", (unsigned long)millis());
     Serial.printf("Sleeping for %us\n", (unsigned)WAKE_INTERVAL_SEC);
