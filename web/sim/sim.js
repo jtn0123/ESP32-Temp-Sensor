@@ -353,17 +353,19 @@
     ctx.fillStyle = '#000';
     // ensure center divider reaches bottom
     ctx.fillRect(125, 18, 1, HEIGHT-18-1);
-    // Battery glyph
-    ctx.strokeStyle = '#000'; ctx.strokeRect(bx, baseY, bw, bh); ctx.fillStyle = '#000';
-    ctx.fillRect(bx + bw, baseY + 2, 2, 4);
-    const fillw3 = Math.max(0, Math.min(bw-2, Math.round((bw-2) * (pct/100)))); if (fillw3>0) ctx.fillRect(bx+1, baseY+1, fillw3, bh-2);
+    // Battery glyph (vertically centered between the two top status rows)
+    const by = Math.round(baseY + 8 - bh/2);
+    ctx.strokeStyle = '#000'; ctx.strokeRect(bx, by, bw, bh); ctx.fillStyle = '#000';
+    ctx.fillRect(bx + bw, by + 2, 2, 4);
+    const fillw3 = Math.max(0, Math.min(bw-2, Math.round((bw-2) * (pct/100)))); if (fillw3>0) ctx.fillRect(bx+1, by+1, fillw3, bh-2);
     // Rows
     const leftTextX = bx + bw + 6;
     text(leftTextX, baseY-2, `Batt ${data.voltage||'4.01'}V`, SIZE_STATUS);
     text(leftTextX, baseY+8, `~${data.days||'128'}d   ${pct}%`, SIZE_STATUS);
     const ip = `IP ${data.ip||'192.168.1.42'}`; const iw = ctx.measureText(ip).width;
+    const leftColLeft = STATUS[0] + 1; // include battery icon area for centering
     const leftColRight = 125 - 2;
-    const ipAreaLeft = leftTextX; const ipAreaRight = leftColRight;
+    const ipAreaLeft = leftColLeft; const ipAreaRight = leftColRight;
     const ipCenterLeft = ipAreaLeft + Math.max(0, Math.floor((ipAreaRight - ipAreaLeft - iw) / 2));
     ctx.fillStyle = '#fff'; ctx.fillRect(ipAreaLeft-1, baseY+17, ipAreaRight-ipAreaLeft+2, SIZE_STATUS+2);
     ctx.fillStyle = '#000';
@@ -371,17 +373,21 @@
     // Right weather: scale icon and fit label
     const cond = shortConditionLabel(data.weather||'Cloudy');
     const barX = 130, barW = 114, gap = 8, barY = 95;
+    // Draw weather icon about 20% larger than before by inflating its layout width
+    const ICON_DRAW_SCALE = 1.2;
     let candidateIcon = 26;
+    function eff(iconSize){ return Math.round(iconSize * ICON_DRAW_SCALE); }
     function fitLabel(iconSize){
-      const maxText = barW - iconSize - gap - 2;
+      const iconDrawW = eff(iconSize);
+      const maxText = barW - iconDrawW - gap - 2;
       let s = cond;
       while (ctx.measureText(s).width > maxText && s.length > 1) s = s.slice(0,-1);
       if (s !== cond && s.length>1) s = s.slice(0,-1) + '…';
-      return {label:s, fits: ctx.measureText(s).width <= maxText, icon: iconSize};
+      return {label:s, fits: ctx.measureText(s).width <= maxText, icon: iconSize, drawW: iconDrawW};
     }
     let fit = fitLabel(candidateIcon);
     while (!fit.fits && candidateIcon > 18){ candidateIcon--; fit = fitLabel(candidateIcon); }
-    const label = fit.label; const iconW = fit.icon, iconH = fit.icon;
+    const label = fit.label; const iconW = fit.drawW, iconH = fit.drawW;
     const totalW = iconW + gap + ctx.measureText(label).width;
     const startX = barX + Math.max(0, Math.floor((barW - totalW)/2));
     const iconSelector = (data.moon_phase ? `moon_${(data.moon_phase||'').toLowerCase().replace(/\s+/g,'_')}` : (data.weather||'Cloudy'));
