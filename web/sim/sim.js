@@ -288,21 +288,22 @@
       ctx.fillStyle = '#000'; ctx.fillRect(125, 98, 119, 1); ctx.fillStyle = '#000';
       const pct = parseInt(data.percent||'76', 10);
       // Move entire status block up by one row (approx 10px)
-      const baseY = STATUS[1] - 10;
+      const baseY = STATUS[1] - 10; // move whole two-row block up one row
       const bx = STATUS[0], by = baseY; const bw = 13, bh = 7;
       ctx.strokeStyle = '#000'; ctx.strokeRect(bx, by, bw, bh); ctx.fillStyle = '#000';
       ctx.fillRect(bx + bw, by + 2, 2, 4);
       const fillw = Math.max(0, Math.min(bw-2, Math.round((bw-2) * (pct/100)))); if (fillw>0) ctx.fillRect(bx+1, by+1, fillw, bh-2);
       // top row: Batt V %
-      text(bx + bw + 6, baseY-1, `Batt ${data.voltage||'4.01'}V ${pct}%`, SIZE_STATUS);
+      text(bx + bw + 6, baseY-2, `Batt ${data.voltage||'4.01'}V ${pct}%`, SIZE_STATUS);
       // bottom row: ~days and IP right-aligned WITHIN LEFT COLUMN only (up to x=125)
       const rightText = `~${data.days||'128'}d    IP ${data.ip||'192.168.1.42'}`;
       const rw = ctx.measureText(rightText).width;
       const leftColRight = 125 - 2; // just inside the center divider
       const ipLeft = Math.max(STATUS[0] + bw + 6, leftColRight - rw);
-      text(ipLeft, baseY+8, rightText, SIZE_STATUS);
+      text(ipLeft, baseY+7, rightText, SIZE_STATUS);
       // Bottom-right bar: center icon+condition within a right-side panel to avoid clipping
-      const barX = 170, barW = 78, iconW = 16, iconH = 16, gap = 6, barY = 100;
+      // Use most of the right half for centering; raise bar items by 1px
+      const barX = 130, barW = 114, iconW = 16, iconH = 16, gap = 8, barY = 99;
       const iconSelector = (data.moon_phase ? `moon_${(data.moon_phase||'').toLowerCase().replace(/\s+/g,'_')}` : (data.weather||'Cloudy'));
       // Fit condition text to available width
       let label = condition;
