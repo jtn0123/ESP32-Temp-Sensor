@@ -199,8 +199,9 @@
     const wind = (data.wind || '4.2') + 'm/s';
     const condition = shortConditionLabel(data.weather || 'Cloudy');
     const hilo = `H ${data.high||'75.0'}° | L ${data.low||'60.0'}°`;
-    text(OUT_ROW1_L[0], OUT_ROW1_L[1], wind, SIZE_SMALL);
-    text(OUT_ROW2_L[0], OUT_ROW2_L[1], hilo, SIZE_SMALL);
+    // Put H/L on the left top row, wind on the left bottom row so 'Cloudy' stands alone on its row
+    text(OUT_ROW1_L[0], OUT_ROW1_L[1], hilo, SIZE_SMALL);
+    text(OUT_ROW2_L[0], OUT_ROW2_L[1], wind, SIZE_SMALL);
     text(OUT_ROW1_R[0], OUT_ROW1_R[1], condition, SIZE_SMALL);
     text(OUT_ROW2_R[0], OUT_ROW2_R[1], `${data.outside_hum||'53'}% RH`, SIZE_SMALL);
     const iconSelector = (data.moon_phase ? `moon_${(data.moon_phase||'').toLowerCase().replace(/\s+/g,'_')}` : (data.weather||'Cloudy'));
