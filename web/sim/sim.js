@@ -185,7 +185,7 @@
     // Battery glyph + status text with IP, voltage, percent, ETA days
     const pct = parseInt(data.percent||'76', 10);
     const bx = STATUS[0];
-    const by = STATUS[1]; // raised 2px total to center within 10px status row
+    const by = STATUS[1]-1; // raised 3px total for perfect centering
     const bw = 14, bh = 8;
     ctx.strokeStyle = '#000';
     ctx.strokeRect(bx, by, bw, bh);
