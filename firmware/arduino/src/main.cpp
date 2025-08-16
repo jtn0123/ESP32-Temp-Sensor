@@ -136,8 +136,16 @@ static inline void draw_temp_number_and_units(const int rect[4], const char* tem
     int num_rect[4] = { rect[0], rect[1], rect[2] - units_w, rect[3] };
     int units_rect[4] = { rect[0] + rect[2] - units_w, rect[1], units_w, rect[3] };
 
-    // Right-align numeric in its sub-rect
-    draw_right_aligned_text_in_rect(num_rect, temp_f, 2, 2, 4);
+    // Center numeric in its sub-rect
+    draw_in_region(num_rect, [&](int16_t x, int16_t y, int16_t w, int16_t h){
+        display.setTextColor(GxEPD_BLACK);
+        display.setTextSize(2);
+        int16_t tw = text_width_default_font(temp_f, 2);
+        int16_t rx = x + (w - tw) / 2;
+        int16_t by = y + h - 4;
+        display.setCursor(rx, by);
+        display.print(temp_f);
+    });
 
     // Draw degree symbol and F in small font inside the units sub-rect
     draw_in_region(units_rect, [&](int16_t x, int16_t y, int16_t w, int16_t h){

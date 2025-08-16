@@ -7,7 +7,7 @@
   const INSIDE_RH   = [  6, 66, 118, 14];
   const INSIDE_TIME = [  6, 82, 118, 12];
   const OUT_TEMP    = [131, 36,  90, 28];
-  const OUT_ICON    = [224, 58,  24, 24];
+  const OUT_ICON    = [224, 72,  24, 24];
   // Move outside non-temp rows up by one row (12px) to close white space
   const OUT_ROW1_L  = [131, 66,  44, 12]; // top row: outside RH
   const OUT_ROW1_R  = [177, 66,  44, 12]; // top row: wind mph
@@ -47,10 +47,11 @@
   function drawTempWithUnits(rect, valueStr){
     const [x, y, w, h] = rect;
     const unitsW = 14;
-    // measure numeric width with big font
+    // measure numeric width with big font and center within numeric sub-rect
     ctx.font = `bold ${SIZE_BIG}px ${FONT_STACK}`;
     const tw = ctx.measureText(valueStr).width;
-    const rx = x + (w - unitsW) - 2 - tw;
+    const numW = w - unitsW;
+    const rx = x + Math.max(0, Math.floor((numW - tw) / 2));
     text(rx, y, valueStr, SIZE_BIG, 'bold');
     // units drawn inside fixed strip on the right
     text(x + (w - unitsW) + 1, y + 4, '°', 12);
@@ -185,10 +186,17 @@
     const tw = ctx.measureText(t).width;
     text(HEADER_TIME[0] + HEADER_TIME[2] - 2 - tw, HEADER_TIME[1]+1, t, SIZE_TIME);
 
-    // Labels
+    // Labels centered above their columns
     ctx.fillStyle = '#000';
-    text(6,22,'INSIDE',SIZE_LABEL,'bold');
-    text(131,22,'OUTSIDE',SIZE_LABEL,'bold');
+    const insideLabel = 'INSIDE';
+    const outsideLabel = 'OUTSIDE';
+    ctx.font = `${SIZE_LABEL}px ${FONT_STACK}`;
+    const ilw = ctx.measureText(insideLabel).width;
+    const olw = ctx.measureText(outsideLabel).width;
+    const ilx = INSIDE_TEMP[0] + Math.floor((INSIDE_TEMP[2] - ilw) / 2);
+    const olx = OUT_TEMP[0] + Math.floor((OUT_TEMP[2] - olw) / 2);
+    text(ilx, 22, insideLabel, SIZE_LABEL, 'bold');
+    text(olx, 22, outsideLabel, SIZE_LABEL, 'bold');
 
     // Values: numeric right-aligned with fixed units strip
     const numIn = `${data.inside_temp||'72.5'}`;
