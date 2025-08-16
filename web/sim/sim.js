@@ -53,10 +53,12 @@
     const numW = w - unitsW;
     const rx = x + Math.max(0, Math.floor((numW - tw) / 2));
     text(rx, y, valueStr, SIZE_BIG, 'bold');
-    // units drawn inside fixed strip on the right
-    const unitY = y + (SIZE_BIG - 12); // align bottoms with big digits
-    text(x + (w - unitsW) + 1, unitY, '°', 12);
-    text(x + (w - unitsW) + 7, unitY, 'F', 12);
+    // Place units right after the number for tighter look
+    const degX = rx + tw + 2;
+    const fX = degX + 6;
+    const unitY = y + 4; // visually aligned with big digits
+    text(degX, unitY, '°', 12);
+    text(fX, unitY, 'F', 12);
   }
 
   function rect(x0,y0,x1,y1){
