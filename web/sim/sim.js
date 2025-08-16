@@ -224,7 +224,43 @@
     // Right column
     text(OUT_ROW1_R[0], OUT_ROW1_R[1], wind, SIZE_SMALL);
     const mode = (document.getElementById('layoutMode')||{value:'classic'}).value;
-    if (mode === 'icon') {
+    if (mode === 'banner') {
+      // Full-height right banner for weather: large icon + condition stacked
+      const ICON = [200, 30, 48, 48];
+      const iconSelector = (data.moon_phase ? `moon_${(data.moon_phase||'').toLowerCase().replace(/\s+/g,'_')}` : (data.weather||'Cloudy'));
+      weatherIcon([ICON[0],ICON[1],ICON[0]+ICON[2],ICON[1]+ICON[3]], iconSelector);
+      // condition centered below icon
+      const cond = shortConditionLabel(data.weather||'Cloudy');
+      const cw = ctx.measureText(cond).width;
+      const cx = ICON[0] + Math.max(0, Math.floor((ICON[2]-cw)/2));
+      text(cx, ICON[1]+ICON[3]+2, cond, SIZE_SMALL);
+      // shift outside label a bit left to visually balance
+      olx = OUT_TEMP[0] + 4;
+      text(olx, 22, outsideLabel, SIZE_LABEL, 'bold');
+    } else if (mode === 'badges') {
+      // Pill badges for RH and mph to separate from condition
+      const iconSelector = (data.moon_phase ? `moon_${(data.moon_phase||'').toLowerCase().replace(/\s+/g,'_')}` : (data.weather||'Cloudy'));
+      weatherIcon([214,50,30,30], iconSelector);
+      // draw badges
+      function badge(x,y,label){
+        const pad = 4; const w = ctx.measureText(label).width + pad*2; const h = 14;
+        ctx.fillStyle = '#000'; ctx.fillRect(x,y,w,h);
+        ctx.fillStyle = '#fff'; ctx.fillText(label, x+pad, y+2);
+        ctx.fillStyle = '#000';
+      }
+      badge(OUT_ROW1_L[0], OUT_ROW1_L[1]-2, `${data.outside_hum||'53'}%`);
+      badge(OUT_ROW1_R[0], OUT_ROW1_R[1]-2, `${((parseFloat(data.wind||'4.2')||4.2)*2.237).toFixed(1)} mph`);
+      // condition on its own line
+      text(OUT_ROW2_L[0], OUT_ROW2_L[1]+2, shortConditionLabel(data.weather||'Cloudy'), SIZE_SMALL);
+    } else if (mode === 'split') {
+      // Bottom split bar dedicated to icon + condition spanning width
+      ctx.fillStyle = '#000'; ctx.fillRect(125, 98, 119, 1); ctx.fillStyle = '#000';
+      const ICON = [130, 100, 16, 16];
+      const iconSelector = (data.moon_phase ? `moon_${(data.moon_phase||'').toLowerCase().replace(/\s+/g,'_')}` : (data.weather||'Cloudy'));
+      weatherIcon([ICON[0],ICON[1],ICON[0]+ICON[2],ICON[1]+ICON[3]], iconSelector);
+      const cond = shortConditionLabel(data.weather||'Cloudy');
+      text(ICON[0]+ICON[2]+6, 100, cond, SIZE_SMALL);
+    } else if (mode === 'icon') {
       // icon-dominant: big icon area, shift outside label left edge to align with OUT_TEMP
       const ICON = [204, 50, 44, 44];
       const iconSelector = (data.moon_phase ? `moon_${(data.moon_phase||'').toLowerCase().replace(/\s+/g,'_')}` : (data.weather||'Cloudy'));
