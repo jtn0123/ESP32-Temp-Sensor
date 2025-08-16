@@ -23,7 +23,8 @@
   let oneBitMode = true;
 
   const FONT_STACK = 'Menlo, Consolas, "DM Mono", "Roboto Mono", monospace';
-  const SIZE_SMALL = 11; // bump to improve legibility
+  const SIZE_SMALL = 11; // general small text
+  const SIZE_STATUS = 10; // status row must fit 10px tall window
   const SIZE_LABEL = 11;
   const SIZE_TIME = 11;
   const SIZE_BIG = 22;
@@ -216,8 +217,8 @@
       }
       left = left + '…';
     }
-    text(leftX, STATUS[1], left, SIZE_SMALL);
-    text(ipX, STATUS[1], ip, SIZE_SMALL);
+    text(leftX, STATUS[1], left, SIZE_STATUS);
+    text(ipX, STATUS[1], ip, SIZE_STATUS);
 
     // partial window overlay
     if (showWindows){
