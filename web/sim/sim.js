@@ -326,6 +326,11 @@
     } else if (mode === 'split3') {
       // Three-row left status: row1 Batt V %, row2 ~days, row3 IP; right: taller weather area
       ctx.fillStyle = '#000'; ctx.fillRect(125, 98, 119, 1); ctx.fillStyle = '#000';
+      // Clear previous single-row status artifacts in left & right halves
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(STATUS[0], STATUS[1]-18, 125-STATUS[0], STATUS[3]+22);
+      ctx.fillRect(125, STATUS[1]-18, WIDTH-125-1, STATUS[3]+22);
+      ctx.fillStyle = '#000';
       const pct = parseInt(data.percent||'76', 10);
       const bx = STATUS[0], bw = 13, bh = 7;
       const baseY = STATUS[1] - 14; // shift up a bit to fit 3 rows comfortably
@@ -379,7 +384,7 @@
 
     // Battery glyph + status text with IP, voltage, percent, ETA days
     const pct = parseInt(data.percent||'76', 10);
-    if (mode !== 'split2') {
+    if (mode !== 'split2' && mode !== 'split3') {
       const bx = STATUS[0];
       const by = STATUS[1]; // baseline
       const bw = 13, bh = 7;
