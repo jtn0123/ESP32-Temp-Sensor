@@ -54,6 +54,26 @@
     ctx.fillText(s + '…', x, y);
   }
 
+  function drawTextInRect(rect, str, size=10, weight='normal', align='left', pad=1){
+    const [x,y,w,h] = rect;
+    const maxW = Math.max(0, w - pad*2);
+    ctx.save();
+    ctx.beginPath(); ctx.rect(x, y, w, h); ctx.clip();
+    ctx.font = `${weight} ${size}px ${FONT_STACK}`; ctx.textBaseline='top'; ctx.fillStyle='#000';
+    let s = String(str||'');
+    // truncate with ellipsis if needed
+    if (ctx.measureText(s).width > maxW){
+      while (s.length>1 && ctx.measureText(s + '…').width > maxW){ s = s.slice(0,-1); }
+      s = s + '…';
+    }
+    let tx = x + pad;
+    const tw = ctx.measureText(s).width;
+    if (align === 'right') tx = x + w - pad - tw;
+    else if (align === 'center') tx = x + Math.max(0, Math.floor((w - tw)/2));
+    ctx.fillText(s, tx, y);
+    ctx.restore();
+  }
+
   function drawTempWithUnits(rect, valueStr){
     const [x, y, w, h] = rect;
     const unitsW = 14;
@@ -245,9 +265,9 @@
     let windMps = parseFloat(data.wind || '4.2');
     if (!isFinite(windMps)) windMps = 4.2;
     const wind = `${(windMps*2.237).toFixed(1)} mph`;
-    // Left/right small rows: draw RH and wind now; condition is drawn per-mode below
-    text(OUT_ROW1_L[0], OUT_ROW1_L[1], rhText, SIZE_SMALL);
-    text(OUT_ROW1_R[0], OUT_ROW1_R[1], wind, SIZE_SMALL);
+    // Left/right small rows within clipped boxes to prevent overlap
+    drawTextInRect(OUT_ROW1_L, rhText, SIZE_SMALL, 'normal', 'left', 1);
+    drawTextInRect(OUT_ROW1_R, wind, SIZE_SMALL, 'normal', 'right', 1);
     const mode = (document.getElementById('layoutMode')||{value:'classic'}).value;
     if (mode === 'banner') {
       // Full-height right banner for weather: large icon + condition stacked
@@ -367,8 +387,11 @@
       const ip = `IP ${data.ip||'192.168.1.42'}`; const iw = ctx.measureText(ip).width;
       const leftColRight = 125 - 2;
       const ipAreaLeft = leftTextX; const ipAreaRight = leftColRight;
-      const ipLeft = Math.max(ipAreaLeft, Math.floor(ipAreaLeft + (ipAreaRight - ipAreaLeft - iw) / 2));
-      text(ipLeft, baseY+18, ip, SIZE_STATUS);
+      const ipCenterLeft = ipAreaLeft + Math.max(0, Math.floor((ipAreaRight - ipAreaLeft - iw) / 2));
+      // Clear IP row rect before drawing to prevent any previous overlap
+      ctx.fillStyle = '#fff'; ctx.fillRect(ipAreaLeft-1, baseY+17, ipAreaRight-ipAreaLeft+2, SIZE_STATUS+2);
+      ctx.fillStyle = '#000';
+      text(ipCenterLeft, baseY+18, ip, SIZE_STATUS);
       // Right: larger icon + condition centered
       const cond = shortConditionLabel(data.weather||'Cloudy');
       // Allocate more height for icon
