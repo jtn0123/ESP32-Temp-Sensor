@@ -203,20 +203,37 @@
       ctx.fill();
     }
     // Left status (Batt and ETA) with separators; right-aligned IP
-    let left = `Batt ${data.voltage||'4.01'}V ${pct||76}%  |  ~${data.days||'128'}d`;
+    const days = `${data.days||'128'}`;
+    const voltageText = `${data.voltage||'4.01'}`;
+    let prefix = `Batt ${voltageText}V ${pct||76}%`;
+    const tail = `  |  ~${days}d`;
     let leftX = STATUS[0] + bw + 8;
     const statusTextY = STATUS[1] - 1; // nudge up 1px to avoid bottom clip
     // Right-aligned IP
     const ip = `IP ${data.ip||'192.168.1.42'}`;
     const iw = ctx.measureText(ip).width;
     const ipX = STATUS[0] + STATUS[2] - 2 - iw;
-    // Clamp left text to avoid overlap with IP
+    // Clamp left text to avoid overlap with IP, preserving the tail ( ~Xd)
     const maxLeftWidth = ipX - leftX - 4;
-    if (ctx.measureText(left).width > maxLeftWidth) {
-      while (left.length > 0 && ctx.measureText(left + '…').width > maxLeftWidth) {
-        left = left.slice(0, -1);
+    let left;
+    if (ctx.measureText(prefix + tail).width <= maxLeftWidth) {
+      left = prefix + tail;
+    } else {
+      // Try dropping the word 'Batt '
+      prefix = prefix.replace(/^Batt\s+/,'');
+      if (ctx.measureText(prefix + tail).width <= maxLeftWidth) {
+        left = prefix + tail;
+      } else {
+        // Middle-clip the prefix but keep the tail visible
+        const ell = '…';
+        let available = maxLeftWidth - ctx.measureText(tail).width - ctx.measureText(ell).width - 2;
+        if (available < 0) available = 0;
+        let clipped = prefix;
+        while (clipped.length > 0 && ctx.measureText(clipped).width > available) {
+          clipped = clipped.slice(0, -1);
+        }
+        left = (clipped.length ? (clipped + ell) : '') + tail;
       }
-      left = left + '…';
     }
     text(leftX, statusTextY, left, SIZE_STATUS);
     text(ipX, statusTextY, ip, SIZE_STATUS);
