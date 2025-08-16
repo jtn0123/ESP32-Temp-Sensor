@@ -205,6 +205,7 @@
     // Left status (Batt and ETA) with separators; right-aligned IP
     let left = `Batt ${data.voltage||'4.01'}V ${pct||76}%  |  ~${data.days||'128'}d`;
     let leftX = STATUS[0] + bw + 8;
+    const statusTextY = STATUS[1] - 1; // nudge up 1px to avoid bottom clip
     // Right-aligned IP
     const ip = `IP ${data.ip||'192.168.1.42'}`;
     const iw = ctx.measureText(ip).width;
@@ -217,8 +218,8 @@
       }
       left = left + '…';
     }
-    text(leftX, STATUS[1], left, SIZE_STATUS);
-    text(ipX, STATUS[1], ip, SIZE_STATUS);
+    text(leftX, statusTextY, left, SIZE_STATUS);
+    text(ipX, statusTextY, ip, SIZE_STATUS);
 
     // partial window overlay
     if (showWindows){
