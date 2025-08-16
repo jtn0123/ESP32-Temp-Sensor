@@ -547,6 +547,11 @@ void setup() {
     delay(100);
     Serial.println(F("ESP32 eInk Room Node boot"));
 
+    #ifdef EINK_EN_PIN
+    pinMode(EINK_EN_PIN, OUTPUT);
+    digitalWrite(EINK_EN_PIN, HIGH); // enable panel power if gated
+    delay(5);
+    #endif
     display.init(0);
     display.setRotation(1); // landscape 250x122 coordinate system
     nvs_begin_cache();
@@ -671,6 +676,10 @@ void setup() {
     // Log awake duration and planned sleep for diagnostics
     Serial.printf("Awake ms: %lu\n", (unsigned long)millis());
     Serial.printf("Sleeping for %us\n", (unsigned)WAKE_INTERVAL_SEC);
+    #ifdef EINK_EN_PIN
+    // Power down panel between wakes if gated to save sleep current
+    digitalWrite(EINK_EN_PIN, LOW);
+    #endif
     nvs_end_cache();
     go_deep_sleep_seconds(WAKE_INTERVAL_SEC);
 }
