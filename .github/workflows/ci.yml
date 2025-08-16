@@ -7,7 +7,7 @@ on:
     branches: [ main ]
 
 jobs:
-  build-firmware:
+  build-arduino:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -15,12 +15,13 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - name: Install PlatformIO Core
-        run: pip install --upgrade platformio
+      - name: Install PlatformIO
+        run: pip install -U platformio pyyaml
       - name: Generate device header
         run: python scripts/gen_device_header.py
-      - name: Build Arduino firmware
-        run: pio run -d firmware/arduino
+      - name: Build firmware
+        working-directory: firmware/arduino
+        run: pio run
 
   test-python:
     runs-on: ubuntu-latest
@@ -33,65 +34,20 @@ jobs:
       - name: Install Python deps
         run: |
           python -m pip install --upgrade pip
-          pip install pillow pytest
-          # optional playwright
-          pip install playwright
+          pip install pillow pytest pyyaml
+          pip install playwright pytest-playwright
           python -m playwright install --with-deps chromium
       - name: Run tests
         run: pytest -q
 
-name: CI
-
-on:
-  push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
-
-jobs:
-  build-arduino:
+  esphome-validate:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.x'
-      - name: Install PlatformIO
-        run: pip install -U platformio
-      - name: Build firmware
-        working-directory: firmware/arduino
-        run: pio run
-      - name: Run Python tests
-        run: |
-          pip install -U pillow pytest pyyaml
-          pytest -q
-      - name: Parse sample awake log (example)
-        run: |
-          echo -e "ESP32 eInk Room Node boot\nAwake ms: 32000\nSleeping for 7200s" > sample_serial.txt
-          python3 scripts/parse_awake_log.py sample_serial.txt --max-awake-ms 45000 --sleep-s 7200
-  lint-esphome:
-  web-sim:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.x'
-      - name: Install Playwright deps
-        run: |
-          pip install -U pytest playwright pytest-playwright
-          python -m playwright install --with-deps chromium
-      - name: Run web simulator test
-        run: pytest -q -k web_sim
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.x'
+          python-version: '3.11'
       - name: Install ESPHome
         run: pip install -U esphome
       - name: Validate ESPHome config
