@@ -7,7 +7,7 @@
   const INSIDE_RH   = [  6, 66, 118, 14];
   const INSIDE_TIME = [  6, 82, 118, 12];
   const OUT_TEMP    = [131, 36,  90, 28];
-  const OUT_ICON    = [224, 22,  20, 20];
+  const OUT_ICON    = [224, 22,  24, 24];
   // Move outside non-temp rows up by one row (12px) to close white space
   const OUT_ROW1_L  = [131, 74,  44, 12];
   const OUT_ROW1_R  = [177, 74,  44, 12];
@@ -42,6 +42,19 @@
     ctx.font = `${weight} ${size}px ${FONT_STACK}`;
     ctx.textBaseline = 'top';
     ctx.fillText(str, x, y);
+  }
+
+  function drawTempWithUnits(rect, valueStr){
+    const [x, y, w, h] = rect;
+    const unitsW = 14;
+    // measure numeric width with big font
+    ctx.font = `bold ${SIZE_BIG}px ${FONT_STACK}`;
+    const tw = ctx.measureText(valueStr).width;
+    const rx = x + (w - unitsW) - 2 - tw;
+    text(rx, y, valueStr, SIZE_BIG, 'bold');
+    // units drawn inside fixed strip on the right
+    text(x + (w - unitsW) + 1, y + 4, '°', 12);
+    text(x + (w - unitsW) + 7, y + 4, 'F', 12);
   }
 
   function rect(x0,y0,x1,y1){
@@ -177,24 +190,14 @@
     text(6,22,'INSIDE',SIZE_LABEL,'bold');
     text(131,22,'OUTSIDE',SIZE_LABEL,'bold');
 
-    // Values: right-align degrees and unit
+    // Values: numeric right-aligned with fixed units strip
     const numIn = `${data.inside_temp||'72.5'}`;
-    const deg = '°';
-    const unit = 'F';
-    ctx.font = `bold ${SIZE_BIG}px ${FONT_STACK}`;
-    // Left-justify number; place degree and F immediately after the number
-    text(INSIDE_TEMP[0], INSIDE_TEMP[1], numIn, 22, 'bold');
-    const nwi = ctx.measureText(numIn).width;
-    text(INSIDE_TEMP[0] + nwi + 2, INSIDE_TEMP[1]+4, deg, 12);
-    text(INSIDE_TEMP[0] + nwi + 8, INSIDE_TEMP[1]+4, unit, 12);
+    drawTempWithUnits(INSIDE_TEMP, numIn);
     text(INSIDE_RH[0], INSIDE_RH[1], `${data.inside_hum||'47'}% RH`, SIZE_SMALL);
     // Omit duplicate time here; header shows time
 
     const numOut = `${data.outside_temp||'68.4'}`;
-    text(OUT_TEMP[0], OUT_TEMP[1], numOut, 22, 'bold');
-    const nwo = ctx.measureText(numOut).width;
-    text(OUT_TEMP[0] + nwo + 2, OUT_TEMP[1]+4, deg, 12);
-    text(OUT_TEMP[0] + nwo + 8, OUT_TEMP[1]+4, unit, 12);
+    drawTempWithUnits(OUT_TEMP, numOut);
     // two-column lower info: move condition to left-top, swap wind/humidity positions, show wind in mph
     const condition = shortConditionLabel(data.weather || 'Cloudy');
     const hilo = `H ${data.high||'75.0'}° | L ${data.low||'60.0'}°`;
@@ -235,37 +238,25 @@
     const days = `${data.days||'128'}`;
     const voltageText = `${data.voltage||'4.01'}`;
     const pctText = `${pct||76}%`;
-    let prefix = `Batt ${voltageText}V`;
-    const tail = ` ${pctText} | ~${days}d`;
-    let leftX = STATUS[0] + bw + 6; // tighter left margin
-    const statusTextY = STATUS[1] - 1; // nudge up 1px to avoid bottom clip
+    const leftX = STATUS[0] + bw + 6;
+    const statusTextY = STATUS[1] - 1;
     // Right-aligned IP
     const ip = `IP ${data.ip||'192.168.1.42'}`;
+    ctx.font = `${SIZE_STATUS}px ${FONT_STACK}`;
     const iw = ctx.measureText(ip).width;
-    const ipX = STATUS[0] + STATUS[2] - 1 - iw; // nudge 1px closer to right edge
-    // Clamp left text to avoid overlap with IP, preserving the tail ( ~Xd)
-    const maxLeftWidth = ipX - leftX - 4;
-    let left;
-    if (ctx.measureText(prefix + tail).width <= maxLeftWidth) {
-      left = prefix + tail;
-    } else {
-      // Try dropping the word 'Batt '
-      prefix = prefix.replace(/^Batt\s+/,'');
-      if (ctx.measureText(prefix + tail).width <= maxLeftWidth) {
-        left = prefix + tail;
-      } else {
-        // Middle-clip the prefix but keep the tail visible
-        const ell = '…';
-        let available = maxLeftWidth - ctx.measureText(tail).width - ctx.measureText(ell).width - 2;
-        if (available < 0) available = 0;
-        let clipped = prefix;
-        while (clipped.length > 0 && ctx.measureText(clipped).width > available) {
-          clipped = clipped.slice(0, -1);
-        }
-        left = (clipped.length ? (clipped + ell) : '') + tail;
-      }
+    const ipX = STATUS[0] + STATUS[2] - 2 - iw;
+    const maxLeftWidth = ipX - leftX - 2;
+    const leftFull = `Batt ${voltageText}V ${pctText} | ~${days}d`;
+    const leftNoBatt = `${voltageText}V ${pctText} | ~${days}d`;
+    const leftTail = `${pctText} | ~${days}d`;
+    let chosen = leftFull;
+    if (ctx.measureText(chosen).width > maxLeftWidth) {
+      chosen = leftNoBatt;
     }
-    text(leftX, statusTextY, left, SIZE_STATUS);
+    if (ctx.measureText(chosen).width > maxLeftWidth) {
+      chosen = ctx.measureText(leftTail).width <= maxLeftWidth ? leftTail : '';
+    }
+    text(leftX, statusTextY, chosen, SIZE_STATUS);
     text(ipX, statusTextY, ip, SIZE_STATUS);
 
     // partial window overlay
