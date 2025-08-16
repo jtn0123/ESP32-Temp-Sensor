@@ -1,21 +1,21 @@
 (function(){
-  const WIDTH = 250, HEIGHT = 122;
+  let WIDTH = 250, HEIGHT = 122;
   // Rectangles use [x, y, w, h]
-  const HEADER_NAME = [  6,  2, 160, 14];
-  const HEADER_TIME = [172,  2,  72, 14];
-  const INSIDE_TEMP = [  6, 36, 118, 28];
-  const INSIDE_RH   = [  6, 66, 118, 14];
-  const INSIDE_TIME = [  6, 82, 118, 12];
-  const OUT_TEMP    = [131, 36,  90, 28];
+  let HEADER_NAME = [  6,  2, 160, 14];
+  let HEADER_TIME = [172,  2,  72, 14];
+  let INSIDE_TEMP = [  6, 36, 118, 28];
+  let INSIDE_RH   = [  6, 66, 118, 14];
+  let INSIDE_TIME = [  6, 82, 118, 12];
+  let OUT_TEMP    = [131, 36,  90, 28];
   // Place icon higher so tests sampling around y=30 see non-white pixels
-  const OUT_ICON    = [210, 22,  28, 28];
+  let OUT_ICON    = [210, 22,  28, 28];
   // Move outside non-temp rows up by one row (12px) to close white space
-  const OUT_ROW1_L  = [131, 66,  44, 12]; // top row: outside RH
+  let OUT_ROW1_L  = [131, 66,  44, 12]; // top row: outside RH
   // widen right-top box so "99.9 mph" never truncates
-  const OUT_ROW1_R  = [177, 66,  64, 12]; // top row: wind mph (widened)
-  const OUT_ROW2_L  = [131, 84,  44, 12]; // bottom row: condition (spaced)
-  const OUT_ROW2_R  = [177, 84,  44, 12]; // bottom row: reserved (H/L)
-  const STATUS      = [  6, 112, 238, 10];
+  let OUT_ROW1_R  = [177, 66,  64, 12]; // top row: wind mph (widened)
+  let OUT_ROW2_L  = [131, 78,  44, 12]; // bottom row: condition (aligned with FW)
+  let OUT_ROW2_R  = [177, 78,  44, 12]; // bottom row: reserved (H/L)
+  let STATUS      = [  6, 112, 238, 10];
 
   const canvas = document.getElementById('epd');
   const ctx = canvas.getContext('2d');
@@ -24,6 +24,8 @@
   let showWindows = false;
   let stressMode = false;
   let oneBitMode = true;
+  let GEOMETRY = null; // optional overlay geometry loaded from geometry.json
+  let GJSON = null;    // centralized geometry JSON
 
   const FONT_STACK = 'Menlo, Consolas, "DM Mono", "Roboto Mono", monospace';
   const SIZE_SMALL = 11; // general small text
@@ -32,6 +34,35 @@
   const SIZE_TIME = 11;
   const SIZE_BIG = 22;
   const THRESH = 176;
+  async function loadCentralGeometry(){
+    const urls = ['../../config/display_geometry.json', 'geometry.json'];
+    for (const url of urls){
+      try{
+        const res = await fetch(url);
+        if(!res.ok) continue;
+        const gj = await res.json();
+        if (gj && gj.rects){
+          GJSON = gj;
+          WIDTH = gj.canvas?.w || WIDTH;
+          HEIGHT = gj.canvas?.h || HEIGHT;
+          const R = gj.rects;
+          HEADER_NAME = R.HEADER_NAME || HEADER_NAME;
+          HEADER_TIME = R.HEADER_TIME || HEADER_TIME;
+          INSIDE_TEMP = R.INSIDE_TEMP || INSIDE_TEMP;
+          INSIDE_RH   = R.INSIDE_RH   || INSIDE_RH;
+          INSIDE_TIME = R.INSIDE_TIME || INSIDE_TIME;
+          OUT_TEMP    = R.OUT_TEMP    || OUT_TEMP;
+          OUT_ICON    = R.OUT_ICON    || OUT_ICON;
+          OUT_ROW1_L  = R.OUT_ROW1_L  || OUT_ROW1_L;
+          OUT_ROW1_R  = R.OUT_ROW1_R  || OUT_ROW1_R;
+          OUT_ROW2_L  = R.OUT_ROW2_L  || OUT_ROW2_L;
+          OUT_ROW2_R  = R.OUT_ROW2_R  || OUT_ROW2_R;
+          STATUS      = R.STATUS      || STATUS;
+          break;
+        }
+      }catch(e){ /* try next */ }
+    }
+  }
 
   function applyOneBitThreshold(){
     if (!oneBitMode) return;
@@ -366,7 +397,15 @@
     if (showWindows){
       ctx.strokeStyle = '#888';
       ctx.setLineDash([3,2]);
-      const rects = [HEADER_NAME, HEADER_TIME, INSIDE_TEMP, INSIDE_RH, INSIDE_TIME, OUT_TEMP, OUT_ICON, OUT_ROW1_L, OUT_ROW1_R, OUT_ROW2_L, OUT_ROW2_R, STATUS];
+      let rects = [];
+      if (GEOMETRY && typeof GEOMETRY === 'object'){
+        for (const key of Object.keys(GEOMETRY)){
+          const r = GEOMETRY[key];
+          if (Array.isArray(r) && r.length === 4) rects.push(r);
+        }
+      } else {
+        rects = [HEADER_NAME, HEADER_TIME, INSIDE_TEMP, INSIDE_RH, INSIDE_TIME, OUT_TEMP, OUT_ICON, OUT_ROW1_L, OUT_ROW1_R, OUT_ROW2_L, OUT_ROW2_R, STATUS];
+      }
       rects.forEach(([x,y,w,h])=>{ ctx.strokeRect(x,y,w,h); });
       ctx.setLineDash([]);
     }
@@ -376,8 +415,14 @@
   }
 
   async function load(){
+    await loadCentralGeometry();
     // Draw defaults immediately for instant feedback
     draw(lastData);
+    // Try to load overlay geometry (cache-busted)
+    try{
+      const gres = await fetch('geometry.json?v=2');
+      if (gres.ok){ GEOMETRY = await gres.json(); }
+    }catch(e){ GEOMETRY = null; }
     try{
       const res = await fetch('sample_data.json');
       if(!res.ok) throw new Error('fetch failed');

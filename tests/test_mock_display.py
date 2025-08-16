@@ -1,5 +1,6 @@
 import os
 import sys
+import json
 from PIL import Image
 
 ROOT = os.path.dirname(os.path.dirname(__file__))
@@ -29,10 +30,24 @@ def test_icon_changes_image_hash():
 def test_png_icon_loads_and_renders_centered():
     # uses generated 24x24 icons if present
     img = md.render({"weather":"cloudy"})
-    # Check that some black pixels exist within the icon box area
-    x0,y0,x1,y1 = 218,22,242,46
+    # Load geometry JSON for icon box
+    gpaths = [
+        os.path.join(ROOT, 'config', 'display_geometry.json'),
+        os.path.join(ROOT, 'web', 'sim', 'geometry.json'),
+    ]
+    G = None
+    for p in gpaths:
+        if os.path.exists(p):
+            with open(p,'r') as f:
+                G = json.load(f)
+            break
+    assert G is not None
+    rects = G.get('rects', G)
+    icon = rects.get('OUT_ICON', [210,22,28,28])
+    x,y,w,h = icon
+    x0,y0,x1,y1 = x, y, x+w, y+h
     px = img.load()
-    has_black = any(px[x,y] == 0 for x in range(x0,x1) for y in range(y0,y1))
+    has_black = any(px[i,j] == 0 for i in range(x0,x1) for j in range(y0,y1))
     assert has_black
 
 
