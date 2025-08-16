@@ -77,6 +77,10 @@ def main():
     vbat_divider = float(battery.get('divider', 2.0) or 2.0)
     adc_max = int(battery.get('adc_max', 4095) or 4095)
     adc_ref = float(battery.get('adc_ref', 3.3) or 3.3)
+    # thresholds for redraw skipping
+    thresholds = data.get('thresholds', {})
+    thresh_temp_c = float(thresholds.get('temp_degC', 0.1) or 0.1)
+    thresh_rh_pct = float(thresholds.get('rh_pct', 1.0) or 1.0)
 
     out_dir = os.path.join(prj, 'firmware', 'arduino', 'src')
     os.makedirs(out_dir, exist_ok=True)
@@ -104,6 +108,8 @@ def main():
         f.write(f'#define VBAT_DIVIDER {vbat_divider}\n')
         f.write(f'#define ADC_MAX_COUNTS {adc_max}\n')
         f.write(f'#define ADC_REF_V {adc_ref}\n')
+        f.write(f'#define THRESH_TEMP_C {thresh_temp_c}\n')
+        f.write(f'#define THRESH_RH_PCT {thresh_rh_pct}\n')
     print(f"Wrote {out_path}")
 
 if __name__ == '__main__':

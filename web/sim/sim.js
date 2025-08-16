@@ -12,12 +12,14 @@
   const OUT_ROW1_R  = [177, 86,  44, 12];
   const OUT_ROW2_L  = [131, 98,  44, 12];
   const OUT_ROW2_R  = [177, 98,  44, 12];
-  const STATUS      = [  6, 96, 238, 20];
+  const STATUS      = [  6, 112, 238, 10];
 
   const canvas = document.getElementById('epd');
   const ctx = canvas.getContext('2d');
   canvas.style.imageRendering = 'pixelated';
   let showWindows = false;
+  let stressMode = false;
+  let oneBitMode = true;
 
   function clear(){
     ctx.fillStyle = '#fff';
@@ -27,7 +29,7 @@
 
   function text(x,y,str,size=10,weight='normal'){
     ctx.fillStyle = '#000';
-    ctx.font = `${weight} ${size}px Arial, Helvetica, sans-serif`;
+    ctx.font = `${weight} ${size}px "DM Mono", "Roboto Mono", monospace`;
     ctx.textBaseline = 'top';
     ctx.fillText(str, x, y);
   }
@@ -171,10 +173,6 @@
     text(OUT_ROW2_R[0], OUT_ROW2_R[1], hilo, 10);
     const iconSelector = (data.moon_phase ? `moon_${(data.moon_phase||'').toLowerCase().replace(/\s+/g,'_')}` : (data.weather||'Cloudy'));
     weatherIcon([OUT_ICON[0],OUT_ICON[1],OUT_ICON[0]+OUT_ICON[2],OUT_ICON[1]+OUT_ICON[3]], iconSelector);
-    // condition and hi/lo
-    text(OUT_COND[0], OUT_COND[1], (data.weather||'Cloudy'), 10);
-    const hilo = `H ${data.high||'75.0'}°  L ${data.low||'60.0'}°`;
-    text(OUT_HILO[0], OUT_HILO[1], hilo, 10);
 
     // Battery glyph + status text with IP, voltage, percent, ETA days
     const pct = parseInt(data.percent||'76', 10);
@@ -187,7 +185,16 @@
     ctx.fillRect(bx + bw, by + 2, 2, 4); // terminal
     const fillw = Math.max(0, Math.min(bw-2, Math.round((bw-2) * (pct/100))));
     if (fillw > 0) ctx.fillRect(bx+1, by+1, fillw, bh-2);
-    // Left status (Batt and ETA)
+    // Low-battery glyph if <20%
+    if (pct < 20) {
+      ctx.beginPath();
+      ctx.moveTo(bx + bw + 4, by + 1);
+      ctx.lineTo(bx + bw + 8, by + 5);
+      ctx.lineTo(bx + bw + 0, by + 5);
+      ctx.closePath();
+      ctx.fill();
+    }
+    // Left status (Batt and ETA) with separators; right-aligned IP
     const left = `Batt ${data.voltage||'4.01'}V ${pct||76}%  |  ~${data.days||'128'}d`;
     text(STATUS[0] + bw + 8, STATUS[1], left, 10);
     // Right-aligned IP
@@ -197,21 +204,40 @@
 
     // partial window overlay
     if (showWindows){
-      ctx.strokeStyle = '#aaa';
+      ctx.strokeStyle = '#888';
+      ctx.setLineDash([3,2]);
       const rects = [HEADER_NAME, HEADER_TIME, INSIDE_TEMP, INSIDE_RH, INSIDE_TIME, OUT_TEMP, OUT_ICON, OUT_ROW1_L, OUT_ROW1_R, OUT_ROW2_L, OUT_ROW2_R, STATUS];
       rects.forEach(([x,y,w,h])=>{ ctx.strokeRect(x,y,w,h); });
+      ctx.setLineDash([]);
+    }
+
+    // Optional: convert to 1-bit threshold rendering pass
+    if (oneBitMode){
+      const img = ctx.getImageData(0,0,WIDTH,HEIGHT);
+      const d = img.data;
+      // Simple luminance threshold; e-ink tends to dither, but we do hard threshold for clarity
+      for (let i=0;i<d.length;i+=4){
+        const r=d[i], g=d[i+1], b=d[i+2];
+        const y = 0.2126*r + 0.7152*g + 0.0722*b;
+        const v = y < 192 ? 0 : 255; // threshold tuned for legibility
+        d[i]=d[i+1]=d[i+2]=v;
+        d[i+3]=255;
+      }
+      ctx.putImageData(img,0,0);
     }
   }
 
   async function load(){
+    // Draw defaults immediately for instant feedback
+    draw({});
     try{
       const res = await fetch('sample_data.json');
+      if(!res.ok) throw new Error('fetch failed');
       const data = await res.json();
       console.log('[sim] loaded sample_data.json');
       draw(data);
     } catch(e){
-      console.warn('[sim] falling back to defaults', e);
-      draw({});
+      console.warn('[sim] using defaults', e);
     }
   }
 
@@ -238,6 +264,29 @@
     showWindows = !!e.target.checked;
     clear();
     draw({});
+  });
+  document.getElementById('stressMode').addEventListener('change', (e)=>{
+    stressMode = !!e.target.checked;
+    // draw immediately with extreme values to reveal layout issues
+    const stress = {
+      room_name: 'Extremely Long Room Name Example',
+      time: '23:59',
+      inside_temp: '-10.2',
+      inside_hum: '100',
+      outside_temp: '-10.2',
+      outside_hum: '100',
+      weather: 'Thunderstorms and very windy with heavy rain bands',
+      wind: '99.9',
+      high: '199.9',
+      low: '-40.0',
+      moon_phase: '',
+      percent: 12,
+      voltage: '3.42',
+      days: '1',
+      ip: '10.1.2.3'
+    };
+    clear();
+    draw(stressMode ? stress : {});
   });
   load();
 })();

@@ -409,7 +409,7 @@ void setup() {
                 float d = now_out_f - last_outside_f;
                 if (d >= 0.3f) trend_out = '+'; else if (d <= -0.3f) trend_out = '-';
             }
-            if (!isfinite(last_outside_f) || fabs(now_out_f - last_outside_f) >= 0.2f) {
+            if (!isfinite(last_outside_f) || fabs(o.temperatureC - (last_outside_f - 32.0f) * 5.0f/9.0f) >= THRESH_TEMP_C) {
                 partial_update_outside_temp(out_temp, trend_out);
                 last_outside_f = now_out_f;
             }
@@ -417,7 +417,7 @@ void setup() {
         if (o.validHum) {
             char out_rh[16];
             snprintf(out_rh, sizeof(out_rh), "%.0f", o.humidityPct);
-            if (!isfinite(last_outside_rh) || fabs(o.humidityPct - last_outside_rh) >= 1.0f) {
+            if (!isfinite(last_outside_rh) || fabs(o.humidityPct - last_outside_rh) >= THRESH_RH_PCT) {
                 partial_update_outside_rh(out_rh);
                 last_outside_rh = o.humidityPct;
             }

@@ -21,3 +21,5 @@
 #define VBAT_DIVIDER 2.0
 #define ADC_MAX_COUNTS 4095
 #define ADC_REF_V 3.3
+#define THRESH_TEMP_C 0.1
+#define THRESH_RH_PCT 1.0
