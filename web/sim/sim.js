@@ -7,12 +7,12 @@
   const INSIDE_RH   = [  6, 66, 118, 14];
   const INSIDE_TIME = [  6, 82, 118, 12];
   const OUT_TEMP    = [131, 36,  90, 28];
-  const OUT_ICON    = [224, 22,  24, 24];
+  const OUT_ICON    = [224, 58,  24, 24];
   // Move outside non-temp rows up by one row (12px) to close white space
-  const OUT_ROW1_L  = [131, 74,  44, 12];
-  const OUT_ROW1_R  = [177, 74,  44, 12];
-  const OUT_ROW2_L  = [131, 86,  44, 12];
-  const OUT_ROW2_R  = [177, 86,  44, 12];
+  const OUT_ROW1_L  = [131, 66,  44, 12]; // top row: outside RH
+  const OUT_ROW1_R  = [177, 66,  44, 12]; // top row: wind mph
+  const OUT_ROW2_L  = [131, 78,  44, 12]; // bottom row: condition
+  const OUT_ROW2_R  = [177, 78,  44, 12]; // bottom row: reserved (H/L)
   const STATUS      = [  6, 112, 238, 10];
 
   const canvas = document.getElementById('epd');
@@ -200,17 +200,15 @@
     drawTempWithUnits(OUT_TEMP, numOut);
     // two-column lower info: move condition to left-top, swap wind/humidity positions, show wind in mph
     const condition = shortConditionLabel(data.weather || 'Cloudy');
-    const hilo = `H ${data.high||'75.0'}° | L ${data.low||'60.0'}°`;
     const rhText = `${data.outside_hum||'53'}% RH`;
     let windMps = parseFloat(data.wind || '4.2');
     if (!isFinite(windMps)) windMps = 4.2;
     const wind = `${(windMps*2.237).toFixed(1)} mph`;
     // Left column
-    text(OUT_ROW1_L[0], OUT_ROW1_L[1], condition, SIZE_SMALL);
-    text(OUT_ROW2_L[0], OUT_ROW2_L[1], rhText, SIZE_SMALL);
+    text(OUT_ROW1_L[0], OUT_ROW1_L[1], rhText, SIZE_SMALL);
+    text(OUT_ROW2_L[0], OUT_ROW2_L[1], condition, SIZE_SMALL);
     // Right column
-    // right-top intentionally blank
-    text(OUT_ROW2_R[0], OUT_ROW2_R[1], wind, SIZE_SMALL);
+    text(OUT_ROW1_R[0], OUT_ROW1_R[1], wind, SIZE_SMALL);
     const iconSelector = (data.moon_phase ? `moon_${(data.moon_phase||'').toLowerCase().replace(/\s+/g,'_')}` : (data.weather||'Cloudy'));
     weatherIcon([OUT_ICON[0],OUT_ICON[1],OUT_ICON[0]+OUT_ICON[2],OUT_ICON[1]+OUT_ICON[3]], iconSelector);
 

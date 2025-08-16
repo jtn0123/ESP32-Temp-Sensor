@@ -17,14 +17,15 @@ static constexpr int INSIDE_RH[4]   = {  6, 66, 118, 14};
 static constexpr int INSIDE_TIME[4] = {  6, 82, 118, 12};
 
 static constexpr int OUT_TEMP[4]    = {131, 36,  90, 28};
-static constexpr int OUT_ICON[4]    = {224, 22,  24, 24};
+static constexpr int OUT_ICON[4]    = {224, 58,  24, 24};
 
 // Two small columns at bottom right
 // moved up by 12 px to close space
-static constexpr int OUT_ROW1_L[4]  = {131, 74,  44, 12}; // e.g., condition
-static constexpr int OUT_ROW1_R[4]  = {177, 74,  44, 12}; // e.g., RH
-static constexpr int OUT_ROW2_L[4]  = {131, 86,  44, 12}; // e.g., wind
-static constexpr int OUT_ROW2_R[4]  = {177, 86,  44, 12}; // e.g., H/L
+// Align outside RH/wind with inside RH row; put condition below; move icon down
+static constexpr int OUT_ROW1_L[4]  = {131, 66,  44, 12}; // outside RH
+static constexpr int OUT_ROW1_R[4]  = {177, 66,  44, 12}; // wind mph
+static constexpr int OUT_ROW2_L[4]  = {131, 78,  44, 12}; // condition
+static constexpr int OUT_ROW2_R[4]  = {177, 78,  44, 12}; // reserved (H/L)
 
 static constexpr int STATUS_[4]     = {  6, 112, 238, 10};
 
