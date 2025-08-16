@@ -1,5 +1,6 @@
 #include <Arduino.h>
 #include <GxEPD2_BW.h>
+#include <Preferences.h>
 #include "icons.h"
 #include "display_layout.h"
 #include "sensors.h"
@@ -35,6 +36,24 @@ RTC_DATA_ATTR static float last_published_inside_rh = NAN;
 RTC_DATA_ATTR static uint32_t last_status_crc = 0;
 RTC_DATA_ATTR static float last_inside_rh = NAN;
 
+static Preferences g_prefs;
+
+static inline void nvs_begin_cache() { g_prefs.begin("cache", false); }
+static inline void nvs_end_cache() { g_prefs.end(); }
+static inline void nvs_load_cache_if_unset() {
+    if (!isfinite(last_inside_f)) last_inside_f = g_prefs.getFloat("li_f", NAN);
+    if (!isfinite(last_inside_rh)) last_inside_rh = g_prefs.getFloat("li_rh", NAN);
+    if (!isfinite(last_outside_f)) last_outside_f = g_prefs.getFloat("lo_f", NAN);
+    if (!isfinite(last_outside_rh)) last_outside_rh = g_prefs.getFloat("lo_rh", NAN);
+    if (last_icon_id < 0) last_icon_id = (int32_t)g_prefs.getInt("icon", -1);
+    if (last_status_crc == 0) last_status_crc = g_prefs.getUInt("st_crc", 0);
+    if (!isfinite(last_published_inside_tempC)) last_published_inside_tempC = g_prefs.getFloat("pi_t", NAN);
+    if (!isfinite(last_published_inside_rh)) last_published_inside_rh = g_prefs.getFloat("pi_rh", NAN);
+}
+static inline void nvs_store_float(const char* key, float v) { g_prefs.putFloat(key, v); }
+static inline void nvs_store_int(const char* key, int32_t v) { g_prefs.putInt(key, v); }
+static inline void nvs_store_uint(const char* key, uint32_t v) { g_prefs.putUInt(key, v); }
+
 static constexpr float THRESH_TEMP_F = 0.2f; // redraw/publish threshold in F
 static constexpr float THRESH_TEMP_C_FROM_F = THRESH_TEMP_F / 1.8f; // ~0.111C
 static constexpr float THRESH_RH = 1.0f; // percent
@@ -64,9 +83,9 @@ static void draw_static_chrome()
 
     // Section labels
     display.setCursor(6, 22);
-    display.print("INSIDE");
+    display.print(F("INSIDE"));
     display.setCursor(131, 22);
-    display.print("OUTSIDE");
+    display.print(F("OUTSIDE"));
 }
 
 static inline int16_t text_width_default_font(const char* s, uint8_t size)
@@ -175,21 +194,23 @@ static inline bool maybe_redraw_status(const BatteryStatus& bs, const char* ip_c
     return false;
 }
 
-static String make_short_condition(const char* weather)
+static void make_short_condition_cstr(const char* weather, char* out, size_t out_size)
 {
-    String s(weather);
-    s.trim();
-    if (s.length() == 0) return String("");
-    s.replace(" with ", " ");
-    s.replace(" and ", " ");
-    s.replace(",", " ");
-    s.replace(";", " ");
-    s.replace(":", " ");
-    s.replace("/", " ");
-    int sp = s.indexOf(' ');
-    String first = (sp >= 0) ? s.substring(0, sp) : s;
-    first.trim();
-    return first;
+    if (!out || out_size == 0) return;
+    out[0] = '\0';
+    if (!weather) return;
+    // Skip leading spaces
+    const char* p = weather;
+    while (*p == ' ' || *p == '\t') p++;
+    // Copy until next separator or end
+    size_t i = 0;
+    while (*p && i < out_size - 1) {
+        char c = *p;
+        if (c == ' ' || c == '\t' || c == ',' || c == ';' || c == ':' || c == '/') break;
+        out[i++] = c;
+        p++;
+    }
+    out[i] = '\0';
 }
 
 static void draw_header_time(const char* time_str)
@@ -366,7 +387,8 @@ static void full_refresh()
         }
         // Outside condition short token (left-top)
         if (o.validWeather) {
-            String sc = make_short_condition(o.weather);
+            char sc[24];
+            make_short_condition_cstr(o.weather, sc, sizeof(sc));
             display.setTextColor(GxEPD_BLACK);
             display.setTextSize(1);
             display.setCursor(OUT_ROW1_L[0], OUT_ROW1_L[1]);
@@ -521,10 +543,12 @@ static void partial_update_outside_hilo(float highC, float lowC)
 void setup() {
     Serial.begin(115200);
     delay(100);
-    Serial.println("ESP32 eInk Room Node boot");
+    Serial.println(F("ESP32 eInk Room Node boot"));
 
     display.init(0);
     display.setRotation(1); // landscape 250x122 coordinate system
+    nvs_begin_cache();
+    nvs_load_cache_if_unset();
     net_begin();
     pump_network_ms(800); // allow retained MQTT to arrive quickly
 
@@ -555,6 +579,7 @@ void setup() {
         maybe_redraw_numeric(INSIDE_TEMP, now_in_f, last_inside_f, THRESH_TEMP_F, [&](){
             partial_update_inside_temp(in_temp, trend_in);
         });
+        if (isfinite(last_inside_f)) nvs_store_float("li_f", last_inside_f);
         // Inside RH partial update + publish only when changed beyond thresholds
         if (isfinite(r.humidityPct)) {
             char in_rh_str[16];
@@ -562,6 +587,7 @@ void setup() {
             maybe_redraw_numeric(INSIDE_RH, r.humidityPct, last_inside_rh, THRESH_RH, [&](){
                 partial_update_inside_rh(in_rh_str);
             });
+            if (isfinite(last_inside_rh)) nvs_store_float("li_rh", last_inside_rh);
         }
         if (isfinite(r.temperatureC) && isfinite(r.humidityPct)) {
             bool temp_changed = (!isfinite(last_published_inside_tempC)) || fabsf(r.temperatureC - last_published_inside_tempC) >= THRESH_TEMP_C_FROM_F;
@@ -570,6 +596,8 @@ void setup() {
                 net_publish_inside(r.temperatureC, r.humidityPct);
                 last_published_inside_tempC = r.temperatureC;
                 last_published_inside_rh = r.humidityPct;
+                nvs_store_float("pi_t", last_published_inside_tempC);
+                nvs_store_float("pi_rh", last_published_inside_rh);
             }
         }
 
@@ -586,6 +614,7 @@ void setup() {
             maybe_redraw_numeric(OUT_TEMP, now_out_f, last_outside_f, THRESH_TEMP_F, [&](){
                 partial_update_outside_temp(out_temp, trend_out);
             });
+            if (isfinite(last_outside_f)) nvs_store_float("lo_f", last_outside_f);
         }
         if (o.validHum) {
             char out_rh[16];
@@ -593,14 +622,17 @@ void setup() {
             maybe_redraw_numeric(OUT_ROW2_L, o.humidityPct, last_outside_rh, THRESH_RH, [&](){
                 partial_update_outside_rh(out_rh);
             });
+            if (isfinite(last_outside_rh)) nvs_store_float("lo_rh", last_outside_rh);
         }
         if (o.validWeather) {
             IconId id = map_weather_to_icon(o.weather);
             maybe_redraw_value<int32_t>(OUT_ICON, (int32_t)id, last_icon_id, [&](){
                 partial_update_weather_icon(o.weather);
             });
-            String sc = make_short_condition(o.weather);
-            partial_update_outside_condition(sc.c_str());
+            nvs_store_int("icon", last_icon_id);
+            char sc[24];
+            make_short_condition_cstr(o.weather, sc, sizeof(sc));
+            partial_update_outside_condition(sc);
         }
         if (o.validWind && isfinite(o.windMps)) {
             float mph = o.windMps * 2.237f;
@@ -614,13 +646,16 @@ void setup() {
         BatteryStatus bs = read_battery_status();
         char ip_c[32];
         net_ip_cstr(ip_c, sizeof(ip_c));
-        maybe_redraw_status(bs, ip_c, STATUS_);
+        if (maybe_redraw_status(bs, ip_c, STATUS_)) {
+            nvs_store_uint("st_crc", last_status_crc);
+        }
     }
 
     partial_counter++;
     // Log awake duration and planned sleep for diagnostics
     Serial.printf("Awake ms: %lu\n", (unsigned long)millis());
     Serial.printf("Sleeping for %us\n", (unsigned)WAKE_INTERVAL_SEC);
+    nvs_end_cache();
     go_deep_sleep_seconds(WAKE_INTERVAL_SEC);
 }
 
