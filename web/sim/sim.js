@@ -90,9 +90,9 @@
   async function weatherIcon(box, weather){
     const [x0,y0,x1,y1] = box;
     const w = x1-x0, h=y1-y0; const cx=x0+w/2, cy=y0+h/2;
-    const scale = 1.3; // ~30% larger so the change is clearly visible
-    const effW = Math.round(Math.min(28, w*scale));
-    const effH = Math.round(Math.min(28, h*scale));
+    const scale = 1.5; // ~50% larger than base 20x20 box
+    const effW = Math.round(Math.min(32, w*scale));
+    const effH = Math.round(Math.min(32, h*scale));
     const ex0 = Math.round(x0 + (w - effW)/2);
     const ey0 = Math.round(y0 + (h - effH)/2);
     const ex1 = ex0 + effW;
@@ -172,7 +172,7 @@
     text(INSIDE_TEMP[0] + nwi + 2, INSIDE_TEMP[1]+4, deg, 12);
     text(INSIDE_TEMP[0] + nwi + 8, INSIDE_TEMP[1]+4, unit, 12);
     text(INSIDE_RH[0], INSIDE_RH[1], `${data.inside_hum||'47'}% RH`, SIZE_SMALL);
-    text(INSIDE_TIME[0], INSIDE_TIME[1], data.time||'10:32', SIZE_SMALL);
+    // Omit duplicate time here; header shows time
 
     const numOut = `${data.outside_temp||'68.4'}`;
     text(OUT_TEMP[0], OUT_TEMP[1], numOut, 22, 'bold');
@@ -291,14 +291,15 @@
       const res = await fetch('sample_data.json');
       const data = await res.json();
       data.time = new Date().toTimeString().slice(0,5);
-      // clear the time box and redraw just that region
-      const [x0,y0,w,h] = INSIDE_TIME;
+      // clear the header time box and redraw just that region (right-aligned)
+      const [hx,hy,hw,hh] = HEADER_TIME;
       ctx.fillStyle = '#fff';
-      ctx.fillRect(x0,y0,w,h);
-      text(x0,y0, data.time, 10);
+      ctx.fillRect(hx,hy,hw,hh);
+      const tw = ctx.measureText(data.time).width;
+      text(hx + hw - 2 - tw, hy+1, data.time, SIZE_TIME);
       // brief outline to show the partial region
       ctx.strokeStyle = '#000';
-      ctx.strokeRect(x0,y0,w,h);
+      ctx.strokeRect(hx,hy,hw,hh);
       setTimeout(()=>{ /* no-op */ }, 100);
     }catch(e){
       load();
