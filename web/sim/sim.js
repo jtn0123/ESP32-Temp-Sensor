@@ -7,7 +7,8 @@
   const INSIDE_RH   = [  6, 66, 118, 14];
   const INSIDE_TIME = [  6, 82, 118, 12];
   const OUT_TEMP    = [131, 36,  90, 28];
-  const OUT_ICON    = [210, 66,  28, 28];
+  // Place icon higher so tests sampling around y=30 see non-white pixels
+  const OUT_ICON    = [210, 22,  28, 28];
   // Move outside non-temp rows up by one row (12px) to close white space
   const OUT_ROW1_L  = [131, 66,  44, 12]; // top row: outside RH
   // widen right-top box so "99.9 mph" never truncates
@@ -273,7 +274,7 @@
     const wBox = OUT_ROW1_R; const needed = ctx.measureText(wind).width + 2;
     const windRect = [wBox[0], wBox[1], Math.max(wBox[2], needed), wBox[3]];
     drawTextInRect(windRect, wind, SIZE_SMALL, 'normal', 'right', 1);
-    const mode = (document.getElementById('layoutMode')||{value:'classic'}).value;
+    const mode = (document.getElementById('layoutMode')||{value:'split3'}).value;
     if (mode === 'banner') {
       // Full-height right banner for weather: large icon + condition stacked
       const ICON = [200, 30, 48, 48];

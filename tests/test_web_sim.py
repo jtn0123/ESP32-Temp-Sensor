@@ -57,12 +57,19 @@ def test_web_sim_basic_pixels():
             r, g, b, a = _canvas_rgba(page, 5, 18)
             assert (r, g, b) == (0, 0, 0)
 
-            # Icon box should contain at least some non-white pixel
+            # In split3 layout, a horizontal rule above the status stack is drawn around y≈92
+            r, g, b, a = _canvas_rgba(page, 5, 92)
+            assert (r, g, b) == (0, 0, 0)
+
+            # Bottom-right weather area (split3) should contain some non-white pixels
             any_black = False
-            for x in range(218, 242):
-                r, g, b, a = _canvas_rgba(page, x, 30)
-                if (r, g, b) != (255, 255, 255):
-                    any_black = True
+            for y in range(95, 120):
+                for x in range(130, 244):
+                    r, g, b, a = _canvas_rgba(page, x, y)
+                    if (r, g, b) != (255, 255, 255):
+                        any_black = True
+                        break
+                if any_black:
                     break
             assert any_black
 

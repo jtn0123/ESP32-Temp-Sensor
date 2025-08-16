@@ -3,7 +3,6 @@ body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial
 h1 { font-size: 18px; margin: 0 0 12px; }
 canvas {
   image-rendering: pixelated;
-  border: 1px solid #000;
   background: #fff;
   display: block;
   width: 500px;  /* 2x scale for visibility */
