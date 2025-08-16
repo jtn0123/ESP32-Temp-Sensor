@@ -121,20 +121,20 @@
     ctx.restore();
   }
 
-  function drawTempRightAligned(rect, valueF){
+  // Draw temperature centered horizontally as a group (number + °F)
+  function drawTempCentered(rect, valueF, tag){
     const [x, y, w, h] = rect;
     const pad = 2;           // inner padding to keep to 2px grid inside boxes
-    const unitsW = 14;       // fixed strip for degree + unit to prevent jitter
-    const unitsLeft = x + w - unitsW;
+    const unitsW = 14;       // width for degree + unit
     // prepare value string (allow caller to pass number or string)
     let s = String(valueF ?? '');
     // use bold, monospaced stack for rock-solid digits
     ctx.font = `bold ${SIZE_BIG}px ${FONT_STACK}`;
     ctx.textBaseline = 'top';
-    const maxNumW = Math.max(0, unitsLeft - (x + pad));
+    const maxContentW = Math.max(0, w - pad*2);
     // If too wide, prefer dropping fractional part first
     let tw = ctx.measureText(s).width;
-    if (tw > maxNumW){
+    if (tw + unitsW > maxContentW){
       const noFrac = s.replace(/(\.|,).*/, '');
       if (noFrac !== s){
         s = noFrac;
@@ -142,14 +142,16 @@
       }
     }
     // As final fallback, truncate from the right
-    while (tw > maxNumW && s.length > 1){
+    while (tw + unitsW > maxContentW && s.length > 1){
       s = s.slice(0, -1);
       // avoid dangling minus or dot at end
       if (/[\-\.+]$/.test(s)) s = s.slice(0, -1);
       tw = ctx.measureText(s).width;
     }
-    const numRight = unitsLeft - pad;
-    const numLeft = Math.max(x + pad, Math.floor(numRight - tw));
+    const totalW = Math.min(maxContentW, tw + unitsW);
+    const contentLeft = x + Math.max(0, Math.floor((w - totalW)/2));
+    const numLeft = contentLeft;
+    const unitsLeft = contentLeft + tw;
     // draw number on 2px baseline grid (y is already even in layout)
     text(numLeft, y, s, SIZE_BIG, 'bold');
     // draw units inside the fixed strip, horizontally compact
@@ -158,6 +160,11 @@
     const unitY = y + 4; // keep even baseline offset
     text(degX, unitY, '°', 12);
     text(fX, unitY, 'F', 12);
+    // expose metrics
+    try{
+      if(!window.__tempMetrics) window.__tempMetrics = {};
+      window.__tempMetrics[tag||'temp'] = { rect: {x,y,w,h}, contentLeft, totalW };
+    }catch(e){ }
   }
 
   function rect(x0,y0,x1,y1){
@@ -322,12 +329,12 @@
 
     // Values: numeric right-aligned with fixed units strip
     const numIn = `${data.inside_temp||'72.5'}`;
-    drawTempRightAligned(INSIDE_TEMP, numIn);
+    drawTempCentered(INSIDE_TEMP, numIn, 'inside');
     text(INSIDE_RH[0], INSIDE_RH[1], `${data.inside_hum||'47'}% RH`, SIZE_SMALL);
     // Omit duplicate time here; header shows time
 
     const numOut = `${data.outside_temp||'68.4'}`;
-    drawTempRightAligned(OUT_TEMP, numOut);
+    drawTempCentered(OUT_TEMP, numOut, 'outside');
     // Outside details: split RH and wind into two rows to avoid collisions
     const condition = shortConditionLabel(data.weather || 'Cloudy');
     const rhText = `${data.outside_hum||'53'}% RH`;
@@ -427,6 +434,33 @@
       rects.forEach(([x,y,w,h])=>{ ctx.strokeRect(x,y,w,h); });
       ctx.setLineDash([]);
     }
+
+    // Expose layout metrics for automated tests/debugging
+    try{
+      window.__layoutMetrics = {
+        canvas: { width: WIDTH, height: HEIGHT },
+        statusLeft: {
+          left: leftColLeft,
+          right: leftColRight,
+          baseY,
+          batteryIcon: { x: bx, y: by, w: bw, h: bh },
+          batteryGroup: { x: groupLeft, w: groupW, textLeft: leftTextX },
+          line1Y: baseY-2,
+          line2Y: baseY+8,
+          ip: { x: ipCenterLeft, w: iw, y: baseY+18 }
+        },
+        weather: {
+          bar: { x: barX, w: barW, y: barY },
+          iconBox: { x: startX, y: barY, w: iconW, h: iconH },
+          label: { x: startX + iconW + gap, y: labelTop, text: label },
+          totalW
+        },
+        outsideRows: {
+          row1L: { x: OUT_ROW1_L[0], y: OUT_ROW1_L[1], w: OUT_ROW1_L[2], h: OUT_ROW1_L[3] },
+          row2L: { x: OUT_ROW2_L[0], y: OUT_ROW2_L[1]+1, w: OUT_ROW2_L[2], h: OUT_ROW2_L[3] }
+        }
+      };
+    }catch(e){ /* ignore if window not accessible */ }
 
     // Optional: convert to 1-bit threshold rendering pass
     applyOneBitThreshold();
