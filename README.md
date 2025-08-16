@@ -17,6 +17,21 @@
 - Refresh: **partial** each wake; **full** every N cycles to clear ghosting.
  - Panel driver (GxEPD2): start with `GxEPD2_213_B74` (SSD1680 122×250). If your Wing revision differs, try `GxEPD2_213_DEPG0213BN` and other 122×250 classes listed in `GxEPD2_display_selection.h`.
 
+### Shared Display Geometry (single source of truth)
+
+- `config/display_geometry.json` defines the canvas size and all drawing rectangles.
+- Consumers:
+  - Web simulator loads it at runtime (falls back to `web/sim/geometry.json`).
+  - Python PNG mock reads it to render a matching 250×122 preview.
+  - Firmware header is generated from it.
+- Regenerate the firmware header from JSON before building firmware:
+
+```bash
+python3 scripts/gen_layout_header.py
+```
+
+- Tests validate that the mock and sim are in sync (snapshot + pixel checks).
+
 ### Power & Duty Cycle (example)
 
 - Deep sleep: ~**0.09 mA** (board LEDs/rails off).
@@ -119,6 +134,8 @@ cd web/sim
 python3 -m http.server 8080
 # open http://localhost:8080 in your browser
 ```
+
+Both simulators read the same `config/display_geometry.json`, so they match the firmware layout.
 
 #### Weather Icons (24×24 PNG)
 
