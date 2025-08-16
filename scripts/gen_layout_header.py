@@ -32,14 +32,15 @@ def generate_header(data: Dict[str, Any]) -> str:
     lines.append('')
     lines.append('// Partial update windows (x, y, w, h) — generated from display_geometry.json')
 
+    # Helper to avoid emitting reserved/conflicting identifiers (e.g., STATUS)
+    def emitted_name(name: str) -> str:
+        return 'STATUS_' if name == 'STATUS' else name
+
     # Emit arrays
     for name, xywh in rects.items():
         x, y, rw, rh = [int(v) for v in xywh]
-        lines.append(f'static constexpr int {name}[4] = {{ {x:3d}, {y:3d}, {rw:3d}, {rh:2d}}};')
-    # Back-compat: also provide STATUS_ if STATUS exists
-    if 'STATUS' in rects:
-        x, y, rw, rh = [int(v) for v in rects['STATUS']]
-        lines.append(f'static constexpr int STATUS_[4]     = {{ {x:3d}, {y:3d}, {rw:3d}, {rh:2d}}};')
+        var = emitted_name(name)
+        lines.append(f'static constexpr int {var}[4] = {{ {x:3d}, {y:3d}, {rw:3d}, {rh:2d}}};')
 
     lines.append('')
     lines.append('enum WeatherIconId {')
@@ -55,7 +56,8 @@ def generate_header(data: Dict[str, Any]) -> str:
     lines.append('// Compile-time layout sanity checks (widths/heights within bounds)')
     for name, xywh in rects.items():
         x, y, rw, rh = [int(v) for v in xywh]
-        lines.append(f'static_assert({name}[0] >= 0 && {name}[1] >= 0, "{name} origin");')
+        var = emitted_name(name)
+        lines.append(f'static_assert({var}[0] >= 0 && {var}[1] >= 0, "{name} origin");')
         lines.append(f'static_assert({x} + {rw} <= EINK_WIDTH,  "{name} width");')
         lines.append(f'static_assert({y} + {rh} <= EINK_HEIGHT, "{name} height");')
     if 'STATUS' in rects:

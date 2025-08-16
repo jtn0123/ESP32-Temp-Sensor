@@ -23,8 +23,7 @@ static constexpr int OUT_ROW1_L[4] = { 131,  66,  44, 12};
 static constexpr int OUT_ROW1_R[4] = { 177,  66,  64, 12};
 static constexpr int OUT_ROW2_L[4] = { 131,  84,  44, 12};
 static constexpr int OUT_ROW2_R[4] = { 177,  84,  44, 12};
-static constexpr int STATUS[4] = {   6, 112, 238, 10};
-static constexpr int STATUS_[4]     = {   6, 112, 238, 10};
+static constexpr int STATUS_[4] = {   6, 112, 238, 10};
 
 enum WeatherIconId {
     ICON_CLEAR = 0,
@@ -70,7 +69,7 @@ static_assert(84 + 12 <= EINK_HEIGHT, "OUT_ROW2_L height");
 static_assert(OUT_ROW2_R[0] >= 0 && OUT_ROW2_R[1] >= 0, "OUT_ROW2_R origin");
 static_assert(177 + 44 <= EINK_WIDTH,  "OUT_ROW2_R width");
 static_assert(84 + 12 <= EINK_HEIGHT, "OUT_ROW2_R height");
-static_assert(STATUS[0] >= 0 && STATUS[1] >= 0, "STATUS origin");
+static_assert(STATUS_[0] >= 0 && STATUS_[1] >= 0, "STATUS origin");
 static_assert(6 + 238 <= EINK_WIDTH,  "STATUS width");
 static_assert(112 + 10 <= EINK_HEIGHT, "STATUS height");
 static_assert(STATUS_[0] + STATUS_[2] <= EINK_WIDTH,  "STATUS_ width");
