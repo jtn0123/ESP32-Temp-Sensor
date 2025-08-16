@@ -75,7 +75,10 @@ static void draw_static_chrome()
     display.fillScreen(GxEPD_WHITE);
     display.drawRect(0, 0, EINK_WIDTH, EINK_HEIGHT, GxEPD_BLACK);
     display.drawLine(1, 18, EINK_WIDTH-2, 18, GxEPD_BLACK);
-    display.drawLine(125, 18, 125, 95, GxEPD_BLACK);
+    // Extend the center divider to the bottom frame to match the simulator
+    display.drawLine(125, 18, 125, EINK_HEIGHT-2, GxEPD_BLACK);
+    // Draw a thin horizontal rule above the bottom status/weather rows (aligned with sim)
+    display.drawLine(1, STATUS_[1] - 20, EINK_WIDTH-2, STATUS_[1] - 20, GxEPD_BLACK);
 
     // Header: room name left, time will be drawn separately
     display.setTextColor(GxEPD_BLACK);
