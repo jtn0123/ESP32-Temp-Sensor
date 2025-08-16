@@ -336,8 +336,8 @@
     const wind = `${(windMps*2.237).toFixed(1)} mph`;
     // Row 1 (left): RH
     drawTextInRect(OUT_ROW1_L, rhText, SIZE_SMALL, 'normal', 'left', 1);
-    // Row 2 (left): wind (mph)
-    drawTextInRect(OUT_ROW2_L, wind, SIZE_SMALL, 'normal', 'left', 1);
+    // Row 2 (left): wind (mph) — nudge down 1px to avoid descender clipping
+    drawTextInRect([OUT_ROW2_L[0], OUT_ROW2_L[1]+1, OUT_ROW2_L[2], OUT_ROW2_L[3]], wind, SIZE_SMALL, 'normal', 'left', 1);
     // Unified layout: split + three-row status
     // Three-row left status and right weather area
     ctx.fillStyle = '#fff';
