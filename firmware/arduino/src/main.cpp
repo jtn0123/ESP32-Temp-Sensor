@@ -98,6 +98,7 @@ static void pump_network_ms(uint32_t duration_ms)
 static Adafruit_NeoPixel s_statusPixel(1, STATUS_PIXEL_PIN, NEO_GRB + NEO_KHZ800);
 static uint32_t s_lastPixelMs = 0;
 static uint8_t s_hue = 0;
+static uint8_t s_breath = 0; // brightness phase for subtle breathing
 
 static uint32_t color_wheel(uint8_t pos)
 {
@@ -116,7 +117,7 @@ static uint32_t color_wheel(uint8_t pos)
 static inline void status_pixel_begin()
 {
     s_statusPixel.begin();
-    s_statusPixel.setBrightness(16);
+    s_statusPixel.setBrightness(8);
     s_statusPixel.show();
 }
 
@@ -129,9 +130,19 @@ static inline void status_pixel_off()
 static inline void status_pixel_tick()
 {
     uint32_t now = millis();
-    if (now - s_lastPixelMs < 20) return;
+    if (now - s_lastPixelMs < 40) return; // slower update for smooth, slow cycle
     s_lastPixelMs = now;
-    s_statusPixel.setPixelColor(0, color_wheel(s_hue++));
+    s_hue++;
+    s_breath++;
+    // Triangle wave 0..127..0 mapped to brightness range
+    uint8_t amp = (s_breath < 128) ? s_breath : (uint8_t)(255 - s_breath);
+    const uint8_t minB = 8;
+    const uint8_t maxB = 64;
+    uint8_t level = (uint8_t)(minB + ((uint16_t)amp * (maxB - minB) / 127));
+    // Occasional brief flash for a bit of flair
+    if ((s_hue & 0x3F) == 0) level = maxB;
+    s_statusPixel.setBrightness(level);
+    s_statusPixel.setPixelColor(0, color_wheel(s_hue));
     s_statusPixel.show();
 }
 #endif
@@ -201,6 +212,9 @@ static inline void draw_in_region(const int rect[4], DrawFn drawFn)
     do {
         display.fillScreen(GxEPD_WHITE);
         drawFn(x, y, w, h);
+        #if USE_STATUS_PIXEL
+        status_pixel_tick();
+        #endif
     } while (display.nextPage());
 }
 
@@ -444,6 +458,9 @@ static void full_refresh()
     do {
         draw_static_chrome();
         InsideReadings r = read_inside_sensors();
+        #if USE_STATUS_PIXEL
+        status_pixel_tick();
+        #endif
         char in_temp[16];
         char in_rh[16];
         snprintf(in_temp, sizeof(in_temp), isfinite(r.temperatureC) ? "%.1f" : "--", r.temperatureC * 9.0/5.0 + 32.0);
