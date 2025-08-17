@@ -82,5 +82,3 @@ def test_web_sim_basic_pixels():
     finally:
         server.terminate()
         server.wait(timeout=2)
-
-

@@ -23,11 +23,15 @@ def main() -> int:
         "--project-dir",
         default=os.path.join(os.path.dirname(__file__), "..", "firmware", "arduino"),
     )
-    ap.add_argument("--environments", nargs="*", default=[
-        "feather_esp32s2",
-        "feather_esp32s2_headless",
-        "feather_esp32s2_field",
-    ])
+    ap.add_argument(
+        "--environments",
+        nargs="*",
+        default=[
+            "feather_esp32s2",
+            "feather_esp32s2_headless",
+            "feather_esp32s2_field",
+        ],
+    )
     args = ap.parse_args()
 
     proj = os.path.abspath(args.project_dir)
@@ -42,5 +46,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-
-

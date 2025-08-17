@@ -50,6 +50,7 @@ def main() -> None:
 
     if args.logfile == "-":
         import sys
+
         lines = sys.stdin
     else:
         lines = open(args.logfile, "r", encoding="utf-8", errors="ignore")
@@ -71,5 +72,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
-

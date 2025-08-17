@@ -54,5 +54,3 @@ if __name__ == "__main__":
         "Time: SNTP sync ok",
     ]
     print(parse(sample))
-
-

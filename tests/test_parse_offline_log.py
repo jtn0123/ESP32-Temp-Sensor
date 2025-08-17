@@ -23,5 +23,3 @@ def test_sntp_parse_ok_and_timeout():
     evt = parse(lines)
     assert evt.saw_sntp_timeout is True
     assert evt.saw_sntp_ok is True
-
-

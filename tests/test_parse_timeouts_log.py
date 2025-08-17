@@ -4,7 +4,7 @@ import tempfile
 
 
 def run_parse(content: str) -> tuple[int, str]:
-    with tempfile.NamedTemporaryFile(mode='w+', delete=False, newline='') as tf:
+    with tempfile.NamedTemporaryFile(mode="w+", delete=False, newline="") as tf:
         tf.write(content)
         tf.flush()
         path = tf.name
@@ -36,5 +36,3 @@ Timeout: publish exceeded budget ms=900 budget=800
     assert "fetch=1" in out
     assert "display=1" in out
     assert "publish=1" in out
-
-

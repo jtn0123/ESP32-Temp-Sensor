@@ -15,9 +15,13 @@ def _find_free_port() -> int:
 
 
 def _start_http_server(root: str, port: int) -> subprocess.Popen:
-    return subprocess.Popen([
-        "python3", "-m", "http.server", str(port), "--bind", "127.0.0.1"
-    ], cwd=root, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    return subprocess.Popen(
+        ["python3", "-m", "http.server", str(port), "--bind", "127.0.0.1"],
+        cwd=root,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+
 
 _CANVAS_RGBA_JS = (
     "([x,y])=>{"
@@ -109,7 +113,7 @@ def test_partial_refresh_header_time_remains_binary():
             page.goto(f"http://127.0.0.1:{port}/index.html", wait_until="load")
             page.wait_for_timeout(300)
             # Click refresh (triggers partial time update)
-            page.click('#refresh')
+            page.click("#refresh")
             page.wait_for_timeout(200)
             # Read HEADER_TIME geometry
             rt = page.evaluate(
@@ -117,12 +121,12 @@ def test_partial_refresh_header_time_remains_binary():
                 "const R=(window.GJSON&&window.GJSON.rects)||null;"
                 "return R ? R.HEADER_TIME : [172,2,72,14];}"
             )
-            x,y,w,h = rt
+            x, y, w, h = rt
             # Sample multiple points inside the time box and assert binary pixels
-            for dx in [2, int(w/3), int(2*w/3), w-3]:
-                r, g, b, a = page.evaluate(_CANVAS_RGBA_JS, [x+dx, y+2])
-                assert r in (0,255) and g in (0,255) and b in (0,255)
-                assert r==g==b
+            for dx in [2, int(w / 3), int(2 * w / 3), w - 3]:
+                r, g, b, a = page.evaluate(_CANVAS_RGBA_JS, [x + dx, y + 2])
+                assert r in (0, 255) and g in (0, 255) and b in (0, 255)
+                assert r == g == b
             browser.close()
     finally:
         server.terminate()
@@ -168,5 +172,3 @@ def test_vector_fallback_when_svg_blocked():
     finally:
         server.terminate()
         server.wait(timeout=2)
-
-

@@ -29,11 +29,11 @@ def main():
     max_awake_ms = 45000
     expected_sleep_s = None
     for i, arg in enumerate(sys.argv[2:], start=2):
-        if arg == "--max-awake-ms" and i+1 < len(sys.argv):
-            max_awake_ms = int(sys.argv[i+1])
-        elif arg == "--sleep-s" and i+1 < len(sys.argv):
-            expected_sleep_s = int(sys.argv[i+1])
-    with open(path, 'r') as f:
+        if arg == "--max-awake-ms" and i + 1 < len(sys.argv):
+            max_awake_ms = int(sys.argv[i + 1])
+        elif arg == "--sleep-s" and i + 1 < len(sys.argv):
+            expected_sleep_s = int(sys.argv[i + 1])
+    with open(path, "r") as f:
         awake_ms, sleep_s = parse(f)
     if awake_ms is None:
         print("ERROR: No 'Awake ms:' line found")

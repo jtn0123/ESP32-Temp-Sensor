@@ -46,9 +46,7 @@ def parse_debug_payload(payload: str) -> Optional[DebugRecord]:
 
 def main() -> None:
     ap = argparse.ArgumentParser(
-        description=(
-            "Parse a single debug JSON payload and render a summary"
-        )
+        description=("Parse a single debug JSON payload and render a summary")
     )
     ap.add_argument("payload", help="JSON string")
     args = ap.parse_args()
@@ -61,5 +59,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
-

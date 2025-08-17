@@ -4,7 +4,7 @@ import tempfile
 
 
 def run_parse(content: str, *args: str) -> tuple[int, str]:
-    with tempfile.NamedTemporaryFile(mode='w+', delete=False, newline='') as tf:
+    with tempfile.NamedTemporaryFile(mode="w+", delete=False, newline="") as tf:
         tf.write(content)
         tf.flush()
         path = tf.name
@@ -54,5 +54,3 @@ Sleeping for 7200s
     rc, out = run_parse(content, "--max-awake-ms", "45000", "--sleep-s", "7200")
     assert rc == 0
     assert "OK:" in out
-
-

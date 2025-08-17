@@ -67,9 +67,7 @@ def main() -> int:
     ap = argparse.ArgumentParser(description="Monitor ESP32 metrics JSON over USB serial")
     ap.add_argument(
         "port",
-        help=(
-            "Serial port (e.g. /dev/cu.usbmodem*, /dev/tty.usbserial*)"
-        ),
+        help=("Serial port (e.g. /dev/cu.usbmodem*, /dev/tty.usbserial*)"),
     )
     ap.add_argument(
         "--baud",
@@ -112,5 +110,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-
-

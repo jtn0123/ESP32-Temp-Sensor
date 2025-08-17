@@ -8,5 +8,3 @@ def test_sample_serial_has_no_timeouts():
     assert s.fetch_count == 0
     assert s.display_count == 0
     assert s.publish_count == 0
-
-

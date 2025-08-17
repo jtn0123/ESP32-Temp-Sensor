@@ -27,5 +27,3 @@ def parse_history_payload(s: str) -> Optional[HistoryRecord]:
 if __name__ == "__main__":
     sample = '{"ts":1710000000,"tempF":72.5,"rh":47}'
     print(parse_history_payload(sample))
-
-

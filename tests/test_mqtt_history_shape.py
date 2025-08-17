@@ -22,5 +22,3 @@ def test_history_payload_types_and_bounds():
         assert rec.ts >= 1_600_000_000
         assert -100.0 < rec.tempF < 200.0
         assert 0.0 <= rec.rh <= 100.0
-
-

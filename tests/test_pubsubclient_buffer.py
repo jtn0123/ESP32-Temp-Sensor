@@ -31,21 +31,21 @@ def build_fw_discovery_payload(
         suggested_precision = 0
     return (
         "{"  # opening brace
-        f"\"name\":\"{name}\","  # name
-        f"\"unique_id\":\"{client_id}_{key}\","  # unique_id
-        f"\"state_topic\":\"{state_topic}\","  # state_topic
-        f"\"availability_topic\":\"{availability_topic}\","  # availability_topic
-        f"\"unit_of_measurement\":\"{unit}\","  # unit
-        f"\"device_class\":\"{dev_class}\","  # device_class
-        f"\"state_class\":\"measurement\","  # state_class
-        f"\"suggested_display_precision\":{suggested_precision},"
-        f"\"expire_after\":{expire_after},"
-        "\"device\":"
+        f'"name":"{name}",'  # name
+        f'"unique_id":"{client_id}_{key}",'  # unique_id
+        f'"state_topic":"{state_topic}",'  # state_topic
+        f'"availability_topic":"{availability_topic}",'  # availability_topic
+        f'"unit_of_measurement":"{unit}",'  # unit
+        f'"device_class":"{dev_class}",'  # device_class
+        f'"state_class":"measurement",'  # state_class
+        f'"suggested_display_precision":{suggested_precision},'
+        f'"expire_after":{expire_after},'
+        '"device":'
         "{"  # device object
-        f"\"identifiers\":[\"{client_id}\"],"
-        f"\"name\":\"ESP32 Room Node: {room_name}\","  # device name
-        "\"manufacturer\":\"DIY\","  # manufacturer
-        "\"model\":\"Feather ESP32-S2\""  # model
+        f'"identifiers":["{client_id}"],'
+        f'"name":"ESP32 Room Node: {room_name}",'  # device name
+        '"manufacturer":"DIY",'  # manufacturer
+        '"model":"Feather ESP32-S2"'  # model
         "}"
         "}"
     )
@@ -149,5 +149,3 @@ def test_platformio_and_firmware_config_set_buffer_to_1024():
     net_text = net_h.read_text(encoding="utf-8")
     msg_net = "Expected runtime g_mqtt.setBufferSize(1024) fallback in net.h"
     assert "setBufferSize(1024)" in net_text, msg_net
-
-

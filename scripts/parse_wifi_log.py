@@ -42,7 +42,7 @@ def parse(lines: Iterable[str]) -> WifiJoin:
                 ts = int(m_ts.group(1))
             except Exception:
                 ts = None
-            line = line[m_ts.end():]
+            line = line[m_ts.end() :]
 
         m = CONNECTING_RE.search(line)
         if m:
@@ -78,5 +78,3 @@ if __name__ == "__main__":
         "WiFi: connected, IP 192.168.1.42 RSSI -62 dBm",
     ]
     print(parse(sample))
-
-

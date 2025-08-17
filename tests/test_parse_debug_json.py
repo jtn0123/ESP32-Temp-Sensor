@@ -31,5 +31,3 @@ def test_parse_partial_payload():
 
 def test_parse_invalid_payload():
     assert parse_debug_payload("not json") is None
-
-

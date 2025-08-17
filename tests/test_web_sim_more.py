@@ -36,7 +36,7 @@ _TIME_METRICS_JS = (
     "  const R=(window.GJSON && window.GJSON.rects)||null;\n"
     "  const rt = R ? R.HEADER_TIME : [172,2,72,14];\n"
     "  const t = (window.lastData && window.lastData.time) || '10:32';\n"
-    "  ctx.font = '11px Menlo, Consolas, \"DM Mono\", \"Roboto Mono\", monospace';\n"
+    '  ctx.font = \'11px Menlo, Consolas, "DM Mono", "Roboto Mono", monospace\';\n'
     "  const tw = ctx.measureText(t).width;\n"
     "  const timeX = rt[0] + rt[2] - 2 - tw;\n"
     "  return {x: timeX, y: rt[1]+1, w: tw, rt};\n"
@@ -93,7 +93,7 @@ def test_stress_mode_renders_without_overlap():
             page.wait_for_timeout(300)
 
             # Enable stress mode
-            page.check('#stressMode')
+            page.check("#stressMode")
             page.wait_for_timeout(300)
 
             # Probe that the layout still draws expected frame lines
@@ -193,17 +193,15 @@ def test_header_time_right_aligned_and_name_truncated():
             # Compute actual time text placement as in sim.js and probe a pixel near its middle
             time_metrics = page.evaluate(_TIME_METRICS_JS)
             # Sample the pixel at center of the time text box; should be black
-            cx = int(time_metrics["x"] + max(1, time_metrics["w"]//2))
+            cx = int(time_metrics["x"] + max(1, time_metrics["w"] // 2))
             cy = int(time_metrics["y"] + 2)
             r1, g1, b1, a1 = page.evaluate(_CANVAS_RGBA_JS, [cx, cy])
             assert (r1, g1, b1) == (0, 0, 0)
             # Just left of HEADER_TIME rect should remain white to confirm right-alignment space
             hx, hy, hw, hh = time_metrics["rt"]
-            r0, g0, b0, a0 = page.evaluate(_CANVAS_RGBA_JS, [hx-2, hy+2])
+            r0, g0, b0, a0 = page.evaluate(_CANVAS_RGBA_JS, [hx - 2, hy + 2])
             assert (r0, g0, b0) == (255, 255, 255)
             browser.close()
     finally:
         server.terminate()
         server.wait(timeout=2)
-
-

@@ -18,12 +18,9 @@ def estimate_days(
     hours = capacity_mAh / avg_mA
     return hours / 24.0
 
+
 def main():
-    p = argparse.ArgumentParser(
-        description=(
-            "Estimate runtime days for ESP32 eInk Room Node"
-        )
-    )
+    p = argparse.ArgumentParser(description=("Estimate runtime days for ESP32 eInk Room Node"))
     p.add_argument(
         "--capacity",
         type=float,
@@ -65,7 +62,6 @@ def main():
     )
     print(f"Estimated runtime: {days:.1f} days")
 
+
 if __name__ == "__main__":
     main()
-
-

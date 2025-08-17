@@ -15,9 +15,12 @@ def _find_free_port() -> int:
 
 
 def _start_http_server(root: str, port: int) -> subprocess.Popen:
-    return subprocess.Popen([
-        "python3", "-m", "http.server", str(port), "--bind", "127.0.0.1"
-    ], cwd=root, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    return subprocess.Popen(
+        ["python3", "-m", "http.server", str(port), "--bind", "127.0.0.1"],
+        cwd=root,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
 
 
 def _canvas_rgba(page, x: int, y: int):
@@ -41,13 +44,13 @@ def _save_artifacts(page, name: str = "sim") -> None:
     out_dir = _ensure_out_dir()
     # Save full page and canvas-only screenshots plus layout metrics JSON
     page.screenshot(path=os.path.join(out_dir, f"{name}_page.png"))
-    canvas = page.query_selector('#epd')
+    canvas = page.query_selector("#epd")
     if canvas:
         canvas.screenshot(path=os.path.join(out_dir, f"{name}_canvas.png"))
     metrics = page.evaluate(
         "() => ({ L: window.__layoutMetrics || null, T: window.__tempMetrics || null })"
     )
-    with open(os.path.join(out_dir, f"{name}_metrics.json"), 'w') as f:
+    with open(os.path.join(out_dir, f"{name}_metrics.json"), "w") as f:
         json.dump(metrics, f, indent=2)
 
 
@@ -73,7 +76,7 @@ def test_layout_centering_and_clipping():
             assert page.evaluate("() => !!document.getElementById('epd')")
 
             # Optional always-save screenshots for visual review
-            if os.getenv('SIM_SAVE_SHOT') or os.getenv('SAVE_SHOT'):
+            if os.getenv("SIM_SAVE_SHOT") or os.getenv("SAVE_SHOT"):
                 _save_artifacts(page, name="boot")
 
             # Query computed geometry and derived centers from the page context
@@ -89,9 +92,9 @@ def test_layout_centering_and_clipping():
             assert metrics["canvas"]["w"] == 250 and metrics["canvas"]["h"] == 122
 
             # Simple smoke: corners must be black (frame)
-            for x,y in [(0,0),(249,0),(0,121),(249,121)]:
-                r,g,b,a = _canvas_rgba(page, x, y)
-                assert (r,g,b) == (0,0,0)
+            for x, y in [(0, 0), (249, 0), (0, 121), (249, 121)]:
+                r, g, b, a = _canvas_rgba(page, x, y)
+                assert (r, g, b) == (0, 0, 0)
 
             # Pull exported layout metrics to validate guidelines
             M = page.evaluate("() => window.__layoutMetrics || null")
@@ -99,55 +102,56 @@ def test_layout_centering_and_clipping():
 
             try:
                 # 1) Battery icon centered vertically between first two rows
-                by = M['statusLeft']['batteryIcon']['y']
-                bh = M['statusLeft']['batteryIcon']['h']
-                icon_cy = by + bh/2
-                row1y = M['statusLeft']['line1Y']
-                row2y = M['statusLeft']['line2Y']
+                by = M["statusLeft"]["batteryIcon"]["y"]
+                bh = M["statusLeft"]["batteryIcon"]["h"]
+                icon_cy = by + bh / 2
+                row1y = M["statusLeft"]["line1Y"]
+                row2y = M["statusLeft"]["line2Y"]
                 mid_y = (row1y + row2y + 8) / 2  # approximate text baselines
                 assert abs(icon_cy - mid_y) <= 1.5
 
                 # 2) Battery group centered horizontally across left column
-                left = M['statusLeft']['left']
-                right = M['statusLeft']['right']
-                group_left = M['statusLeft']['batteryGroup']['x']
-                group_w = M['statusLeft']['batteryGroup']['w']
+                left = M["statusLeft"]["left"]
+                right = M["statusLeft"]["right"]
+                group_left = M["statusLeft"]["batteryGroup"]["x"]
+                group_w = M["statusLeft"]["batteryGroup"]["w"]
                 col_mid = (left + right) / 2
                 group_mid = group_left + group_w / 2
                 assert abs(col_mid - group_mid) <= 1.5
 
                 # 3) IP row centered within left column
-                ipx = M['statusLeft']['ip']['x']
-                ipw = M['statusLeft']['ip']['w']
+                ipx = M["statusLeft"]["ip"]["x"]
+                ipw = M["statusLeft"]["ip"]["w"]
                 ip_mid = ipx + ipw / 2
                 assert abs(ip_mid - col_mid) <= 1.5
 
                 # 4) Weather block (icon + label) is horizontally centered within right quadrant bar
-                wx = M['weather']['bar']['x']
-                ww = M['weather']['bar']['w']
-                totalW = M['weather']['totalW']
-                block_left = M['weather']['iconBox']['x']
+                wx = M["weather"]["bar"]["x"]
+                ww = M["weather"]["bar"]["w"]
+                totalW = M["weather"]["totalW"]
+                block_left = M["weather"]["iconBox"]["x"]
                 block_mid = block_left + totalW / 2
-                bar_mid = wx + ww/2
+                bar_mid = wx + ww / 2
                 assert abs(block_mid - bar_mid) <= 1.5
 
                 # 5) Temperature groups (inside/outside) roughly centered
                 T = page.evaluate("() => window.__tempMetrics || null")
                 assert T is not None
-                for key in ['inside', 'outside']:
-                    r = T[key]['rect']
-                    contentLeft = T[key]['contentLeft']
-                    totalW = T[key]['totalW']
-                    mid = r['x'] + r['w'] / 2
+                for key in ["inside", "outside"]:
+                    r = T[key]["rect"]
+                    contentLeft = T[key]["contentLeft"]
+                    totalW = T[key]["totalW"]
+                    mid = r["x"] + r["w"] / 2
                     groupMid = contentLeft + totalW / 2
                     assert abs(mid - groupMid) <= 2
 
                 # 6) Section labels centered above their temp blocks
                 def _centered_over(rect, label_x, tol=2):
-                    mid = rect['x'] + rect['w']/2
+                    mid = rect["x"] + rect["w"] / 2
                     assert abs(label_x - mid) <= tol
-                _centered_over(T['inside']['rect'], M['labels']['inside']['x'])
-                _centered_over(T['outside']['rect'], M['labels']['outside']['x'])
+
+                _centered_over(T["inside"]["rect"], M["labels"]["inside"]["x"])
+                _centered_over(T["outside"]["rect"], M["labels"]["outside"]["x"])
             except AssertionError:
                 _save_artifacts(page, name="failure")
                 raise
@@ -156,7 +160,6 @@ def test_layout_centering_and_clipping():
     finally:
         server.terminate()
         server.wait(timeout=2)
-
 
 
 @pytest.mark.skipif(
@@ -308,7 +311,7 @@ def test_web_sim_partial_refresh_only_updates_header_time():
             before = page.evaluate(js_read, OUT_TEMP)
 
             # Click Refresh → fetches sample_data.json again but only redraws header time region
-            page.click('#refresh')
+            page.click("#refresh")
             page.wait_for_timeout(400)
 
             after = page.evaluate(js_read, OUT_TEMP)
@@ -319,5 +322,3 @@ def test_web_sim_partial_refresh_only_updates_header_time():
     finally:
         server.terminate()
         server.wait(timeout=2)
-
-

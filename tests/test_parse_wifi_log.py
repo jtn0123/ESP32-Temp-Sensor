@@ -32,5 +32,3 @@ def test_parse_wifi_log_with_fallback_and_timestamps():
     assert evt.started_ms == 100
     assert evt.connected_ms == 5200
     assert evt.join_ms == 5100
-
-

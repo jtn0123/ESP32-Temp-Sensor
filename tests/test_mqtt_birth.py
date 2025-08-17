@@ -151,5 +151,3 @@ def test_homeassistant_birth_triggers_rediscovery_and_state_republish():
     val.disconnect()
     ha.disconnect()
     device.disconnect()
-
-

@@ -46,5 +46,3 @@ def test_format_metrics_rounds_and_composes():
     assert "mqtt=down" in s
     assert "battV=4.08" in s
     assert "batt%=87" in s
-
-

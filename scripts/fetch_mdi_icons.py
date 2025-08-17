@@ -28,19 +28,21 @@ ICONS = [
     "moon-waning-crescent",
 ]
 
+
 def fetch(name: str, out_dir: str) -> bool:
     url = f"{BASE}/{name}.svg"
     dst = os.path.join(out_dir, f"{name}.svg")
     try:
         with urllib.request.urlopen(url) as r:
             data = r.read()
-        with open(dst, 'wb') as f:
+        with open(dst, "wb") as f:
             f.write(data)
         print("fetched", name)
         return True
     except Exception as e:
         print("skip", name, e)
         return False
+
 
 def main():
     out_dir = os.path.join("web", "icons", "mdi")
@@ -50,7 +52,6 @@ def main():
         ok += 1 if fetch(name, out_dir) else 0
     print(f"done {ok}/{len(ICONS)}")
 
+
 if __name__ == "__main__":
     main()
-
-

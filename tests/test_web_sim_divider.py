@@ -14,9 +14,12 @@ def _find_free_port() -> int:
 
 
 def _start_http_server(root: str, port: int) -> subprocess.Popen:
-    return subprocess.Popen([
-        "python3", "-m", "http.server", str(port), "--bind", "127.0.0.1"
-    ], cwd=root, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    return subprocess.Popen(
+        ["python3", "-m", "http.server", str(port), "--bind", "127.0.0.1"],
+        cwd=root,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
 
 
 @pytest.mark.skipif(
@@ -37,7 +40,7 @@ def test_center_divider_reaches_bottom():
             page.goto(f"http://127.0.0.1:{port}/index.html", wait_until="load")
             page.wait_for_timeout(300)
             # Divider is drawn at x=125 from y=18 down to HEIGHT-1
-            for y in [18, 60, 120-1]:
+            for y in [18, 60, 120 - 1]:
                 js = (
                     "([x,y])=>{"
                     "const c=document.getElementById('epd');"
@@ -50,5 +53,3 @@ def test_center_divider_reaches_bottom():
     finally:
         server.terminate()
         server.wait(timeout=2)
-
-
