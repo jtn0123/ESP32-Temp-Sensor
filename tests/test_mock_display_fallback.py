@@ -1,4 +1,6 @@
-import os, sys
+import os
+import sys
+
 from PIL import Image
 
 ROOT = os.path.dirname(os.path.dirname(__file__))

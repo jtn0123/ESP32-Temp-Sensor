@@ -1,6 +1,5 @@
 import os
 import sys
-import json
 
 ROOT = os.path.dirname(os.path.dirname(__file__))
 sys.path.insert(0, os.path.join(ROOT, 'scripts'))

@@ -1,8 +1,9 @@
-import os
-import time
-import socket
 import contextlib
+import os
+import socket
 import subprocess
+import time
+
 import pytest
 
 

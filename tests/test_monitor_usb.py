@@ -1,4 +1,4 @@
-from scripts.monitor_usb import parse_metrics_line, format_metrics, Metrics
+from scripts.monitor_usb import Metrics, format_metrics, parse_metrics_line
 
 
 def test_parse_metrics_line_valid():

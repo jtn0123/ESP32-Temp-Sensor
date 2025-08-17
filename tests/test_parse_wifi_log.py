@@ -1,4 +1,4 @@
-from scripts.parse_wifi_log import parse, WifiJoin
+from scripts.parse_wifi_log import WifiJoin, parse
 
 
 def test_parse_wifi_log_basic_with_bssid():

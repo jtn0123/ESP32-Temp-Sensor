@@ -4,7 +4,6 @@ import sys
 ROOT = os.path.dirname(os.path.dirname(__file__))
 sys.path.insert(0, os.path.join(ROOT, 'scripts'))
 
-import gen_device_header as gdh  # type: ignore
 
 
 def test_gen_header_emits_wifi_country_and_bssid_channel():
@@ -28,7 +27,9 @@ def test_gen_header_emits_wifi_country_and_bssid_channel():
     # The script currently writes directly; we can simulate by monkeypatching environment
     # but here we call its main path indirectly by recreating the logic.
     # Simpler: write a temp YAML and run the script to generate header, then inspect.
-    import tempfile, subprocess, json, textwrap
+    import subprocess
+    import tempfile
+
     import yaml  # type: ignore
 
     with tempfile.TemporaryDirectory() as td:

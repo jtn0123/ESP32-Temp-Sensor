@@ -1,7 +1,10 @@
-import os, sys, pytest
+import os
+import sys
+
+import pytest
+
 ROOT = os.path.dirname(os.path.dirname(__file__))
 sys.path.insert(0, os.path.join(ROOT, 'scripts'))
-from mock_display import draw_weather_icon  # smoke import to ensure availability
 
 # Mirror of C-side make_short_condition_cstr behavior for tests
 

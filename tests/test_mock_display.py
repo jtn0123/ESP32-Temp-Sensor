@@ -1,12 +1,12 @@
+import json
 import os
 import sys
-import json
-from PIL import Image
 
 ROOT = os.path.dirname(os.path.dirname(__file__))
 sys.path.insert(0, os.path.join(ROOT, 'scripts'))
 
 import mock_display as md  # type: ignore
+
 
 def test_render_dimensions():
     img = md.render({})

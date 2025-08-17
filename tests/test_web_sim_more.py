@@ -1,9 +1,10 @@
-import os
-import time
-import json
-import socket
 import contextlib
+import json
+import os
+import socket
 import subprocess
+import time
+
 import pytest
 
 

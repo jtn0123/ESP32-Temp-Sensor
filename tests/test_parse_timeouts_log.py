@@ -1,6 +1,6 @@
 import os
-import tempfile
 import subprocess
+import tempfile
 
 
 def run_parse(content: str) -> tuple[int, str]:

@@ -5,7 +5,12 @@ import time
 
 import pytest
 
-from scripts.test_mqtt_integration import MqttTestClient, SensorSpec, build_discovery_config, _now_ms
+from scripts.test_mqtt_integration import (
+    MqttTestClient,
+    SensorSpec,
+    _now_ms,
+    build_discovery_config,
+)
 
 
 def _mqtt_host_port():
