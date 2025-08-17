@@ -383,6 +383,14 @@ inline void net_publish_debug_json(const char* payload, bool retain = false) {
     g_mqtt.publish(topic, payload, retain);
 }
 
+// Publish a small probe message to measure publish latency without affecting retained state
+inline void net_publish_debug_probe(const char* payload, bool retain = false) {
+    if (!g_mqtt.connected() || !payload) return;
+    char topic[128];
+    snprintf(topic, sizeof(topic), "%s/debug_probe", MQTT_PUB_BASE);
+    g_mqtt.publish(topic, payload, retain);
+}
+
 // Publish Home Assistant MQTT Discovery configs for inside temperature and humidity
 inline void net_publish_ha_discovery() {
     if (!g_mqtt.connected()) return;
