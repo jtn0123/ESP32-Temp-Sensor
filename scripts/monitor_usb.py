@@ -15,6 +15,7 @@ except Exception:  # pragma: no cover - optional at import time
 class Metrics:
     ip: str
     tempC: float | None
+    tempF: float | None
     rhPct: float | None
     wifi: bool
     mqtt: bool
@@ -30,6 +31,7 @@ def parse_metrics_line(line: str) -> Metrics | None:
         return Metrics(
             ip=obj.get("ip") or "0.0.0.0",
             tempC=float(obj["tempC"]) if obj.get("tempC") is not None else None,
+            tempF=float(obj["tempF"]) if obj.get("tempF") is not None else None,
             rhPct=float(obj["rhPct"]) if obj.get("rhPct") is not None else None,
             wifi=bool(obj.get("wifi")),
             mqtt=bool(obj.get("mqtt")),
@@ -43,9 +45,11 @@ def parse_metrics_line(line: str) -> Metrics | None:
 def format_metrics(m: Metrics) -> str:
     parts: list[str] = []
     parts.append(f"ip={m.ip}")
-    if m.tempC is not None:
-        parts.append(f"tempC={m.tempC:.2f}")
-        parts.append(f"tempF={m.tempC * 9/5 + 32:.2f}")
+    # Prefer provided tempF, fallback to derived from tempC
+    if m.tempF is not None:
+        parts.append(f"tempF={m.tempF:.2f}")
+    elif m.tempC is not None:
+        parts.append(f"tempF={(m.tempC * 9/5) + 32:.2f}")
     if m.rhPct is not None:
         parts.append(f"rh%={m.rhPct:.0f}")
     parts.append(f"wifi={'up' if m.wifi else 'down'}")

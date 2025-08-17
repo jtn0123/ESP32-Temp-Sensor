@@ -155,7 +155,7 @@ static void emit_metrics_json(float tempC, float rhPct)
     Serial.print('{');
     Serial.print("\"event\":\"metrics\",");
     Serial.print("\"ip\":\""); Serial.print(ip_c); Serial.print("\",");
-    Serial.print("\"tempC\":"); Serial.print(isfinite(tempC) ? tempC : NAN); Serial.print(',');
+    Serial.print("\"tempF\":"); Serial.print(isfinite(tempC) ? (tempC * 9.0/5.0 + 32.0) : NAN); Serial.print(',');
     Serial.print("\"rhPct\":"); Serial.print(isfinite(rhPct) ? rhPct : NAN); Serial.print(',');
     Serial.print("\"wifi\":"); Serial.print(net_wifi_is_connected() ? "true" : "false"); Serial.print(',');
     Serial.print("\"mqtt\":"); Serial.print(net_mqtt_is_connected() ? "true" : "false"); Serial.print(',');

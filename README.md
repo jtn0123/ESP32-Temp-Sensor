@@ -331,11 +331,37 @@ pip install -r requirements.txt
 python3 scripts/monitor_usb.py /dev/cu.usbmodemXXXX --raw
 ```
 
-Example parsed output:
+Example parsed output (monitor script prints Fahrenheit by default):
 
 ```
-ip=192.168.1.23  tempC=22.38  tempF=72.28  rh%=41  wifi=up  mqtt=up  battV=4.08  batt%=87
+ip=192.168.1.23  tempF=72.28  rh%=41  wifi=up  mqtt=up  battV=4.08  batt%=87
 ```
+
+#### Serial command interface (optional)
+
+- The firmware accepts simple commands over USB when running the headless/always‑on build.
+- Open a monitor, type a command, press Enter:
+
+```bash
+pio device monitor -p /dev/cu.usbmodemXXXX -b 115200
+```
+
+Supported commands:
+
+```text
+help               # list commands
+status             # ip, wifi/mqtt, battery estimate
+metrics            # emit one JSON metrics line
+wifi               # force Wi‑Fi reconnect
+mqtt               # force MQTT reconnect
+sleep <sec>        # deep sleep for N seconds immediately
+reboot             # software reset
+pub <tempF> <rh%>  # publish inside readings (Fahrenheit + RH)
+```
+
+Notes:
+
+- Only one serial program can access the port at a time. Close other monitors before opening a new one.
 
 - MQTT (replace with your broker/user/pass and base topic):
 
