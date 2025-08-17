@@ -56,19 +56,25 @@ def test_moon_phase_icon_draws_nonwhite_pixels():
             page.wait_for_timeout(300)
 
             def grab_region(x0, y0, w, h):
-                return page.evaluate(
-                    "([x0,y0,w,h])=>{const c=document.getElementById('epd');const ctx=c.getContext('2d');return Array.from(ctx.getImageData(x0,y0,w,h).data);}",
-                    [x0, y0, w, h],
+                js = (
+                    "([x0,y0,w,h])=>{"
+                    "const c=document.getElementById('epd');const ctx=c.getContext('2d');"
+                    "return Array.from(ctx.getImageData(x0,y0,w,h).data);}"
                 )
+                return page.evaluate(js, [x0, y0, w, h])
 
             # Weather bar region where icon+label are drawn
-            barX, barY, barW = 130, 95, 114
+            barX, barY, _barW = 130, 95, 114
             # sample a smaller icon-left region inside the bar where the moon icon should be rendered
             x0, y0, w, h = barX+2, barY+2, 32, 20
-            cnt = page.evaluate(
-                "([x0,y0,w,h])=>{const c=document.getElementById('epd');const ctx=c.getContext('2d');const d=ctx.getImageData(x0,y0,w,h).data;let k=0;for(let i=0;i<d.length;i+=4){if(!(d[i]===255&&d[i+1]===255&&d[i+2]===255))k++;}return k;}",
-                [x0,y0,w,h]
+            js_cnt = (
+                "([x0,y0,w,h])=>{"
+                "const c=document.getElementById('epd');const ctx=c.getContext('2d');"
+                "const d=ctx.getImageData(x0,y0,w,h).data;let k=0;"
+                "for(let i=0;i<d.length;i+=4){"
+                "if(!(d[i]===255&&d[i+1]===255&&d[i+2]===255))k++;}return k;}"
             )
+            cnt = page.evaluate(js_cnt, [x0, y0, w, h])
             assert cnt > 0
             browser.close()
     finally:

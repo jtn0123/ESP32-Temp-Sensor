@@ -103,7 +103,8 @@ def test_layout_centering_and_clipping():
                 assert abs(icon_cy - mid_y) <= 1.5
 
                 # 2) Battery group centered horizontally across left column
-                left = M['statusLeft']['left']; right = M['statusLeft']['right']
+                left = M['statusLeft']['left']
+                right = M['statusLeft']['right']
                 group_left = M['statusLeft']['batteryGroup']['x']
                 group_w = M['statusLeft']['batteryGroup']['w']
                 col_mid = (left + right) / 2
@@ -111,12 +112,14 @@ def test_layout_centering_and_clipping():
                 assert abs(col_mid - group_mid) <= 1.5
 
                 # 3) IP row centered within left column
-                ipx = M['statusLeft']['ip']['x']; ipw = M['statusLeft']['ip']['w']
+                ipx = M['statusLeft']['ip']['x']
+                ipw = M['statusLeft']['ip']['w']
                 ip_mid = ipx + ipw / 2
                 assert abs(ip_mid - col_mid) <= 1.5
 
                 # 4) Weather block (icon + label) is horizontally centered within right quadrant bar
-                wx = M['weather']['bar']['x']; ww = M['weather']['bar']['w']
+                wx = M['weather']['bar']['x']
+                ww = M['weather']['bar']['w']
                 totalW = M['weather']['totalW']
                 block_left = M['weather']['iconBox']['x']
                 block_mid = block_left + totalW / 2
@@ -126,9 +129,12 @@ def test_layout_centering_and_clipping():
                 # 5) Temperature groups (inside/outside) roughly centered
                 T = page.evaluate("() => window.__tempMetrics || null")
                 assert T is not None
-                for key in ['inside','outside']:
-                    r = T[key]['rect']; contentLeft = T[key]['contentLeft']; totalW = T[key]['totalW']
-                    mid = r['x'] + r['w']/2; groupMid = contentLeft + totalW/2
+                for key in ['inside', 'outside']:
+                    r = T[key]['rect']
+                    contentLeft = T[key]['contentLeft']
+                    totalW = T[key]['totalW']
+                    mid = r['x'] + r['w'] / 2
+                    groupMid = contentLeft + totalW / 2
                     assert abs(mid - groupMid) <= 2
 
                 # 6) Section labels centered above their temp blocks
@@ -230,7 +236,8 @@ def test_web_sim_backend_integration_full_reload():
             assert cnt_cloudy != cnt_rain
             browser.close()
     finally:
-        server.terminate(); server.wait(timeout=2)
+        server.terminate()
+        server.wait(timeout=2)
 
 
 @pytest.mark.skipif(not bool(__import__("importlib").util.find_spec("playwright")), reason="playwright not installed")
@@ -285,7 +292,7 @@ def test_web_sim_partial_refresh_only_updates_header_time():
             js_read = (
                 "([x,y,w,h])=>{"
                 "const c=document.getElementById('epd');const ctx=c.getContext('2d');"
-                "return Array.from(ctx.getImageData(x,y,w,h).data);}" 
+                "return Array.from(ctx.getImageData(x,y,w,h).data);}"
             )
             before = page.evaluate(js_read, OUT_TEMP)
 

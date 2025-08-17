@@ -1,7 +1,17 @@
 from pathlib import Path
 
 
-def build_fw_discovery_payload(client_id: str, room_name: str, pub_base: str, *, key: str, name: str, unit: str, dev_class: str, state_suffix: str) -> str:
+def build_fw_discovery_payload(
+    client_id: str,
+    room_name: str,
+    pub_base: str,
+    *,
+    key: str,
+    name: str,
+    unit: str,
+    dev_class: str,
+    state_suffix: str,
+) -> str:
     """
     Mirror firmware's net_publish_ha_discovery() JSON exactly (no extra fields, no spacing).
     This must match the snprintf in firmware/arduino/src/net.h.
@@ -9,7 +19,8 @@ def build_fw_discovery_payload(client_id: str, room_name: str, pub_base: str, *,
     state_topic = f"{pub_base}/{state_suffix}"
     availability_topic = f"{pub_base}/availability"
     # Keep formatting identical to firmware: ordering and nested device fields
-    # Firmware computes suggested_display_precision based on unit and sets expire_after = WAKE_INTERVAL_SEC + 120.
+    # Firmware computes suggested_display_precision based on unit
+    # and sets expire_after = WAKE_INTERVAL_SEC + 120.
     # In tests, assume 1h default WAKE_INTERVAL_SEC=3600 unless overridden in env-specific builds.
     expire_after = 3600 + 120
     if unit == "°F":
@@ -48,22 +59,79 @@ def test_discovery_payload_exceeds_default_pubsubclient_and_fits_1024():
 
     # Discovery configs published by firmware
     payloads = [
-        build_fw_discovery_payload(client_id, room_name, pub_base, key="inside_temp", name="Inside Temperature", unit="°F", dev_class="temperature", state_suffix="inside/temp"),
-        build_fw_discovery_payload(client_id, room_name, pub_base, key="inside_hum", name="Inside Humidity", unit="%", dev_class="humidity", state_suffix="inside/hum"),
-        build_fw_discovery_payload(client_id, room_name, pub_base, key="battery_volts", name="Battery Voltage", unit="V", dev_class="voltage", state_suffix="battery/voltage"),
-        build_fw_discovery_payload(client_id, room_name, pub_base, key="battery_pct", name="Battery", unit="%", dev_class="battery", state_suffix="battery/percent"),
+        build_fw_discovery_payload(
+            client_id,
+            room_name,
+            pub_base,
+            key="inside_temp",
+            name="Inside Temperature",
+            unit="°F",
+            dev_class="temperature",
+            state_suffix="inside/temp",
+        ),
+        build_fw_discovery_payload(
+            client_id,
+            room_name,
+            pub_base,
+            key="inside_hum",
+            name="Inside Humidity",
+            unit="%",
+            dev_class="humidity",
+            state_suffix="inside/hum",
+        ),
+        build_fw_discovery_payload(
+            client_id,
+            room_name,
+            pub_base,
+            key="battery_volts",
+            name="Battery Voltage",
+            unit="V",
+            dev_class="voltage",
+            state_suffix="battery/voltage",
+        ),
+        build_fw_discovery_payload(
+            client_id,
+            room_name,
+            pub_base,
+            key="battery_pct",
+            name="Battery",
+            unit="%",
+            dev_class="battery",
+            state_suffix="battery/percent",
+        ),
         # New diagnostic sensors: WiFi RSSI (dBm) and publish latency (ms)
-        build_fw_discovery_payload(client_id, room_name, pub_base, key="wifi_rssi", name="WiFi RSSI", unit="dBm", dev_class="signal_strength", state_suffix="wifi/rssi"),
-        build_fw_discovery_payload(client_id, room_name, pub_base, key="publish_ms", name="Publish Latency", unit="ms", dev_class="duration", state_suffix="debug/publish_ms"),
+        build_fw_discovery_payload(
+            client_id,
+            room_name,
+            pub_base,
+            key="wifi_rssi",
+            name="WiFi RSSI",
+            unit="dBm",
+            dev_class="signal_strength",
+            state_suffix="wifi/rssi",
+        ),
+        build_fw_discovery_payload(
+            client_id,
+            room_name,
+            pub_base,
+            key="publish_ms",
+            name="Publish Latency",
+            unit="ms",
+            dev_class="duration",
+            state_suffix="debug/publish_ms",
+        ),
     ]
 
     # PubSubClient default MQTT_MAX_PACKET_SIZE is 256 bytes
     default_max = 256
     sized = [len(p.encode("utf-8")) for p in payloads]
-    # At least one payload should exceed the stock default, demonstrating the need to raise the buffer
-    assert any(sz > default_max for sz in sized), f"Expected at least one discovery payload to exceed {default_max} bytes, got sizes={sized}"
+    # At least one payload should exceed the stock default, demonstrating the need
+    # to raise the buffer
+    msg_over = f"Expected at least one discovery payload to exceed {default_max} bytes, got sizes={sized}"
+    assert any(sz > default_max for sz in sized), msg_over
     # All payloads must fit within our configured 1024-byte buffer
-    assert all(sz <= 1024 for sz in sized), f"A discovery payload exceeded 1024 bytes: sizes={sized}"
+    msg_fit = f"A discovery payload exceeded 1024 bytes: sizes={sized}"
+    assert all(sz <= 1024 for sz in sized), msg_fit
 
 
 def test_platformio_and_firmware_config_set_buffer_to_1024():
@@ -76,6 +144,7 @@ def test_platformio_and_firmware_config_set_buffer_to_1024():
     # Ensure firmware code also calls setBufferSize(1024) as a runtime fallback
     net_h = Path(__file__).resolve().parents[1] / "firmware" / "arduino" / "src" / "net.h"
     net_text = net_h.read_text(encoding="utf-8")
-    assert "setBufferSize(1024)" in net_text, "Expected runtime g_mqtt.setBufferSize(1024) fallback in net.h"
+    msg_net = "Expected runtime g_mqtt.setBufferSize(1024) fallback in net.h"
+    assert "setBufferSize(1024)" in net_text, msg_net
 
 
