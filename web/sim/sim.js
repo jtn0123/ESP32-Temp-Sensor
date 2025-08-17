@@ -317,7 +317,7 @@
     text(timeX, HEADER_TIME[1]+1, t, SIZE_TIME);
     // Deterministic probe pixel for tests: mark the center of time text box black
     // This avoids font/kerning differences across environments landing on whitespace
-    const probeCx = Math.floor(timeX + Math.max(1, tw/2));
+    const probeCx = Math.floor(timeX + Math.max(1, Math.floor(tw/2)));
     ctx.fillStyle = '#000';
     ctx.fillRect(probeCx, HEADER_TIME[1]+3, 1, 1);
 
