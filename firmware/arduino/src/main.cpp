@@ -1057,6 +1057,16 @@ void setup() {
 #if USE_STATUS_PIXEL
     status_pixel_off();
 #endif
+    // Power down any gated rails between wakes
+#if USE_DISPLAY
+#ifdef EINK_EN_PIN
+    digitalWrite(EINK_EN_PIN, LOW);
+#endif
+#endif
+#ifdef SENSORS_EN_PIN
+    pinMode(SENSORS_EN_PIN, OUTPUT);
+    digitalWrite(SENSORS_EN_PIN, LOW);
+#endif
     net_prepare_for_sleep();
     go_deep_sleep_seconds(DEV_SLEEP_SEC);
     #else
@@ -1070,6 +1080,11 @@ void setup() {
     nvs_end_cache();
 #if USE_STATUS_PIXEL
     status_pixel_off();
+#endif
+    // Optionally gate off sensor rail if present
+#ifdef SENSORS_EN_PIN
+    pinMode(SENSORS_EN_PIN, OUTPUT);
+    digitalWrite(SENSORS_EN_PIN, LOW);
 #endif
     net_prepare_for_sleep();
     go_deep_sleep_seconds(WAKE_INTERVAL_SEC);
