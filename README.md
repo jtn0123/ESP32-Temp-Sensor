@@ -253,4 +253,72 @@ pio run -t upload -e feather_esp32s2 --upload-port PORT
 
 - The build step generates `firmware/arduino/src/generated_config.h` with `WAKE_INTERVAL_SEC` based on your YAML.
 
+### Flashing via software (force bootloader) and upload
+
+You can force the Feather ESP32‑S2 into bootloader mode from the CLI and upload without touching buttons.
+
+Steps (macOS):
+
+```bash
+# 1) Find the current modem port
+pio device list   # look for /dev/cu.usbmodemXXXX
+
+# 2) Force the UF2 bootloader by touching the CDC port at 1200 baud
+stty -f /dev/cu.usbmodemXXXX 1200
+sleep 2  # give it time to re-enumerate
+
+# 3) Upload to the new modem port (it often changes to /dev/cu.usbmodem01)
+NEW_PORT=$(ls /dev/cu.usbmodem* 2>/dev/null | head -n1)
+pio run -t upload -e feather_esp32s2_headless --upload-port "$NEW_PORT"
+```
+
+All‑in‑one snippet:
+
+```bash
+port=/dev/cu.usbmodemXXXX
+stty -f "$port" 1200 || true
+sleep 2
+p=$(ls /dev/cu.usbmodem* 2>/dev/null | head -n1)
+pio run -t upload -e feather_esp32s2_headless --upload-port "$p"
+```
+
+Alternative (serial ROM bootloader via esptool):
+
+```bash
+python -m esptool --chip esp32s2 --port /dev/cu.usbmodemXXXX chip_id
+# then upload with PlatformIO on that same port
+pio run -t upload -e feather_esp32s2_headless --upload-port /dev/cu.usbmodemXXXX
+```
+
+### Monitor over USB and MQTT
+
+- USB (115200 baud):
+
+```bash
+pio device monitor -p /dev/cu.usbmodemXXXX -b 115200
+```
+
+- MQTT (replace with your broker/user/pass and base topic):
+
+```bash
+mosquitto_sub -h <MQTT_HOST> -u <USER> -P '<PASS>' -t 'sensors/<room>/#' -v
+```
+
+- Helper script in this repo:
+
+```bash
+python3 scripts/mqtt_headless_check.py --host <MQTT_HOST> --user <USER> --password <PASS> \
+  --pub-base sensors/<room> --sub-base home/outdoor --seed
+```
+
+### Troubleshooting
+
+- If the upload tool picks the wrong port, pass `--upload-port /dev/cu.usbmodemXXXX` explicitly.
+- If the port flaps or disappears, unplug/replug USB, try another cable/port, or re‑enter bootloader and retry.
+- Hardware fallback: hold BOOT, tap RESET, release BOOT; then upload to the new modem port.
+
+### Secrets safety
+
+- Store Wi‑Fi/MQTT credentials only in `config/device.yaml`. That file and the generated `firmware/arduino/src/generated_config.h` are already ignored by Git.
+
 
