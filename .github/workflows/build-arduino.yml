@@ -18,6 +18,8 @@ jobs:
           python-version: '3.11'
       - name: Install PlatformIO
         run: pip install -U platformio
+      - name: Generate config header
+        run: python scripts/gen_device_header.py
       - name: Build firmware
         working-directory: firmware/arduino
         run: pio run
