@@ -6,7 +6,7 @@ import PIL
 ROOT = os.path.dirname(os.path.dirname(__file__))
 sys.path.insert(0, os.path.join(ROOT, 'scripts'))
 
-import mock_display as md  # type: ignore
+import mock_display as md  # type: ignore  # noqa: E402
 
 _PIL_VER = getattr(PIL, '__version__', '0')
 _PIL_MAJOR = _PIL_VER.split('.')[0]

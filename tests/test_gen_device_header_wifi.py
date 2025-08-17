@@ -36,7 +36,7 @@ def test_gen_header_emits_wifi_country_and_bssid_channel():
         cfg_dir = os.path.join(td, 'config')
         os.makedirs(cfg_dir, exist_ok=True)
         ypath = os.path.join(cfg_dir, 'device.yaml')
-        with open(ypass := ypath, 'w') as f:
+        with open(ypath, 'w') as f:
             yaml.safe_dump(data, f)
 
         # Copy script into temp and run to emit header to temp firmware dir
