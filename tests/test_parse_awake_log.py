@@ -9,7 +9,8 @@ def run_parse(content: str, *args: str) -> tuple[int, str]:
         tf.flush()
         path = tf.name
     try:
-        cmd = ["python3", os.path.join(os.path.dirname(os.path.dirname(__file__)), "scripts", "parse_awake_log.py"), path, *args]
+        scripts_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "scripts")
+        cmd = ["python3", os.path.join(scripts_path, "parse_awake_log.py"), path, *args]
         proc = subprocess.run(cmd, capture_output=True, text=True)
         return proc.returncode, (proc.stdout + proc.stderr)
     finally:

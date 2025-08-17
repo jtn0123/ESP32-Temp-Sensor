@@ -2,7 +2,11 @@ from scripts.monitor_usb import Metrics, format_metrics, parse_metrics_line
 
 
 def test_parse_metrics_line_valid():
-    line = '{"event":"metrics","ip":"192.168.0.10","tempC":21.5,"rhPct":40,"wifi":true,"mqtt":false,"v":3.98,"pct":76}'
+    line = (
+        '{"event":"metrics","ip":"192.168.0.10","tempC":21.5,'
+        '"rhPct":40,"wifi":true,"mqtt":false,'
+        '"v":3.98,"pct":76}'
+    )
     m = parse_metrics_line(line)
     assert m is not None
     assert isinstance(m, Metrics)
