@@ -69,7 +69,8 @@ def test_moon_phase_icon_draws_nonwhite_pixels():
 
             # Weather bar region where icon+label are drawn
             barX, barY, _barW = 130, 95, 114
-            # sample a smaller icon-left region inside the bar where the moon icon should be rendered
+            # sample a smaller icon-left region inside the bar
+            # where the moon icon should be rendered
             x0 = barX + 2
             y0 = barY + 2
             w = 32
