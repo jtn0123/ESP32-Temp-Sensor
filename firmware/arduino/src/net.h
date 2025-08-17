@@ -829,6 +829,18 @@ inline void net_publish_debug_json(const char* payload, bool retain = false) {
     g_mqtt.publish(topic, payload, retain);
 }
 
+inline void net_publish_last_crash(const char* reason_or_null) {
+    if (!g_mqtt.connected()) return;
+    char topic[128];
+    snprintf(topic, sizeof(topic), "%s/last_crash", MQTT_PUB_BASE);
+    if (reason_or_null && reason_or_null[0]) {
+        g_mqtt.publish(topic, reason_or_null, true);
+    } else {
+        // Clear retained key by publishing empty payload per MQTT convention
+        g_mqtt.publish(topic, "", true);
+    }
+}
+
 // Publish a small probe message to measure publish latency without affecting retained state
 inline void net_publish_debug_probe(const char* payload, bool retain = false) {
     if (!g_mqtt.connected() || !payload) return;

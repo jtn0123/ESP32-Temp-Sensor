@@ -82,6 +82,11 @@ static uint32_t s_timeouts_mask = 0;
 #define TIMEOUT_BIT_DISPLAY       (1u << 2)
 #define TIMEOUT_BIT_PUBLISH       (1u << 3)
 
+#if USE_DISPLAY
+// Shared soft deadline used by display drawing helpers to avoid long loops
+static unsigned long g_display_deadline_ms = 0;
+#endif
+
 static void pump_network_ms(uint32_t duration_ms)
 {
     unsigned long start = millis();
@@ -369,6 +374,12 @@ static inline void draw_in_region(const int rect[4], DrawFn drawFn)
         drawFn(x, y, w, h);
         #if USE_STATUS_PIXEL
         status_pixel_tick();
+        #endif
+        #ifdef DISPLAY_PHASE_TIMEOUT_MS
+        if (g_display_deadline_ms > 0 && millis() >= g_display_deadline_ms) {
+            // Stop iterating additional pages to respect deadline
+            break;
+        }
         #endif
     } while (display.nextPage());
 }
@@ -682,6 +693,11 @@ static void full_refresh()
             display.setCursor(OUT_ROW2_R[0], OUT_ROW2_R[1]);
             display.print(ws);
         }
+        #ifdef DISPLAY_PHASE_TIMEOUT_MS
+        if (g_display_deadline_ms > 0 && millis() >= g_display_deadline_ms) {
+            break;
+        }
+        #endif
     } while (display.nextPage());
 }
 
@@ -859,6 +875,11 @@ void setup() {
     InsideReadings _sensor_probe = read_inside_sensors();
     (void)_sensor_probe;
     int64_t t3_us = esp_timer_get_time();
+    uint32_t dbg_ms_sensor = (uint32_t)((t3_us - t_sense_start_us) / 1000);
+    if (dbg_ms_sensor > (uint32_t)SENSOR_PHASE_TIMEOUT_MS) {
+        s_timeouts_mask |= TIMEOUT_BIT_SENSOR;
+        Serial.printf("Timeout: sensor read exceeded budget ms=%u budget=%u\n", dbg_ms_sensor, (unsigned)SENSOR_PHASE_TIMEOUT_MS);
+    }
 
     // Compute scheduled sleep based on build-time mode
     uint32_t sleep_scheduled_ms = 0;
@@ -873,7 +894,7 @@ void setup() {
         char dbg[320];
         uint32_t ms_boot_to_wifi = (uint32_t)((t1_us - t0_us) / 1000);
         uint32_t ms_wifi_to_mqtt = (uint32_t)((t2_us - t1_us) / 1000);
-        uint32_t ms_sensor_read = (uint32_t)((t3_us - t_sense_start_us) / 1000);
+        uint32_t ms_sensor_read = dbg_ms_sensor;
         // Measure publish time using a non-retained probe topic
         int64_t pub_probe_start_us = esp_timer_get_time();
         net_publish_debug_probe("1", false);
@@ -892,8 +913,16 @@ void setup() {
         net_publish_debug_json(dbg, false);
     }
 
-    // Allow retained MQTT to arrive quickly for outside readings
-    pump_network_ms(800);
+    // Allow retained MQTT to arrive quickly for outside readings (bounded)
+    unsigned long fetch_start_ms = millis();
+    bool outside_before = net_get_outside().validTemp || net_get_outside().validHum || net_get_outside().validWeather || net_get_outside().validWind;
+    pump_network_ms((uint32_t)FETCH_RETAINED_TIMEOUT_MS);
+    uint32_t ms_fetch = (uint32_t)(millis() - fetch_start_ms);
+    bool outside_after = net_get_outside().validTemp || net_get_outside().validHum || net_get_outside().validWeather || net_get_outside().validWind;
+    if (ms_fetch >= (uint32_t)FETCH_RETAINED_TIMEOUT_MS && !outside_after && !outside_before) {
+        s_timeouts_mask |= TIMEOUT_BIT_FETCH;
+        Serial.printf("Timeout: retained fetch budget reached ms=%u budget=%u (no outside data)\n", ms_fetch, (unsigned)FETCH_RETAINED_TIMEOUT_MS);
+    }
 
     // Publish HA discovery once we have MQTT so entities auto-register in Home Assistant
     if (net_mqtt_is_connected()) {
@@ -908,10 +937,21 @@ void setup() {
         do_full = true; // periodic full clears
     }
 
+    unsigned long display_phase_start = millis();
+    // Establish a soft deadline visible to drawing helpers
+    #ifdef DISPLAY_PHASE_TIMEOUT_MS
+    g_display_deadline_ms = display_phase_start + (unsigned long)DISPLAY_PHASE_TIMEOUT_MS;
+    #endif
     if (do_full) {
         full_refresh();
     } else {
+        unsigned long sens2_start = millis();
         InsideReadings r = read_inside_sensors();
+        uint32_t sens2_ms = (uint32_t)(millis() - sens2_start);
+        if (sens2_ms > (uint32_t)SENSOR_PHASE_TIMEOUT_MS) {
+            s_timeouts_mask |= TIMEOUT_BIT_SENSOR;
+            Serial.printf("Timeout: sensor read (secondary) exceeded budget ms=%u budget=%u\n", sens2_ms, (unsigned)SENSOR_PHASE_TIMEOUT_MS);
+        }
         char in_temp[16];
         if (isfinite(r.temperatureC)) {
             snprintf(in_temp, sizeof(in_temp), "%.1f", r.temperatureC * 9.0/5.0 + 32.0);
@@ -938,11 +978,14 @@ void setup() {
             });
             if (isfinite(last_inside_rh)) nvs_store_float("li_rh", last_inside_rh);
         }
+        unsigned long publish_phase_start = millis();
+        bool publish_any = false;
         if (isfinite(r.temperatureC) && isfinite(r.humidityPct)) {
             bool temp_changed = (!isfinite(last_published_inside_tempC)) || fabsf(r.temperatureC - last_published_inside_tempC) >= THRESH_TEMP_C_FROM_F;
             bool rh_changed = (!isfinite(last_published_inside_rh)) || fabsf(r.humidityPct - last_published_inside_rh) >= THRESH_RH;
             if (temp_changed || rh_changed) {
                 net_publish_inside(r.temperatureC, r.humidityPct);
+                publish_any = true;
                 last_published_inside_tempC = r.temperatureC;
                 last_published_inside_rh = r.humidityPct;
                 nvs_store_float("pi_t", last_published_inside_tempC);
@@ -1013,16 +1056,40 @@ void setup() {
         // Publish battery metrics once per wake
         if (isfinite(bs.voltage) && bs.percent >= 0) {
             net_publish_battery(bs.voltage, bs.percent);
+            publish_any = true;
+        }
+        uint32_t ms_publish_phase = publish_any ? (uint32_t)(millis() - publish_phase_start) : 0;
+        if (publish_any && ms_publish_phase > (uint32_t)PUBLISH_PHASE_TIMEOUT_MS) {
+            s_timeouts_mask |= TIMEOUT_BIT_PUBLISH;
+            Serial.printf("Timeout: publish exceeded budget ms=%u budget=%u\n", ms_publish_phase, (unsigned)PUBLISH_PHASE_TIMEOUT_MS);
         }
     }
+    // End of display phase, check duration and clear deadline
+    #ifdef DISPLAY_PHASE_TIMEOUT_MS
+    uint32_t ms_display = (uint32_t)(millis() - display_phase_start);
+    if (ms_display > (uint32_t)DISPLAY_PHASE_TIMEOUT_MS) {
+        s_timeouts_mask |= TIMEOUT_BIT_DISPLAY;
+        Serial.printf("Timeout: display phase exceeded budget ms=%u budget=%u\n", ms_display, (unsigned)DISPLAY_PHASE_TIMEOUT_MS);
+    }
+    g_display_deadline_ms = 0;
+    #endif
     #else
     // Headless mode: no display; still connect, read sensors, publish, and sleep
+    unsigned long sens2_start = millis();
     InsideReadings r = read_inside_sensors();
+    uint32_t sens2_ms = (uint32_t)(millis() - sens2_start);
+    if (sens2_ms > (uint32_t)SENSOR_PHASE_TIMEOUT_MS) {
+        s_timeouts_mask |= TIMEOUT_BIT_SENSOR;
+        Serial.printf("Timeout: sensor read exceeded budget ms=%u budget=%u\n", sens2_ms, (unsigned)SENSOR_PHASE_TIMEOUT_MS);
+    }
+    unsigned long publish_phase_start = millis();
+    bool publish_any = false;
     if (isfinite(r.temperatureC) && isfinite(r.humidityPct)) {
         bool temp_changed = (!isfinite(last_published_inside_tempC)) || fabsf(r.temperatureC - last_published_inside_tempC) >= THRESH_TEMP_C_FROM_F;
         bool rh_changed = (!isfinite(last_published_inside_rh)) || fabsf(r.humidityPct - last_published_inside_rh) >= THRESH_RH;
         if (temp_changed || rh_changed) {
             net_publish_inside(r.temperatureC, r.humidityPct);
+            publish_any = true;
             last_published_inside_tempC = r.temperatureC;
             last_published_inside_rh = r.humidityPct;
             nvs_store_float("pi_t", last_published_inside_tempC);
@@ -1038,7 +1105,13 @@ void setup() {
         net_publish_status(payload, true);
         if (isfinite(bs.voltage) && bs.percent >= 0) {
             net_publish_battery(bs.voltage, bs.percent);
+            publish_any = true;
         }
+    }
+    uint32_t ms_publish_phase = publish_any ? (uint32_t)(millis() - publish_phase_start) : 0;
+    if (publish_any && ms_publish_phase > (uint32_t)PUBLISH_PHASE_TIMEOUT_MS) {
+        s_timeouts_mask |= TIMEOUT_BIT_PUBLISH;
+        Serial.printf("Timeout: publish exceeded budget ms=%u budget=%u\n", ms_publish_phase, (unsigned)PUBLISH_PHASE_TIMEOUT_MS);
     }
     #endif
 
@@ -1046,6 +1119,15 @@ void setup() {
     {
         InsideReadings latest = read_inside_sensors();
         emit_metrics_json(latest.temperatureC, latest.humidityPct);
+    }
+
+    // Publish a concise timeout summary JSON if MQTT is connected
+    if (net_mqtt_is_connected()) {
+        char dbg2[192];
+        snprintf(dbg2, sizeof(dbg2),
+                 "{\"timeouts\":%u,\"notes\":\"bits:1=sensor,2=fetch,4=display,8=publish\"}",
+                 (unsigned)s_timeouts_mask);
+        net_publish_debug_json(dbg2, false);
     }
 
     partial_counter++;
