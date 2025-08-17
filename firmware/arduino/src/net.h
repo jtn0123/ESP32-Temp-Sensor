@@ -859,8 +859,8 @@ inline void net_publish_ha_discovery() {
         char payload[640];
         // Full HA discovery keys for maximum compatibility; retained
         snprintf(payload, sizeof(payload),
-            "{\"name\":\"%s\",\"unique_id\":\"%s_%s\",\"state_topic\":\"%s\",\"availability_topic\":\"%s\",\"unit_of_measurement\":\"%s\",\"device_class\":\"%s\",\"state_class\":\"measurement\",\"device\":{\"identifiers\":[\"%s\"],\"name\":\"ESP32 Room Node: %s\",\"manufacturer\":\"DIY\",\"model\":\"Feather ESP32-S2\"}}",
-            name, g_client_id, key, stateTopic, availTopic, unit, dev_class, g_client_id, ROOM_NAME);
+            "{\"name\":\"%s\",\"unique_id\":\"%s_%s\",\"state_topic\":\"%s\",\"availability_topic\":\"%s\",\"unit_of_measurement\":\"%s\",\"device_class\":\"%s\",\"state_class\":\"measurement\",\"device\":{\"identifiers\":[\"%s\"],\"name\":\"ESP32 Room Node: %s\",\"manufacturer\":\"DIY\",\"model\":\"Feather ESP32-S2\",\"sw_version\":\"%s\"}}",
+            name, g_client_id, key, stateTopic, availTopic, unit, dev_class, g_client_id, ROOM_NAME, FW_VERSION);
         g_mqtt.publish(discTopic, payload, true);
         Serial.print("HA discovery -> ");
         Serial.println(discTopic);

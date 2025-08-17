@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import os
 import sys
+import subprocess
 
 try:
     import yaml  # type: ignore
@@ -83,6 +84,24 @@ def main():
     adc_ref = float(battery.get('adc_ref', 3.3) or 3.3)
     # thresholds for redraw skipping
     thresholds = data.get('thresholds', {})
+    # Optional firmware version: allow explicit config/env, else fallback to git
+    fw_version = str(data.get('fw_version', '') or os.environ.get('FW_VERSION', '') or '')
+    if not fw_version:
+        try:
+            fw_version = subprocess.check_output(
+                ['git', 'describe', '--tags', '--always', '--dirty'],
+                cwd=prj,
+                stderr=subprocess.DEVNULL,
+            ).decode('utf-8', 'ignore').strip()
+        except Exception:
+            try:
+                fw_version = subprocess.check_output(
+                    ['git', 'rev-parse', '--short', 'HEAD'],
+                    cwd=prj,
+                    stderr=subprocess.DEVNULL,
+                ).decode('utf-8', 'ignore').strip()
+            except Exception:
+                fw_version = 'dev'
     thresh_temp_c = float(thresholds.get('temp_degC', 0.1) or 0.1)
     thresh_rh_pct = float(thresholds.get('rh_pct', 1.0) or 1.0)
 
@@ -93,6 +112,7 @@ def main():
         f.write('// Auto-generated from config/device.yaml by scripts/gen_device_header.py\n')
         f.write('#pragma once\n\n')
         f.write(f'#define ROOM_NAME {c_string(room_name)}\n')
+        f.write(f'#define FW_VERSION {c_string(fw_version)}\n')
         f.write(f'#define WAKE_INTERVAL_SEC {wake_interval}\n')
         f.write(f'#define FULL_REFRESH_EVERY {full_refresh_every}\n')
         f.write(f'#define OUTSIDE_SOURCE {c_string(outside_source)}\n')

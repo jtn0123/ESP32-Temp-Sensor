@@ -50,6 +50,7 @@ python3 scripts/gen_layout_header.py
     - `homeassistant/sensor/<client_id>_inside_temp/config`
     - `homeassistant/sensor/<client_id>_inside_hum/config`
   - Discovery payload keys (abridged): `state_topic`, `availability_topic`, `payload_available: "online"`, `payload_not_available: "offline"`, `unit_of_measurement` ("°F" for temp), `device_class`.
+  - Device info included for HA device registry: `identifiers`, `name`, `manufacturer` (DIY), `model` (Feather ESP32-S2), and `sw_version`.
   - State topics (retained):
     - `sensors/<room>/inside/temp` (Fahrenheit, one decimal)
     - `sensors/<room>/inside/hum` (percent, integer)
@@ -84,6 +85,9 @@ battery:
   capacity_mAh: 3500
   sleep_current_mA: 0.09
   active_current_mA: 80
+
+Notes:
+- `sw_version` is published from the generated `FW_VERSION` define. You can override by setting `fw_version` in `config/device.yaml` or exporting `FW_VERSION` in the environment before building. Otherwise it falls back to `git describe`/short SHA or `dev`.
 ```
 
 ### Build — Arduino / PlatformIO
