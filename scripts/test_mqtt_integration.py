@@ -172,6 +172,7 @@ def main() -> None:
     device_id = "room_node_ci"
     state_base = f"sensors/{device_id}"
     availability_topic = f"{state_base}/status"
+    debug_topic = f"{state_base}/debug"
     ha_prefix = "homeassistant"
 
     sensors: List[SensorSpec] = [
@@ -220,6 +221,17 @@ def main() -> None:
     publisher.publish(availability_topic, "offline", retain=False)
     time.sleep(0.2)
     publisher.publish(availability_topic, "online", retain=False)
+
+    # 3b) Publish a sample debug JSON payload (non-retained) and validate receipt
+    sample_debug = {
+        "ms_boot_to_wifi": 1000,
+        "ms_wifi_to_mqtt": 500,
+        "ms_sensor_read": 120,
+        "ms_publish": 40,
+        "timeouts": 0,
+    }
+    import json as _json
+    publisher.publish(debug_topic, _json.dumps(sample_debug), retain=False)
 
     # 4) Validate discovery topics retained (new subscriber should receive retained messages)
     validator = MqttTestClient(mqtt_host, mqtt_port, client_id=f"sub-{_now_ms()}")
@@ -273,6 +285,17 @@ def main() -> None:
     assert observed == ["online", "offline", "online"], f"Unexpected availability sequence: {observed}"
     # None of these should be retained
     assert not any(r for _p, r in events[:3]), f"Availability events should not be retained: {events[:3]}"
+
+    # 7) Validate debug topic can be subscribed to and delivers the sample payload
+    dbg_sub = MqttTestClient(mqtt_host, mqtt_port, client_id=f"dbg-{_now_ms()}")
+    dbg_sub.connect()
+    dbg_msgs = dbg_sub.subscribe_and_wait(debug_topic, expected_count=1, timeout_s=3.0)
+    assert dbg_msgs, "No debug JSON message received"
+    dbg_payload, dbg_retained = dbg_msgs[0]
+    assert not dbg_retained, "Debug JSON should not be retained"
+    d = _json.loads(dbg_payload)
+    assert d.get("timeouts") == 0
+    dbg_sub.disconnect()
 
     toggles_sub.disconnect()
     validator.disconnect()
