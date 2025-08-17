@@ -39,3 +39,15 @@ def test_crlf_and_noise():
     assert "OK:" in out
 
 
+def test_multiple_matches_last_wins():
+    content = """
+Awake ms: 40000
+Sleeping for 3600s
+Awake ms: 20000
+Sleeping for 7200s
+"""
+    rc, out = run_parse(content, "--max-awake-ms", "45000", "--sleep-s", "7200")
+    assert rc == 0
+    assert "OK:" in out
+
+
