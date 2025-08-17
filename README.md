@@ -49,7 +49,7 @@ python3 scripts/gen_layout_header.py
   - Discovery topics (retained):
     - `homeassistant/sensor/<client_id>_inside_temp/config`
     - `homeassistant/sensor/<client_id>_inside_hum/config`
-  - Discovery payload keys (abridged): `state_topic`, `availability_topic`, `payload_available: "online"`, `payload_not_available: "offline"`, `unit_of_measurement` ("°F" for temp), `device_class`.
+  - Discovery payload keys (abridged): `state_topic`, `availability_topic`, `payload_available: "online"`, `payload_not_available: "offline"`, `unit_of_measurement` ("°F" for temp), `device_class`, `state_class: "measurement"`, `suggested_display_precision` (1 for °F, 0 for %), and `expire_after` (slightly above the wake interval) so HA greys stale values if a wake is missed.
   - Device info included for HA device registry: `identifiers`, `name`, `manufacturer` (DIY), `model` (Feather ESP32-S2), and `sw_version`.
   - State topics (retained):
     - `sensors/<room>/inside/temp` (Fahrenheit, one decimal)
