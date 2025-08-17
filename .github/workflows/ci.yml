@@ -25,11 +25,11 @@ jobs:
         run: |
           python -m playwright install --with-deps chromium
 
-      - name: Run image and web-sim tests (pytest -q)
+      - name: Run image, geometry, and web-sim tests (pytest -q)
         env:
           PYTHONPATH: .
         run: |
-          pytest -q -k "snapshot or mock_display or web_sim"
+          pytest -q -k "snapshot or mock_display or geometry_schema or web_sim"
 
       - name: Lint Python (ruff)
         run: ruff check .
