@@ -44,7 +44,9 @@ def _save_artifacts(page, name: str = "sim") -> None:
     canvas = page.query_selector('#epd')
     if canvas:
         canvas.screenshot(path=os.path.join(out_dir, f"{name}_canvas.png"))
-    metrics = page.evaluate("() => ({ L: window.__layoutMetrics || null, T: window.__tempMetrics || null })")
+    metrics = page.evaluate(
+        "() => ({ L: window.__layoutMetrics || null, T: window.__tempMetrics || null })"
+    )
     with open(os.path.join(out_dir, f"{name}_metrics.json"), 'w') as f:
         json.dump(metrics, f, indent=2)
 
@@ -306,6 +308,7 @@ def test_web_sim_partial_refresh_only_updates_header_time():
             assert before == after
             browser.close()
     finally:
-        server.terminate(); server.wait(timeout=2)
+        server.terminate()
+        server.wait(timeout=2)
 
 

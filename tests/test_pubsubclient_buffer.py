@@ -127,7 +127,10 @@ def test_discovery_payload_exceeds_default_pubsubclient_and_fits_1024():
     sized = [len(p.encode("utf-8")) for p in payloads]
     # At least one payload should exceed the stock default, demonstrating the need
     # to raise the buffer
-    msg_over = f"Expected at least one discovery payload to exceed {default_max} bytes, got sizes={sized}"
+    msg_over = (
+        "Expected at least one discovery payload to exceed "
+        f"{default_max} bytes, got sizes=" + str(sized)
+    )
     assert any(sz > default_max for sz in sized), msg_over
     # All payloads must fit within our configured 1024-byte buffer
     msg_fit = f"A discovery payload exceeded 1024 bytes: sizes={sized}"

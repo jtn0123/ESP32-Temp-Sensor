@@ -20,7 +20,10 @@ def _start_http_server(root: str, port: int) -> subprocess.Popen:
     ], cwd=root, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
 
-@pytest.mark.skipif(not bool(__import__("importlib").util.find_spec("playwright")), reason="playwright not installed")
+@pytest.mark.skipif(
+    not bool(__import__("importlib").util.find_spec("playwright")),
+    reason="playwright not installed",
+)
 def test_moon_phase_icon_draws_nonwhite_pixels():
     from playwright.sync_api import sync_playwright  # type: ignore
 
@@ -82,7 +85,10 @@ def test_moon_phase_icon_draws_nonwhite_pixels():
         server.wait(timeout=2)
 
 
-@pytest.mark.skipif(not bool(__import__("importlib").util.find_spec("playwright")), reason="playwright not installed")
+@pytest.mark.skipif(
+    not bool(__import__("importlib").util.find_spec("playwright")),
+    reason="playwright not installed",
+)
 def test_partial_refresh_header_time_remains_binary():
     from playwright.sync_api import sync_playwright  # type: ignore
 
@@ -118,7 +124,10 @@ def test_partial_refresh_header_time_remains_binary():
         server.wait(timeout=2)
 
 
-@pytest.mark.skipif(not bool(__import__("importlib").util.find_spec("playwright")), reason="playwright not installed")
+@pytest.mark.skipif(
+    not bool(__import__("importlib").util.find_spec("playwright")),
+    reason="playwright not installed",
+)
 def test_vector_fallback_when_svg_blocked():
     from playwright.sync_api import sync_playwright  # type: ignore
 
@@ -136,13 +145,17 @@ def test_vector_fallback_when_svg_blocked():
             page.wait_for_timeout(300)
 
             # Count non-white pixels in weather icon area to ensure something was drawn
-            barX, barY, barW = 130, 95, 114
+            barX, barY, _barW = 130, 95, 114
             # approximate icon box left portion inside bar
-            x0, y0, w, h = barX+2, barY+2, 28, 20
-            cnt = page.evaluate(
-                "([x0,y0,w,h])=>{const c=document.getElementById('epd');const ctx=c.getContext('2d');const d=ctx.getImageData(x0,y0,w,h).data;let k=0;for(let i=0;i<d.length;i+=4){if(!(d[i]===255&&d[i+1]===255&&d[i+2]===255))k++;}return k;}",
-                [x0,y0,w,h]
+            x0, y0, w, h = barX + 2, barY + 2, 28, 20
+            js_cnt = (
+                "([x0,y0,w,h])=>{"
+                "const c=document.getElementById('epd');const ctx=c.getContext('2d');"
+                "const d=ctx.getImageData(x0,y0,w,h).data;let k=0;"
+                "for(let i=0;i<d.length;i+=4){"
+                "if(!(d[i]===255&&d[i+1]===255&&d[i+2]===255))k++;}return k;}"
             )
+            cnt = page.evaluate(js_cnt, [x0, y0, w, h])
             assert cnt > 0
             browser.close()
     finally:

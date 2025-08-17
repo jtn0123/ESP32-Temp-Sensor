@@ -23,7 +23,10 @@ def _start_http_server(root: str, port: int) -> subprocess.Popen:
     )
 
 
-@pytest.mark.skipif(not bool(__import__("importlib").util.find_spec("playwright")), reason="playwright not installed")
+@pytest.mark.skipif(
+    not bool(__import__("importlib").util.find_spec("playwright")),
+    reason="playwright not installed",
+)
 def test_canvas_is_binary_after_draw():
     from playwright.sync_api import sync_playwright  # type: ignore
 
@@ -53,7 +56,10 @@ def test_canvas_is_binary_after_draw():
         server.wait(timeout=2)
 
 
-@pytest.mark.skipif(not bool(__import__("importlib").util.find_spec("playwright")), reason="playwright not installed")
+@pytest.mark.skipif(
+    not bool(__import__("importlib").util.find_spec("playwright")),
+    reason="playwright not installed",
+)
 def test_stress_mode_renders_without_overlap():
     from playwright.sync_api import sync_playwright  # type: ignore
 
@@ -85,7 +91,10 @@ def test_stress_mode_renders_without_overlap():
         server.wait(timeout=2)
 
 
-@pytest.mark.skipif(not bool(__import__("importlib").util.find_spec("playwright")), reason="playwright not installed")
+@pytest.mark.skipif(
+    not bool(__import__("importlib").util.find_spec("playwright")),
+    reason="playwright not installed",
+)
 def test_icons_available_or_fallback():
     from playwright.sync_api import sync_playwright  # type: ignore
 
@@ -115,7 +124,10 @@ def test_icons_available_or_fallback():
         server.wait(timeout=2)
 
 
-@pytest.mark.skipif(not bool(__import__("importlib").util.find_spec("playwright")), reason="playwright not installed")
+@pytest.mark.skipif(
+    not bool(__import__("importlib").util.find_spec("playwright")),
+    reason="playwright not installed",
+)
 def test_header_time_right_aligned_and_name_truncated():
     from playwright.sync_api import sync_playwright  # type: ignore
 

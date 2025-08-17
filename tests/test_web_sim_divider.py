@@ -19,7 +19,10 @@ def _start_http_server(root: str, port: int) -> subprocess.Popen:
     ], cwd=root, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
 
-@pytest.mark.skipif(not bool(__import__("importlib").util.find_spec("playwright")), reason="playwright not installed")
+@pytest.mark.skipif(
+    not bool(__import__("importlib").util.find_spec("playwright")),
+    reason="playwright not installed",
+)
 def test_center_divider_reaches_bottom():
     from playwright.sync_api import sync_playwright  # type: ignore
 
@@ -35,10 +38,12 @@ def test_center_divider_reaches_bottom():
             page.wait_for_timeout(300)
             # Divider is drawn at x=125 from y=18 down to HEIGHT-1
             for y in [18, 60, 120-1]:
-                r, g, b, a = page.evaluate(
-                    "([x,y])=>{const c=document.getElementById('epd');const ctx=c.getContext('2d');return Array.from(ctx.getImageData(x,y,1,1).data);}",
-                    [125, y],
+                js = (
+                    "([x,y])=>{"
+                    "const c=document.getElementById('epd');const ctx=c.getContext('2d');"
+                    "return Array.from(ctx.getImageData(x,y,1,1).data);}"
                 )
+                r, g, b, a = page.evaluate(js, [125, y])
                 assert (r, g, b) == (0, 0, 0)
             browser.close()
     finally:
