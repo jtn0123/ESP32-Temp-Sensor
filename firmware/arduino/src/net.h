@@ -375,6 +375,14 @@ inline void net_publish_status(const char* payload, bool retain = true) {
     g_mqtt.publish(topic, payload, retain);
 }
 
+// Publish a JSON debug payload with wake metrics to sensors/<node>/debug
+inline void net_publish_debug_json(const char* payload, bool retain = false) {
+    if (!g_mqtt.connected() || !payload) return;
+    char topic[128];
+    snprintf(topic, sizeof(topic), "%s/debug", MQTT_PUB_BASE);
+    g_mqtt.publish(topic, payload, retain);
+}
+
 // Publish Home Assistant MQTT Discovery configs for inside temperature and humidity
 inline void net_publish_ha_discovery() {
     if (!g_mqtt.connected()) return;
