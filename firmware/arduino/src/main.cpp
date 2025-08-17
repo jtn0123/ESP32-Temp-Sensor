@@ -828,15 +828,15 @@ void setup() {
         int64_t pub_probe_start_us = esp_timer_get_time();
         net_publish_debug_probe("1", false);
         uint32_t ms_publish = (uint32_t)((esp_timer_get_time() - pub_probe_start_us) / 1000);
-        uint32_t sleep_scheduled_us = sleep_scheduled_ms * 1000UL;
+        uint32_t deep_sleep_us = sleep_scheduled_ms * 1000UL;
         snprintf(dbg, sizeof(dbg),
-                 "{\"ms_boot_to_wifi\":%u,\"ms_wifi_to_mqtt\":%u,\"ms_sensor_read\":%u,\"ms_publish\":%u,\"sleep_scheduled_ms\":%u,\"sleep_scheduled_us\":%u,\"reset_reason\":\"%s\",\"wakeup_cause\":\"%s\"}",
+                 "{\"ms_boot_to_wifi\":%u,\"ms_wifi_to_mqtt\":%u,\"ms_sensor_read\":%u,\"ms_publish\":%u,\"sleep_scheduled_ms\":%u,\"deep_sleep_us\":%u,\"reset_reason\":\"%s\",\"wakeup_cause\":\"%s\"}",
                  ms_boot_to_wifi,
                  ms_wifi_to_mqtt,
                  ms_sensor_read,
                  ms_publish,
                  sleep_scheduled_ms,
-                 sleep_scheduled_us,
+                 deep_sleep_us,
                  reset_reason_str(esp_reset_reason()),
                  wakeup_cause_str(esp_sleep_get_wakeup_cause()));
         net_publish_debug_json(dbg, false);
