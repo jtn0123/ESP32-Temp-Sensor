@@ -43,9 +43,30 @@ def test_homeassistant_birth_triggers_rediscovery_and_state_republish():
     ha_prefix = "homeassistant"
 
     sensors = [
-        SensorSpec(key="temp", name="Temperature", state_topic=f"{state_base}/inside/temp", unit_of_measurement="°C", device_class="temperature", sample_value="21.7"),
-        SensorSpec(key="hum", name="Humidity", state_topic=f"{state_base}/inside/hum", unit_of_measurement="%", device_class="humidity", sample_value="48.2"),
-        SensorSpec(key="batt", name="Battery", state_topic=f"{state_base}/battery", unit_of_measurement="%", device_class="battery", sample_value="93"),
+        SensorSpec(
+            key="temp",
+            name="Temperature",
+            state_topic=f"{state_base}/inside/temp",
+            unit_of_measurement="°C",
+            device_class="temperature",
+            sample_value="21.7",
+        ),
+        SensorSpec(
+            key="hum",
+            name="Humidity",
+            state_topic=f"{state_base}/inside/hum",
+            unit_of_measurement="%",
+            device_class="humidity",
+            sample_value="48.2",
+        ),
+        SensorSpec(
+            key="batt",
+            name="Battery",
+            state_topic=f"{state_base}/battery",
+            unit_of_measurement="%",
+            device_class="battery",
+            sample_value="93",
+        ),
     ]
 
     # Device simulator: listens for HA birth and republishes discovery + current states (retained)
@@ -96,7 +117,8 @@ def test_homeassistant_birth_triggers_rediscovery_and_state_republish():
     while time.time() < end_at and not got_all.is_set():
         time.sleep(0.05)
 
-    assert len(received) >= expected_total, f"Expected at least {expected_total} messages, got {len(received)}: {received}"
+    msg = f"Expected at least {expected_total} messages, got {len(received)}: {received}"
+    assert len(received) >= expected_total, msg
 
     # Validate payloads: discovery JSONs include expected topics, and states match sample values
     seen_cfg = set()

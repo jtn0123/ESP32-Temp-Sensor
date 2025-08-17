@@ -9,9 +9,10 @@ def run_parse(content: str, *args: str) -> tuple[int, str]:
         tf.flush()
         path = tf.name
     try:
+        scripts_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "scripts")
         cmd = [
             "python3",
-            os.path.join(os.path.dirname(os.path.dirname(__file__)), "scripts", "parse_awake_log.py"),
+            os.path.join(scripts_dir, "parse_awake_log.py"),
             path,
             *args,
         ]
