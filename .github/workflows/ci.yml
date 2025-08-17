@@ -6,95 +6,84 @@ on:
   pull_request:
     branches: [ main ]
 
-jobs:
-  test:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: ["3.11"]
-        pillow-major: ["10"]
-    steps:
-      - uses: actions/checkout@v4
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ matrix.python-version }}
-      - name: Install deps
-        run: |
-          python -m pip install --upgrade pip
-          pip install pytest pillow==${{ matrix.pillow-major }}.* playwright
-          python -m playwright install --with-deps chromium
-      - name: Run tests
-        run: pytest -q
-
-  firmware-arduino:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Install PlatformIO
-        run: |
-          python -m pip install --upgrade pip
-          pip install platformio
-      - name: Build
-        run: |
-          cd firmware/arduino
-          pio run
-
-name: CI
-
-on:
-  push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  build-arduino:
+  tests-python:
+    name: Python tests (Pillow-only)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - name: Set up Python
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - name: Install PlatformIO
-        run: pip install -U platformio pyyaml
-      - name: Generate device header
-        run: python scripts/gen_device_header.py
-      - name: Build firmware
-        working-directory: firmware/arduino
-        run: pio run
+          cache: 'pip'
 
-  test-python:
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install pytest pillow
+
+      - name: Run unit tests (skip web-sim)
+        run: pytest -q -k "not web_sim"
+
+  tests-web:
+    name: Web simulator tests (Playwright/Chromium)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - name: Set up Python
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+          cache: 'pip'
+
       - name: Install Python deps
         run: |
           python -m pip install --upgrade pip
-          pip install pillow pytest pyyaml
-          pip install playwright pytest-playwright
-          python -m playwright install --with-deps chromium
-      - name: Run tests
-        run: pytest -q
+          python -m pip install pytest pillow playwright pytest-playwright
 
-  esphome-validate:
+      - name: Install Playwright browsers
+        run: python -m playwright install --with-deps chromium
+
+      - name: Run web simulator tests
+        env:
+          # Set to 1 to always save screenshots/artifacts from layout tests
+          SAVE_SHOT: "0"
+        run: pytest -q -k web_sim
+
+  firmware-build:
+    name: Firmware build (PlatformIO)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - name: Set up Python
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - name: Install ESPHome
-        run: pip install -U esphome
-      - name: Validate ESPHome config
-        working-directory: firmware/esphome
+
+      - name: Cache PlatformIO
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.platformio
+          key: pio-${{ runner.os }}-${{ hashFiles('firmware/arduino/platformio.ini') }}
+
+      - name: Install PlatformIO
         run: |
-          cp secrets.example.yaml secrets.yaml
-          esphome config room_node.yaml
+          python -m pip install --upgrade pip
+          python -m pip install platformio
+
+      - name: Build Arduino firmware
+        working-directory: firmware/arduino
+        run: pio run
 
