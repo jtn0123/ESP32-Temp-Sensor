@@ -6,7 +6,7 @@ from PIL import Image
 ROOT = os.path.dirname(os.path.dirname(__file__))
 sys.path.insert(0, os.path.join(ROOT, 'scripts'))
 
-import mock_display as md  # type: ignore  # noqa: E402
+import mock_display as md  # type: ignore
 
 
 def _count_nonwhite(img: Image.Image, rect):

@@ -4,7 +4,7 @@ import sys
 ROOT = os.path.dirname(os.path.dirname(__file__))
 sys.path.insert(0, os.path.join(ROOT, 'scripts'))
 
-import power_estimator as pe  # type: ignore  # noqa: E402
+import power_estimator as pe  # type: ignore
 
 
 def test_estimate_days_zero_current():

@@ -5,7 +5,7 @@ import sys
 ROOT = os.path.dirname(os.path.dirname(__file__))
 sys.path.insert(0, os.path.join(ROOT, 'scripts'))
 
-import mock_display as md  # type: ignore  # noqa: E402
+import mock_display as md  # type: ignore
 
 
 def test_render_dimensions():

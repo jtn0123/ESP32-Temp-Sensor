@@ -4,7 +4,7 @@ import sys
 ROOT = os.path.dirname(os.path.dirname(__file__))
 sys.path.insert(0, os.path.join(ROOT, 'scripts'))
 
-import gen_layout_header as glh  # type: ignore  # noqa: E402
+import gen_layout_header as glh  # type: ignore
 
 
 def test_generate_header_basic_contents():
