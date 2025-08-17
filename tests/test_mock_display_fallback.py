@@ -1,12 +1,12 @@
 import os
 import sys
-
+import importlib
 from PIL import Image
 
 ROOT = os.path.dirname(os.path.dirname(__file__))
 sys.path.insert(0, os.path.join(ROOT, 'scripts'))
 
-import mock_display as md  # type: ignore
+md = importlib.import_module('mock_display')  # type: ignore
 
 
 def _count_nonwhite(img: Image.Image, rect):

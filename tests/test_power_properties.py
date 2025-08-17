@@ -1,10 +1,11 @@
 import os
 import sys
+import importlib
 
 ROOT = os.path.dirname(os.path.dirname(__file__))
 sys.path.insert(0, os.path.join(ROOT, 'scripts'))
 
-import power_estimator as pe  # type: ignore
+pe = importlib.import_module('power_estimator')  # type: ignore
 
 
 def test_monotonic_capacity():

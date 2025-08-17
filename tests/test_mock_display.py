@@ -1,11 +1,12 @@
 import json
 import os
 import sys
+import importlib
 
 ROOT = os.path.dirname(os.path.dirname(__file__))
 sys.path.insert(0, os.path.join(ROOT, 'scripts'))
 
-import mock_display as md  # type: ignore
+md = importlib.import_module('mock_display')  # type: ignore
 
 
 def test_render_dimensions():
