@@ -7,6 +7,8 @@
 #include <esp_wifi.h>
 #include <time.h>
 #include "config.h"
+#include "sensors.h"
+#include "power.h"
 
 #if USE_WIFI_PROVISIONING
 #include <esp_err.h>
@@ -74,6 +76,11 @@ inline bool is_all_zero_bssid(const uint8_t b[6]) {
 #define WIFI_AUTHMODE_THRESHOLD WIFI_AUTH_WPA2_PSK
 #endif
 
+// Number of consecutive failed connects with a pinned BSSID before clearing it
+#ifndef WIFI_BSSID_FAIL_CLEAR_N
+#define WIFI_BSSID_FAIL_CLEAR_N 3
+#endif
+
 // NVS helpers: remember last successful AP (SSID + BSSID)
 inline bool nvs_load_last_ap(String& ssid, uint8_t bssid[6]) {
     bool ok = false;
@@ -94,6 +101,32 @@ inline void nvs_store_last_ap(const char* ssid, const uint8_t bssid[6]) {
     if (g_net_prefs.begin("net", false)) {
         g_net_prefs.putString("last_ssid", ssid);
         g_net_prefs.putBytes("last_bssid", bssid, 6);
+        g_net_prefs.end();
+    }
+}
+
+// Track consecutive failures when attempting BSSID-pinned joins so we can
+// clear the saved BSSID after repeated misses (AP moved/changed).
+inline uint32_t nvs_get_bssid_fail_count() {
+    uint32_t c = 0;
+    if (g_net_prefs.begin("net", true)) {
+        c = g_net_prefs.getUInt("bssid_fail", 0);
+        g_net_prefs.end();
+    }
+    return c;
+}
+
+inline void nvs_set_bssid_fail_count(uint32_t v) {
+    if (g_net_prefs.begin("net", false)) {
+        g_net_prefs.putUInt("bssid_fail", v);
+        g_net_prefs.end();
+    }
+}
+
+inline void nvs_clear_last_ap() {
+    if (g_net_prefs.begin("net", false)) {
+        g_net_prefs.remove("last_bssid");
+        g_net_prefs.remove("last_ssid");
         g_net_prefs.end();
     }
 }
@@ -248,6 +281,22 @@ inline void mqtt_callback(char* topic, uint8_t* payload, unsigned int length) {
     unsigned int n = length < (sizeof(val) - 1) ? length : (unsigned int)(sizeof(val) - 1);
     for (unsigned int i = 0; i < n; ++i) val[i] = (char)payload[i];
     val[n] = '\0';
+    // Home Assistant birth: when HA announces online, republish discovery and current states
+    if (strcmp(topic, "homeassistant/status") == 0) {
+        if (n == 6 && memcmp(payload, "online", 6) == 0) {
+            net_publish_ha_discovery();
+            // Publish current states (inside temp/RH and battery)
+            InsideReadings ir = read_inside_sensors();
+            if (isfinite(ir.temperatureC) && isfinite(ir.humidityPct)) {
+                net_publish_inside(ir.temperatureC, ir.humidityPct);
+            }
+            BatteryStatus bs = read_battery_status();
+            if (isfinite(bs.voltage) && bs.percent >= 0) {
+                net_publish_battery(bs.voltage, bs.percent);
+            }
+        }
+        return;
+    }
     if (ends_with(topic, "/temp")) {
         g_outside.temperatureC = atof(val);
         g_outside.validTemp = true;
@@ -293,7 +342,7 @@ static bool start_wifi_station_connect_from_nvs(unsigned long timeout_ms) {
     WiFi.mode(WIFI_STA);
     WiFi.persistent(false);
     WiFi.setAutoReconnect(true);
-    // Unlock channel and apply thresholds without touching SSID/pass saved by provisioning
+    // Unlock channel and apply thresholds and optional preferred BSSID remembered in our own NVS
     wifi_config_t cfg;
     memset(&cfg, 0, sizeof(cfg));
     esp_wifi_get_config(WIFI_IF_STA, &cfg);
@@ -301,6 +350,23 @@ static bool start_wifi_station_connect_from_nvs(unsigned long timeout_ms) {
     cfg.sta.threshold.rssi = WIFI_RSSI_THRESHOLD;
     cfg.sta.threshold.authmode = WIFI_AUTHMODE_THRESHOLD;
     cfg.sta.channel = 0;
+    // Prefer last successful BSSID if it matches the provisioned SSID
+    String last_ssid;
+    uint8_t prefer_bssid[6] = {0};
+    bool have_bssid = false;
+    if (nvs_load_last_ap(last_ssid, prefer_bssid)) {
+        if (last_ssid.length() > 0 && strncmp((const char*)cfg.sta.ssid, last_ssid.c_str(), sizeof(cfg.sta.ssid)) == 0) {
+            memcpy(cfg.sta.bssid, prefer_bssid, 6);
+            cfg.sta.bssid_set = 1;
+            have_bssid = true;
+            Serial.printf("WiFi: preferring BSSID %02x:%02x:%02x:%02x:%02x:%02x (prov)\n",
+                          prefer_bssid[0], prefer_bssid[1], prefer_bssid[2],
+                          prefer_bssid[3], prefer_bssid[4], prefer_bssid[5]);
+        } else {
+            memset(cfg.sta.bssid, 0, 6);
+            cfg.sta.bssid_set = 0;
+        }
+    }
     esp_wifi_set_config(WIFI_IF_STA, &cfg);
     esp_wifi_start();
     esp_wifi_connect();
@@ -310,6 +376,8 @@ static bool start_wifi_station_connect_from_nvs(unsigned long timeout_ms) {
     }
     if (WiFi.isConnected()) {
         Serial.printf("WiFi: connected, IP %s RSSI %d dBm\n", WiFi.localIP().toString().c_str(), WiFi.RSSI());
+        // Reset failure counter on success
+        nvs_set_bssid_fail_count(0);
         // Cache last SSID + BSSID for next wake if available
         uint8_t now_bssid[6] = {0};
         const uint8_t* bp = WiFi.BSSID();
@@ -321,6 +389,17 @@ static bool start_wifi_station_connect_from_nvs(unsigned long timeout_ms) {
         return true;
     }
     Serial.printf("WiFi: connect timeout (status=%d)\n", (int)WiFi.status());
+    // Increment consecutive failure count and clear saved BSSID after N misses
+    if (have_bssid) {
+        uint32_t c = nvs_get_bssid_fail_count();
+        c++;
+        nvs_set_bssid_fail_count(c);
+        if (c >= WIFI_BSSID_FAIL_CLEAR_N) {
+            Serial.println("WiFi: clearing saved BSSID after repeated failures (prov)");
+            nvs_clear_last_ap();
+            nvs_set_bssid_fail_count(0);
+        }
+    }
     return false;
 }
 
@@ -517,6 +596,8 @@ inline void ensure_wifi_connected() {
     }
     if (WiFi.isConnected()) {
         Serial.printf("WiFi: connected, IP %s RSSI %d dBm\n", WiFi.localIP().toString().c_str(), WiFi.RSSI());
+        // Reset failure counter on success
+        nvs_set_bssid_fail_count(0);
         // Cache last SSID + BSSID for next wake
         uint8_t now_bssid[6] = {0};
         const uint8_t* bp = WiFi.BSSID();
@@ -526,6 +607,17 @@ inline void ensure_wifi_connected() {
         }
     } else {
         Serial.printf("WiFi: connect timeout (status=%d)\n", (int)WiFi.status());
+        // Increment consecutive failure count and clear saved BSSID after N misses
+        if (have_bssid) {
+            uint32_t c = nvs_get_bssid_fail_count();
+            c++;
+            nvs_set_bssid_fail_count(c);
+            if (c >= WIFI_BSSID_FAIL_CLEAR_N) {
+                Serial.println("WiFi: clearing saved BSSID after repeated failures");
+                nvs_clear_last_ap();
+                nvs_set_bssid_fail_count(0);
+            }
+        }
     }
 }
 
@@ -583,6 +675,9 @@ inline void ensure_mqtt_connected() {
         sub("/hi");
         sub("/low");
         sub("/lo");
+        // Subscribe to Home Assistant birth topic for rediscovery on HA restarts
+        g_mqtt.subscribe("homeassistant/status");
+        Serial.printf("MQTT: subscribed %s\n", "homeassistant/status");
         // On successful MQTT connection, try to drain any offline backlog
         offline_drain_if_any();
     } else {
