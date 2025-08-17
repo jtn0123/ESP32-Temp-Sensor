@@ -719,6 +719,13 @@ void setup() {
     g_prefs.putUShort("pcount", partial_counter);
     // Log awake duration and planned sleep for diagnostics
     Serial.printf("Awake ms: %lu\n", (unsigned long)millis());
+    #if DEV_NO_SLEEP
+    Serial.println("DEV_NO_SLEEP=1: staying awake for debugging");
+    while (true) {
+        net_loop();
+        delay(50);
+    }
+    #else
     #if DEV_CYCLE_MODE
     Serial.printf("Dev cycle: sleeping for %us\n", (unsigned)DEV_SLEEP_SEC);
     nvs_end_cache();
@@ -733,6 +740,7 @@ void setup() {
     #endif
     nvs_end_cache();
     go_deep_sleep_seconds(WAKE_INTERVAL_SEC);
+    #endif
     #endif
 }
 

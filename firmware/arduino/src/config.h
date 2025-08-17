@@ -4,6 +4,9 @@
 #ifndef USE_DISPLAY
 #define USE_DISPLAY 1
 #endif
+#ifndef DEV_NO_SLEEP
+#define DEV_NO_SLEEP 0
+#endif
 #ifndef DEV_CYCLE_MODE
 #define DEV_CYCLE_MODE 0
 #endif

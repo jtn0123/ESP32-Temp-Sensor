@@ -80,6 +80,7 @@ inline void mqtt_callback(char* topic, uint8_t* payload, unsigned int length) {
 inline void ensure_wifi_connected() {
     if (WiFi.isConnected()) return;
     if (strlen(WIFI_SSID) == 0) return;
+    Serial.printf("WiFi: connecting to %s...\n", WIFI_SSID);
     WiFi.mode(WIFI_STA);
     WiFi.persistent(false);
     WiFi.setAutoReconnect(true);
@@ -125,6 +126,11 @@ inline void ensure_wifi_connected() {
     while (!WiFi.isConnected() && millis() - start < WIFI_CONNECT_TIMEOUT_MS) {
         delay(100);
     }
+    if (WiFi.isConnected()) {
+        Serial.printf("WiFi: connected, IP %s RSSI %d dBm\n", WiFi.localIP().toString().c_str(), WiFi.RSSI());
+    } else {
+        Serial.printf("WiFi: connect timeout (status=%d)\n", (int)WiFi.status());
+    }
 }
 
 inline void ensure_mqtt_connected() {
@@ -132,6 +138,7 @@ inline void ensure_mqtt_connected() {
     if (strlen(MQTT_HOST) == 0) return;
     g_mqtt.setServer(MQTT_HOST, MQTT_PORT);
     g_mqtt.setCallback(mqtt_callback);
+    Serial.printf("MQTT: connecting to %s:%u...\n", MQTT_HOST, (unsigned)MQTT_PORT);
     char clientId[40];
     uint64_t mac = ESP.getEfuseMac();
     // Use lower 24 bits
@@ -149,11 +156,13 @@ inline void ensure_mqtt_connected() {
         delay(200);
     }
     if (g_mqtt.connected()) {
+        Serial.println("MQTT: connected");
         char topic[128];
         const char* base = MQTT_SUB_BASE;
         auto sub = [&](const char* suffix){
             snprintf(topic, sizeof(topic), "%s%s", base, suffix);
             g_mqtt.subscribe(topic);
+            Serial.printf("MQTT: subscribed %s\n", topic);
         };
         sub("/temp");
         sub("/hum");
@@ -166,6 +175,8 @@ inline void ensure_mqtt_connected() {
         sub("/hi");
         sub("/low");
         sub("/lo");
+    } else {
+        Serial.println("MQTT: connect timeout/fail");
     }
 }
 
@@ -175,9 +186,21 @@ inline void net_begin() {
 }
 
 inline void net_loop() {
+    static bool last_wifi = false;
+    static bool last_mqtt = false;
     if (!WiFi.isConnected()) ensure_wifi_connected();
     if (WiFi.isConnected() && !g_mqtt.connected()) ensure_mqtt_connected();
-    if (g_mqtt.connected()) g_mqtt.loop();
+    bool now_wifi = WiFi.isConnected();
+    bool now_mqtt = g_mqtt.connected();
+    if (now_wifi != last_wifi) {
+        Serial.printf("WiFi: %s\n", now_wifi ? "up" : "down");
+        last_wifi = now_wifi;
+    }
+    if (now_mqtt != last_mqtt) {
+        Serial.printf("MQTT: %s\n", now_mqtt ? "up" : "down");
+        last_mqtt = now_mqtt;
+    }
+    if (now_mqtt) g_mqtt.loop();
 }
 
 inline String net_ip() {
