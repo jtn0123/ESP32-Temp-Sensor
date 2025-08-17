@@ -3,7 +3,8 @@ import os
 
 ROOT = os.path.dirname(os.path.dirname(__file__))
 _scripts = os.path.join(ROOT, 'scripts')
-_spec = importlib.util.spec_from_file_location('power_estimator', os.path.join(_scripts, 'power_estimator.py'))
+_module_path = os.path.join(_scripts, 'power_estimator.py')
+_spec = importlib.util.spec_from_file_location('power_estimator', _module_path)
 pe = importlib.util.module_from_spec(_spec)  # type: ignore
 _spec.loader.exec_module(pe)  # type: ignore
 
