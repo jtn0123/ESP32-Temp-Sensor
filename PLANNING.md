@@ -42,6 +42,19 @@
 ‑ Tests: UI snapshot — golden PNG compare for typical values.
 ‑ Docs: `hardware/pinmap.md` exact pins; `hardware/bom.md` purchase links.
 
+### Change Log — Headless mode parity
+
+- Goal: Make `env:feather_esp32s2_headless` behave like the e‑ink build for MQTT publish thresholds and availability sequencing, so soak tests are representative.
+- Sub‑tasks:
+  1. Remove dev‑cycle and always‑on flags from `env:feather_esp32s2_headless` to restore sleep cadence parity.
+  2. Add `env:feather_esp32s2_headless_always` for always‑on development.
+  3. Update `scripts/flash.py` to map `--mode always` to the new env.
+  4. Update README to document the new behaviors and envs.
+  5. Run tests and validate PlatformIO builds.
+- Validation:
+  - Python tests pass (`pytest`).
+  - `scripts/validate_builds.py` succeeds for key envs.
+
 
 ### Phase 1 — Wake time & stability
 
