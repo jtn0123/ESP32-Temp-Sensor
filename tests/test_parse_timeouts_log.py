@@ -9,9 +9,10 @@ def run_parse(content: str) -> tuple[int, str]:
         tf.flush()
         path = tf.name
     try:
+        scripts_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "scripts")
         cmd = [
             "python3",
-            os.path.join(os.path.dirname(os.path.dirname(__file__)), "scripts", "parse_timeouts_log.py"),
+            os.path.join(scripts_dir, "parse_timeouts_log.py"),
             path,
         ]
         proc = subprocess.run(cmd, capture_output=True, text=True)

@@ -74,15 +74,17 @@ def test_homeassistant_birth_triggers_rediscovery_and_state_republish():
     device.connect()
 
     def on_device_msg(_client, _userdata, msg):  # pragma: no cover - involves I/O
-        if msg.topic == "homeassistant/status" and msg.payload.decode("utf-8", "ignore") == "online":
-            for s in sensors:
-                cfg_topic = f"{ha_prefix}/sensor/{device_id}_{s.key}/config"
-                cfg_payload = json.dumps(build_discovery_config(device_id, availability_topic, s))
-                device.publish(cfg_topic, cfg_payload, retain=True, qos=1)
-            for s in sensors:
-                device.publish(s.state_topic, s.sample_value, retain=True, qos=1)
-            # Also publish availability online retained so HA can mark entity available
-            device.publish(availability_topic, "online", retain=True, qos=1)
+        if msg.topic == "homeassistant/status":
+            payload_decoded = msg.payload.decode("utf-8", "ignore")
+            if payload_decoded == "online":
+                for s in sensors:
+                    cfg_topic = f"{ha_prefix}/sensor/{device_id}_{s.key}/config"
+                    cfg_payload = json.dumps(build_discovery_config(device_id, availability_topic, s))
+                    device.publish(cfg_topic, cfg_payload, retain=True, qos=1)
+                for s in sensors:
+                    device.publish(s.state_topic, s.sample_value, retain=True, qos=1)
+                # Also publish availability online retained so HA can mark entity available
+                device.publish(availability_topic, "online", retain=True, qos=1)
 
     device.client.on_message = on_device_msg
     device.subscribe_and_confirm("homeassistant/status")

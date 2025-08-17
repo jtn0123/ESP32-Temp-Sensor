@@ -35,7 +35,11 @@ def test_sleep_mismatch():
 
 
 def test_crlf_and_noise():
-    rc, out = run_parse("\r\nNOISE\r\nAwake ms: 1234\r\nnoise\r\nSleeping for 7200s\r\n", "--max-awake-ms", "2000")
+    rc, out = run_parse(
+        "\r\nNOISE\r\nAwake ms: 1234\r\nnoise\r\nSleeping for 7200s\r\n",
+        "--max-awake-ms",
+        "2000",
+    )
     assert rc == 0
     assert "OK:" in out
 
