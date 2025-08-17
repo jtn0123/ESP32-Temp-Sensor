@@ -9,6 +9,7 @@
 #include "config.h"
 
 #if USE_WIFI_PROVISIONING
+#include <esp_err.h>
 #include <esp_event.h>
 #include <esp_netif.h>
 #include <wifi_provisioning/manager.h>
@@ -276,10 +277,15 @@ inline void mqtt_callback(char* topic, uint8_t* payload, unsigned int length) {
 static void ensure_system_netif_and_loop_inited() {
     static bool done = false;
     if (done) return;
-    if (esp_netif_init() == ESP_OK || true) {
-        // ignore already-initialized state
+    esp_err_t e;
+    e = esp_netif_init();
+    if (e != ESP_OK && e != ESP_ERR_INVALID_STATE) {
+        Serial.printf("esp_netif_init err=%d\n", (int)e);
     }
-    esp_event_loop_create_default();
+    e = esp_event_loop_create_default();
+    if (e != ESP_OK && e != ESP_ERR_INVALID_STATE) {
+        Serial.printf("esp_event_loop_create_default err=%d\n", (int)e);
+    }
     done = true;
 }
 
@@ -385,6 +391,26 @@ static void ensure_wifi_connected_provisioned_impl() {
     start_wifi_station_connect_from_nvs(WIFI_CONNECT_TIMEOUT_MS);
 }
 #endif // USE_WIFI_PROVISIONING
+
+inline bool net_wifi_clear_provisioning() {
+#if USE_WIFI_PROVISIONING
+    ensure_system_netif_and_loop_inited();
+    wifi_prov_mgr_config_t prov_cfg = {};
+#if WIFI_PROV_USE_SOFTAP
+    prov_cfg.scheme = wifi_prov_scheme_softap;
+    prov_cfg.scheme_event_handler = WIFI_PROV_EVENT_HANDLER_NONE;
+#elif WIFI_PROV_USE_BLE
+    prov_cfg.scheme = wifi_prov_scheme_ble;
+    prov_cfg.scheme_event_handler = WIFI_PROV_EVENT_HANDLER_NONE;
+#endif
+    if (wifi_prov_mgr_init(prov_cfg) != ESP_OK) return false;
+    esp_err_t err = wifi_prov_mgr_reset_provisioning();
+    wifi_prov_mgr_deinit();
+    return err == ESP_OK;
+#else
+    return false;
+#endif
+}
 
 inline void ensure_wifi_connected() {
 #if USE_WIFI_PROVISIONING

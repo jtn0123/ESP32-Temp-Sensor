@@ -71,7 +71,8 @@ class MqttTestClient:
 
     def publish(self, topic: str, payload: str, retain: bool = False, qos: int = 0) -> None:
         result = self.client.publish(topic, payload=payload, retain=retain, qos=qos)
-        result.wait_for_publish(timeout=5)
+        # Compatible with paho-mqtt 1.x and 2.x (no timeout argument)
+        result.wait_for_publish()
         if result.rc is not mqtt.MQTT_ERR_SUCCESS:
             raise RuntimeError(f"Publish failed rc={result.rc} topic={topic}")
 

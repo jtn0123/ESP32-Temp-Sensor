@@ -257,6 +257,14 @@ static void handle_serial_command_line(const String& line)
         ensure_wifi_connected();
         return;
     }
+    if (op == "wificlear") {
+        Serial.println(F("WiFi: clearing provisioned credentials and rebooting..."));
+        bool ok = net_wifi_clear_provisioning();
+        Serial.printf("WiFi: clear %s\n", ok ? "ok" : "failed");
+        delay(50);
+        ESP.restart();
+        return;
+    }
     if (op == "mqtt") {
         Serial.println(F("MQTT: reconnecting..."));
         ensure_mqtt_connected();
