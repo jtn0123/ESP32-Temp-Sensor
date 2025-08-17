@@ -210,4 +210,11 @@ inline void net_publish_inside(float tempC, float rhPct) {
     g_mqtt.publish(topic, payload, true);
 }
 
+inline void net_publish_status(const char* payload, bool retain = true) {
+    if (!g_mqtt.connected() || !payload) return;
+    char topic[128];
+    snprintf(topic, sizeof(topic), "%s/status", MQTT_PUB_BASE);
+    g_mqtt.publish(topic, payload, retain);
+}
+
 

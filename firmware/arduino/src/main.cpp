@@ -704,6 +704,14 @@ void setup() {
             nvs_store_float("pi_rh", last_published_inside_rh);
         }
     }
+    // Publish a headless status heartbeat to aid validation
+    {
+        String ip = net_ip();
+        BatteryStatus bs = read_battery_status();
+        char payload[96];
+        snprintf(payload, sizeof(payload), "headless=1 ip=%s v=%.2f pct=%d", ip.c_str(), bs.voltage, bs.percent);
+        net_publish_status(payload, true);
+    }
     #endif
 
     partial_counter++;

@@ -2,7 +2,7 @@
 
 // Compile-time toggles (filled in later as features land)
 #ifndef USE_DISPLAY
-#define USE_DISPLAY 0
+#define USE_DISPLAY 1
 #endif
 #define USE_SHT40 0
 #define USE_BME280 1
