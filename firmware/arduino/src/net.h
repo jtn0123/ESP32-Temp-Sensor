@@ -25,6 +25,11 @@
 
 // All configuration should come from generated_config.h
 
+// Forward declarations for functions referenced before their definitions
+inline void net_publish_ha_discovery();
+inline void net_publish_inside(float tempC, float rhPct);
+inline void net_publish_battery(float voltage, int percent);
+
 struct OutsideReadings {
     float temperatureC = NAN;
     float humidityPct = NAN;
