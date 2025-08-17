@@ -45,3 +45,21 @@
 #endif
 
 
+#ifndef I2C_TIMEOUT_MS
+#define I2C_TIMEOUT_MS 150
+#endif
+
+// Phase budgets (ms). Keep each phase bounded so a stall can't eat the whole wake.
+#ifndef SENSOR_PHASE_TIMEOUT_MS
+#define SENSOR_PHASE_TIMEOUT_MS 300
+#endif
+#ifndef FETCH_RETAINED_TIMEOUT_MS
+#define FETCH_RETAINED_TIMEOUT_MS 800
+#endif
+#ifndef DISPLAY_PHASE_TIMEOUT_MS
+#define DISPLAY_PHASE_TIMEOUT_MS 2000
+#endif
+#ifndef PUBLISH_PHASE_TIMEOUT_MS
+#define PUBLISH_PHASE_TIMEOUT_MS 800
+#endif
+

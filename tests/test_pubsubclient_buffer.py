@@ -10,6 +10,15 @@ def build_fw_discovery_payload(client_id: str, room_name: str, pub_base: str, *,
     state_topic = f"{pub_base}/{state_suffix}"
     availability_topic = f"{pub_base}/availability"
     # Keep formatting identical to firmware: ordering and nested device fields
+    # Firmware computes suggested_display_precision based on unit and sets expire_after = WAKE_INTERVAL_SEC + 120.
+    # In tests, assume 1h default WAKE_INTERVAL_SEC=3600 unless overridden in env-specific builds.
+    expire_after = 3600 + 120
+    if unit == "°F":
+        suggested_precision = 1
+    elif unit == "V":
+        suggested_precision = 2
+    else:
+        suggested_precision = 0
     return (
         "{"  # opening brace
         f"\"name\":\"{name}\","  # name
@@ -19,6 +28,8 @@ def build_fw_discovery_payload(client_id: str, room_name: str, pub_base: str, *,
         f"\"unit_of_measurement\":\"{unit}\","  # unit
         f"\"device_class\":\"{dev_class}\","  # device_class
         f"\"state_class\":\"measurement\","  # state_class
+        f"\"suggested_display_precision\":{suggested_precision},"
+        f"\"expire_after\":{expire_after},"
         "\"device\":"
         "{"  # device object
         f"\"identifiers\":[\"{client_id}\"],"

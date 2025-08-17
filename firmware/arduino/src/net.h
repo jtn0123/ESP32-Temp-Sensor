@@ -843,6 +843,8 @@ inline void net_publish_ha_discovery() {
     // Topics and availability
     char availTopic[128];
     snprintf(availTopic, sizeof(availTopic), "%s/availability", MQTT_PUB_BASE);
+    // Expire entities slightly after our scheduled wake so HA greys stale values if we miss a cycle
+    uint32_t expireAfterSec = (uint32_t)WAKE_INTERVAL_SEC + 120U;
 
     // Helper to publish one discovery config
     auto pub_disc = [&](const char* key, const char* name, const char* unit, const char* dev_class, const char* state_suffix){
@@ -851,10 +853,15 @@ inline void net_publish_ha_discovery() {
         char stateTopic[192];
         snprintf(stateTopic, sizeof(stateTopic), "%s/%s", MQTT_PUB_BASE, state_suffix);
         char payload[640];
+        // Choose a suggested display precision based on unit to stabilize graphs in HA
+        int suggestedPrecision = 0;
+        if (strcmp(unit, "°F") == 0) suggestedPrecision = 1;      // Fahrenheit: one decimal
+        else if (strcmp(unit, "V") == 0) suggestedPrecision = 2;  // Volts: two decimals
+        else suggestedPrecision = 0;                                // Percent and others: integer
         // Full HA discovery keys for maximum compatibility; retained
         snprintf(payload, sizeof(payload),
-            "{\"name\":\"%s\",\"unique_id\":\"%s_%s\",\"state_topic\":\"%s\",\"availability_topic\":\"%s\",\"unit_of_measurement\":\"%s\",\"device_class\":\"%s\",\"state_class\":\"measurement\",\"device\":{\"identifiers\":[\"%s\"],\"name\":\"ESP32 Room Node: %s\",\"manufacturer\":\"DIY\",\"model\":\"Feather ESP32-S2\",\"sw_version\":\"%s\"}}",
-            name, g_client_id, key, stateTopic, availTopic, unit, dev_class, g_client_id, ROOM_NAME, FW_VERSION);
+            "{\"name\":\"%s\",\"unique_id\":\"%s_%s\",\"state_topic\":\"%s\",\"availability_topic\":\"%s\",\"unit_of_measurement\":\"%s\",\"device_class\":\"%s\",\"state_class\":\"measurement\",\"suggested_display_precision\":%d,\"expire_after\":%u,\"device\":{\"identifiers\":[\"%s\"],\"name\":\"ESP32 Room Node: %s\",\"manufacturer\":\"DIY\",\"model\":\"Feather ESP32-S2\",\"sw_version\":\"%s\"}}",
+            name, g_client_id, key, stateTopic, availTopic, unit, dev_class, suggestedPrecision, (unsigned)expireAfterSec, g_client_id, ROOM_NAME, FW_VERSION);
         g_mqtt.publish(discTopic, payload, true);
         Serial.print("HA discovery -> ");
         Serial.println(discTopic);
@@ -886,6 +893,8 @@ inline void net_prepare_for_sleep() {
     if (WiFi.isConnected()) {
         WiFi.disconnect(true);
     }
+    // Ensure the Wi-Fi radio is fully powered down between wakes
+    WiFi.mode(WIFI_OFF);
 }
 
 

@@ -249,50 +249,30 @@ See `hardware/pinmap.md` for Feather ESP32‑S2 + 2.13" FeatherWing.
 
 MIT (see `LICENSE`).
 
-### Headless mode + Developer 3/3 cycle
+### Headless environments
 
-- A headless firmware build (no display required) is provided as a separate PlatformIO environment.
-
-```ini
-[env:feather_esp32s2_headless]
-platform = espressif32
-board = featheresp32-s2
-framework = arduino
-monitor_speed = 115200
-lib_deps = ${env:feather_esp32s2.lib_deps}
-build_flags =
-  -DCORE_DEBUG_LEVEL=1
-  -DUSE_DISPLAY=0
-  -DDEV_CYCLE_MODE=1 -DDEV_ACTIVE_SEC=180 -DDEV_SLEEP_SEC=180
-  -DEINK_WIDTH=250 -DEINK_HEIGHT=122
-extra_scripts = ${env:feather_esp32s2.extra_scripts}
-```
-
-- Use this environment for quick testing without a screen. It stays awake for ~3 minutes (pumping Wi‑Fi/MQTT), then deep sleeps for ~3 minutes to let the MCU cool down.
+- `env:feather_esp32s2_headless`: headless build that mirrors the e‑ink build's thresholds and availability sequencing. It uses the same wake/sleep cadence as the e‑ink build (via `WAKE_INTERVAL_SEC` from config) and publishes `availability` online on connect and `offline` just before sleep.
+- `env:feather_esp32s2_dev2`: headless 3/3 developer soak cycle (stays awake ~3m, then sleeps ~3m) for MQTT/HA soak testing.
+- `env:feather_esp32s2_headless_always`: headless, always-on (no sleep) for rapid iteration.
 
 Commands:
 
 ```bash
-# Build headless dev cycle
-pio run -e feather_esp32s2_headless
+# 1-hour sleep (default)
+python3 scripts/flash.py
 
-# Upload (put board in bootloader if needed). Replace PORT with your /dev/cu.usbmodem*
-pio run -t upload -e feather_esp32s2_headless --upload-port PORT
+# 3-minute cycle (awake ~3m, sleep ~3m)
+python3 scripts/flash.py --mode 3m
 
-# Serial monitor
-pio device monitor -p PORT -b 115200
+# Always-on (no sleep)
+python3 scripts/flash.py --mode always
+
+# Optional: specify a serial port explicitly
+python3 scripts/flash.py --mode 3m --port /dev/cu.usbmodem101
+
+# Build only, do not upload
+python3 scripts/flash.py --mode always --build-only
 ```
-
-Expected serial lines:
-
-```
-ESP32 eInk Room Node boot
-Dev cycle: staying awake for 180s
-Awake ms: <...>
-Dev cycle: sleeping for 180s
-```
-
-- Disable the 3/3 cycle by switching back to the normal env `env:feather_esp32s2`, or by removing `-DDEV_CYCLE_MODE=1` from headless build flags.
 
 #### Status LED heartbeat (optional)
 

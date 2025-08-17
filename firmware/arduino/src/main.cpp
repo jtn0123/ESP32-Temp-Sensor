@@ -241,6 +241,17 @@ static void handle_serial_command_line(const String& line)
 #if USE_STATUS_PIXEL
         status_pixel_off();
 #endif
+        // Optionally gate off display/sensor rails if defined
+#if defined(EINK_EN_PIN)
+        pinMode(EINK_EN_PIN, OUTPUT);
+        digitalWrite(EINK_EN_PIN, LOW);
+#endif
+#ifdef SENSORS_EN_PIN
+        pinMode(SENSORS_EN_PIN, OUTPUT);
+        digitalWrite(SENSORS_EN_PIN, LOW);
+#endif
+        // Cleanly disconnect and power down radios before sleeping
+        net_prepare_for_sleep();
         go_deep_sleep_seconds(sec);
         return;
     }

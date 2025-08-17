@@ -37,7 +37,7 @@ def main() -> int:
     elif args.mode == "3m":
         env = "feather_esp32s2_dev2"
     else:
-        env = "feather_esp32s2_headless"
+        env = "feather_esp32s2_headless_always"
 
     base = ["pio", "run", "-d", arduino_dir, "-e", env]
     if args.build_only:

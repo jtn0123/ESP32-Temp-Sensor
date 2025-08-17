@@ -22,6 +22,9 @@ inline BatteryStatus read_battery_status() {
     static bool fg_init = false;
     if (!fg_init) {
         Wire.begin();
+        #ifdef I2C_TIMEOUT_MS
+        Wire.setTimeOut(I2C_TIMEOUT_MS);
+        #endif
         fg_init = maxfg.begin();
     }
     if (fg_init) {

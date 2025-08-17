@@ -11,6 +11,9 @@ static bool g_bme280_initialized = false;
 inline void sensors_begin() {
     if (g_bme280_initialized) return;
     Wire.begin();
+    #ifdef I2C_TIMEOUT_MS
+    Wire.setTimeOut(I2C_TIMEOUT_MS);
+    #endif
     // Try default I2C address 0x77 then 0x76
     if (!g_bme280.begin(0x77) && !g_bme280.begin(0x76)) {
         Serial.println("BME280 not found");
