@@ -46,12 +46,15 @@ def test_discovery_payload_exceeds_default_pubsubclient_and_fits_1024():
     room_name = "Office"
     pub_base = f"sensors/{client_id}"
 
-    # Four discovery configs published by firmware
+    # Discovery configs published by firmware
     payloads = [
         build_fw_discovery_payload(client_id, room_name, pub_base, key="inside_temp", name="Inside Temperature", unit="°F", dev_class="temperature", state_suffix="inside/temp"),
         build_fw_discovery_payload(client_id, room_name, pub_base, key="inside_hum", name="Inside Humidity", unit="%", dev_class="humidity", state_suffix="inside/hum"),
         build_fw_discovery_payload(client_id, room_name, pub_base, key="battery_volts", name="Battery Voltage", unit="V", dev_class="voltage", state_suffix="battery/voltage"),
         build_fw_discovery_payload(client_id, room_name, pub_base, key="battery_pct", name="Battery", unit="%", dev_class="battery", state_suffix="battery/percent"),
+        # New diagnostic sensors: WiFi RSSI (dBm) and publish latency (ms)
+        build_fw_discovery_payload(client_id, room_name, pub_base, key="wifi_rssi", name="WiFi RSSI", unit="dBm", dev_class="signal_strength", state_suffix="wifi/rssi"),
+        build_fw_discovery_payload(client_id, room_name, pub_base, key="publish_ms", name="Publish Latency", unit="ms", dev_class="duration", state_suffix="debug/publish_ms"),
     ]
 
     # PubSubClient default MQTT_MAX_PACKET_SIZE is 256 bytes

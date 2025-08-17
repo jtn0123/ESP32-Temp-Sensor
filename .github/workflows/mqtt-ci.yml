@@ -47,4 +47,10 @@ jobs:
           python3 scripts/test_mqtt_integration.py
           kill $sub_pid || true
 
+      - name: Run pytest birth/rediscovery test against broker
+        env:
+          MQTT_HOST: 127.0.0.1
+          MQTT_PORT: 1883
+        run: pytest -q tests/test_mqtt_birth.py
+
 

@@ -29,6 +29,8 @@
 inline void net_publish_ha_discovery();
 inline void net_publish_inside(float tempC, float rhPct);
 inline void net_publish_battery(float voltage, int percent);
+inline void net_publish_wifi_rssi(int rssiDbm);
+inline void net_publish_publish_latency_ms(uint32_t publishLatencyMs);
 
 struct OutsideReadings {
     float temperatureC = NAN;
@@ -814,6 +816,28 @@ inline void net_publish_battery(float voltage, int percent) {
     g_mqtt.publish(topic, payload, true);
 }
 
+// Publish WiFi RSSI in dBm (diagnostic)
+inline void net_publish_wifi_rssi(int rssiDbm) {
+    if (!g_mqtt.connected()) return;
+    char topic[128];
+    char payload[16];
+    const char* base = MQTT_PUB_BASE;
+    snprintf(topic, sizeof(topic), "%s/wifi/rssi", base);
+    snprintf(payload, sizeof(payload), "%d", rssiDbm);
+    g_mqtt.publish(topic, payload, true);
+}
+
+// Publish publish-latency metric in milliseconds (diagnostic)
+inline void net_publish_publish_latency_ms(uint32_t publishLatencyMs) {
+    if (!g_mqtt.connected()) return;
+    char topic[128];
+    char payload[16];
+    const char* base = MQTT_PUB_BASE;
+    snprintf(topic, sizeof(topic), "%s/debug/publish_ms", base);
+    snprintf(payload, sizeof(payload), "%u", (unsigned)publishLatencyMs);
+    g_mqtt.publish(topic, payload, true);
+}
+
 inline void net_publish_status(const char* payload, bool retain = true) {
     if (!g_mqtt.connected() || !payload) return;
     char topic[128];
@@ -883,6 +907,9 @@ inline void net_publish_ha_discovery() {
     pub_disc("inside_hum",    "Inside Humidity",    "%",  "humidity",    "inside/hum");
     pub_disc("battery_volts", "Battery Voltage",    "V",  "voltage",     "battery/voltage");
     pub_disc("battery_pct",   "Battery",            "%",  "battery",     "battery/percent");
+    // Additional diagnostics published each wake
+    pub_disc("wifi_rssi",     "WiFi RSSI",          "dBm", "signal_strength", "wifi/rssi");
+    pub_disc("publish_ms",    "Publish Latency",    "ms",  "duration",    "debug/publish_ms");
 }
 
 inline bool net_wifi_is_connected() {
