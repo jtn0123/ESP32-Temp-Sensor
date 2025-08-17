@@ -875,6 +875,10 @@ void setup() {
         if (maybe_redraw_status(bs, ip_c, STATUS_)) {
             nvs_store_uint("st_crc", last_status_crc);
         }
+        // Publish battery metrics once per wake
+        if (isfinite(bs.voltage) && bs.percent >= 0) {
+            net_publish_battery(bs.voltage, bs.percent);
+        }
     }
     #else
     // Headless mode: no display; still connect, read sensors, publish, and sleep
@@ -897,6 +901,9 @@ void setup() {
         char payload[96];
         snprintf(payload, sizeof(payload), "headless=1 ip=%s v=%.2f pct=%d", ip.c_str(), bs.voltage, bs.percent);
         net_publish_status(payload, true);
+        if (isfinite(bs.voltage) && bs.percent >= 0) {
+            net_publish_battery(bs.voltage, bs.percent);
+        }
     }
     #endif
 

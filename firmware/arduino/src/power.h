@@ -4,6 +4,10 @@
 #include <esp_sleep.h>
 #include "generated_config.h"
 #include "config.h"
+#if USE_MAX17048
+#include <Wire.h>
+#include <Adafruit_MAX1704X.h>
+#endif
 
 struct BatteryStatus {
     float voltage = NAN;
@@ -14,9 +18,6 @@ struct BatteryStatus {
 inline BatteryStatus read_battery_status() {
     BatteryStatus b;
 #if USE_MAX17048
-    // Optional MAX17048 fuel gauge via I2C
-    // Lazy include to avoid dependency unless enabled
-    #include <Adafruit_MAX1704X.h>
     static Adafruit_MAX17048 maxfg;
     static bool fg_init = false;
     if (!fg_init) {

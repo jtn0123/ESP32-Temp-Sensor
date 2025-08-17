@@ -20,6 +20,8 @@
 #define USE_BME280 1
 #define USE_MQTT 1
 #define USE_ESPHOME_API 0
+#ifndef USE_MAX17048
 #define USE_MAX17048 0
+#endif
 
 
