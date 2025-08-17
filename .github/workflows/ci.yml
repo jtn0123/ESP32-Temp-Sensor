@@ -94,3 +94,48 @@ jobs:
         working-directory: firmware/arduino
         run: pio run
 
+  lint:
+    name: Lint (Python + C++)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Python tools (ruff, black, cpplint)
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install ruff black cpplint
+
+      - name: Install clang-format
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang-format
+
+      - name: Lint Python (ruff)
+        run: ruff check .
+
+      - name: Check Python formatting (black)
+        run: black --check .
+
+      - name: Check C++ formatting (clang-format)
+        run: |
+          set -e
+          FILES=$(find firmware/arduino/src -type f \( -name "*.cpp" -o -name "*.h" \))
+          if [ -n "$FILES" ]; then
+            clang-format --version
+            clang-format -n --Werror $FILES
+          fi
+
+      - name: cpplint (include-order and braces only)
+        run: |
+          set -e
+          FILES=$(find firmware/arduino/src -type f \( -name "*.cpp" -o -name "*.h" \))
+          if [ -n "$FILES" ]; then
+            python -m cpplint --filter=-build,-legal,-readability,-runtime,-whitespace,+build/include_order,+whitespace/braces $FILES
+          fi
+
