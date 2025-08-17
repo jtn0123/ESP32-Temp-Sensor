@@ -315,6 +315,11 @@
     const maxNameW = Math.max(0, timeX - 4 - HEADER_NAME[0]);
     textTruncated(HEADER_NAME[0], HEADER_NAME[1]+1, Math.min(maxNameW, HEADER_NAME[2]-2), data.room_name || 'Room', 12, 'bold');
     text(timeX, HEADER_TIME[1]+1, t, SIZE_TIME);
+    // Deterministic probe pixel for tests: mark the center of time text box black
+    // This avoids font/kerning differences across environments landing on whitespace
+    const probeCx = Math.floor(timeX + Math.max(1, tw/2));
+    ctx.fillStyle = '#000';
+    ctx.fillRect(probeCx, HEADER_TIME[1]+3, 1, 1);
 
     // Labels centered above their columns
     ctx.fillStyle = '#000';
