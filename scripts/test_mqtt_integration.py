@@ -54,6 +54,8 @@ class MqttTestClient:
         self._port = port
         self._connected_event = threading.Event()
         self._disconnected_event = threading.Event()
+        self._subscribe_cond = threading.Condition()
+        self._subscribed_mids: set[int] = set()
 
         # Support both v1 and v2 callback signatures
         def on_connect(client, userdata, flags, rc=None, properties=None):  # type: ignore[no-redef]
@@ -64,6 +66,14 @@ class MqttTestClient:
 
         self.client.on_connect = on_connect
         self.client.on_disconnect = on_disconnect
+
+        # Handle SUBACK for confirming subscription registration (v1 and v2 compatible)
+        def on_subscribe(client, userdata, mid, granted_qos, properties=None):  # type: ignore[no-redef]
+            with self._subscribe_cond:
+                self._subscribed_mids.add(int(mid))
+                self._subscribe_cond.notify_all()
+
+        self.client.on_subscribe = on_subscribe
 
     def connect(self, timeout_s: float = 10.0) -> None:
         self.client.connect(self._host, self._port, keepalive=30)
@@ -85,6 +95,21 @@ class MqttTestClient:
         if result.rc is not mqtt.MQTT_ERR_SUCCESS:
             raise RuntimeError(f"Publish failed rc={result.rc} topic={topic}")
 
+    def subscribe_and_confirm(self, topic: str, qos: int = 0, timeout_s: float = 3.0) -> None:
+        # Subscribe and wait for SUBACK to ensure broker registered the subscription
+        result, mid = self.client.subscribe(topic, qos=qos)
+        if result != mqtt.MQTT_ERR_SUCCESS:
+            raise RuntimeError(f"Subscribe failed rc={result} topic={topic}")
+        end_at = time.time() + timeout_s
+        with self._subscribe_cond:
+            while int(mid) not in self._subscribed_mids and time.time() < end_at:
+                remaining = end_at - time.time()
+                if remaining <= 0:
+                    break
+                self._subscribe_cond.wait(timeout=remaining)
+            # Clean up recorded mid to avoid unbounded growth
+            self._subscribed_mids.discard(int(mid))
+
     def subscribe_and_wait(
         self,
         topic: str,
@@ -103,8 +128,9 @@ class MqttTestClient:
             if len(messages) >= expected_count:
                 got_all.set()
 
-        self.client.subscribe(topic, qos=0)
+        # Install handler before subscribing to avoid races with retained delivery
         self.client.on_message = on_message
+        self.subscribe_and_confirm(topic, qos=0, timeout_s=timeout_s)
         # Give broker a moment to process SUB and send retained
         end_at = time.time() + timeout_s
         while time.time() < end_at:
@@ -229,8 +255,9 @@ def main() -> None:
         if len(events) >= 3:
             got_all.set()
 
-    toggles_sub.client.subscribe(availability_topic, qos=0)
+    # Install handler before subscribing and confirm SUBACK to avoid missing first event
     toggles_sub.client.on_message = on_msg
+    toggles_sub.subscribe_and_confirm(availability_topic, qos=0, timeout_s=3.0)
 
     # Trigger the three messages
     publisher.publish(availability_topic, "online", retain=False)
