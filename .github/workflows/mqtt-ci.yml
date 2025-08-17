@@ -1,0 +1,47 @@
+name: mqtt-ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  itest:
+    runs-on: ubuntu-latest
+    services:
+      mosquitto:
+        image: eclipse-mosquitto:2
+        ports:
+          - "1883:1883"
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt paho-mqtt
+
+      - name: Install mosquitto clients
+        run: sudo apt-get update && sudo apt-get install -y mosquitto-clients
+
+      - name: Wait for broker
+        shell: bash
+        run: timeout 20 bash -c 'until echo > /dev/tcp/127.0.0.1/1883; do sleep 0.2; done'
+
+      - name: Simulate HA birth
+        run: mosquitto_pub -h 127.0.0.1 -t homeassistant/status -m online
+
+      - name: Background subscribe for debug
+        run: mosquitto_sub -h 127.0.0.1 -t 'homeassistant/#' -v | sed -u "s/^/[SUB] /" &
+
+      - name: Run MQTT integration test
+        env:
+          MQTT_HOST: 127.0.0.1
+          MQTT_PORT: 1883
+        run: python3 scripts/test_mqtt_integration.py
+
+
