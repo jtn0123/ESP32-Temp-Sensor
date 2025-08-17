@@ -116,12 +116,14 @@ def main():
 
     # draw helper
     header_lines.append('template<typename GFX>')
-    header_lines.append('inline void draw_icon_xbm(GFX& d, int16_t x, int16_t y, IconId id, uint16_t color) {')
+    header_lines.append('inline void draw_icon_xbm(GFX& d, int16_t x, int16_t y,')
+    header_lines.append('    IconId id, uint16_t color) {')
     header_lines.append('    switch(id) {')
     for name in ICON_NAMES:
         arr = c_array_name(name)
         enum_name = 'ICON_' + name.replace('-', '_').upper()
-        header_lines.append(f'    case {enum_name}: d.drawXBitmap(x, y, {arr}, ICON_W, ICON_H, color); break;')
+        header_lines.append(f'    case {enum_name}:')
+        header_lines.append(f'        d.drawXBitmap(x, y, {arr}, ICON_W, ICON_H, color); break;')
     header_lines.append('    default: break;')
     header_lines.append('    }')
     header_lines.append('}')

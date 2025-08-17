@@ -14,7 +14,10 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Flash ESP32 firmware with common modes")
     parser.add_argument(
         "--port",
-        help="Serial port (e.g. /dev/cu.usbmodem101). If omitted, auto-detect is used by PlatformIO.",
+        help=(
+            "Serial port (e.g. /dev/cu.usbmodem101). "
+            "If omitted, auto-detect is used by PlatformIO."
+        ),
     )
     parser.add_argument(
         "--mode",

@@ -222,7 +222,8 @@ def main() -> None:
     time.sleep(0.2)
     publisher.publish(availability_topic, "online", retain=False)
 
-    # 3b) Publish a sample debug JSON payload (non-retained) and validate receipt
+    # 3b) Prepare a sample debug JSON payload (non-retained). We'll publish it later
+    # after subscribing to the debug topic to ensure the message is received.
     sample_debug = {
         "ms_boot_to_wifi": 1000,
         "ms_wifi_to_mqtt": 500,
@@ -231,7 +232,6 @@ def main() -> None:
         "timeouts": 0,
     }
     import json as _json
-    publisher.publish(debug_topic, _json.dumps(sample_debug), retain=False)
 
     # 4) Validate discovery topics retained (new subscriber should receive retained messages)
     validator = MqttTestClient(mqtt_host, mqtt_port, client_id=f"sub-{_now_ms()}")
@@ -286,12 +286,29 @@ def main() -> None:
     # None of these should be retained
     assert not any(r for _p, r in events[:3]), f"Availability events should not be retained: {events[:3]}"
 
-    # 7) Validate debug topic can be subscribed to and delivers the sample payload
+    # 7) Validate debug topic can be subscribed to and delivers the sample payload.
+    # Subscribe first, then publish a sample payload to ensure delivery (non-retained).
     dbg_sub = MqttTestClient(mqtt_host, mqtt_port, client_id=f"dbg-{_now_ms()}")
     dbg_sub.connect()
-    dbg_msgs = dbg_sub.subscribe_and_wait(debug_topic, expected_count=1, timeout_s=3.0)
-    assert dbg_msgs, "No debug JSON message received"
-    dbg_payload, dbg_retained = dbg_msgs[0]
+    dbg_events: List[Tuple[str, bool]] = []
+    got_dbg = threading.Event()
+
+    def on_dbg(client, userdata, msg):  # type: ignore[no-redef]
+        dbg_events.append((msg.payload.decode("utf-8", "ignore"), bool(msg.retain)))
+        got_dbg.set()
+
+    dbg_sub.client.on_message = on_dbg
+    dbg_sub.subscribe_and_confirm(debug_topic, qos=0, timeout_s=3.0)
+
+    # Publish after subscription to avoid missing the non-retained message
+    publisher.publish(debug_topic, _json.dumps(sample_debug), retain=False)
+
+    end_at = time.time() + 3.0
+    while time.time() < end_at and not got_dbg.is_set():
+        time.sleep(0.05)
+
+    assert dbg_events, "No debug JSON message received"
+    dbg_payload, dbg_retained = dbg_events[0]
     assert not dbg_retained, "Debug JSON should not be retained"
     d = _json.loads(dbg_payload)
     assert d.get("timeouts") == 0

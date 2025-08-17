@@ -17,9 +17,19 @@ def main():
     ap.add_argument("--port", type=int, default=int(os.environ.get("MQTT_PORT", "1883")))
     ap.add_argument("--user", default=os.environ.get("MQTT_USER", ""))
     ap.add_argument("--password", default=os.environ.get("MQTT_PASS", ""))
-    ap.add_argument("--pub-base", default=os.environ.get("MQTT_PUB_BASE", "sensors/room"))
-    ap.add_argument("--sub-base", default=os.environ.get("MQTT_SUB_BASE", "home/outdoor"))
-    ap.add_argument("--seed", action="store_true", help="Publish sample outdoor readings to SUB base")
+    ap.add_argument(
+        "--pub-base",
+        default=os.environ.get("MQTT_PUB_BASE", "sensors/room"),
+    )
+    ap.add_argument(
+        "--sub-base",
+        default=os.environ.get("MQTT_SUB_BASE", "home/outdoor"),
+    )
+    ap.add_argument(
+        "--seed",
+        action="store_true",
+        help=("Publish sample outdoor readings to SUB base"),
+    )
     args = ap.parse_args()
 
     # Support paho-mqtt 1.x and 2.x by specifying callback API version when available
