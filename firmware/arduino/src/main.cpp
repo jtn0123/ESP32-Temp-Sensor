@@ -10,6 +10,9 @@
 #include "generated_config.h"
 #include "net.h"
 #include "power.h"
+#if USE_STATUS_PIXEL
+#include <Adafruit_NeoPixel.h>
+#endif
 
 // Feather ESP32-S2 + 2.13" FeatherWing (adjust if needed)
 #ifndef EINK_CS
@@ -70,8 +73,79 @@ static void pump_network_ms(uint32_t duration_ms)
     unsigned long start = millis();
     while (millis() - start < duration_ms) {
         net_loop();
+        #if USE_STATUS_PIXEL
+        status_pixel_tick();
+        #endif
         delay(10);
     }
+}
+
+#if USE_STATUS_PIXEL
+// Status NeoPixel heartbeat
+#ifndef STATUS_PIXEL_PIN
+#ifdef PIN_NEOPIXEL
+#define STATUS_PIXEL_PIN PIN_NEOPIXEL
+#else
+#define STATUS_PIXEL_PIN 18
+#endif
+#endif
+
+static Adafruit_NeoPixel s_statusPixel(1, STATUS_PIXEL_PIN, NEO_GRB + NEO_KHZ800);
+static uint32_t s_lastPixelMs = 0;
+static uint8_t s_hue = 0;
+
+static uint32_t color_wheel(uint8_t pos)
+{
+    pos = 255 - pos;
+    if (pos < 85) {
+        return s_statusPixel.Color(255 - pos * 3, 0, pos * 3);
+    }
+    if (pos < 170) {
+        pos -= 85;
+        return s_statusPixel.Color(0, pos * 3, 255 - pos * 3);
+    }
+    pos -= 170;
+    return s_statusPixel.Color(pos * 3, 255 - pos * 3, 0);
+}
+
+static inline void status_pixel_begin()
+{
+    s_statusPixel.begin();
+    s_statusPixel.setBrightness(16);
+    s_statusPixel.show();
+}
+
+static inline void status_pixel_off()
+{
+    s_statusPixel.clear();
+    s_statusPixel.show();
+}
+
+static inline void status_pixel_tick()
+{
+    uint32_t now = millis();
+    if (now - s_lastPixelMs < 20) return;
+    s_lastPixelMs = now;
+    s_statusPixel.setPixelColor(0, color_wheel(s_hue++));
+    s_statusPixel.show();
+}
+#endif
+
+static void emit_metrics_json(float tempC, float rhPct)
+{
+    BatteryStatus bs = read_battery_status();
+    char ip_c[32];
+    net_ip_cstr(ip_c, sizeof(ip_c));
+    Serial.print('{');
+    Serial.print("\"event\":\"metrics\",");
+    Serial.print("\"ip\":\""); Serial.print(ip_c); Serial.print("\",");
+    Serial.print("\"tempC\":"); Serial.print(isfinite(tempC) ? tempC : NAN); Serial.print(',');
+    Serial.print("\"rhPct\":"); Serial.print(isfinite(rhPct) ? rhPct : NAN); Serial.print(',');
+    Serial.print("\"wifi\":"); Serial.print(net_wifi_is_connected() ? "true" : "false"); Serial.print(',');
+    Serial.print("\"mqtt\":"); Serial.print(net_mqtt_is_connected() ? "true" : "false"); Serial.print(',');
+    Serial.print("\"v\":"); Serial.print(bs.voltage, 2); Serial.print(',');
+    Serial.print("\"pct\":"); Serial.print(bs.percent);
+    Serial.println('}');
 }
 
 #if USE_DISPLAY
@@ -565,6 +639,15 @@ void setup() {
     delay(100);
     Serial.println(F("ESP32 eInk Room Node boot"));
 
+#if USE_STATUS_PIXEL
+    status_pixel_begin();
+    uint32_t t0 = millis();
+    while (millis() - t0 < 200) {
+        status_pixel_tick();
+        delay(10);
+    }
+#endif
+
     #if USE_DISPLAY
     #ifdef EINK_EN_PIN
     pinMode(EINK_EN_PIN, OUTPUT);
@@ -714,6 +797,12 @@ void setup() {
     }
     #endif
 
+    // Emit one metrics JSON line over USB for monitor scripts
+    {
+        InsideReadings latest = read_inside_sensors();
+        emit_metrics_json(latest.temperatureC, latest.humidityPct);
+    }
+
     partial_counter++;
     // Persist partial refresh cadence so it survives reset
     g_prefs.putUShort("pcount", partial_counter);
@@ -723,12 +812,25 @@ void setup() {
     Serial.println("DEV_NO_SLEEP=1: staying awake for debugging");
     while (true) {
         net_loop();
+        // Periodic USB metrics while debugging
+        static uint32_t last_metrics = 0;
+        if (millis() - last_metrics > 2000) {
+            InsideReadings latest = read_inside_sensors();
+            emit_metrics_json(latest.temperatureC, latest.humidityPct);
+            last_metrics = millis();
+        }
+#if USE_STATUS_PIXEL
+        status_pixel_tick();
+#endif
         delay(50);
     }
     #else
     #if DEV_CYCLE_MODE
     Serial.printf("Dev cycle: sleeping for %us\n", (unsigned)DEV_SLEEP_SEC);
     nvs_end_cache();
+#if USE_STATUS_PIXEL
+    status_pixel_off();
+#endif
     go_deep_sleep_seconds(DEV_SLEEP_SEC);
     #else
     Serial.printf("Sleeping for %us\n", (unsigned)WAKE_INTERVAL_SEC);
@@ -739,6 +841,9 @@ void setup() {
     #endif
     #endif
     nvs_end_cache();
+#if USE_STATUS_PIXEL
+    status_pixel_off();
+#endif
     go_deep_sleep_seconds(WAKE_INTERVAL_SEC);
     #endif
     #endif
