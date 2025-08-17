@@ -191,4 +191,66 @@ See `hardware/pinmap.md` for Feather ESP32‑S2 + 2.13" FeatherWing.
 
 MIT (see `LICENSE`).
 
+### Headless mode + Developer 3/3 cycle
+
+- A headless firmware build (no display required) is provided as a separate PlatformIO environment.
+
+```ini
+[env:feather_esp32s2_headless]
+platform = espressif32
+board = featheresp32-s2
+framework = arduino
+monitor_speed = 115200
+lib_deps = ${env:feather_esp32s2.lib_deps}
+build_flags =
+  -DCORE_DEBUG_LEVEL=1
+  -DUSE_DISPLAY=0
+  -DDEV_CYCLE_MODE=1 -DDEV_ACTIVE_SEC=180 -DDEV_SLEEP_SEC=180
+  -DEINK_WIDTH=250 -DEINK_HEIGHT=122
+extra_scripts = ${env:feather_esp32s2.extra_scripts}
+```
+
+- Use this environment for quick testing without a screen. It stays awake for ~3 minutes (pumping Wi‑Fi/MQTT), then deep sleeps for ~3 minutes to let the MCU cool down.
+
+Commands:
+
+```bash
+# Build headless dev cycle
+pio run -e feather_esp32s2_headless
+
+# Upload (put board in bootloader if needed). Replace PORT with your /dev/cu.usbmodem*
+pio run -t upload -e feather_esp32s2_headless --upload-port PORT
+
+# Serial monitor
+pio device monitor -p PORT -b 115200
+```
+
+Expected serial lines:
+
+```
+ESP32 eInk Room Node boot
+Dev cycle: staying awake for 180s
+Awake ms: <...>
+Dev cycle: sleeping for 180s
+```
+
+- Disable the 3/3 cycle by switching back to the normal env `env:feather_esp32s2`, or by removing `-DDEV_CYCLE_MODE=1` from headless build flags.
+
+### Switching wake interval (1h / 2h / 4h)
+
+- Long‑term duty cycle is configured in `config/device.yaml`:
+
+```yaml
+wake_interval: "2h"   # examples: "1h", "2h", "4h", or a number of seconds like "3600"
+```
+
+- After editing, rebuild and upload the normal environment:
+
+```bash
+pio run -e feather_esp32s2
+pio run -t upload -e feather_esp32s2 --upload-port PORT
+```
+
+- The build step generates `firmware/arduino/src/generated_config.h` with `WAKE_INTERVAL_SEC` based on your YAML.
+
 
