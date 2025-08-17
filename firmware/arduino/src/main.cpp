@@ -820,30 +820,23 @@ void setup() {
 
     // Build and publish debug JSON with wake metrics and causes
     if (net_mqtt_is_connected()) {
-        char dbg[256];
+        char dbg[320];
         uint32_t ms_boot_to_wifi = (uint32_t)((t1_us - t0_us) / 1000);
         uint32_t ms_wifi_to_mqtt = (uint32_t)((t2_us - t1_us) / 1000);
         uint32_t ms_sensor_read = (uint32_t)((t3_us - t_sense_start_us) / 1000);
-        int64_t pub_start_us = esp_timer_get_time();
-        // We fill ms_publish with a placeholder first; compute actual after publish call returns
+        // Measure publish time using a non-retained probe topic
+        int64_t pub_probe_start_us = esp_timer_get_time();
+        net_publish_debug_probe("1", false);
+        uint32_t ms_publish = (uint32_t)((esp_timer_get_time() - pub_probe_start_us) / 1000);
+        uint32_t sleep_scheduled_us = sleep_scheduled_ms * 1000UL;
         snprintf(dbg, sizeof(dbg),
-                 "{\"ms_boot_to_wifi\":%u,\"ms_wifi_to_mqtt\":%u,\"ms_sensor_read\":%u,\"ms_publish\":0,\"sleep_scheduled_ms\":%u,\"reset_reason\":\"%s\",\"wakeup_cause\":\"%s\"}",
-                 ms_boot_to_wifi,
-                 ms_wifi_to_mqtt,
-                 ms_sensor_read,
-                 sleep_scheduled_ms,
-                 reset_reason_str(esp_reset_reason()),
-                 wakeup_cause_str(esp_sleep_get_wakeup_cause()));
-        net_publish_debug_json(dbg, false);
-        uint32_t ms_publish = (uint32_t)((esp_timer_get_time() - pub_start_us) / 1000);
-        // Re-publish with measured publish time for completeness
-        snprintf(dbg, sizeof(dbg),
-                 "{\"ms_boot_to_wifi\":%u,\"ms_wifi_to_mqtt\":%u,\"ms_sensor_read\":%u,\"ms_publish\":%u,\"sleep_scheduled_ms\":%u,\"reset_reason\":\"%s\",\"wakeup_cause\":\"%s\"}",
+                 "{\"ms_boot_to_wifi\":%u,\"ms_wifi_to_mqtt\":%u,\"ms_sensor_read\":%u,\"ms_publish\":%u,\"sleep_scheduled_ms\":%u,\"sleep_scheduled_us\":%u,\"reset_reason\":\"%s\",\"wakeup_cause\":\"%s\"}",
                  ms_boot_to_wifi,
                  ms_wifi_to_mqtt,
                  ms_sensor_read,
                  ms_publish,
                  sleep_scheduled_ms,
+                 sleep_scheduled_us,
                  reset_reason_str(esp_reset_reason()),
                  wakeup_cause_str(esp_sleep_get_wakeup_cause()));
         net_publish_debug_json(dbg, false);

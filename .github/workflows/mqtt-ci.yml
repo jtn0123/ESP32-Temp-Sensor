@@ -12,6 +12,10 @@ jobs:
         image: eclipse-mosquitto:2
         ports:
           - "1883:1883"
+        options: >-
+          --health-cmd "mosquitto -c /mosquitto/config/mosquitto.conf -v & sleep 1; exit 0"
+          --health-interval 5s --health-retries 5 --health-timeout 5s
+          -v ${{ github.workspace }}/.github/mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf
     steps:
       - uses: actions/checkout@v4
 
@@ -35,13 +39,16 @@ jobs:
       - name: Simulate HA birth
         run: mosquitto_pub -h 127.0.0.1 -t homeassistant/status -m online
 
-      - name: Background subscribe for debug
-        run: mosquitto_sub -h 127.0.0.1 -t 'homeassistant/#' -v | sed -u "s/^/[SUB] /" &
-
-      - name: Run MQTT integration test
+      - name: Run MQTT integration test with live subscribe
         env:
           MQTT_HOST: 127.0.0.1
           MQTT_PORT: 1883
-        run: python3 scripts/test_mqtt_integration.py
+        shell: bash
+        run: |
+          set -euo pipefail
+          mosquitto_sub -h 127.0.0.1 -t 'homeassistant/#' -v | sed -u "s/^/[SUB] /" &
+          sub_pid=$!
+          python3 scripts/test_mqtt_integration.py
+          kill $sub_pid || true
 
 

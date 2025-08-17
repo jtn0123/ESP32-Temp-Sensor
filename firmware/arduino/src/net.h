@@ -5,6 +5,19 @@
 #include <PubSubClient.h>
 #include <Preferences.h>
 #include <esp_wifi.h>
+#include "config.h"
+
+#if USE_WIFI_PROVISIONING
+#include <esp_event.h>
+#include <esp_netif.h>
+#include <wifi_provisioning/manager.h>
+#if WIFI_PROV_USE_SOFTAP
+#include <wifi_provisioning/scheme_softap.h>
+#endif
+#if WIFI_PROV_USE_BLE
+#include <wifi_provisioning/scheme_ble.h>
+#endif
+#endif
 
 // All configuration should come from generated_config.h
 
@@ -118,7 +131,126 @@ inline void mqtt_callback(char* topic, uint8_t* payload, unsigned int length) {
     }
 }
 
+// Provisioning helper implementations (enabled via USE_WIFI_PROVISIONING)
+#if USE_WIFI_PROVISIONING
+static void ensure_system_netif_and_loop_inited() {
+    static bool done = false;
+    if (done) return;
+    if (esp_netif_init() == ESP_OK || true) {
+        // ignore already-initialized state
+    }
+    esp_event_loop_create_default();
+    done = true;
+}
+
+static bool start_wifi_station_connect_from_nvs(unsigned long timeout_ms) {
+    WiFi.mode(WIFI_STA);
+    WiFi.persistent(false);
+    WiFi.setAutoReconnect(true);
+    // Unlock channel and apply thresholds without touching SSID/pass saved by provisioning
+    wifi_config_t cfg;
+    memset(&cfg, 0, sizeof(cfg));
+    esp_wifi_get_config(WIFI_IF_STA, &cfg);
+    cfg.sta.scan_method = WIFI_FAST_SCAN;
+    cfg.sta.threshold.rssi = WIFI_RSSI_THRESHOLD;
+    cfg.sta.threshold.authmode = WIFI_AUTHMODE_THRESHOLD;
+    cfg.sta.channel = 0;
+    esp_wifi_set_config(WIFI_IF_STA, &cfg);
+    esp_wifi_start();
+    esp_wifi_connect();
+    unsigned long start = millis();
+    while (!WiFi.isConnected() && (millis() - start) < timeout_ms) {
+        delay(100);
+    }
+    if (WiFi.isConnected()) {
+        Serial.printf("WiFi: connected, IP %s RSSI %d dBm\n", WiFi.localIP().toString().c_str(), WiFi.RSSI());
+        // Cache last SSID + BSSID for next wake if available
+        uint8_t now_bssid[6] = {0};
+        const uint8_t* bp = WiFi.BSSID();
+        if (bp) memcpy(now_bssid, bp, 6);
+        if (!is_all_zero_bssid(now_bssid)) {
+            String ssid = WiFi.SSID();
+            nvs_store_last_ap(ssid.c_str(), now_bssid);
+        }
+        return true;
+    }
+    Serial.printf("WiFi: connect timeout (status=%d)\n", (int)WiFi.status());
+    return false;
+}
+
+static void ensure_wifi_connected_provisioned_impl() {
+    if (WiFi.isConnected()) return;
+    ensure_system_netif_and_loop_inited();
+
+    wifi_prov_mgr_config_t prov_cfg = {};
+#if WIFI_PROV_USE_SOFTAP
+    prov_cfg.scheme = wifi_prov_scheme_softap;
+    prov_cfg.scheme_event_handler = WIFI_PROV_EVENT_HANDLER_NONE;
+#elif WIFI_PROV_USE_BLE
+    prov_cfg.scheme = wifi_prov_scheme_ble;
+    prov_cfg.scheme_event_handler = WIFI_PROV_EVENT_HANDLER_NONE;
+#else
+#error "Enable at least one provisioning scheme"
+#endif
+    if (wifi_prov_mgr_init(prov_cfg) != ESP_OK) {
+        Serial.println("WiFiProv: mgr init failed");
+        return;
+    }
+
+    bool is_prov = false;
+    if (wifi_prov_mgr_is_provisioned(&is_prov) != ESP_OK) {
+        Serial.println("WiFiProv: query failed");
+        wifi_prov_mgr_deinit();
+        return;
+    }
+
+    if (!is_prov) {
+        // Generate friendly service name: PROV_XXXXXX (lower 24 bits of MAC)
+        char service_name[16];
+        uint64_t mac = ESP.getEfuseMac();
+        snprintf(service_name, sizeof(service_name), "PROV_%06X", (unsigned int)(mac & 0xFFFFFF));
+        const char* service_key = NULL; // open softAP by default
+#if WIFI_PROV_SECURITY == 1
+        wifi_prov_security_t sec = WIFI_PROV_SECURITY_1;
+        const char* pop = "esp32-pop"; // customize via build flag if desired
+#else
+        wifi_prov_security_t sec = WIFI_PROV_SECURITY_0;
+        const char* pop = NULL;
+#endif
+        Serial.printf("WiFiProv: starting provisioning (%s), service '%s'\n",
+#if WIFI_PROV_USE_SOFTAP
+                      "softAP",
+#else
+                      "BLE",
+#endif
+                      service_name);
+        if (wifi_prov_mgr_start_provisioning(sec, pop, service_name, service_key) != ESP_OK) {
+            Serial.println("WiFiProv: start failed");
+        } else {
+            // Wait until provisioned or timeout
+            unsigned long t0 = millis();
+            while (millis() - t0 < (unsigned long)WIFI_PROV_TIMEOUT_SEC * 1000UL) {
+                bool prov = false;
+                if (wifi_prov_mgr_is_provisioned(&prov) == ESP_OK && prov) break;
+                delay(200);
+            }
+            // Stop provisioning service
+            wifi_prov_mgr_stop_provisioning();
+        }
+    }
+
+    // Deinit manager to free resources
+    wifi_prov_mgr_deinit();
+    // Attempt connection using creds in NVS
+    start_wifi_station_connect_from_nvs(WIFI_CONNECT_TIMEOUT_MS);
+}
+#endif // USE_WIFI_PROVISIONING
+
 inline void ensure_wifi_connected() {
+#if USE_WIFI_PROVISIONING
+    ensure_wifi_connected_provisioned_impl();
+    return;
+#endif
     if (WiFi.isConnected()) return;
     if (strlen(WIFI_SSID) == 0) return;
     Serial.printf("WiFi: connecting to %s...\n", WIFI_SSID);
