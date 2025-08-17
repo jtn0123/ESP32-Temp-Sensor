@@ -28,16 +28,16 @@
 #ifndef USE_WIFI_PROVISIONING
 #define USE_WIFI_PROVISIONING 0
 #endif
-// Select provisioning transport. BLE by default for field units; SoftAP optional.
+// Select provisioning transport. ESP32-S2 has no BLE, so SoftAP by default.
 #ifndef WIFI_PROV_USE_BLE
-#define WIFI_PROV_USE_BLE 1
+#define WIFI_PROV_USE_BLE 0
 #endif
 #ifndef WIFI_PROV_USE_SOFTAP
-#define WIFI_PROV_USE_SOFTAP 0
+#define WIFI_PROV_USE_SOFTAP 1
 #endif
-// Security level: 1 enables proof-of-possession (recommended). 0 disables POP.
+// Security level: 1 enables proof-of-possession. 0 disables POP (simpler).
 #ifndef WIFI_PROV_SECURITY
-#define WIFI_PROV_SECURITY 1
+#define WIFI_PROV_SECURITY 0
 #endif
 // Timeout for provisioning session before giving up (seconds)
 #ifndef WIFI_PROV_TIMEOUT_SEC

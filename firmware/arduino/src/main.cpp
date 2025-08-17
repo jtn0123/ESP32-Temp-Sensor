@@ -1,6 +1,8 @@
 #include <Arduino.h>
 #include <Preferences.h>
 #include "config.h"
+#include <esp_timer.h>
+#include <esp_system.h>
 #if USE_DISPLAY
 #include <GxEPD2_BW.h>
 #include "icons.h"
@@ -162,6 +164,43 @@ static void emit_metrics_json(float tempC, float rhPct)
     Serial.print("\"v\":"); Serial.print(bs.voltage, 2); Serial.print(',');
     Serial.print("\"pct\":"); Serial.print(bs.percent);
     Serial.println('}');
+}
+
+// Map reset reason and wakeup cause to short strings for debug publishing
+static const char* reset_reason_str(esp_reset_reason_t r)
+{
+    switch (r) {
+        case ESP_RST_POWERON: return "ESP_RST_POWERON";
+        case ESP_RST_EXT: return "ESP_RST_EXT";
+        case ESP_RST_SW: return "ESP_RST_SW";
+        case ESP_RST_PANIC: return "ESP_RST_PANIC";
+        case ESP_RST_INT_WDT: return "ESP_RST_INT_WDT";
+        case ESP_RST_TASK_WDT: return "ESP_RST_TASK_WDT";
+        case ESP_RST_WDT: return "ESP_RST_WDT";
+        case ESP_RST_BROWNOUT: return "ESP_RST_BROWNOUT";
+        case ESP_RST_DEEPSLEEP: return "ESP_RST_DEEPSLEEP";
+        case ESP_RST_SDIO: return "ESP_RST_SDIO";
+        default: return "ESP_RST_UNKNOWN";
+    }
+}
+
+static const char* wakeup_cause_str(esp_sleep_wakeup_cause_t c)
+{
+    switch (c) {
+        case ESP_SLEEP_WAKEUP_UNDEFINED: return "UNDEFINED";
+        case ESP_SLEEP_WAKEUP_EXT0: return "EXT0";
+        case ESP_SLEEP_WAKEUP_EXT1: return "EXT1";
+        case ESP_SLEEP_WAKEUP_TIMER: return "TIMER";
+        case ESP_SLEEP_WAKEUP_TOUCHPAD: return "TOUCHPAD";
+        case ESP_SLEEP_WAKEUP_ULP: return "ULP";
+        #ifdef ESP_SLEEP_WAKEUP_GPIO
+        case ESP_SLEEP_WAKEUP_GPIO: return "GPIO";
+        #endif
+        #ifdef ESP_SLEEP_WAKEUP_UART
+        case ESP_SLEEP_WAKEUP_UART: return "UART";
+        #endif
+        default: return "OTHER";
+    }
 }
 
 static void handle_serial_command_line(const String& line)
@@ -733,6 +772,7 @@ static void partial_update_outside_hilo(float highC, float lowC)
 #endif // USE_DISPLAY
 
 void setup() {
+    int64_t t0_us = esp_timer_get_time();
     Serial.begin(115200);
     delay(100);
     Serial.println(F("ESP32 eInk Room Node boot"));
@@ -757,8 +797,60 @@ void setup() {
     #endif
     nvs_begin_cache();
     nvs_load_cache_if_unset();
-    net_begin();
-    pump_network_ms(800); // allow retained MQTT to arrive quickly
+
+    // Connect Wi-Fi then MQTT while capturing timestamps
+    ensure_wifi_connected();
+    int64_t t1_us = esp_timer_get_time();
+    ensure_mqtt_connected();
+    int64_t t2_us = esp_timer_get_time();
+
+    // Measure sensor read duration (first read post-boot)
+    int64_t t_sense_start_us = esp_timer_get_time();
+    InsideReadings _sensor_probe = read_inside_sensors();
+    (void)_sensor_probe;
+    int64_t t3_us = esp_timer_get_time();
+
+    // Compute scheduled sleep based on build-time mode
+    uint32_t sleep_scheduled_ms = 0;
+    #if DEV_CYCLE_MODE
+    sleep_scheduled_ms = (uint32_t)DEV_SLEEP_SEC * 1000UL;
+    #else
+    sleep_scheduled_ms = (uint32_t)WAKE_INTERVAL_SEC * 1000UL;
+    #endif
+
+    // Build and publish debug JSON with wake metrics and causes
+    if (net_mqtt_is_connected()) {
+        char dbg[256];
+        uint32_t ms_boot_to_wifi = (uint32_t)((t1_us - t0_us) / 1000);
+        uint32_t ms_wifi_to_mqtt = (uint32_t)((t2_us - t1_us) / 1000);
+        uint32_t ms_sensor_read = (uint32_t)((t3_us - t_sense_start_us) / 1000);
+        int64_t pub_start_us = esp_timer_get_time();
+        // We fill ms_publish with a placeholder first; compute actual after publish call returns
+        snprintf(dbg, sizeof(dbg),
+                 "{\"ms_boot_to_wifi\":%u,\"ms_wifi_to_mqtt\":%u,\"ms_sensor_read\":%u,\"ms_publish\":0,\"sleep_scheduled_ms\":%u,\"reset_reason\":\"%s\",\"wakeup_cause\":\"%s\"}",
+                 ms_boot_to_wifi,
+                 ms_wifi_to_mqtt,
+                 ms_sensor_read,
+                 sleep_scheduled_ms,
+                 reset_reason_str(esp_reset_reason()),
+                 wakeup_cause_str(esp_sleep_get_wakeup_cause()));
+        net_publish_debug_json(dbg, false);
+        uint32_t ms_publish = (uint32_t)((esp_timer_get_time() - pub_start_us) / 1000);
+        // Re-publish with measured publish time for completeness
+        snprintf(dbg, sizeof(dbg),
+                 "{\"ms_boot_to_wifi\":%u,\"ms_wifi_to_mqtt\":%u,\"ms_sensor_read\":%u,\"ms_publish\":%u,\"sleep_scheduled_ms\":%u,\"reset_reason\":\"%s\",\"wakeup_cause\":\"%s\"}",
+                 ms_boot_to_wifi,
+                 ms_wifi_to_mqtt,
+                 ms_sensor_read,
+                 ms_publish,
+                 sleep_scheduled_ms,
+                 reset_reason_str(esp_reset_reason()),
+                 wakeup_cause_str(esp_sleep_get_wakeup_cause()));
+        net_publish_debug_json(dbg, false);
+    }
+
+    // Allow retained MQTT to arrive quickly for outside readings
+    pump_network_ms(800);
 
     // Publish HA discovery once we have MQTT so entities auto-register in Home Assistant
     if (net_mqtt_is_connected()) {
