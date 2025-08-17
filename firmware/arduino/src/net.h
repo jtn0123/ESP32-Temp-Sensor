@@ -240,4 +240,12 @@ inline void net_publish_status(const char* payload, bool retain = true) {
     g_mqtt.publish(topic, payload, retain);
 }
 
+inline bool net_wifi_is_connected() {
+    return WiFi.isConnected();
+}
+
+inline bool net_mqtt_is_connected() {
+    return g_mqtt.connected();
+}
+
 
