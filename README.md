@@ -99,6 +99,8 @@ build_flags =
   -DEINK_WIDTH=250 -DEINK_HEIGHT=122
 ```
 
+Note: The optional status LED heartbeat uses the Adafruit NeoPixel library and is already included in the PlatformIO `lib_deps`. You can disable the LED at build time with `-DUSE_STATUS_PIXEL=0` if optimizing for lowest sleep current.
+
 Minimal `src/main.cpp` skeleton:
 
 ```cpp
@@ -236,6 +238,12 @@ Dev cycle: sleeping for 180s
 
 - Disable the 3/3 cycle by switching back to the normal env `env:feather_esp32s2`, or by removing `-DDEV_CYCLE_MODE=1` from headless build flags.
 
+#### Status LED heartbeat (optional)
+
+- When awake, the firmware can animate the onboard NeoPixel as a visual heartbeat for headless debugging.
+- Enabled by default via `-DUSE_STATUS_PIXEL=1`. It is ticked while the device is awake and turned off before deep sleep.
+- To disable entirely, build with `-DUSE_STATUS_PIXEL=0` (recommended for lowest sleep current).
+
 ### Switching wake interval (1h / 2h / 4h)
 
 - Long‑term duty cycle is configured in `config/device.yaml`:
@@ -296,6 +304,20 @@ pio run -t upload -e feather_esp32s2_headless --upload-port /dev/cu.usbmodemXXXX
 
 ```bash
 pio device monitor -p /dev/cu.usbmodemXXXX -b 115200
+```
+
+- USB metrics helper script (parses one-line JSON emitted by firmware):
+
+```bash
+source .venv/bin/activate 2>/dev/null || true
+pip install -r requirements.txt
+python3 scripts/monitor_usb.py /dev/cu.usbmodemXXXX --raw
+```
+
+Example parsed output:
+
+```
+ip=192.168.1.23  tempC=22.38  tempF=72.28  rh%=41  wifi=up  mqtt=up  battV=4.08  batt%=87
 ```
 
 - MQTT (replace with your broker/user/pass and base topic):
