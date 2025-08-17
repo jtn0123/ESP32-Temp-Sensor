@@ -182,20 +182,15 @@ def test_header_time_right_aligned_and_name_truncated():
             # Sample the pixel at center of the time text box; should be black
             cx = int(time_metrics["x"] + max(1, time_metrics["w"]//2))
             cy = int(time_metrics["y"] + 2)
-            r1, g1, b1, a1 = page.evaluate(
-                "([x,y])=>{const c=document.getElementById('epd');const ctx=c.getContext('2d');return Array.from(ctx.getImageData(x,y,1,1).data);}",
-                [cx, cy],
-            )
+            r1, g1, b1, a1 = page.evaluate(_CANVAS_RGBA_JS, [cx, cy])
             assert (r1, g1, b1) == (0, 0, 0)
             # Just left of HEADER_TIME rect should remain white to confirm right-alignment space
             hx, hy, hw, hh = time_metrics["rt"]
-            r0, g0, b0, a0 = page.evaluate(
-                "([x,y])=>{const c=document.getElementById('epd');const ctx=c.getContext('2d');return Array.from(ctx.getImageData(x,y,1,1).data);}",
-                [hx-2, hy+2],
-            )
+            r0, g0, b0, a0 = page.evaluate(_CANVAS_RGBA_JS, [hx-2, hy+2])
             assert (r0, g0, b0) == (255, 255, 255)
             browser.close()
     finally:
-        server.terminate(); server.wait(timeout=2)
+        server.terminate()
+        server.wait(timeout=2)
 
 

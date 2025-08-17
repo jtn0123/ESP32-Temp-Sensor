@@ -69,7 +69,10 @@ def test_moon_phase_icon_draws_nonwhite_pixels():
             # Weather bar region where icon+label are drawn
             barX, barY, _barW = 130, 95, 114
             # sample a smaller icon-left region inside the bar where the moon icon should be rendered
-            x0, y0, w, h = barX+2, barY+2, 32, 20
+            x0 = barX + 2
+            y0 = barY + 2
+            w = 32
+            h = 20
             js_cnt = (
                 "([x0,y0,w,h])=>{"
                 "const c=document.getElementById('epd');const ctx=c.getContext('2d');"
@@ -107,7 +110,9 @@ def test_partial_refresh_header_time_remains_binary():
             page.wait_for_timeout(200)
             # Read HEADER_TIME geometry
             rt = page.evaluate(
-                "()=>{const R=(window.GJSON&&window.GJSON.rects)||null;return R?R.HEADER_TIME:[172,2,72,14];}"
+                "() => {"
+                "const R=(window.GJSON&&window.GJSON.rects)||null;"
+                "return R ? R.HEADER_TIME : [172,2,72,14];}"
             )
             x,y,w,h = rt
             # Sample multiple points inside the time box and assert binary pixels

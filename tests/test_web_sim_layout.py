@@ -51,7 +51,10 @@ def _save_artifacts(page, name: str = "sim") -> None:
         json.dump(metrics, f, indent=2)
 
 
-@pytest.mark.skipif(not bool(__import__("importlib").util.find_spec("playwright")), reason="playwright not installed")
+@pytest.mark.skipif(
+    not bool(__import__("importlib").util.find_spec("playwright")),
+    reason="playwright not installed",
+)
 def test_layout_centering_and_clipping():
     from playwright.sync_api import sync_playwright  # type: ignore
 
@@ -156,7 +159,10 @@ def test_layout_centering_and_clipping():
 
 
 
-@pytest.mark.skipif(not bool(__import__("importlib").util.find_spec("playwright")), reason="playwright not installed")
+@pytest.mark.skipif(
+    not bool(__import__("importlib").util.find_spec("playwright")),
+    reason="playwright not installed",
+)
 def test_web_sim_backend_integration_full_reload():
     from playwright.sync_api import sync_playwright  # type: ignore
 
@@ -242,7 +248,10 @@ def test_web_sim_backend_integration_full_reload():
         server.wait(timeout=2)
 
 
-@pytest.mark.skipif(not bool(__import__("importlib").util.find_spec("playwright")), reason="playwright not installed")
+@pytest.mark.skipif(
+    not bool(__import__("importlib").util.find_spec("playwright")),
+    reason="playwright not installed",
+)
 def test_web_sim_partial_refresh_only_updates_header_time():
     from playwright.sync_api import sync_playwright  # type: ignore
 
