@@ -24,4 +24,24 @@
 #define USE_MAX17048 0
 #endif
 
+// Wi-Fi provisioning (ESP-IDF wifi_prov_mgr) compile-time switch
+#ifndef USE_WIFI_PROVISIONING
+#define USE_WIFI_PROVISIONING 0
+#endif
+// Select provisioning transport. BLE by default for field units; SoftAP optional.
+#ifndef WIFI_PROV_USE_BLE
+#define WIFI_PROV_USE_BLE 1
+#endif
+#ifndef WIFI_PROV_USE_SOFTAP
+#define WIFI_PROV_USE_SOFTAP 0
+#endif
+// Security level: 1 enables proof-of-possession (recommended). 0 disables POP.
+#ifndef WIFI_PROV_SECURITY
+#define WIFI_PROV_SECURITY 1
+#endif
+// Timeout for provisioning session before giving up (seconds)
+#ifndef WIFI_PROV_TIMEOUT_SEC
+#define WIFI_PROV_TIMEOUT_SEC 180
+#endif
+
 
