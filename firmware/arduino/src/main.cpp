@@ -164,6 +164,82 @@ static void emit_metrics_json(float tempC, float rhPct)
     Serial.println('}');
 }
 
+static void handle_serial_command_line(const String& line)
+{
+    String cmd = line;
+    cmd.trim();
+    if (cmd.length() == 0) return;
+    // Split first token
+    int sp = cmd.indexOf(' ');
+    String op = sp >= 0 ? cmd.substring(0, sp) : cmd;
+    String args = sp >= 0 ? cmd.substring(sp + 1) : String();
+    op.toLowerCase();
+    if (op == "help" || op == "h" || op == "?") {
+        Serial.println(F("Commands: help | status | metrics | sleep <sec> | reboot | wifi | mqtt | pub <tempF> <rh%>"));
+        return;
+    }
+    if (op == "status") {
+        char ip_c[32];
+        net_ip_cstr(ip_c, sizeof(ip_c));
+        BatteryStatus bs = read_battery_status();
+        Serial.printf("status ip=%s wifi=%s mqtt=%s v=%.2f pct=%d partial=%u\n",
+                      ip_c,
+                      net_wifi_is_connected() ? "up" : "down",
+                      net_mqtt_is_connected() ? "up" : "down",
+                      bs.voltage, bs.percent, (unsigned)partial_counter);
+        return;
+    }
+    if (op == "metrics") {
+        InsideReadings latest = read_inside_sensors();
+        emit_metrics_json(latest.temperatureC, latest.humidityPct);
+        return;
+    }
+    if (op == "sleep") {
+        uint32_t sec = args.toInt();
+        if (sec == 0) { Serial.println(F("ERR sleep: provide seconds > 0")); return; }
+        Serial.printf("Sleeping for %us\n", (unsigned)sec);
+        nvs_end_cache();
+#if USE_STATUS_PIXEL
+        status_pixel_off();
+#endif
+        go_deep_sleep_seconds(sec);
+        return;
+    }
+    if (op == "reboot" || op == "reset") {
+        Serial.println(F("Rebooting..."));
+        delay(50);
+        ESP.restart();
+        return;
+    }
+    if (op == "wifi") {
+        Serial.println(F("WiFi: reconnecting..."));
+        WiFi.disconnect(true, true);
+        delay(100);
+        ensure_wifi_connected();
+        return;
+    }
+    if (op == "mqtt") {
+        Serial.println(F("MQTT: reconnecting..."));
+        ensure_mqtt_connected();
+        return;
+    }
+    if (op == "pub") {
+        // pub <tempF> <rh%>
+        float tf = NAN, rh = NAN;
+        int sp2 = args.indexOf(' ');
+        if (sp2 > 0) {
+            tf = args.substring(0, sp2).toFloat();
+            rh = args.substring(sp2 + 1).toFloat();
+        }
+        if (!isfinite(tf) || !isfinite(rh)) { Serial.println(F("ERR pub: usage pub <tempF> <rh%>")); return; }
+        float tc = (tf - 32.0f) * (5.0f/9.0f);
+        net_publish_inside(tc, rh);
+        Serial.printf("Published inside tempC=%.2f rh=%.0f\n", tc, rh);
+        return;
+    }
+    Serial.println(F("ERR: unknown command (try 'help')"));
+}
+
 #if USE_DISPLAY
 static void draw_static_chrome()
 {
@@ -834,6 +910,18 @@ void setup() {
     Serial.println("DEV_NO_SLEEP=1: staying awake for debugging");
     while (true) {
         net_loop();
+        // Handle line-oriented serial commands
+        static String buf;
+        while (Serial.available() > 0) {
+            int ch = Serial.read();
+            if (ch == '\r') continue;
+            if (ch == '\n') {
+                handle_serial_command_line(buf);
+                buf = "";
+            } else if (buf.length() < 96) {
+                buf += (char)ch;
+            }
+        }
         // Periodic USB metrics while debugging
         static uint32_t last_metrics = 0;
         if (millis() - last_metrics > 2000) {
