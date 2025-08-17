@@ -49,7 +49,8 @@ def test_canvas_is_binary_after_draw():
                 assert r == g == b
             browser.close()
     finally:
-        server.terminate(); server.wait(timeout=2)
+        server.terminate()
+        server.wait(timeout=2)
 
 
 @pytest.mark.skipif(not bool(__import__("importlib").util.find_spec("playwright")), reason="playwright not installed")
@@ -80,7 +81,8 @@ def test_stress_mode_renders_without_overlap():
                 assert (r, g, b) == (0, 0, 0)
             browser.close()
     finally:
-        server.terminate(); server.wait(timeout=2)
+        server.terminate()
+        server.wait(timeout=2)
 
 
 @pytest.mark.skipif(not bool(__import__("importlib").util.find_spec("playwright")), reason="playwright not installed")
@@ -107,7 +109,8 @@ def test_icons_available_or_fallback():
             assert all(ok)
             browser.close()
     finally:
-        server.terminate(); server.wait(timeout=2)
+        server.terminate()
+        server.wait(timeout=2)
 
 
 @pytest.mark.skipif(not bool(__import__("importlib").util.find_spec("playwright")), reason="playwright not installed")

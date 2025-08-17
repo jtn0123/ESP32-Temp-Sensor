@@ -42,6 +42,7 @@ def test_center_divider_reaches_bottom():
                 assert (r, g, b) == (0, 0, 0)
             browser.close()
     finally:
-        server.terminate(); server.wait(timeout=2)
+        server.terminate()
+        server.wait(timeout=2)
 
 

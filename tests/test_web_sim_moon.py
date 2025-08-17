@@ -72,7 +72,8 @@ def test_moon_phase_icon_draws_nonwhite_pixels():
             assert cnt > 0
             browser.close()
     finally:
-        server.terminate(); server.wait(timeout=2)
+        server.terminate()
+        server.wait(timeout=2)
 
 
 @pytest.mark.skipif(not bool(__import__("importlib").util.find_spec("playwright")), reason="playwright not installed")
@@ -107,7 +108,8 @@ def test_partial_refresh_header_time_remains_binary():
                 assert r==g==b
             browser.close()
     finally:
-        server.terminate(); server.wait(timeout=2)
+        server.terminate()
+        server.wait(timeout=2)
 
 
 @pytest.mark.skipif(not bool(__import__("importlib").util.find_spec("playwright")), reason="playwright not installed")
@@ -138,6 +140,7 @@ def test_vector_fallback_when_svg_blocked():
             assert cnt > 0
             browser.close()
     finally:
-        server.terminate(); server.wait(timeout=2)
+        server.terminate()
+        server.wait(timeout=2)
 
 

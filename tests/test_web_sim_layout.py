@@ -140,7 +140,8 @@ def test_layout_centering_and_clipping():
 
             browser.close()
     finally:
-        server.terminate(); server.wait(timeout=2)
+        server.terminate()
+        server.wait(timeout=2)
 
 
 
