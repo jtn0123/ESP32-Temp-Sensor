@@ -14,13 +14,13 @@ except Exception:  # pragma: no cover - optional at import time
 @dataclass
 class Metrics:
     ip: str
-    tempC: float | None
-    tempF: float | None
-    rhPct: float | None
-    wifi: bool
-    mqtt: bool
-    v: float | None
-    pct: int | None
+    tempC: float | None = None
+    tempF: float | None = None
+    rhPct: float | None = None
+    wifi: bool = False
+    mqtt: bool = False
+    v: float | None = None
+    pct: int | None = None
 
 
 def parse_metrics_line(line: str) -> Metrics | None:
@@ -45,6 +45,8 @@ def parse_metrics_line(line: str) -> Metrics | None:
 def format_metrics(m: Metrics) -> str:
     parts: list[str] = []
     parts.append(f"ip={m.ip}")
+    if m.tempC is not None:
+        parts.append(f"tempC={m.tempC:.2f}")
     # Prefer provided tempF, fallback to derived from tempC
     if m.tempF is not None:
         parts.append(f"tempF={m.tempF:.2f}")
