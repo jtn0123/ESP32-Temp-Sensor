@@ -760,6 +760,11 @@ void setup() {
     net_begin();
     pump_network_ms(800); // allow retained MQTT to arrive quickly
 
+    // Publish HA discovery once we have MQTT so entities auto-register in Home Assistant
+    if (net_mqtt_is_connected()) {
+        net_publish_ha_discovery();
+    }
+
     #if USE_DISPLAY
     bool do_full = false;
     if (partial_counter == 0) {

@@ -24,6 +24,7 @@ struct OutsideReadings {
 static WiFiClient g_wifi_client;
 static PubSubClient g_mqtt(g_wifi_client);
 static OutsideReadings g_outside;
+static char g_client_id[40];
 
 #ifndef WIFI_CONNECT_TIMEOUT_MS
 #define WIFI_CONNECT_TIMEOUT_MS 6000
@@ -139,10 +140,9 @@ inline void ensure_mqtt_connected() {
     g_mqtt.setServer(MQTT_HOST, MQTT_PORT);
     g_mqtt.setCallback(mqtt_callback);
     Serial.printf("MQTT: connecting to %s:%u...\n", MQTT_HOST, (unsigned)MQTT_PORT);
-    char clientId[40];
     uint64_t mac = ESP.getEfuseMac();
     // Use lower 24 bits
-    snprintf(clientId, sizeof(clientId), "esp32-room-%06x", (unsigned int)(mac & 0xFFFFFF));
+    snprintf(g_client_id, sizeof(g_client_id), "esp32-room-%06x", (unsigned int)(mac & 0xFFFFFF));
     unsigned long start = millis();
     const char* user = nullptr;
     const char* pass = nullptr;
@@ -152,11 +152,16 @@ inline void ensure_mqtt_connected() {
     #ifdef MQTT_PASS
     if (strlen(MQTT_PASS) > 0) pass = MQTT_PASS;
     #endif
-    while (!g_mqtt.connect(clientId, user, pass) && millis() - start < MQTT_CONNECT_TIMEOUT_MS) {
+    // Set LWT to availability topic so HA can mark device offline if we drop unexpectedly
+    char availTopic[128];
+    snprintf(availTopic, sizeof(availTopic), "%s/availability", MQTT_PUB_BASE);
+    while (!g_mqtt.connect(g_client_id, user, pass, availTopic, 0, true, "offline") && millis() - start < MQTT_CONNECT_TIMEOUT_MS) {
         delay(200);
     }
     if (g_mqtt.connected()) {
         Serial.println("MQTT: connected");
+        // Publish availability online on successful connect
+        g_mqtt.publish(availTopic, "online", true);
         char topic[128];
         const char* base = MQTT_SUB_BASE;
         auto sub = [&](const char* suffix){
@@ -238,6 +243,31 @@ inline void net_publish_status(const char* payload, bool retain = true) {
     char topic[128];
     snprintf(topic, sizeof(topic), "%s/status", MQTT_PUB_BASE);
     g_mqtt.publish(topic, payload, retain);
+}
+
+// Publish Home Assistant MQTT Discovery configs for inside temperature and humidity
+inline void net_publish_ha_discovery() {
+    if (!g_mqtt.connected()) return;
+    // Topics and availability
+    char availTopic[128];
+    snprintf(availTopic, sizeof(availTopic), "%s/availability", MQTT_PUB_BASE);
+
+    // Helper to publish one discovery config
+    auto pub_disc = [&](const char* key, const char* name, const char* unit, const char* dev_class, const char* state_suffix){
+        char discTopic[192];
+        snprintf(discTopic, sizeof(discTopic), "homeassistant/sensor/%s_%s/config", g_client_id, key);
+        char stateTopic[192];
+        snprintf(stateTopic, sizeof(stateTopic), "%s/%s", MQTT_PUB_BASE, state_suffix);
+        char payload[640];
+        // Minimal JSON with device info; retained
+        snprintf(payload, sizeof(payload),
+            "{\"name\":\"%s\",\"uniq_id\":\"%s_%s\",\"stat_t\":\"%s\",\"avty_t\":\"%s\",\"unit_of_meas\":\"%s\",\"dev_cla\":\"%s\",\"state_class\":\"measurement\",\"dev\":{\"ids\":[\"%s\"],\"name\":\"ESP32 Room Node: %s\",\"mf\":\"DIY\",\"mdl\":\"Feather ESP32-S2\"}}",
+            name, g_client_id, key, stateTopic, availTopic, unit, dev_class, g_client_id, ROOM_NAME);
+        g_mqtt.publish(discTopic, payload, true);
+    };
+
+    pub_disc("inside_temp", "Inside Temperature", "°C", "temperature", "inside/temp");
+    pub_disc("inside_hum",  "Inside Humidity",    "%",  "humidity",   "inside/hum");
 }
 
 inline bool net_wifi_is_connected() {
