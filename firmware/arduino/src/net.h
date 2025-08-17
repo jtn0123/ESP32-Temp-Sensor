@@ -5,6 +5,7 @@
 #include <PubSubClient.h>
 #include <Preferences.h>
 #include <esp_wifi.h>
+#include <time.h>
 #include "config.h"
 
 #if USE_WIFI_PROVISIONING
@@ -41,6 +42,7 @@ static PubSubClient g_mqtt(g_wifi_client);
 static OutsideReadings g_outside;
 static char g_client_id[40];
 static Preferences g_net_prefs;
+static Preferences g_offline_prefs;
 
 #ifndef WIFI_CONNECT_TIMEOUT_MS
 #define WIFI_CONNECT_TIMEOUT_MS 6000
@@ -100,6 +102,144 @@ inline bool ends_with(const char* s, const char* suffix) {
     size_t lf = strlen(suffix);
     if (lf > ls) return false;
     return strcmp(s + (ls - lf), suffix) == 0;
+}
+
+// -------------------- Time sync (SNTP) --------------------
+#ifndef TIME_FRESH_EPOCH_MIN
+#define TIME_FRESH_EPOCH_MIN 1609459200UL // 2021-01-01, anything earlier considered stale
+#endif
+#ifndef TIME_RESYNC_INTERVAL_SEC
+#define TIME_RESYNC_INTERVAL_SEC (24UL * 60UL * 60UL) // once per day
+#endif
+
+inline bool time_is_stale()
+{
+    time_t now = time(nullptr);
+    uint32_t last_sync = 0;
+    if (g_net_prefs.begin("net", true)) {
+        last_sync = g_net_prefs.getUInt("last_ntp", 0);
+        g_net_prefs.end();
+    }
+    if ((uint32_t)now < TIME_FRESH_EPOCH_MIN) return true;
+    if (last_sync == 0) return true;
+    return ((uint32_t)now - last_sync) > TIME_RESYNC_INTERVAL_SEC;
+}
+
+inline void ensure_time_synced_if_stale()
+{
+    if (!WiFi.isConnected()) return;
+    if (!time_is_stale()) return;
+    // Use IDF/Arduino SNTP helper via configTime; keep timeout short
+    configTime(0, 0, "pool.ntp.org", "time.nist.gov", "time.google.com");
+    // Poll briefly until time looks sane
+    unsigned long start = millis();
+    while ((uint32_t)time(nullptr) < TIME_FRESH_EPOCH_MIN && millis() - start < 2000UL) {
+        delay(50);
+    }
+    uint32_t now_epoch = (uint32_t)time(nullptr);
+    if (now_epoch >= TIME_FRESH_EPOCH_MIN) {
+        if (g_net_prefs.begin("net", false)) {
+            g_net_prefs.putUInt("last_ntp", now_epoch);
+            g_net_prefs.end();
+        }
+        Serial.println("Time: SNTP sync ok");
+    } else {
+        Serial.println("Time: SNTP sync timeout (continuing)");
+    }
+}
+
+// -------------------- Offline buffer (NVS ring) --------------------
+#ifndef OFFLINE_CAPACITY
+#define OFFLINE_CAPACITY 96U // number of samples to retain when offline
+#endif
+#ifndef OFFLINE_DRAIN_MAX_PER_WAKE
+#define OFFLINE_DRAIN_MAX_PER_WAKE 64U
+#endif
+
+struct OfflineSample {
+    uint32_t epoch;
+    float tempC;
+    float rhPct;
+};
+
+inline void offline_get_bounds(uint32_t& head, uint32_t& tail)
+{
+    head = g_offline_prefs.getUInt("head", 0);
+    tail = g_offline_prefs.getUInt("tail", 0);
+}
+
+inline void offline_set_bounds(uint32_t head, uint32_t tail)
+{
+    g_offline_prefs.putUInt("head", head);
+    g_offline_prefs.putUInt("tail", tail);
+}
+
+inline void offline_key_for(uint32_t seq, char out[16])
+{
+    snprintf(out, 16, "s%u", seq);
+}
+
+inline void offline_enqueue_sample(float tempC, float rhPct)
+{
+    uint32_t ts = (uint32_t)time(nullptr);
+    OfflineSample s{ ts, tempC, rhPct };
+    if (!g_offline_prefs.begin("obuf", false)) return;
+    uint32_t head = 0, tail = 0;
+    offline_get_bounds(head, tail);
+    // Drop oldest if at capacity
+    if (head - tail >= OFFLINE_CAPACITY) {
+        char delk[16]; offline_key_for(tail, delk);
+        g_offline_prefs.remove(delk);
+        tail++;
+    }
+    char key[16]; offline_key_for(head, key);
+    g_offline_prefs.putBytes(key, &s, sizeof(s));
+    offline_set_bounds(head + 1, tail);
+    g_offline_prefs.end();
+    Serial.printf("Offline: queued seq=%u ts=%u (C=%.2f RH=%.0f)\n", (unsigned)head, (unsigned)ts, s.tempC, s.rhPct);
+}
+
+inline void net_publish_inside_history(uint32_t epoch, float tempC, float rhPct)
+{
+    if (!g_mqtt.connected()) return;
+    char topic[128];
+    snprintf(topic, sizeof(topic), "%s/inside/history", MQTT_PUB_BASE);
+    // Build compact JSON with F and RH integer; keep payload small
+    char tbuf[16];
+    char rhbuf[8];
+    dtostrf(tempC * 9.0f/5.0f + 32.0f, 0, 1, tbuf);
+    dtostrf(rhPct, 0, 0, rhbuf);
+    char payload[96];
+    snprintf(payload, sizeof(payload), "{\"ts\":%u,\"tempF\":%s,\"rh\":%s}", (unsigned)epoch, tbuf, rhbuf);
+    g_mqtt.publish(topic, payload, false);
+}
+
+inline void offline_drain_if_any()
+{
+    if (!g_mqtt.connected()) return;
+    if (!g_offline_prefs.begin("obuf", false)) return;
+    uint32_t head = 0, tail = 0;
+    offline_get_bounds(head, tail);
+    uint32_t to_send = head - tail;
+    if (to_send == 0) { g_offline_prefs.end(); return; }
+    if (to_send > OFFLINE_DRAIN_MAX_PER_WAKE) to_send = OFFLINE_DRAIN_MAX_PER_WAKE;
+    Serial.printf("Offline: draining %u samples (tail=%u head=%u)\n", (unsigned)to_send, (unsigned)tail, (unsigned)head);
+    for (uint32_t i = 0; i < to_send && g_mqtt.connected(); ++i) {
+        uint32_t seq = tail + i;
+        char key[16]; offline_key_for(seq, key);
+        OfflineSample s{};
+        size_t n = g_offline_prefs.getBytes(key, &s, sizeof(s));
+        if (n == sizeof(s)) {
+            net_publish_inside_history(s.epoch, s.tempC, s.rhPct);
+            // Immediately delete upon publish; advance tail
+            g_offline_prefs.remove(key);
+            tail = seq + 1;
+            // Give MQTT time to pump
+            for (int k = 0; k < 3; ++k) { if (g_mqtt.connected()) g_mqtt.loop(); delay(5); }
+        }
+    }
+    offline_set_bounds(head, tail);
+    g_offline_prefs.end();
 }
 
 inline void mqtt_callback(char* topic, uint8_t* payload, unsigned int length) {
@@ -417,6 +557,8 @@ inline void ensure_mqtt_connected() {
         sub("/hi");
         sub("/low");
         sub("/lo");
+        // On successful MQTT connection, try to drain any offline backlog
+        offline_drain_if_any();
     } else {
         Serial.println("MQTT: connect timeout/fail");
     }
@@ -424,6 +566,8 @@ inline void ensure_mqtt_connected() {
 
 inline void net_begin() {
     ensure_wifi_connected();
+    // Refresh time occasionally; quick and only when stale
+    ensure_time_synced_if_stale();
     ensure_mqtt_connected();
 }
 
@@ -471,7 +615,11 @@ inline void mqtt_pump(uint32_t duration_ms) {
 inline OutsideReadings net_get_outside() { return g_outside; }
 
 inline void net_publish_inside(float tempC, float rhPct) {
-    if (!g_mqtt.connected()) return;
+    if (!g_mqtt.connected()) {
+        // Buffer a compact record for later publish with timestamp
+        offline_enqueue_sample(tempC, rhPct);
+        return;
+    }
     char topic[128];
     char payload[32];
     const char* base = MQTT_PUB_BASE;
