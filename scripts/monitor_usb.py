@@ -65,9 +65,23 @@ def format_metrics(m: Metrics) -> str:
 
 def main() -> int:
     ap = argparse.ArgumentParser(description="Monitor ESP32 metrics JSON over USB serial")
-    ap.add_argument("port", help="Serial port (e.g. /dev/cu.usbmodem*, /dev/tty.usbserial*)")
-    ap.add_argument("--baud", type=int, default=115200, help="Baud rate (default: 115200)")
-    ap.add_argument("--raw", action="store_true", help="Print raw lines in addition to parsed summary")
+    ap.add_argument(
+        "port",
+        help=(
+            "Serial port (e.g. /dev/cu.usbmodem*, /dev/tty.usbserial*)"
+        ),
+    )
+    ap.add_argument(
+        "--baud",
+        type=int,
+        default=115200,
+        help=("Baud rate (default: 115200)"),
+    )
+    ap.add_argument(
+        "--raw",
+        action="store_true",
+        help=("Print raw lines in addition to parsed summary"),
+    )
     args = ap.parse_args()
 
     if serial is None:

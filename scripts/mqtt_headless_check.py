@@ -8,7 +8,11 @@ import paho.mqtt.client as mqtt  # type: ignore
 
 
 def main():
-    ap = argparse.ArgumentParser(description="Subscribe to headless publishes and optionally seed outdoor data")
+    ap = argparse.ArgumentParser(
+        description=(
+            "Subscribe to headless publishes and optionally seed outdoor data"
+        )
+    )
     ap.add_argument("--host", default=os.environ.get("MQTT_HOST", "localhost"))
     ap.add_argument("--port", type=int, default=int(os.environ.get("MQTT_PORT", "1883")))
     ap.add_argument("--user", default=os.environ.get("MQTT_USER", ""))

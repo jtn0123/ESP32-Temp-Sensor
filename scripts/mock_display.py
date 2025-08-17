@@ -38,7 +38,8 @@ def try_load_icon_png(weather: str):
                 'snow' if 'snow' in key else None,
                 'fog' if 'fog' in key else None]
   for c in candidates:
-    if not c: continue
+    if not c:
+      continue
     p = os.path.join(base, f'{c}.png')
     if os.path.exists(p):
       try:
@@ -107,18 +108,18 @@ def draw_layout(draw: ImageDraw.ImageDraw, data: dict):
       return (x, y, x+w, y+h)
     return fallback_xywh
 
-  HEADER_NAME = R('HEADER_NAME', (6, 2, 6+160, 2+14))
+  _HEADER_NAME = R('HEADER_NAME', (6, 2, 6+160, 2+14))
   HEADER_TIME = R('HEADER_TIME', (172, 2, 172+72, 2+14))
 
   INSIDE_TEMP = R('INSIDE_TEMP', (6, 36, 6+118, 36+28))
   INSIDE_RH   = R('INSIDE_RH',   (6, 66, 6+118, 66+14))
-  INSIDE_TIME = R('INSIDE_TIME', (6, 82, 6+118, 82+12))
+  _INSIDE_TIME = R('INSIDE_TIME', (6, 82, 6+118, 82+12))
   OUT_TEMP    = R('OUT_TEMP',    (131, 36, 131+90, 36+28))
   OUT_ICON    = R('OUT_ICON',    (210, 22, 210+28, 22+28))
   OUT_ROW1_L  = R('OUT_ROW1_L',  (131, 66, 131+44, 66+12))
   OUT_ROW1_R  = R('OUT_ROW1_R',  (177, 66, 177+64, 66+12))
   OUT_ROW2_L  = R('OUT_ROW2_L',  (131, 78, 131+44, 78+12))
-  OUT_ROW2_R  = R('OUT_ROW2_R',  (177, 78, 177+44, 78+12))
+  _OUT_ROW2_R  = R('OUT_ROW2_R',  (177, 78, 177+44, 78+12))
   STATUS      = R('STATUS',      (6, 112, 6+238, 112+10))
 
   # Frame and header
@@ -164,12 +165,14 @@ def draw_layout(draw: ImageDraw.ImageDraw, data: dict):
     draw.text((units_left + 8, y0+2), "F", font=load_font(10), fill=0)
 
   draw_temp_right(INSIDE_TEMP, str(data.get('inside_temp','72.5')))
-  draw.text((INSIDE_RH[0], INSIDE_RH[1]), f"{data.get('inside_hum','47')}% RH", font=font_sm, fill=0)
+  inside_rh_text = f"{data.get('inside_hum','47')}% RH"
+  draw.text((INSIDE_RH[0], INSIDE_RH[1]), inside_rh_text, font=font_sm, fill=0)
 
   draw_temp_right(OUT_TEMP, str(data.get('outside_temp','68.4')))
   draw_weather_icon(draw, OUT_ICON, data.get('weather','Cloudy'))
   # Bottom small rows
-  draw.text((OUT_ROW1_L[0], OUT_ROW1_L[1]), f"{data.get('outside_hum','53')}% RH", font=font_sm, fill=0)
+  outside_rh_text = f"{data.get('outside_hum','53')}% RH"
+  draw.text((OUT_ROW1_L[0], OUT_ROW1_L[1]), outside_rh_text, font=font_sm, fill=0)
   # wind mph in right top small box
   try:
     wind_mps = float(data.get('wind','4.2'))

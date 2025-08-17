@@ -56,7 +56,7 @@ def main():
     full_refresh_every = int(data.get('full_refresh_every', 12) or 12)
     outside_source = str(data.get('outside_source', 'mqtt'))
     wifi = data.get('wifi', {})
-    ha = data.get('ha_entities', {})
+    _ha_entities = data.get('ha_entities', {})
     mqtt = data.get('mqtt', {})
     base_topics = mqtt.get('base_topics', {})
     wifi_ssid = wifi.get('ssid', '')
