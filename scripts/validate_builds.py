@@ -19,7 +19,10 @@ def run(cmd: list[str], cwd: str | None = None) -> int:
 
 def main() -> int:
     ap = argparse.ArgumentParser(description="Validate PlatformIO builds for all envs")
-    ap.add_argument("--project-dir", default=os.path.join(os.path.dirname(__file__), "..", "firmware", "arduino"))
+    ap.add_argument(
+        "--project-dir",
+        default=os.path.join(os.path.dirname(__file__), "..", "firmware", "arduino"),
+    )
     ap.add_argument("--environments", nargs="*", default=[
         "feather_esp32s2",
         "feather_esp32s2_headless",

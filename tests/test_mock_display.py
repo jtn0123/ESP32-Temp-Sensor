@@ -1,10 +1,11 @@
+import importlib.util
 import json
 import os
-import importlib.util
 
 ROOT = os.path.dirname(os.path.dirname(__file__))
 _scripts = os.path.join(ROOT, 'scripts')
-_spec = importlib.util.spec_from_file_location('mock_display', os.path.join(_scripts, 'mock_display.py'))
+_module_path = os.path.join(_scripts, 'mock_display.py')
+_spec = importlib.util.spec_from_file_location('mock_display', _module_path)
 md = importlib.util.module_from_spec(_spec)  # type: ignore
 _spec.loader.exec_module(md)  # type: ignore
 

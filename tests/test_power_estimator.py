@@ -1,5 +1,5 @@
-import os
 import importlib.util
+import os
 
 ROOT = os.path.dirname(os.path.dirname(__file__))
 _scripts = os.path.join(ROOT, 'scripts')

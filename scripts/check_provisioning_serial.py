@@ -38,7 +38,11 @@ def wait_for_lines(port: str, baud: int, timeout_s: float) -> tuple[bool, bool, 
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description="Check provisioning start and Wi-Fi connect via serial")
+    ap = argparse.ArgumentParser(
+        description=(
+            "Check provisioning start and Wi-Fi connect via serial"
+        )
+    )
     ap.add_argument("port")
     ap.add_argument("--baud", type=int, default=115200)
     ap.add_argument("--timeout", type=float, default=60.0)

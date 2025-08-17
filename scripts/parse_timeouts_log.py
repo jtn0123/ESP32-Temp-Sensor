@@ -6,7 +6,9 @@ from dataclasses import dataclass
 import re
 from typing import Iterable
 
-SENSOR_RE = re.compile(r"^Timeout: sensor read(?: \(secondary\))? exceeded budget ms=(\d+) budget=(\d+)")
+SENSOR_RE = re.compile(
+    r"^Timeout: sensor read(?: \(secondary\))? exceeded budget ms=(\d+) budget=(\d+)"
+)
 FETCH_RE = re.compile(r"^Timeout: retained fetch budget reached ms=(\d+) budget=(\d+)")
 DISPLAY_RE = re.compile(r"^Timeout: display phase exceeded budget ms=(\d+) budget=(\d+)")
 PUBLISH_RE = re.compile(r"^Timeout: publish exceeded budget ms=(\d+) budget=(\d+)")
@@ -53,7 +55,13 @@ def main() -> None:
         lines = open(args.logfile, "r", encoding="utf-8", errors="ignore")
     try:
         s = parse(lines)
-        print(f"sensor={s.sensor_count} fetch={s.fetch_count} display={s.display_count} publish={s.publish_count}")
+        out = (
+            f"sensor={s.sensor_count} "
+            f"fetch={s.fetch_count} "
+            f"display={s.display_count} "
+            f"publish={s.publish_count}"
+        )
+        print(out)
     finally:
         try:
             lines.close()  # type: ignore[attr-defined]

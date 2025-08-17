@@ -44,7 +44,11 @@ class MqttTestClient:
         # to keep our existing callback signatures working without changes.
         if hasattr(mqtt, "CallbackAPIVersion"):
             try:
-                self.client = mqtt.Client(client_id=client_id, callback_api_version=mqtt.CallbackAPIVersion.VERSION1)
+                _cbver = mqtt.CallbackAPIVersion.VERSION1
+                self.client = mqtt.Client(
+                    client_id=client_id,
+                    callback_api_version=_cbver,
+                )
             except TypeError:
                 # Older 1.x that doesn't accept the keyword
                 self.client = mqtt.Client(client_id=client_id)
@@ -253,7 +257,8 @@ def main() -> None:
         assert msgs, f"No state message received for {s.key}"
         payload, retained = msgs[0]
         assert retained, f"State for {s.key} was not retained"
-        assert payload == s.sample_value, f"Unexpected state for {s.key}: {payload} != {s.sample_value}"
+        msg = f"Unexpected state for {s.key}: {payload} != {s.sample_value}"
+        assert payload == s.sample_value, msg
 
     # 6) Validate availability toggles (non-retained real-time)
     toggles_sub = MqttTestClient(mqtt_host, mqtt_port, client_id=f"tog-{_now_ms()}")
@@ -280,11 +285,14 @@ def main() -> None:
     while time.time() < end_at and not got_all.is_set():
         time.sleep(0.05)
 
-    assert len(events) >= 3, f"Expected 3 availability events, got {len(events)}: {events}"
+    msg_count = f"Expected 3 availability events, got {len(events)}: {events}"
+    assert len(events) >= 3, msg_count
     observed = [p for p, _r in events[:3]]
-    assert observed == ["online", "offline", "online"], f"Unexpected availability sequence: {observed}"
+    msg_seq = f"Unexpected availability sequence: {observed}"
+    assert observed == ["online", "offline", "online"], msg_seq
     # None of these should be retained
-    assert not any(r for _p, r in events[:3]), f"Availability events should not be retained: {events[:3]}"
+    msg_ret = f"Availability events should not be retained: {events[:3]}"
+    assert not any(r for _p, r in events[:3]), msg_ret
 
     # 7) Validate debug topic can be subscribed to and delivers the sample payload.
     # Subscribe first, then publish a sample payload to ensure delivery (non-retained).
