@@ -39,8 +39,17 @@ class SensorSpec:
 
 class MqttTestClient:
     def __init__(self, host: str, port: int, client_id: Optional[str] = None) -> None:
-        # Use default callback API; keep code compatible across paho versions
-        self.client = mqtt.Client(client_id=client_id)
+        # Create client compatible with both paho-mqtt 1.x and 2.x.
+        # In 2.x, the constructor requires a callback API version; we select VERSION1
+        # to keep our existing callback signatures working without changes.
+        if hasattr(mqtt, "CallbackAPIVersion"):
+            try:
+                self.client = mqtt.Client(client_id=client_id, callback_api_version=mqtt.CallbackAPIVersion.VERSION1)
+            except TypeError:
+                # Older 1.x that doesn't accept the keyword
+                self.client = mqtt.Client(client_id=client_id)
+        else:
+            self.client = mqtt.Client(client_id=client_id)
         self._host = host
         self._port = port
         self._connected_event = threading.Event()

@@ -20,7 +20,14 @@ def main():
     ap.add_argument("--seed", action="store_true", help="Publish sample outdoor readings to SUB base")
     args = ap.parse_args()
 
-    c = mqtt.Client()
+    # Support paho-mqtt 1.x and 2.x by specifying callback API version when available
+    if hasattr(mqtt, "CallbackAPIVersion"):
+        try:
+            c = mqtt.Client(callback_api_version=mqtt.CallbackAPIVersion.VERSION1)
+        except TypeError:
+            c = mqtt.Client()
+    else:
+        c = mqtt.Client()
     if args.user:
         c.username_pw_set(args.user, args.password or None)
 
