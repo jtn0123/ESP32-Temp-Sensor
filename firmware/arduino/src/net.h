@@ -383,11 +383,8 @@ static bool start_wifi_station_connect_from_nvs(unsigned long timeout_ms) {
     WiFi.setAutoReconnect(true);
     // Constrain scan channels by country when provided (faster, legal)
     #ifdef WIFI_COUNTRY
-    #if defined(ESP_ARDUINO_VERSION) && (ESP_ARDUINO_VERSION >= ESP_ARDUINO_VERSION_VAL(2,0,0))
-    WiFi.setCountry(WIFI_COUNTRY);
-    #else
+    // Use IDF API directly for broad core compatibility across ESP32 variants
     esp_wifi_set_country_code(WIFI_COUNTRY, true);
-    #endif
     #endif
     // Unlock channel and apply thresholds and optional preferred BSSID remembered in our own NVS
     wifi_config_t cfg;
@@ -552,11 +549,8 @@ inline void ensure_wifi_connected() {
 
     // Constrain scan channels by country when provided (faster, legal)
     #ifdef WIFI_COUNTRY
-    #if defined(ESP_ARDUINO_VERSION) && (ESP_ARDUINO_VERSION >= ESP_ARDUINO_VERSION_VAL(2,0,0))
-    WiFi.setCountry(WIFI_COUNTRY);
-    #else
+    // Use IDF API directly for broad core compatibility across ESP32 variants
     esp_wifi_set_country_code(WIFI_COUNTRY, true);
-    #endif
     #endif
     // Optional static IP configuration
     #ifdef WIFI_STATIC_IP
