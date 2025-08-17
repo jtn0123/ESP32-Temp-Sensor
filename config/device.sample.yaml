@@ -26,6 +26,7 @@ wifi:
   #   dns2: 8.8.8.8
   # bssid: "aa:bb:cc:dd:ee:ff"  # AP MAC to fast connect
   # channel: 6                   # AP channel to fast connect
+  # country: "US"               # Country code for legal channels (US/EU/...)
 thresholds:
   temp_degC: 0.1
   rh_pct: 1

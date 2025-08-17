@@ -64,6 +64,7 @@ def main():
     wifi_static = wifi.get('static', {}) or {}
     wifi_bssid = str(wifi.get('bssid', '') or '')
     wifi_channel = wifi.get('channel', None)
+    wifi_country = str(wifi.get('country', '') or '')
     mqtt_host = mqtt.get('host', '')
     mqtt_port = int(mqtt.get('port', 1883) or 1883)
     mqtt_user = str(mqtt.get('user', '') or '')
@@ -120,6 +121,9 @@ def main():
                 f.write(f'#define WIFI_CHANNEL {ch}\n')
         except Exception:
             pass
+        # Optional country code to constrain scan band and speeds join
+        if wifi_country:
+            f.write(f'#define WIFI_COUNTRY {c_string(wifi_country)}\n')
         f.write(f'#define MQTT_HOST {c_string(mqtt_host)}\n')
         f.write(f'#define MQTT_PORT {mqtt_port}\n')
         f.write(f'#define MQTT_PUB_BASE {c_string(mqtt_pub)}\n')

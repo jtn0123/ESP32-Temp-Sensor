@@ -3,6 +3,8 @@
 #include <Arduino.h>
 #include <WiFi.h>
 #include <PubSubClient.h>
+#include <Preferences.h>
+#include <esp_wifi.h>
 
 // All configuration should come from generated_config.h
 
@@ -25,6 +27,7 @@ static WiFiClient g_wifi_client;
 static PubSubClient g_mqtt(g_wifi_client);
 static OutsideReadings g_outside;
 static char g_client_id[40];
+static Preferences g_net_prefs;
 
 #ifndef WIFI_CONNECT_TIMEOUT_MS
 #define WIFI_CONNECT_TIMEOUT_MS 6000
@@ -40,6 +43,43 @@ inline bool parse_bssid(const char* str, uint8_t out[6]) {
     if (n != 6) return false;
     for (int i = 0; i < 6; ++i) out[i] = (uint8_t)vals[i];
     return true;
+}
+
+inline bool is_all_zero_bssid(const uint8_t b[6]) {
+    for (int i = 0; i < 6; ++i) if (b[i] != 0) return false;
+    return true;
+}
+
+// Optional tuning knobs (can be overridden via build_flags)
+#ifndef WIFI_RSSI_THRESHOLD
+#define WIFI_RSSI_THRESHOLD -75
+#endif
+#ifndef WIFI_AUTHMODE_THRESHOLD
+#define WIFI_AUTHMODE_THRESHOLD WIFI_AUTH_WPA2_PSK
+#endif
+
+// NVS helpers: remember last successful AP (SSID + BSSID)
+inline bool nvs_load_last_ap(String& ssid, uint8_t bssid[6]) {
+    bool ok = false;
+    if (g_net_prefs.begin("net", true)) {
+        ssid = g_net_prefs.getString("last_ssid", "");
+        size_t n = g_net_prefs.getBytes("last_bssid", bssid, 6);
+        g_net_prefs.end();
+        if (ssid.length() > 0 && n == 6 && !is_all_zero_bssid(bssid)) ok = true;
+    } else {
+        ssid = String();
+        memset(bssid, 0, 6);
+    }
+    return ok;
+}
+
+inline void nvs_store_last_ap(const char* ssid, const uint8_t bssid[6]) {
+    if (!ssid || !bssid) return;
+    if (g_net_prefs.begin("net", false)) {
+        g_net_prefs.putString("last_ssid", ssid);
+        g_net_prefs.putBytes("last_bssid", bssid, 6);
+        g_net_prefs.end();
+    }
 }
 
 inline bool ends_with(const char* s, const char* suffix) {
@@ -85,6 +125,11 @@ inline void ensure_wifi_connected() {
     WiFi.mode(WIFI_STA);
     WiFi.persistent(false);
     WiFi.setAutoReconnect(true);
+
+    // Constrain scan channels by country when provided (faster, legal)
+    #ifdef WIFI_COUNTRY
+    esp_wifi_set_country_code(WIFI_COUNTRY, true);
+    #endif
     // Optional static IP configuration
     #ifdef WIFI_STATIC_IP
     {
@@ -102,33 +147,85 @@ inline void ensure_wifi_connected() {
         }
     }
     #endif
-    // Optional fast connect via channel/BSSID
-    #ifdef WIFI_BSSID
-    {
-        uint8_t bssid[6];
-        int channel = 0;
-        #ifdef WIFI_CHANNEL
-        channel = WIFI_CHANNEL;
-        #endif
-        if (parse_bssid(WIFI_BSSID, bssid)) {
-            WiFi.begin(WIFI_SSID, WIFI_PASS, channel, bssid, true);
-        } else {
-            WiFi.begin(WIFI_SSID, WIFI_PASS);
+    // Prefer last known BSSID for fast, reliable joins; don't lock channel
+    bool have_bssid = false;
+    uint8_t prefer_bssid[6] = {0};
+    String last_ssid;
+    if (nvs_load_last_ap(last_ssid, prefer_bssid) && last_ssid == WIFI_SSID) {
+        have_bssid = true;
+    } else {
+        // Fall back to compile-time BSSID if provided
+        #ifdef WIFI_BSSID
+        if (parse_bssid(WIFI_BSSID, prefer_bssid)) {
+            have_bssid = true;
         }
+        #endif
     }
-    #else
-    #ifdef WIFI_CHANNEL
-    WiFi.begin(WIFI_SSID, WIFI_PASS, WIFI_CHANNEL);
-    #else
-    WiFi.begin(WIFI_SSID, WIFI_PASS);
-    #endif
-    #endif
+
+    // Preconfigure station with connect=false so we can tweak IDF fields before connecting
+    if (have_bssid) {
+        WiFi.begin(WIFI_SSID, WIFI_PASS, 0 /*channel*/, prefer_bssid, false /*connect*/);
+        Serial.printf("WiFi: preferring BSSID %02x:%02x:%02x:%02x:%02x:%02x\n",
+                      prefer_bssid[0], prefer_bssid[1], prefer_bssid[2],
+                      prefer_bssid[3], prefer_bssid[4], prefer_bssid[5]);
+    } else {
+        WiFi.begin(WIFI_SSID, WIFI_PASS, 0 /*channel*/, nullptr, false /*connect*/);
+    }
+
+    // Apply FAST scan + thresholds, and ensure channel is unlocked
+    wifi_config_t cfg;
+    memset(&cfg, 0, sizeof(cfg));
+    esp_wifi_get_config(WIFI_IF_STA, &cfg);
+    cfg.sta.scan_method = WIFI_FAST_SCAN;
+    cfg.sta.threshold.rssi = WIFI_RSSI_THRESHOLD;
+    cfg.sta.threshold.authmode = WIFI_AUTHMODE_THRESHOLD;
+    cfg.sta.channel = 0; // do not hard-lock channel
+    if (have_bssid) {
+        memcpy(cfg.sta.bssid, prefer_bssid, 6);
+        cfg.sta.bssid_set = 1;
+    } else {
+        memset(cfg.sta.bssid, 0, 6);
+        cfg.sta.bssid_set = 0;
+    }
+    esp_wifi_set_config(WIFI_IF_STA, &cfg);
+
+    // Start Wi-Fi and attempt to connect
+    esp_wifi_start();
+    esp_wifi_connect();
+
     unsigned long start = millis();
+    // Give BSSID-pinned attempt a shorter window before falling back
+    unsigned long bssid_try_ms = have_bssid ? (WIFI_CONNECT_TIMEOUT_MS > 4000 ? 3000UL : WIFI_CONNECT_TIMEOUT_MS / 2) : 0UL;
+    bool fallback_done = false;
     while (!WiFi.isConnected() && millis() - start < WIFI_CONNECT_TIMEOUT_MS) {
+        if (have_bssid && !fallback_done && (millis() - start) >= bssid_try_ms) {
+            // Fallback: clear BSSID to allow roaming / broad match
+            Serial.println("WiFi: BSSID join slow; falling back to SSID-only");
+            esp_wifi_disconnect();
+            wifi_config_t cfg2;
+            memset(&cfg2, 0, sizeof(cfg2));
+            esp_wifi_get_config(WIFI_IF_STA, &cfg2);
+            memset(cfg2.sta.bssid, 0, 6);
+            cfg2.sta.bssid_set = 0;
+            cfg2.sta.scan_method = WIFI_FAST_SCAN;
+            cfg2.sta.threshold.rssi = WIFI_RSSI_THRESHOLD;
+            cfg2.sta.threshold.authmode = WIFI_AUTHMODE_THRESHOLD;
+            cfg2.sta.channel = 0;
+            esp_wifi_set_config(WIFI_IF_STA, &cfg2);
+            esp_wifi_connect();
+            fallback_done = true;
+        }
         delay(100);
     }
     if (WiFi.isConnected()) {
         Serial.printf("WiFi: connected, IP %s RSSI %d dBm\n", WiFi.localIP().toString().c_str(), WiFi.RSSI());
+        // Cache last SSID + BSSID for next wake
+        uint8_t now_bssid[6] = {0};
+        const uint8_t* bp = WiFi.BSSID();
+        if (bp) memcpy(now_bssid, bp, 6);
+        if (!is_all_zero_bssid(now_bssid)) {
+            nvs_store_last_ap(WIFI_SSID, now_bssid);
+        }
     } else {
         Serial.printf("WiFi: connect timeout (status=%d)\n", (int)WiFi.status());
     }
@@ -256,6 +353,21 @@ inline void net_publish_inside(float tempC, float rhPct) {
     g_mqtt.publish(topic, payload, true);
 }
 
+inline void net_publish_battery(float voltage, int percent) {
+    if (!g_mqtt.connected()) return;
+    char topic[128];
+    char payload[32];
+    const char* base = MQTT_PUB_BASE;
+    // voltage
+    snprintf(topic, sizeof(topic), "%s/battery/voltage", base);
+    dtostrf(voltage, 0, 2, payload);
+    g_mqtt.publish(topic, payload, true);
+    // percent
+    snprintf(topic, sizeof(topic), "%s/battery/percent", base);
+    snprintf(payload, sizeof(payload), "%d", percent);
+    g_mqtt.publish(topic, payload, true);
+}
+
 inline void net_publish_status(const char* payload, bool retain = true) {
     if (!g_mqtt.connected() || !payload) return;
     char topic[128];
@@ -286,8 +398,10 @@ inline void net_publish_ha_discovery() {
         Serial.println(discTopic);
     };
 
-    pub_disc("inside_temp", "Inside Temperature", "°F", "temperature", "inside/temp");
-    pub_disc("inside_hum",  "Inside Humidity",    "%",  "humidity",   "inside/hum");
+    pub_disc("inside_temp",   "Inside Temperature", "°F", "temperature", "inside/temp");
+    pub_disc("inside_hum",    "Inside Humidity",    "%",  "humidity",    "inside/hum");
+    pub_disc("battery_volts", "Battery Voltage",    "V",  "voltage",     "battery/voltage");
+    pub_disc("battery_pct",   "Battery",            "%",  "battery",     "battery/percent");
 }
 
 inline bool net_wifi_is_connected() {
