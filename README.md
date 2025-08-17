@@ -119,6 +119,34 @@ Note: The optional status LED heartbeat uses the Adafruit NeoPixel library and i
 Developer builds:
 - `env:feather_esp32s2_headless`: headless, always on (DEV_NO_SLEEP=1) for fast MQTT/HA validation.
 - `env:feather_esp32s2_dev2`: headless, 3 min awake / 3 min sleep cycle for soak testing while limiting heat.
+- `env:feather_esp32s2_headless_1h`: headless, 1‑hour sleep schedule (WAKE_INTERVAL_SEC=3600).
+
+### Flash helper script (recommended)
+
+Use `scripts/flash.py` to build and upload common modes without remembering env names.
+
+```bash
+# 1-hour sleep (default)
+python3 scripts/flash.py
+
+# 3-minute cycle (awake ~3m, sleep ~3m)
+python3 scripts/flash.py --mode 3m
+
+# Always-on (no sleep)
+python3 scripts/flash.py --mode always
+
+# Optional: specify a serial port explicitly
+python3 scripts/flash.py --mode 3m --port /dev/cu.usbmodem101
+
+# Build only, do not upload
+python3 scripts/flash.py --mode always --build-only
+```
+
+Notes:
+- Default mode flashes `env:feather_esp32s2_headless_1h` (headless, 1‑hour sleep).
+- `--mode 3m` flashes `env:feather_esp32s2_dev2`.
+- `--mode always` flashes `env:feather_esp32s2_headless`.
+- Auto‑detect upload port is used unless `--port` is provided.
 
 Commands:
 ```bash
