@@ -719,6 +719,11 @@ void setup() {
     g_prefs.putUShort("pcount", partial_counter);
     // Log awake duration and planned sleep for diagnostics
     Serial.printf("Awake ms: %lu\n", (unsigned long)millis());
+    #if DEV_CYCLE_MODE
+    Serial.printf("Dev cycle: sleeping for %us\n", (unsigned)DEV_SLEEP_SEC);
+    nvs_end_cache();
+    go_deep_sleep_seconds(DEV_SLEEP_SEC);
+    #else
     Serial.printf("Sleeping for %us\n", (unsigned)WAKE_INTERVAL_SEC);
     #if USE_DISPLAY
     #ifdef EINK_EN_PIN
@@ -728,6 +733,7 @@ void setup() {
     #endif
     nvs_end_cache();
     go_deep_sleep_seconds(WAKE_INTERVAL_SEC);
+    #endif
 }
 
 void loop() {
