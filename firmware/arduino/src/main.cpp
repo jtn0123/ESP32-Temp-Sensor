@@ -75,6 +75,13 @@ static constexpr float THRESH_TEMP_F = 0.2f; // redraw/publish threshold in F
 static constexpr float THRESH_TEMP_C_FROM_F = THRESH_TEMP_F / 1.8f; // ~0.111C
 static constexpr float THRESH_RH = 1.0f; // percent
 
+// Timeout tracking for wake phases
+static uint32_t s_timeouts_mask = 0;
+#define TIMEOUT_BIT_SENSOR        (1u << 0)
+#define TIMEOUT_BIT_FETCH         (1u << 1)
+#define TIMEOUT_BIT_DISPLAY       (1u << 2)
+#define TIMEOUT_BIT_PUBLISH       (1u << 3)
+
 static void pump_network_ms(uint32_t duration_ms)
 {
     unsigned long start = millis();
