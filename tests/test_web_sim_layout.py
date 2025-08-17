@@ -21,10 +21,13 @@ def _start_http_server(root: str, port: int) -> subprocess.Popen:
 
 
 def _canvas_rgba(page, x: int, y: int):
-    return page.evaluate(
-        "([x,y])=>{const c=document.getElementById('epd');const ctx=c.getContext('2d');return Array.from(ctx.getImageData(x,y,1,1).data);}",
-        [x, y],
+    js = (
+        "([x,y])=>{"
+        "const c=document.getElementById('epd');"
+        "const ctx=c.getContext('2d');"
+        "return Array.from(ctx.getImageData(x,y,1,1).data);}"
     )
+    return page.evaluate(js, [x, y])
 
 
 def _ensure_out_dir() -> str:
@@ -206,10 +209,14 @@ def test_web_sim_backend_integration_full_reload():
 
             # Count non-white pixels in the bottom-right weather bar area
             def count_nonwhite(x0, y0, w, h):
-                return page.evaluate(
-                    "([x0,y0,w,h])=>{const c=document.getElementById('epd');const ctx=c.getContext('2d');const d=ctx.getImageData(x0,y0,w,h).data;let cnt=0;for(let i=0;i<d.length;i+=4){if(!(d[i]===255&&d[i+1]===255&&d[i+2]===255))cnt++;}return cnt;}",
-                    [x0, y0, w, h],
+                js_count = (
+                    "([x0,y0,w,h])=>{"
+                    "const c=document.getElementById('epd');const ctx=c.getContext('2d');"
+                    "const d=ctx.getImageData(x0,y0,w,h).data;let cnt=0;"
+                    "for(let i=0;i<d.length;i+=4){"
+                    "if(!(d[i]===255&&d[i+1]===255&&d[i+2]===255))cnt++;}return cnt;}"
                 )
+                return page.evaluate(js_count, [x0, y0, w, h])
 
             area = (130, 95, 114, 24)
             cnt_cloudy = count_nonwhite(*area)
@@ -275,19 +282,18 @@ def test_web_sim_partial_refresh_only_updates_header_time():
 
             # Capture OUT_TEMP rectangle pixels before refresh
             OUT_TEMP = [131, 36, 90, 28]
-            before = page.evaluate(
-                "([x,y,w,h])=>{const c=document.getElementById('epd');const ctx=c.getContext('2d');return Array.from(ctx.getImageData(x,y,w,h).data);}",
-                OUT_TEMP,
+            js_read = (
+                "([x,y,w,h])=>{"
+                "const c=document.getElementById('epd');const ctx=c.getContext('2d');"
+                "return Array.from(ctx.getImageData(x,y,w,h).data);}" 
             )
+            before = page.evaluate(js_read, OUT_TEMP)
 
             # Click Refresh → fetches sample_data.json again but only redraws header time region
             page.click('#refresh')
             page.wait_for_timeout(400)
 
-            after = page.evaluate(
-                "([x,y,w,h])=>{const c=document.getElementById('epd');const ctx=c.getContext('2d');return Array.from(ctx.getImageData(x,y,w,h).data);}",
-                OUT_TEMP,
-            )
+            after = page.evaluate(js_read, OUT_TEMP)
 
             # The OUT_TEMP area should be unchanged by the partial refresh
             assert before == after

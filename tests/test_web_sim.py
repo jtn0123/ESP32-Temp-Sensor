@@ -24,10 +24,13 @@ def _start_http_server(root: str, port: int) -> subprocess.Popen:
 
 
 def _canvas_rgba(page, x: int, y: int):
-    return page.evaluate(
-        "([x,y])=>{const c=document.getElementById('epd');const ctx=c.getContext('2d');return Array.from(ctx.getImageData(x,y,1,1).data);}",
-        [x, y],
+    js = (
+        "([x,y])=>{"
+        "const c=document.getElementById('epd');"
+        "const ctx=c.getContext('2d');"
+        "return Array.from(ctx.getImageData(x,y,1,1).data);}"
     )
+    return page.evaluate(js, [x, y])
 
 
 @pytest.mark.skipif(

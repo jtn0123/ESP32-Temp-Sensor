@@ -79,7 +79,8 @@ def test_homeassistant_birth_triggers_rediscovery_and_state_republish():
             if payload_decoded == "online":
                 for s in sensors:
                     cfg_topic = f"{ha_prefix}/sensor/{device_id}_{s.key}/config"
-                    cfg_payload = json.dumps(build_discovery_config(device_id, availability_topic, s))
+                    cfg = build_discovery_config(device_id, availability_topic, s)
+                    cfg_payload = json.dumps(cfg)
                     device.publish(cfg_topic, cfg_payload, retain=True, qos=1)
                 for s in sensors:
                     device.publish(s.state_topic, s.sample_value, retain=True, qos=1)

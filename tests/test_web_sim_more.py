@@ -102,10 +102,12 @@ def test_icons_available_or_fallback():
 
             # Try fetching a set of icon names
             names = ["clear", "cloudy", "rain", "snow", "storm", "fog"]
-            ok = page.evaluate(
-                "(names)=>Promise.all(names.map(async n=>{for(const u of [`icons/${n}.svg`,`../icons/mdi/${n}.svg`,`../icons/${n}.svg`]){try{const r=await fetch(u);if(r.ok)return true;}catch(e){}}return false;}))",
-                names,
+            js_icons = (
+                "(names)=>Promise.all(names.map(async n=>{"
+                "for(const u of [`icons/${n}.svg`,`../icons/mdi/${n}.svg`,`../icons/${n}.svg`]){"
+                "try{const r=await fetch(u);if(r.ok)return true;}catch(e){} } return false;}))"
             )
+            ok = page.evaluate(js_icons, names)
             assert all(ok)
             browser.close()
     finally:
