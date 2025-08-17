@@ -19,6 +19,12 @@ def _start_http_server(root: str, port: int) -> subprocess.Popen:
         "python3", "-m", "http.server", str(port), "--bind", "127.0.0.1"
     ], cwd=root, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
+_CANVAS_RGBA_JS = (
+    "([x,y])=>{"
+    "const c=document.getElementById('epd');const ctx=c.getContext('2d');"
+    "return Array.from(ctx.getImageData(x,y,1,1).data);}"
+)
+
 
 @pytest.mark.skipif(
     not bool(__import__("importlib").util.find_spec("playwright")),
@@ -59,12 +65,7 @@ def test_moon_phase_icon_draws_nonwhite_pixels():
             page.wait_for_timeout(300)
 
             def grab_region(x0, y0, w, h):
-                js = (
-                    "([x0,y0,w,h])=>{"
-                    "const c=document.getElementById('epd');const ctx=c.getContext('2d');"
-                    "return Array.from(ctx.getImageData(x0,y0,w,h).data);}"
-                )
-                return page.evaluate(js, [x0, y0, w, h])
+                return page.evaluate(_CANVAS_RGBA_JS, [x0, y0, w, h])
 
             # Weather bar region where icon+label are drawn
             barX, barY, _barW = 130, 95, 114
@@ -78,7 +79,8 @@ def test_moon_phase_icon_draws_nonwhite_pixels():
                 "const c=document.getElementById('epd');const ctx=c.getContext('2d');"
                 "const d=ctx.getImageData(x0,y0,w,h).data;let k=0;"
                 "for(let i=0;i<d.length;i+=4){"
-                "if(!(d[i]===255&&d[i+1]===255&&d[i+2]===255))k++;}return k;}"
+                "  if(!(d[i]===255&&d[i+1]===255&&d[i+2]===255))k++;"
+                "}return k;}"
             )
             cnt = page.evaluate(js_cnt, [x0, y0, w, h])
             assert cnt > 0
@@ -117,10 +119,7 @@ def test_partial_refresh_header_time_remains_binary():
             x,y,w,h = rt
             # Sample multiple points inside the time box and assert binary pixels
             for dx in [2, int(w/3), int(2*w/3), w-3]:
-                r,g,b,a = page.evaluate(
-                    "([x,y])=>{const c=document.getElementById('epd');const ctx=c.getContext('2d');return Array.from(ctx.getImageData(x,y,1,1).data);}",
-                    [x+dx, y+2],
-                )
+                r, g, b, a = page.evaluate(_CANVAS_RGBA_JS, [x+dx, y+2])
                 assert r in (0,255) and g in (0,255) and b in (0,255)
                 assert r==g==b
             browser.close()
@@ -155,10 +154,12 @@ def test_vector_fallback_when_svg_blocked():
             x0, y0, w, h = barX + 2, barY + 2, 28, 20
             js_cnt = (
                 "([x0,y0,w,h])=>{"
-                "const c=document.getElementById('epd');const ctx=c.getContext('2d');"
+                "const c=document.getElementById('epd');"
+                "const ctx=c.getContext('2d');"
                 "const d=ctx.getImageData(x0,y0,w,h).data;let k=0;"
                 "for(let i=0;i<d.length;i+=4){"
-                "if(!(d[i]===255&&d[i+1]===255&&d[i+2]===255))k++;}return k;}"
+                "  if(!(d[i]===255&&d[i+1]===255&&d[i+2]===255))k++;"
+                "}return k;}"
             )
             cnt = page.evaluate(js_cnt, [x0, y0, w, h])
             assert cnt > 0

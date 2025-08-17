@@ -61,7 +61,8 @@ def test_web_sim_basic_pixels():
             r, g, b, a = _canvas_rgba(page, 5, 18)
             assert (r, g, b) == (0, 0, 0)
 
-            # In split3 layout, a horizontal rule above the status stack is drawn around y≈92
+            # In split3 layout, a horizontal rule above the status stack
+            # is drawn around y≈92
             r, g, b, a = _canvas_rgba(page, 5, 92)
             assert (r, g, b) == (0, 0, 0)
 

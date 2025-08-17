@@ -40,7 +40,8 @@ def test_center_divider_reaches_bottom():
             for y in [18, 60, 120-1]:
                 js = (
                     "([x,y])=>{"
-                    "const c=document.getElementById('epd');const ctx=c.getContext('2d');"
+                    "const c=document.getElementById('epd');"
+                    "const ctx=c.getContext('2d');"
                     "return Array.from(ctx.getImageData(x,y,1,1).data);}"
                 )
                 r, g, b, a = page.evaluate(js, [125, y])

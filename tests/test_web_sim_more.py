@@ -29,6 +29,20 @@ _CANVAS_RGBA_JS = (
     "return Array.from(ctx.getImageData(x,y,1,1).data);}"
 )
 
+_TIME_METRICS_JS = (
+    "() => {\n"
+    "  const c=document.getElementById('epd');\n"
+    "  const ctx=c.getContext('2d');\n"
+    "  const R=(window.GJSON && window.GJSON.rects)||null;\n"
+    "  const rt = R ? R.HEADER_TIME : [172,2,72,14];\n"
+    "  const t = (window.lastData && window.lastData.time) || '10:32';\n"
+    "  ctx.font = '11px Menlo, Consolas, \"DM Mono\", \"Roboto Mono\", monospace';\n"
+    "  const tw = ctx.measureText(t).width;\n"
+    "  const timeX = rt[0] + rt[2] - 2 - tw;\n"
+    "  return {x: timeX, y: rt[1]+1, w: tw, rt};\n"
+    "}"
+)
+
 
 @pytest.mark.skipif(
     not bool(__import__("importlib").util.find_spec("playwright")),
@@ -114,8 +128,13 @@ def test_icons_available_or_fallback():
             names = ["clear", "cloudy", "rain", "snow", "storm", "fog"]
             js_icons = (
                 "(names)=>Promise.all(names.map(async n=>{"
-                "for(const u of [`icons/${n}.svg`,`../icons/mdi/${n}.svg`,`../icons/${n}.svg`]){"
-                "try{const r=await fetch(u);if(r.ok)return true;}catch(e){} } return false;}))"
+                "for(const u of ["
+                "  `icons/${n}.svg`,"
+                "  `../icons/mdi/${n}.svg`,"
+                "  `../icons/${n}.svg`"
+                "]) {"
+                "try{const r=await fetch(u);if(r.ok)return true;}catch(e){}"
+                "} return false;}))"
             )
             ok = page.evaluate(js_icons, names)
             assert all(ok)
@@ -160,25 +179,19 @@ def test_header_time_right_aligned_and_name_truncated():
                     "wind": "4.2",
                 }
                 base.update(payload)
-                route.fulfill(status=200, content_type="application/json", body=json.dumps(base))
+                body_text = json.dumps(base)
+                route.fulfill(
+                    status=200,
+                    content_type="application/json",
+                    body=body_text,
+                )
 
             page.route("**/sample_data.json", handle_route)
             page.goto(f"http://127.0.0.1:{port}/index.html", wait_until="load")
             page.wait_for_timeout(300)
 
             # Compute actual time text placement as in sim.js and probe a pixel near its middle
-            time_metrics = page.evaluate(
-                "() => {\n"
-                "  const c=document.getElementById('epd'); const ctx=c.getContext('2d');\n"
-                "  const R=(window.GJSON && window.GJSON.rects)||null;\n"
-                "  const rt = R ? R.HEADER_TIME : [172,2,72,14];\n"
-                "  const t = (window.lastData && window.lastData.time) || '10:32';\n"
-                "  ctx.font = '11px Menlo, Consolas, \"DM Mono\", \"Roboto Mono\", monospace';\n"
-                "  const tw = ctx.measureText(t).width;\n"
-                "  const timeX = rt[0] + rt[2] - 2 - tw;\n"
-                "  return {x: timeX, y: rt[1]+1, w: tw, rt};\n"
-                "}"
-            )
+            time_metrics = page.evaluate(_TIME_METRICS_JS)
             # Sample the pixel at center of the time text box; should be black
             cx = int(time_metrics["x"] + max(1, time_metrics["w"]//2))
             cy = int(time_metrics["y"] + 2)
