@@ -946,6 +946,7 @@ void setup() {
 #if USE_STATUS_PIXEL
     status_pixel_off();
 #endif
+    net_prepare_for_sleep();
     go_deep_sleep_seconds(DEV_SLEEP_SEC);
     #else
     Serial.printf("Sleeping for %us\n", (unsigned)WAKE_INTERVAL_SEC);
@@ -959,6 +960,7 @@ void setup() {
 #if USE_STATUS_PIXEL
     status_pixel_off();
 #endif
+    net_prepare_for_sleep();
     go_deep_sleep_seconds(WAKE_INTERVAL_SEC);
     #endif
     #endif

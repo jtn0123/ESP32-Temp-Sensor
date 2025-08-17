@@ -138,6 +138,14 @@ inline void ensure_mqtt_connected() {
     if (g_mqtt.connected()) return;
     if (strlen(MQTT_HOST) == 0) return;
     g_mqtt.setServer(MQTT_HOST, MQTT_PORT);
+    // Broker stability: larger keepalive and buffers; shorter socket timeout
+    g_mqtt.setKeepAlive(60);
+    g_mqtt.setSocketTimeout(5);
+    #ifdef MQTT_MAX_PACKET_SIZE
+    g_mqtt.setBufferSize(MQTT_MAX_PACKET_SIZE);
+    #else
+    g_mqtt.setBufferSize(1024);
+    #endif
     g_mqtt.setCallback(mqtt_callback);
     Serial.printf("MQTT: connecting to %s:%u...\n", MQTT_HOST, (unsigned)MQTT_PORT);
     uint64_t mac = ESP.getEfuseMac();
@@ -223,6 +231,14 @@ inline void net_ip_cstr(char* out, size_t out_size) {
     snprintf(out, out_size, "%u.%u.%u.%u", (unsigned)ip[0], (unsigned)ip[1], (unsigned)ip[2], (unsigned)ip[3]);
 }
 
+inline void mqtt_pump(uint32_t duration_ms) {
+    unsigned long start = millis();
+    while (millis() - start < duration_ms) {
+        if (g_mqtt.connected()) g_mqtt.loop();
+        delay(10);
+    }
+}
+
 inline OutsideReadings net_get_outside() { return g_outside; }
 
 inline void net_publish_inside(float tempC, float rhPct) {
@@ -231,7 +247,9 @@ inline void net_publish_inside(float tempC, float rhPct) {
     char payload[32];
     const char* base = MQTT_PUB_BASE;
     snprintf(topic, sizeof(topic), "%s/inside/temp", base);
-    dtostrf(tempC, 0, 2, payload);
+    // Publish Fahrenheit for HA (discovery advertises °F)
+    float tempF = tempC * 9.0f/5.0f + 32.0f;
+    dtostrf(tempF, 0, 1, payload);
     g_mqtt.publish(topic, payload, true);
     snprintf(topic, sizeof(topic), "%s/inside/hum", base);
     dtostrf(rhPct, 0, 0, payload);
@@ -259,14 +277,16 @@ inline void net_publish_ha_discovery() {
         char stateTopic[192];
         snprintf(stateTopic, sizeof(stateTopic), "%s/%s", MQTT_PUB_BASE, state_suffix);
         char payload[640];
-        // Minimal JSON with device info; retained
+        // Full HA discovery keys for maximum compatibility; retained
         snprintf(payload, sizeof(payload),
-            "{\"name\":\"%s\",\"uniq_id\":\"%s_%s\",\"stat_t\":\"%s\",\"avty_t\":\"%s\",\"unit_of_meas\":\"%s\",\"dev_cla\":\"%s\",\"state_class\":\"measurement\",\"dev\":{\"ids\":[\"%s\"],\"name\":\"ESP32 Room Node: %s\",\"mf\":\"DIY\",\"mdl\":\"Feather ESP32-S2\"}}",
+            "{\"name\":\"%s\",\"unique_id\":\"%s_%s\",\"state_topic\":\"%s\",\"availability_topic\":\"%s\",\"unit_of_measurement\":\"%s\",\"device_class\":\"%s\",\"state_class\":\"measurement\",\"device\":{\"identifiers\":[\"%s\"],\"name\":\"ESP32 Room Node: %s\",\"manufacturer\":\"DIY\",\"model\":\"Feather ESP32-S2\"}}",
             name, g_client_id, key, stateTopic, availTopic, unit, dev_class, g_client_id, ROOM_NAME);
         g_mqtt.publish(discTopic, payload, true);
+        Serial.print("HA discovery -> ");
+        Serial.println(discTopic);
     };
 
-    pub_disc("inside_temp", "Inside Temperature", "°C", "temperature", "inside/temp");
+    pub_disc("inside_temp", "Inside Temperature", "°F", "temperature", "inside/temp");
     pub_disc("inside_hum",  "Inside Humidity",    "%",  "humidity",   "inside/hum");
 }
 
@@ -276,6 +296,20 @@ inline bool net_wifi_is_connected() {
 
 inline bool net_mqtt_is_connected() {
     return g_mqtt.connected();
+}
+
+inline void net_prepare_for_sleep() {
+    // Publish availability offline and disconnect cleanly before deep sleep
+    if (g_mqtt.connected()) {
+        char availTopic[128];
+        snprintf(availTopic, sizeof(availTopic), "%s/availability", MQTT_PUB_BASE);
+        g_mqtt.publish(availTopic, "offline", true);
+        mqtt_pump(100);
+        g_mqtt.disconnect();
+    }
+    if (WiFi.isConnected()) {
+        WiFi.disconnect(true);
+    }
 }
 
 
