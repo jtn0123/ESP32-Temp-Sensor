@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 import os
-import sys
 import urllib.request
 
 BASE = "https://raw.githubusercontent.com/Templarian/MaterialDesign-SVG/master/svg"

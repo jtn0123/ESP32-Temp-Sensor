@@ -8,11 +8,10 @@ Dependencies:
 """
 import io
 import os
-import sys
 from typing import List
 
-from PIL import Image
 import cairosvg
+from PIL import Image
 
 PROJECT_ROOT = os.path.dirname(os.path.dirname(__file__))
 SRC_DIR = os.path.join(PROJECT_ROOT, 'web', 'icons', 'mdi')

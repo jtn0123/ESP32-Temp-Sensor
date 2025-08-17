@@ -13,11 +13,11 @@ Broker and topics are intentionally simple and unauthenticated for CI usage.
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 import json
 import os
 import threading
 import time
-from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple
 
 import paho.mqtt.client as mqtt  # type: ignore

@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-import json
 import hashlib
+import json
 import pathlib
-from typing import Dict, Any, List
+from typing import Any, Dict, List
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 JSON_PATH = ROOT / 'config' / 'display_geometry.json'
@@ -62,7 +62,7 @@ def generate_header(data: Dict[str, Any]) -> str:
         lines.append(f'static_assert({y} + {rh} <= EINK_HEIGHT, "{name} height");')
     if 'STATUS' in rects:
         x, y, rw, rh = [int(v) for v in rects['STATUS']]
-        lines.append(f'static_assert(STATUS_[0] + STATUS_[2] <= EINK_WIDTH,  "STATUS_ width");')
+        lines.append('static_assert(STATUS_[0] + STATUS_[2] <= EINK_WIDTH,  "STATUS_ width");')
     lines.append('')
     return '\n'.join(lines) + '\n'
 

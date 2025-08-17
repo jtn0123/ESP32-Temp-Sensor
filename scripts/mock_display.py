@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
-from PIL import Image, ImageDraw, ImageFont
-import os
 import hashlib
+import os
+
+from PIL import Image, ImageDraw, ImageFont
 
 WIDTH, HEIGHT = 250, 122
 

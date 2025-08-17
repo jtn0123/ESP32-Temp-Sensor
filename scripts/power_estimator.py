@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import argparse
 
+
 def estimate_days(capacity_mAh: float, sleep_current_mA: float, active_current_mA: float, awake_seconds: float, interval_seconds: float) -> float:
     avg_mA = (active_current_mA * awake_seconds + sleep_current_mA * max(0.0, interval_seconds - awake_seconds)) / interval_seconds
     if avg_mA <= 0:

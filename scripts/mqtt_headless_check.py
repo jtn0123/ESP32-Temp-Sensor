@@ -1,9 +1,7 @@
 #!/usr/bin/env python3
 import argparse
-import json
 import os
 import signal
-import sys
 import time
 
 import paho.mqtt.client as mqtt  # type: ignore

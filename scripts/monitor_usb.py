@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 import argparse
+from dataclasses import dataclass
 import json
 import sys
 import time
-from dataclasses import dataclass
 
 try:
     import serial  # type: ignore

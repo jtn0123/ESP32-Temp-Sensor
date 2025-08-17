@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
-from PIL import Image, ImageDraw, ImageFont
 import os
+
+from PIL import Image, ImageDraw
 
 SIZE = 24
 

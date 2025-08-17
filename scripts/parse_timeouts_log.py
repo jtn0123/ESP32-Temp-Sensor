@@ -2,10 +2,9 @@
 from __future__ import annotations
 
 import argparse
-import re
 from dataclasses import dataclass
+import re
 from typing import Iterable
-
 
 SENSOR_RE = re.compile(r"^Timeout: sensor read(?: \(secondary\))? exceeded budget ms=(\d+) budget=(\d+)")
 FETCH_RE = re.compile(r"^Timeout: retained fetch budget reached ms=(\d+) budget=(\d+)")

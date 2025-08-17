@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
-import re
 from dataclasses import dataclass
+import re
 from typing import Iterable, Optional
-
 
 QUEUED_RE = re.compile(r"^Offline: queued seq=(\d+) ts=(\d+) \(C=([0-9\.-]+) RH=([0-9\.-]+)\)")
 DRAIN_RE = re.compile(r"^Offline: draining (\d+) samples \(tail=(\d+) head=(\d+)\)")

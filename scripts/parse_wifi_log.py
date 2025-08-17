@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
-import re
 from dataclasses import dataclass
+import re
 from typing import Iterable, Optional
-
 
 CONNECTING_RE = re.compile(r"^WiFi: connecting to (.+)\.\.\.")
 PREF_BSSID_RE = re.compile(r"^WiFi: preferring BSSID ([0-9a-fA-F:]{17})")
