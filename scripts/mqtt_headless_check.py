@@ -34,7 +34,13 @@ def main():
     def on_connect(client, userdata, flags, rc):
         print(f"connected rc={rc}")
         # Subscribe to our inside and status topics
-        client.subscribe([(f"{args.pub_base}/inside/temp", 0), (f"{args.pub_base}/inside/hum", 0), (f"{args.pub_base}/status", 0)])
+        client.subscribe([
+            (f"{args.pub_base}/inside/temp", 0),
+            (f"{args.pub_base}/inside/hum", 0),
+            (f"{args.pub_base}/status", 0),
+            (f"{args.pub_base}/battery/voltage", 0),
+            (f"{args.pub_base}/battery/percent", 0),
+        ])
         if args.seed:
             msgs = {
                 f"{args.sub_base}/temp": "20.3",
