@@ -14,6 +14,11 @@
 #include <Adafruit_NeoPixel.h>
 #endif
 
+// Forward declaration for status pixel tick used in pump_network_ms
+#if USE_STATUS_PIXEL
+static inline void status_pixel_tick();
+#endif
+
 // Feather ESP32-S2 + 2.13" FeatherWing (adjust if needed)
 #ifndef EINK_CS
 #define EINK_CS   9   // D9

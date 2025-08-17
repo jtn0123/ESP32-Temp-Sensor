@@ -244,6 +244,23 @@ Dev cycle: sleeping for 180s
 - Enabled by default via `-DUSE_STATUS_PIXEL=1`. It is ticked while the device is awake and turned off before deep sleep.
 - To disable entirely, build with `-DUSE_STATUS_PIXEL=0` (recommended for lowest sleep current).
 
+LED pin and board notes:
+
+- The firmware uses `PIN_NEOPIXEL` automatically if your board definition provides it (e.g., Adafruit Feather ESP32‑S2). No action needed in that case.
+- If your NeoPixel is wired to a different GPIO, override with a build flag:
+
+  ```ini
+  build_flags =
+    -DUSE_STATUS_PIXEL=1
+    -DSTATUS_PIXEL_PIN=5    ; replace 5 with your NeoPixel data pin
+  ```
+
+- Brightness defaults to a low value for debugging. To change it, edit `firmware/arduino/src/main.cpp` and adjust the value passed to `s_statusPixel.setBrightness(...)`.
+- Power: the LED is turned off before deep sleep. For the absolute lowest sleep current, disable via `-DUSE_STATUS_PIXEL=0`.
+- If your board has a discrete 3‑pin RGB LED (not a NeoPixel), this heartbeat won’t drive it. In that case either:
+  - disable the NeoPixel heartbeat and add a simple PWM heartbeat on your R/G/B pins, or
+  - let me know your LED pins and I’ll switch the firmware to a PWM‑based status LED for your board.
+
 ### Switching wake interval (1h / 2h / 4h)
 
 - Long‑term duty cycle is configured in `config/device.yaml`:
