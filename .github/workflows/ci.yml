@@ -22,11 +22,13 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: requirements.txt
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          python -m pip install pytest pillow
+          python -m pip install -r requirements.txt
 
       - name: Run unit tests (skip web-sim)
         run: pytest -q -k "not web_sim"
@@ -42,11 +44,13 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: requirements-web.txt
 
       - name: Install Python deps
         run: |
           python -m pip install --upgrade pip
-          python -m pip install pytest pillow playwright pytest-playwright
+          python -m pip install -r requirements-web.txt
 
       - name: Install Playwright browsers
         run: python -m playwright install --with-deps chromium
@@ -68,6 +72,8 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: requirements-firmware.txt
 
       - name: Cache PlatformIO
         uses: actions/cache@v4
@@ -79,7 +85,7 @@ jobs:
       - name: Install PlatformIO
         run: |
           python -m pip install --upgrade pip
-          python -m pip install platformio
+          python -m pip install -r ../../requirements-firmware.txt
 
       - name: Build Arduino firmware
         working-directory: firmware/arduino
