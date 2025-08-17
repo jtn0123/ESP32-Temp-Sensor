@@ -1,11 +1,12 @@
 import os
 import sys
-import importlib
+import importlib.util
 
 ROOT = os.path.dirname(os.path.dirname(__file__))
-sys.path.insert(0, os.path.join(ROOT, 'scripts'))
-
-glh = importlib.import_module('gen_layout_header')  # type: ignore
+_scripts = os.path.join(ROOT, 'scripts')
+_spec = importlib.util.spec_from_file_location('gen_layout_header', os.path.join(_scripts, 'gen_layout_header.py'))
+glh = importlib.util.module_from_spec(_spec)  # type: ignore
+_spec.loader.exec_module(glh)  # type: ignore
 
 
 def test_generate_header_basic_contents():

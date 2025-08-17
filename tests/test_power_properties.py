@@ -1,11 +1,12 @@
 import os
 import sys
-import importlib
+import importlib.util
 
 ROOT = os.path.dirname(os.path.dirname(__file__))
-sys.path.insert(0, os.path.join(ROOT, 'scripts'))
-
-pe = importlib.import_module('power_estimator')  # type: ignore
+_scripts = os.path.join(ROOT, 'scripts')
+_spec = importlib.util.spec_from_file_location('power_estimator', os.path.join(_scripts, 'power_estimator.py'))
+pe = importlib.util.module_from_spec(_spec)  # type: ignore
+_spec.loader.exec_module(pe)  # type: ignore
 
 
 def test_monotonic_capacity():
