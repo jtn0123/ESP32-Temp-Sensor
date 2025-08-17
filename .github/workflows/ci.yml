@@ -2,6 +2,74 @@ name: CI
 
 on:
   push:
+  pull_request:
+
+jobs:
+  test-and-build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Python dependencies (tests + web-sim + firmware)
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-web.txt -r requirements-firmware.txt ruff black cpplint
+
+      - name: Install Playwright browsers (Chromium)
+        run: |
+          python -m playwright install --with-deps chromium
+
+      - name: Run image and web-sim tests (pytest -q)
+        env:
+          PYTHONPATH: .
+        run: |
+          pytest -q -k "snapshot or mock_display or web_sim"
+
+      - name: Lint Python (ruff)
+        run: ruff check .
+
+      - name: Check Python formatting (black)
+        run: black --check .
+
+      - name: Install PlatformIO
+        run: pip install platformio
+
+      - name: PlatformIO compile check (feather_esp32s2_headless)
+        working-directory: firmware/arduino
+        run: platformio run -e feather_esp32s2_headless
+
+      - name: Install clang-format
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang-format
+
+      - name: Check C++ formatting (clang-format)
+        run: |
+          set -e
+          FILES=$(find firmware/arduino/src -type f \( -name "*.cpp" -o -name "*.h" \))
+          if [ -n "$FILES" ]; then
+            clang-format --version
+            clang-format -n --Werror $FILES
+          fi
+
+      - name: cpplint (include-order and braces only)
+        run: |
+          set -e
+          FILES=$(find firmware/arduino/src -type f \( -name "*.cpp" -o -name "*.h" \))
+          if [ -n "$FILES" ]; then
+            python -m cpplint --filter=-build,-legal,-readability,-runtime,-whitespace,+build/include_order,+whitespace/braces $FILES
+          fi
+
+name: CI
+
+on:
+  push:
     branches: [ main ]
   pull_request:
     branches: [ main ]
