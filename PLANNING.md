@@ -23,6 +23,7 @@
 - `pio run` succeeds in `firmware/arduino/` (CI green)
 - README contains getting‑started info and config example
 - Power estimator script runs locally
+ - MQTT CI passes: broker boots, HA discovery/state topics retained, availability toggles observed (non‑retained)
 
 ### Next Steps (after scaffold)
 ‑ Implement display partial windows with GxEPD2
