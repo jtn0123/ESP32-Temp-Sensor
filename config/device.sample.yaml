@@ -37,5 +37,12 @@ battery:
   capacity_mAh: 3500
   sleep_current_mA: 0.09
   active_current_mA: 80
+  # If not using MAX17048, you can wire the battery to an ADC pin and set divider
+  # adc_pin: 5
+  # divider: 2.0
+  # adc_max: 4095
+  # adc_ref: 3.3
+  # Percentage threshold considered "low battery" for UI/alerts
+  low_pct: 20
 
 

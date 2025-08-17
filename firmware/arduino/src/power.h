@@ -15,28 +15,61 @@ struct BatteryStatus {
     int estimatedDays = -1;
 };
 
+#if USE_MAX17048
+static Adafruit_MAX17048 g_maxfg;
+static bool g_maxfg_initialized = false;
+
+inline void fuelgauge_wake_if_asleep() {
+    if (!g_maxfg_initialized) return;
+    g_maxfg.sleep(false);
+}
+
+inline void fuelgauge_quickstart_if_cold_boot(esp_reset_reason_t reason) {
+    if (!g_maxfg_initialized) return;
+    if (reason == ESP_RST_POWERON) {
+        g_maxfg.quickStart();
+    }
+}
+
+inline void fuelgauge_sleep_between_wakes() {
+    if (!g_maxfg_initialized) return;
+    g_maxfg.sleep(true);
+}
+#endif
+
 inline BatteryStatus read_battery_status() {
     BatteryStatus b;
 #if USE_MAX17048
-    static Adafruit_MAX17048 maxfg;
-    static bool fg_init = false;
-    if (!fg_init) {
+    if (!g_maxfg_initialized) {
         Wire.begin();
         #ifdef I2C_TIMEOUT_MS
         Wire.setTimeOut(I2C_TIMEOUT_MS);
         #endif
-        fg_init = maxfg.begin();
+        g_maxfg_initialized = g_maxfg.begin();
+        if (g_maxfg_initialized) {
+            fuelgauge_wake_if_asleep();
+            fuelgauge_quickstart_if_cold_boot(esp_reset_reason());
+        }
     }
-    if (fg_init) {
-        b.voltage = maxfg.cellVoltage();
-        b.percent = (int)(maxfg.cellPercent() + 0.5f);
+    if (g_maxfg_initialized) {
+        b.voltage = g_maxfg.cellVoltage();
+        b.percent = (int)(g_maxfg.cellPercent() + 0.5f);
     }
 #endif
     if (!isfinite(b.voltage) && VBAT_ADC_PIN >= 0) {
-        // Configure ADC once per wake (simple mode)
+        // Reduce IR drop influence: short idle, median-of-3 samples
         analogReadResolution(12);
-        uint16_t raw = analogRead(VBAT_ADC_PIN);
-        float v = (raw / (float)ADC_MAX_COUNTS) * ADC_REF_V * VBAT_DIVIDER;
+        delay(200);
+        uint16_t r0 = analogRead(VBAT_ADC_PIN);
+        delay(10);
+        uint16_t r1 = analogRead(VBAT_ADC_PIN);
+        delay(10);
+        uint16_t r2 = analogRead(VBAT_ADC_PIN);
+        uint16_t a = r0, m = r1, c = r2;
+        if (a > m) { uint16_t t = a; a = m; m = t; }
+        if (m > c) { uint16_t t = m; m = c; c = t; }
+        if (a > m) { uint16_t t = a; a = m; m = t; }
+        float v = (m / (float)ADC_MAX_COUNTS) * ADC_REF_V * VBAT_DIVIDER;
         b.voltage = v;
     }
     // Rough SOC estimate from voltage (linear placeholder 3.3V→0%, 4.2V→100%)
@@ -60,6 +93,11 @@ inline BatteryStatus read_battery_status() {
 }
 
 inline void go_deep_sleep_seconds(uint32_t seconds) {
+    #if USE_MAX17048
+    if (g_maxfg_initialized) {
+        fuelgauge_sleep_between_wakes();
+    }
+    #endif
     esp_sleep_enable_timer_wakeup((uint64_t)seconds * 1000000ULL);
     esp_deep_sleep_start();
 }
