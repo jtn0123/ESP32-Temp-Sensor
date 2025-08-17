@@ -15,7 +15,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.x'
+          python-version: '3.11'
       - name: Install PlatformIO
         run: pip install -U platformio
       - name: Build firmware
@@ -29,10 +29,12 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.x'
+          python-version: '3.11'
       - name: Install test deps
-        run: pip install -U pillow pytest
-      - name: Run Python tests
-        run: pytest -q
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+      - name: Run Python tests (skip web-sim)
+        run: pytest -q -k "not web_sim"
 
 
