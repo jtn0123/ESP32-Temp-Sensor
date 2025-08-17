@@ -1,8 +1,11 @@
 #include <Arduino.h>
-#include <GxEPD2_BW.h>
 #include <Preferences.h>
+#include "config.h"
+#if USE_DISPLAY
+#include <GxEPD2_BW.h>
 #include "icons.h"
 #include "display_layout.h"
+#endif
 #include "sensors.h"
 #include "generated_config.h"
 #include "net.h"
@@ -24,7 +27,9 @@
 
 // 2.13" b/w class; choose the one matching your panel
 // B74 works for SSD1680/UC8151 variants used by many 2.13" panels
+#if USE_DISPLAY
 GxEPD2_BW<GxEPD2_213_B74, GxEPD2_213_B74::HEIGHT> display(GxEPD2_213_B74(EINK_CS, EINK_DC, EINK_RST, EINK_BUSY));
+#endif
 
 RTC_DATA_ATTR static uint16_t partial_counter = 0;
 RTC_DATA_ATTR static float last_inside_f = NAN;
@@ -69,6 +74,7 @@ static void pump_network_ms(uint32_t duration_ms)
     }
 }
 
+#if USE_DISPLAY
 static void draw_static_chrome()
 {
     // Frame and header linework
@@ -552,12 +558,14 @@ static void partial_update_outside_hilo(float highC, float lowC)
         }
     } while (display.nextPage());
 }
+#endif // USE_DISPLAY
 
 void setup() {
     Serial.begin(115200);
     delay(100);
     Serial.println(F("ESP32 eInk Room Node boot"));
 
+    #if USE_DISPLAY
     #ifdef EINK_EN_PIN
     pinMode(EINK_EN_PIN, OUTPUT);
     digitalWrite(EINK_EN_PIN, HIGH); // enable panel power if gated
@@ -565,11 +573,13 @@ void setup() {
     #endif
     display.init(0);
     display.setRotation(1); // landscape 250x122 coordinate system
+    #endif
     nvs_begin_cache();
     nvs_load_cache_if_unset();
     net_begin();
     pump_network_ms(800); // allow retained MQTT to arrive quickly
 
+    #if USE_DISPLAY
     bool do_full = false;
     if (partial_counter == 0) {
         do_full = true; // first ever boot
@@ -680,6 +690,21 @@ void setup() {
             nvs_store_uint("st_crc", last_status_crc);
         }
     }
+    #else
+    // Headless mode: no display; still connect, read sensors, publish, and sleep
+    InsideReadings r = read_inside_sensors();
+    if (isfinite(r.temperatureC) && isfinite(r.humidityPct)) {
+        bool temp_changed = (!isfinite(last_published_inside_tempC)) || fabsf(r.temperatureC - last_published_inside_tempC) >= THRESH_TEMP_C_FROM_F;
+        bool rh_changed = (!isfinite(last_published_inside_rh)) || fabsf(r.humidityPct - last_published_inside_rh) >= THRESH_RH;
+        if (temp_changed || rh_changed) {
+            net_publish_inside(r.temperatureC, r.humidityPct);
+            last_published_inside_tempC = r.temperatureC;
+            last_published_inside_rh = r.humidityPct;
+            nvs_store_float("pi_t", last_published_inside_tempC);
+            nvs_store_float("pi_rh", last_published_inside_rh);
+        }
+    }
+    #endif
 
     partial_counter++;
     // Persist partial refresh cadence so it survives reset
@@ -687,9 +712,11 @@ void setup() {
     // Log awake duration and planned sleep for diagnostics
     Serial.printf("Awake ms: %lu\n", (unsigned long)millis());
     Serial.printf("Sleeping for %us\n", (unsigned)WAKE_INTERVAL_SEC);
+    #if USE_DISPLAY
     #ifdef EINK_EN_PIN
     // Power down panel between wakes if gated to save sleep current
     digitalWrite(EINK_EN_PIN, LOW);
+    #endif
     #endif
     nvs_end_cache();
     go_deep_sleep_seconds(WAKE_INTERVAL_SEC);
