@@ -5,7 +5,10 @@ import sys
 import time
 from dataclasses import dataclass
 
-import serial
+try:
+    import serial  # type: ignore
+except Exception:  # pragma: no cover - optional at import time
+    serial = None  # type: ignore
 
 
 @dataclass
@@ -61,8 +64,11 @@ def main() -> int:
     ap.add_argument("--raw", action="store_true", help="Print raw lines in addition to parsed summary")
     args = ap.parse_args()
 
+    if serial is None:
+        print("pyserial is not installed. Install with: pip3 install pyserial", file=sys.stderr)
+        return 2
     try:
-        with serial.Serial(args.port, args.baud, timeout=1) as ser:
+        with serial.Serial(args.port, args.baud, timeout=1) as ser:  # type: ignore[attr-defined]
             # Give the port a moment after opening
             time.sleep(0.1)
             print(f"Connected to {args.port} @ {args.baud}")
