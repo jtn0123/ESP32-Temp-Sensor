@@ -194,6 +194,13 @@ inline void ensure_time_synced_if_stale()
 #ifndef OFFLINE_DRAIN_MAX_PER_WAKE
 #define OFFLINE_DRAIN_MAX_PER_WAKE 64U
 #endif
+// Additional budgets to prevent long awake time on large backlogs
+#ifndef OFFLINE_DRAIN_MAX_MS
+#define OFFLINE_DRAIN_MAX_MS 2500UL
+#endif
+#ifndef OFFLINE_DRAIN_MAX_BYTES
+#define OFFLINE_DRAIN_MAX_BYTES 8192UL
+#endif
 
 struct OfflineSample {
     uint32_t epoch;
@@ -238,9 +245,9 @@ inline void offline_enqueue_sample(float tempC, float rhPct)
     Serial.printf("Offline: queued seq=%u ts=%u (C=%.2f RH=%.0f)\n", (unsigned)head, (unsigned)ts, s.tempC, s.rhPct);
 }
 
-inline void net_publish_inside_history(uint32_t epoch, float tempC, float rhPct)
+inline uint32_t net_publish_inside_history(uint32_t epoch, float tempC, float rhPct)
 {
-    if (!g_mqtt.connected()) return;
+    if (!g_mqtt.connected()) return 0;
     char topic[128];
     snprintf(topic, sizeof(topic), "%s/inside/history", MQTT_PUB_BASE);
     // Build compact JSON with F and RH integer; keep payload small
@@ -249,8 +256,12 @@ inline void net_publish_inside_history(uint32_t epoch, float tempC, float rhPct)
     dtostrf(tempC * 9.0f/5.0f + 32.0f, 0, 1, tbuf);
     dtostrf(rhPct, 0, 0, rhbuf);
     char payload[96];
-    snprintf(payload, sizeof(payload), "{\"ts\":%u,\"tempF\":%s,\"rh\":%s}", (unsigned)epoch, tbuf, rhbuf);
+    int plen = snprintf(payload, sizeof(payload), "{\"ts\":%u,\"tempF\":%s,\"rh\":%s}", (unsigned)epoch, tbuf, rhbuf);
     g_mqtt.publish(topic, payload, false);
+    // Approximate bytes published as topic + payload length
+    uint32_t tlen = (uint32_t)strlen(topic);
+    uint32_t blen = (uint32_t)(plen > 0 ? plen : (int)strlen(payload));
+    return tlen + blen;
 }
 
 inline void offline_drain_if_any()
@@ -263,18 +274,41 @@ inline void offline_drain_if_any()
     if (to_send == 0) { g_offline_prefs.end(); return; }
     if (to_send > OFFLINE_DRAIN_MAX_PER_WAKE) to_send = OFFLINE_DRAIN_MAX_PER_WAKE;
     Serial.printf("Offline: draining %u samples (tail=%u head=%u)\n", (unsigned)to_send, (unsigned)tail, (unsigned)head);
-    for (uint32_t i = 0; i < to_send && g_mqtt.connected(); ++i) {
-        uint32_t seq = tail + i;
+    unsigned long drain_start_ms = millis();
+    uint32_t bytes_sent = 0;
+    uint32_t orig_tail = tail;
+    uint32_t processed = 0;
+    while (processed < to_send && g_mqtt.connected()) {
+        // Time budget check before reading/publishing next sample
+        if (OFFLINE_DRAIN_MAX_MS > 0 && (millis() - drain_start_ms) >= OFFLINE_DRAIN_MAX_MS) {
+            Serial.printf("Offline: drain stop (time budget) elapsed_ms=%lu sent=%u bytes=%u\n",
+                          (unsigned long)(millis() - drain_start_ms), (unsigned)(tail - orig_tail), (unsigned)bytes_sent);
+            break;
+        }
+        uint32_t seq = tail;
         char key[16]; offline_key_for(seq, key);
         OfflineSample s{};
         size_t n = g_offline_prefs.getBytes(key, &s, sizeof(s));
         if (n == sizeof(s)) {
-            net_publish_inside_history(s.epoch, s.tempC, s.rhPct);
+            bytes_sent += net_publish_inside_history(s.epoch, s.tempC, s.rhPct);
             // Immediately delete upon publish; advance tail
             g_offline_prefs.remove(key);
             tail = seq + 1;
+            processed++;
             // Give MQTT time to pump
             for (int k = 0; k < 3; ++k) { if (g_mqtt.connected()) g_mqtt.loop(); delay(5); }
+            // Post-publish budget checks
+            if ((OFFLINE_DRAIN_MAX_BYTES > 0 && bytes_sent >= OFFLINE_DRAIN_MAX_BYTES) ||
+                (OFFLINE_DRAIN_MAX_MS > 0 && (millis() - drain_start_ms) >= OFFLINE_DRAIN_MAX_MS)) {
+                Serial.printf("Offline: drain stop (%s budget) elapsed_ms=%lu sent=%u bytes=%u\n",
+                              (bytes_sent >= OFFLINE_DRAIN_MAX_BYTES ? "byte" : "time"),
+                              (unsigned long)(millis() - drain_start_ms), (unsigned)(tail - orig_tail), (unsigned)bytes_sent);
+                break;
+            }
+        } else {
+            // Missing or corrupt entry; skip it
+            tail = seq + 1;
+            processed++;
         }
     }
     offline_set_bounds(head, tail);
