@@ -44,6 +44,17 @@ python3 scripts/gen_layout_header.py
 - **MQTT path**: subscribe to retained `home/outdoor/...` topics; publish inside readings to `sensors/<room>/...`.
   - Supports optional MQTT auth: set `mqtt.user` and `mqtt.password` in `config/device.yaml`.
   - Example HA automation to publish outdoor values is provided in `homeassistant/mqtt_outdoor_publish.yaml`.
+  
+  MQTT Discovery (Arduino build) — what the device publishes/uses:
+  - Discovery topics (retained):
+    - `homeassistant/sensor/<client_id>_inside_temp/config`
+    - `homeassistant/sensor/<client_id>_inside_hum/config`
+  - Discovery payload keys (abridged): `state_topic`, `availability_topic`, `payload_available: "online"`, `payload_not_available: "offline"`, `unit_of_measurement` ("°F" for temp), `device_class`.
+  - State topics (retained):
+    - `sensors/<room>/inside/temp` (Fahrenheit, one decimal)
+    - `sensors/<room>/inside/hum` (percent, integer)
+  - Availability (retained):
+    - `sensors/<room>/availability` with payloads `online`/`offline` (LWT set on connect, offline published just before sleep).
 
 ### Configuration
 
@@ -100,6 +111,19 @@ build_flags =
 ```
 
 Note: The optional status LED heartbeat uses the Adafruit NeoPixel library and is already included in the PlatformIO `lib_deps`. You can disable the LED at build time with `-DUSE_STATUS_PIXEL=0` if optimizing for lowest sleep current.
+
+Developer builds:
+- `env:feather_esp32s2_headless`: headless, always on (DEV_NO_SLEEP=1) for fast MQTT/HA validation.
+- `env:feather_esp32s2_dev2`: headless, 3 min awake / 3 min sleep cycle for soak testing while limiting heat.
+
+Commands:
+```bash
+# 3-on / 3-off dev cycle build
+pio run -e feather_esp32s2_dev2
+PORT=$(ls /dev/cu.usbmodem* | head -n1)
+pio run -t upload -e feather_esp32s2_dev2 --upload-port "$PORT"
+pio device monitor -p "$PORT" -b 115200
+```
 
 Minimal `src/main.cpp` skeleton:
 
