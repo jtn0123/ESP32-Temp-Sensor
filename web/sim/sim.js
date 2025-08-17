@@ -320,7 +320,8 @@
     ctx.fillStyle = '#000';
     const insideLabel = 'INSIDE';
     const outsideLabel = 'OUTSIDE';
-    ctx.font = `${SIZE_LABEL}px ${FONT_STACK}`;
+    // Measure using the same style we draw with (bold) so centering is accurate
+    ctx.font = `bold ${SIZE_LABEL}px ${FONT_STACK}`;
     const ilw = ctx.measureText(insideLabel).width;
     const olw = ctx.measureText(outsideLabel).width;
     const ilx = INSIDE_TEMP[0] + Math.floor((INSIDE_TEMP[2] - ilw) / 2);
@@ -439,6 +440,10 @@
     try{
       window.__layoutMetrics = {
         canvas: { width: WIDTH, height: HEIGHT },
+        labels: {
+          inside: { x: ilx + ilw/2, text: insideLabel },
+          outside: { x: olx + olw/2, text: outsideLabel }
+        },
         statusLeft: {
           left: leftColLeft,
           right: leftColRight,

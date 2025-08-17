@@ -126,6 +126,13 @@ def test_layout_centering_and_clipping():
                     r = T[key]['rect']; contentLeft = T[key]['contentLeft']; totalW = T[key]['totalW']
                     mid = r['x'] + r['w']/2; groupMid = contentLeft + totalW/2
                     assert abs(mid - groupMid) <= 2
+
+                # 6) Section labels centered above their temp blocks
+                def _centered_over(rect, label_x, tol=2):
+                    mid = rect['x'] + rect['w']/2
+                    assert abs(label_x - mid) <= tol
+                _centered_over(T['inside']['rect'], M['labels']['inside']['x'])
+                _centered_over(T['outside']['rect'], M['labels']['outside']['x'])
             except AssertionError:
                 _save_artifacts(page, name="failure")
                 raise
