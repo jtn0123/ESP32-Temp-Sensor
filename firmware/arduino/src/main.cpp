@@ -184,6 +184,20 @@ static const char* reset_reason_str(esp_reset_reason_t r)
     }
 }
 
+static inline bool reset_reason_is_crash(esp_reset_reason_t r)
+{
+    switch (r) {
+        case ESP_RST_PANIC:
+        case ESP_RST_INT_WDT:
+        case ESP_RST_TASK_WDT:
+        case ESP_RST_WDT:
+        case ESP_RST_BROWNOUT:
+            return true;
+        default:
+            return false;
+    }
+}
+
 static const char* wakeup_cause_str(esp_sleep_wakeup_cause_t c)
 {
     switch (c) {
@@ -822,6 +836,16 @@ void setup() {
     int64_t t1_us = esp_timer_get_time();
     ensure_mqtt_connected();
     int64_t t2_us = esp_timer_get_time();
+
+    // Crash safety: on panic/WDT/brownout reboot, publish retained last_crash; clear it on clean runs
+    if (net_mqtt_is_connected()) {
+        esp_reset_reason_t rr = esp_reset_reason();
+        if (reset_reason_is_crash(rr)) {
+            net_publish_last_crash(reset_reason_str(rr));
+        } else {
+            net_publish_last_crash(nullptr); // clear retained key
+        }
+    }
 
     // Measure sensor read duration (first read post-boot)
     int64_t t_sense_start_us = esp_timer_get_time();

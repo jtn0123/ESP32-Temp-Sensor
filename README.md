@@ -117,9 +117,10 @@ build_flags =
 Note: The optional status LED heartbeat uses the Adafruit NeoPixel library and is already included in the PlatformIO `lib_deps`. You can disable the LED at build time with `-DUSE_STATUS_PIXEL=0` if optimizing for lowest sleep current.
 
 Developer builds:
-- `env:feather_esp32s2_headless`: headless, always on (DEV_NO_SLEEP=1) for fast MQTT/HA validation.
+- `env:feather_esp32s2_headless`: headless with parity to e‑ink build (same thresholds and availability; sleeps per `WAKE_INTERVAL_SEC`).
 - `env:feather_esp32s2_dev2`: headless, 3 min awake / 3 min sleep cycle for soak testing while limiting heat.
 - `env:feather_esp32s2_headless_1h`: headless, 1‑hour sleep schedule (WAKE_INTERVAL_SEC=3600).
+- `env:feather_esp32s2_headless_always`: headless, always on (DEV_NO_SLEEP=1) for rapid MQTT/HA validation.
 
 ### Flash helper script (recommended)
 
