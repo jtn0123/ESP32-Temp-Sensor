@@ -23,6 +23,13 @@ def _start_http_server(root: str, port: int) -> subprocess.Popen:
     )
 
 
+_CANVAS_RGBA_JS = (
+    "([x,y])=>{"
+    "const c=document.getElementById('epd');const ctx=c.getContext('2d');"
+    "return Array.from(ctx.getImageData(x,y,1,1).data);}"
+)
+
+
 @pytest.mark.skipif(
     not bool(__import__("importlib").util.find_spec("playwright")),
     reason="playwright not installed",
@@ -44,10 +51,7 @@ def test_canvas_is_binary_after_draw():
             # Sample a small grid across the canvas to ensure only 0 or 255 per channel
             grid = [(x, y) for x in range(0, 250, 25) for y in range(0, 122, 12)]
             for x, y in grid:
-                r, g, b, a = page.evaluate(
-                    "([x,y])=>{const c=document.getElementById('epd');const ctx=c.getContext('2d');return Array.from(ctx.getImageData(x,y,1,1).data);}",
-                    [x, y],
-                )
+                r, g, b, a = page.evaluate(_CANVAS_RGBA_JS, [x, y])
                 assert r in (0, 255) and g in (0, 255) and b in (0, 255)
                 assert r == g == b
             browser.close()
@@ -80,10 +84,7 @@ def test_stress_mode_renders_without_overlap():
 
             # Probe that the layout still draws expected frame lines
             for x, y in [(0, 0), (249, 0), (0, 121), (249, 121)]:
-                r, g, b, a = page.evaluate(
-                    "([x,y])=>{const c=document.getElementById('epd');const ctx=c.getContext('2d');return Array.from(ctx.getImageData(x,y,1,1).data);}",
-                    [x, y],
-                )
+                r, g, b, a = page.evaluate(_CANVAS_RGBA_JS, [x, y])
                 assert (r, g, b) == (0, 0, 0)
             browser.close()
     finally:
