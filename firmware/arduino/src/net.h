@@ -98,7 +98,7 @@ inline bool is_all_zero_bssid(const uint8_t b[6]) {
 #endif
 
 // Number of consecutive failed connects with a pinned BSSID before clearing
-    it
+//     it
 #ifndef WIFI_BSSID_FAIL_CLEAR_N
 #define WIFI_BSSID_FAIL_CLEAR_N 3
 #endif
@@ -166,7 +166,7 @@ inline bool ends_with(const char* s, const char* suffix) {
 // -------------------- Time sync (SNTP) --------------------
 #ifndef TIME_FRESH_EPOCH_MIN
 #define TIME_FRESH_EPOCH_MIN 1609459200UL  // 2021-01-01,
-    anything earlier considered stale
+//     anything earlier considered stale
 #endif
 #ifndef TIME_RESYNC_INTERVAL_SEC
 #define TIME_RESYNC_INTERVAL_SEC (24UL * 60UL * 60UL)  // once per day
@@ -267,7 +267,7 @@ inline void offline_enqueue_sample(float tempC, float rhPct) {
   g_offline_prefs.end();
   Serial.printf("Offline: queued seq=%u ts=%u (C=%.2f RH=%.0f)\n",
                 static_cast<unsigned>(head), static_cast<unsigned>(ts),
-    s.tempC,
+//     s.tempC,
     s.rhPct);
 }
 
@@ -461,7 +461,7 @@ static bool start_wifi_station_connect_from_nvs(uint32_t timeout_ms) {
   esp_wifi_set_country_code(WIFI_COUNTRY, true);
 #endif
   // Unlock channel and apply thresholds and optional preferred BSSID
-    remembered
+//     remembered
   // in our own NVS
   wifi_config_t cfg;
   memset(&cfg, 0, sizeof(cfg));
@@ -585,9 +585,9 @@ static void ensure_wifi_connected_provisioned_impl() {
 #endif
     Serial.printf("WiFiProv: starting provisioning (%s), service '%s'\n",
 #if WIFI_PROV_USE_SOFTAP
-                  "softAP",
+//                   "softAP",
 #else
-                  "BLE",
+//                   "BLE",
 #endif
                   service_name);
     if (wifi_prov_mgr_start_provisioning(sec, pop, service_name,
@@ -769,7 +769,7 @@ inline void ensure_wifi_connected() {
     Serial.printf("WiFi: connect timeout (status=%d)\n",
     static_cast<int>(WiFi.status()));
     // Increment consecutive failure count and clear saved BSSID after N
-    misses
+//     misses
     if (have_bssid) {
       uint32_t c = nvs_get_bssid_fail_count();
       c++;
@@ -1036,7 +1036,7 @@ inline void net_publish_ha_discovery() {
   char availTopic[128];
   snprintf(availTopic, sizeof(availTopic), "%s/availability", MQTT_PUB_BASE);
   // Expire entities slightly after our scheduled wake so HA greys stale
-    values
+//     values
   // if we miss a cycle
   uint32_t expireAfterSec = static_cast<uint32_t>(WAKE_INTERVAL_SEC) + 120U;
 
@@ -1058,7 +1058,7 @@ inline void net_publish_ha_discovery() {
     state_suffix);
     char payload[640];
     // Choose a suggested display precision based on unit to stabilize graphs
-    in
+//     in
     // HA
     int suggestedPrecision = 0;
     if (strcmp(unit, "°F") == 0)
@@ -1067,20 +1067,20 @@ inline void net_publish_ha_discovery() {
       suggestedPrecision = 2;  // Volts: two decimals
     else if (strcmp(unit, "hPa") == 0)
       suggestedPrecision = 1;  // Pressure: one decimal
-    else
+//     else
       suggestedPrecision = 0;  // Percent and others: integer
     // Full HA discovery keys for maximum compatibility; retained
     snprintf(payload, sizeof(payload),
 
     "{\"name\":\"%s\",\"unique_id\":\"%s_%s\",\"state_topic\":\"%s\","
-             "\"availability_topic\":\"%s\",\"unit_of_measurement\":\"%s\","
+//              "\"availability_topic\":\"%s\",\"unit_of_measurement\":\"%s\","
              "\"device_class\":\"%s\",\"state_class\":\"measurement\","
-             "\"suggested_display_precision\":%d,\"expire_after\":%u,"
+//              "\"suggested_display_precision\":%d,\"expire_after\":%u,"
              "\"device\":{\"identifiers\":[\"%s\"],\"name\":\"ESP32 Room Node: "
-             "%s\",\"manufacturer\":\"DIY\",\"model\":\"Feather "
+//              "%s\",\"manufacturer\":\"DIY\",\"model\":\"Feather "
              "ESP32-S2\",\"sw_version\":\"%s\"}}",
              name, g_client_id, key, stateTopic, availTopic, unit, dev_class,
-    suggestedPrecision,
+//     suggestedPrecision,
              static_cast<unsigned>(expireAfterSec), g_client_id, ROOM_NAME,
     FW_VERSION);
     g_mqtt.publish(discTopic, payload, true);

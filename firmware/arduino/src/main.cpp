@@ -51,7 +51,7 @@ GxEPD2_BW<GxEPD2_213_B74,
 
 
 
-    EINK_DC, EINK_RST,
+//     EINK_DC, EINK_RST,
 
     EINK_BUSY));
 #endif
@@ -102,9 +102,9 @@ static inline void nvs_store_uint(const char* key,
     uint32_t v) { g_prefs.putUInt(key, v); }
 
 static constexpr float THRESH_TEMP_F = 0.2f;                        //
-    redraw/publish threshold in F
+//     redraw/publish threshold in F
 static constexpr float THRESH_TEMP_C_FROM_F = THRESH_TEMP_F / 1.8f;  //
-    ~0.111C
+//     ~0.111C
 static constexpr float THRESH_RH = 1.0f;                            // percent
 static constexpr float THRESH_PRESS_HPA = 0.5f;                      // hPa
 
@@ -249,7 +249,7 @@ static const char* reset_reason_str(esp_reset_reason_t r) {
     return "ESP_RST_DEEPSLEEP";
   case ESP_RST_SDIO:
     return "ESP_RST_SDIO";
-  default:
+//   default:
     return "ESP_RST_UNKNOWN";
   }
 }
@@ -262,7 +262,7 @@ static inline bool reset_reason_is_crash(esp_reset_reason_t r) {
   case ESP_RST_WDT:
   case ESP_RST_BROWNOUT:
     return true;
-  default:
+//   default:
     return false;
   }
 }
@@ -289,7 +289,7 @@ static const char* wakeup_cause_str(esp_sleep_wakeup_cause_t c) {
   case ESP_SLEEP_WAKEUP_UART:
     return "UART";
 #endif
-  default:
+//   default:
     return "OTHER";
   }
 }
@@ -320,10 +320,10 @@ static void handle_serial_command_line(const String& line) {
     net_ip_cstr(ip_c, sizeof(ip_c));
     BatteryStatus bs = read_battery_status();
     Serial.printf("status ip=%s wifi=%s mqtt=%s v=%.2f pct=%d partial=%u\n",
-    ip_c,
+//     ip_c,
                   net_wifi_is_connected() ? "up" : "down",
     net_mqtt_is_connected() ? "up" : "down",
-                  bs.voltage, bs.percent,
+//                   bs.voltage, bs.percent,
     static_cast<unsigned>(partial_counter));
     return;
   }
@@ -478,8 +478,8 @@ template <typename DrawFn> static inline void draw_in_region(const int rect[4],
 
 static inline void draw_right_aligned_text_in_rect(const int rect[4],
     const char* text,
-                                                   uint8_t textSize,
-    int16_t paddingRight,
+//                                                    uint8_t textSize,
+//     int16_t paddingRight,
                                                    int16_t baselineOffset) {
   draw_in_region(rect, [&](int16_t x, int16_t y, int16_t w, int16_t h) {
     display.setTextColor(GxEPD_BLACK);
@@ -540,8 +540,8 @@ static inline uint32_t fast_crc32(const uint8_t* data, size_t len) {
 
 template <typename DrawFn>
 static inline bool maybe_redraw_numeric(const int rect[4], float currentValue,
-    float& lastValue,
-                                        float threshold, DrawFn drawFn) {
+                                        float& lastValue, float threshold,
+                                        DrawFn drawFn) {
   bool should = false;
   if (!isnan(currentValue) &&
       (!isfinite(lastValue) || fabsf(currentValue - lastValue) >= threshold))
@@ -556,14 +556,7 @@ static inline bool maybe_redraw_numeric(const int rect[4], float currentValue,
 
 template <typename T, typename DrawFn>
 static inline bool maybe_redraw_value(const int rect[4], const T& currentValue,
-    
-    
-    
-    
-    
-    
-    T& lastValue,
-                                      DrawFn drawFn) {
+                                      T& lastValue, DrawFn drawFn) {
   if (currentValue != lastValue) {
     drawFn();
     lastValue = currentValue;
@@ -577,13 +570,7 @@ static inline bool maybe_redraw_status(const BatteryStatus& bs,
                                        const int rect[4]) {
   char buf[96];
   snprintf(buf, sizeof(buf), "IP %s  Batt %.2fV %d%%  ~%dd", ip_cstr,
-    bs.voltage,
-
-
-
-
-    bs.percent,
-           bs.estimatedDays);
+           bs.voltage, bs.percent, bs.estimatedDays);
   uint32_t crc = fast_crc32((const uint8_t*)buf, strlen(buf));
   if (crc != last_status_crc) {
     draw_status_line(bs, ip_cstr);
@@ -666,13 +653,13 @@ static void draw_status_line(const BatteryStatus& bs, const char* ip_cstr) {
     display.getTextBounds(right, 0, 0, &bx, &by, &bw, &bh);
     int16_t rx = xx + ww - 2 - static_cast<int16_t>(bw);
     // Choose, using bounds,
-    which left label to print based on available width
+//     which left label to print based on available width
     char left_full[64];
     char left_nobatt[64];
     char left_tail[32];
     snprintf(left_full, sizeof(left_full), "Batt %.2fV %d%% | ~%dd",
-    bs.voltage,
-    bs.percent,
+//     bs.voltage,
+//     bs.percent,
              bs.estimatedDays);
     snprintf(left_nobatt, sizeof(left_nobatt), "%.2fV %d%% | ~%dd", bs.voltage,
     
@@ -681,7 +668,7 @@ static void draw_status_line(const BatteryStatus& bs, const char* ip_cstr) {
     
     
     
-    bs.percent,
+//     bs.percent,
              bs.estimatedDays);
     snprintf(left_tail, sizeof(left_tail), "%d%% | ~%dd", bs.percent,
     bs.estimatedDays);
@@ -1037,7 +1024,7 @@ void setup() {
   if (dbg_ms_sensor > static_cast<uint32_t>(SENSOR_PHASE_TIMEOUT_MS)) {
     s_timeouts_mask |= TIMEOUT_BIT_SENSOR;
     Serial.printf("Timeout: sensor read exceeded budget ms=%u budget=%u\n",
-    dbg_ms_sensor,
+//     dbg_ms_sensor,
                   static_cast<unsigned>(SENSOR_PHASE_TIMEOUT_MS));
   }
 
@@ -1066,10 +1053,10 @@ void setup() {
     uint32_t deep_sleep_us = sleep_scheduled_ms * 1000UL;
     snprintf(dbg, sizeof(dbg),
              "{\"ms_boot_to_wifi\":%u,\"ms_wifi_to_mqtt\":%u,\"ms_sensor_"
-             "read\":%u,\"ms_publish\":%u,\"sleep_scheduled_ms\":%u,\"deep_"
+//              "read\":%u,\"ms_publish\":%u,\"sleep_scheduled_ms\":%u,\"deep_"
              "sleep_us\":%u,\"reset_reason\":\"%s\",\"wakeup_cause\":\"%s\"}",
-             ms_boot_to_wifi, ms_wifi_to_mqtt, ms_sensor_read, ms_publish,
-    sleep_scheduled_ms,
+//              ms_boot_to_wifi, ms_wifi_to_mqtt, ms_sensor_read, ms_publish,
+//     sleep_scheduled_ms,
              deep_sleep_us, reset_reason_str(esp_reset_reason()),
              wakeup_cause_str(esp_sleep_get_wakeup_cause()));
     net_publish_debug_json(dbg, false);
@@ -1230,17 +1217,17 @@ void setup() {
       if (temp_changed && o.validHum && isfinite(o.humidityPct)) {
         // Merge redraws: update temp and RH in same wake when both changed
         maybe_redraw_numeric(OUT_TEMP, now_out_f, last_outside_f,
-    THRESH_TEMP_F,
+//     THRESH_TEMP_F,
                              [&]() { partial_update_outside_temp(out_temp,
     trend_out); });
         char out_rh2[16];
         snprintf(out_rh2, sizeof(out_rh2), "%.0f", o.humidityPct);
         maybe_redraw_numeric(OUT_ROW2_L, o.humidityPct, last_outside_rh,
-    THRESH_RH,
+//     THRESH_RH,
                              [&]() { partial_update_outside_rh(out_rh2); });
       } else {
         maybe_redraw_numeric(OUT_TEMP, now_out_f, last_outside_f,
-    THRESH_TEMP_F,
+//     THRESH_TEMP_F,
                              [&]() { partial_update_outside_temp(out_temp,
     trend_out); });
       }
@@ -1251,7 +1238,7 @@ void setup() {
       char out_rh[16];
       snprintf(out_rh, sizeof(out_rh), "%.0f", o.humidityPct);
       maybe_redraw_numeric(OUT_ROW2_L, o.humidityPct, last_outside_rh,
-    THRESH_RH,
+//     THRESH_RH,
 
 
 
@@ -1264,7 +1251,7 @@ void setup() {
     if (o.validWeather) {
       IconId id = map_weather_to_icon(o.weather);
       maybe_redraw_value<int32_t>(OUT_ICON, static_cast<int32_t>(id),
-    last_icon_id,
+//     last_icon_id,
                                   [&]() {
     partial_update_weather_icon(o.weather); });
       nvs_store_int("icon", last_icon_id);
@@ -1298,7 +1285,7 @@ void setup() {
     static_cast<uint32_t>(PUBLISH_PHASE_TIMEOUT_MS)) {
       s_timeouts_mask |= TIMEOUT_BIT_PUBLISH;
       Serial.printf("Timeout: publish exceeded budget ms=%u budget=%u\n",
-    ms_publish_phase,
+//     ms_publish_phase,
                     static_cast<unsigned>(PUBLISH_PHASE_TIMEOUT_MS));
     }
   }
@@ -1308,21 +1295,21 @@ void setup() {
   if (ms_display > static_cast<uint32_t>(DISPLAY_PHASE_TIMEOUT_MS)) {
     s_timeouts_mask |= TIMEOUT_BIT_DISPLAY;
     Serial.printf("Timeout: display phase exceeded budget ms=%u budget=%u\n",
-    ms_display,
+//     ms_display,
                   static_cast<unsigned>(DISPLAY_PHASE_TIMEOUT_MS));
   }
   g_display_deadline_ms = 0;
 #endif
 #else
   // Headless mode: no display; still connect, read sensors, publish,
-    and sleep
+//     and sleep
   uint32_t sens2_start = millis();
   InsideReadings r = read_inside_sensors();
   uint32_t sens2_ms = static_cast<uint32_t>(millis() - sens2_start);
   if (sens2_ms > static_cast<uint32_t>(SENSOR_PHASE_TIMEOUT_MS)) {
     s_timeouts_mask |= TIMEOUT_BIT_SENSOR;
     Serial.printf("Timeout: sensor read exceeded budget ms=%u budget=%u\n",
-    sens2_ms,
+//     sens2_ms,
                   static_cast<unsigned>(SENSOR_PHASE_TIMEOUT_MS));
   }
   uint32_t publish_phase_start = millis();
@@ -1375,7 +1362,7 @@ void setup() {
     static_cast<uint32_t>(PUBLISH_PHASE_TIMEOUT_MS)) {
     s_timeouts_mask |= TIMEOUT_BIT_PUBLISH;
     Serial.printf("Timeout: publish exceeded budget ms=%u budget=%u\n",
-    ms_publish_phase,
+//     ms_publish_phase,
                   static_cast<unsigned>(PUBLISH_PHASE_TIMEOUT_MS));
   }
 #endif
