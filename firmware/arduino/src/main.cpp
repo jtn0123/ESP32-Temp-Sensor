@@ -3,22 +3,22 @@
 
 #include <Arduino.h>
 #include <Preferences.h>
+#if USE_STATUS_PIXEL
+#include <Adafruit_NeoPixel.h>
+#endif
+#if USE_DISPLAY
+#include <GxEPD2_BW.h>
+#endif
 
 #include "config.h"
-
 #if USE_DISPLAY
 #include "display_layout.h"
 #include "icons.h"
-
-#include <GxEPD2_BW.h>
 #endif
 #include "generated_config.h"
 #include "net.h"
 #include "power.h"
 #include "sensors.h"
-#if USE_STATUS_PIXEL
-#include <Adafruit_NeoPixel.h>
-#endif
 
 // Forward declaration for status pixel tick used in pump_network_ms
 #if USE_STATUS_PIXEL
