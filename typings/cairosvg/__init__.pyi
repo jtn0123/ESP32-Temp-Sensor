@@ -6,4 +6,3 @@ def svg2png(
     output_width: int = ...,
     output_height: int = ...,
 ) -> bytes: ...
-
