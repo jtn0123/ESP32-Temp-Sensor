@@ -2,11 +2,15 @@
 
 // Copyright 2024 Justin
 
+// C system headers
+#include <esp_sleep.h>
+
+// Other headers
+#include <Arduino.h>
+
+// Project headers
 #include "config.h"
 #include "generated_config.h"
-
-#include <Arduino.h>
-#include <esp_sleep.h>
 
 #if USE_MAX17048
 #include <Adafruit_MAX1704X.h>

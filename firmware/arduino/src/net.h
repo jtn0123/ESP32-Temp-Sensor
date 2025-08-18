@@ -2,9 +2,11 @@
 
 // Copyright 2024 Justin
 // C system / ESP-IDF C headers
-#include <cstdio>
 #include <esp_wifi.h>
 #include <time.h>
+
+// C++ system headers
+#include <cstdio>
 
 // C++/Arduino and third-party headers
 #include <Arduino.h>

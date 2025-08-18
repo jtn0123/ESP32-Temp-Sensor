@@ -95,8 +95,12 @@ jobs:
         run: pio run
 
   lint:
-    name: Lint (Python + C++)
+    name: Lint (${{ matrix.tool }})
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        tool: [ruff, black, clang-format, cpplint]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -106,69 +110,58 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Install Python tools (ruff, black, cpplint)
+      - name: Install tool
+        shell: bash
         run: |
+          set -e
           python -m pip install --upgrade pip
-          python -m pip install ruff black cpplint
+          case "${{ matrix.tool }}" in
+            ruff)
+              pip install ruff
+              ;;
+            black)
+              pip install black
+              ;;
+            cpplint)
+              pip install cpplint
+              ;;
+            clang-format)
+              sudo apt-get update
+              sudo apt-get install -y clang-format
+              ;;
+          esac
 
-      - name: Install clang-format
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y clang-format
-
-      - name: Lint Python (ruff)
-        id: ruff
-        shell: bash
-        run: |
-          set -o pipefail
-          ruff check . 2>&1 | tee ruff.txt
-        continue-on-error: true
-
-      - name: Check Python formatting (black)
-        id: black
-        shell: bash
-        run: |
-          set -o pipefail
-          black --check . 2>&1 | tee black.txt
-        continue-on-error: true
-
-      - name: Check C++ formatting (clang-format)
-        id: clang_format
+      - name: Run ${{ matrix.tool }}
         shell: bash
         run: |
           set -euo pipefail
-          FILES=$(find firmware/arduino/src -type f \( -name "*.cpp" -o -name "*.h" \))
-          if [ -n "$FILES" ]; then
-            clang-format --version | tee clang-format-version.txt
-            clang-format -n --Werror $FILES 2>&1 | tee clang-format.txt
-          fi
-        continue-on-error: true
-
-      - name: cpplint (include-order and braces only)
-        id: cpplint
-        shell: bash
-        run: |
-          set -euo pipefail
-          FILES=$(find firmware/arduino/src -type f \( -name "*.cpp" -o -name "*.h" \))
-          if [ -n "$FILES" ]; then
-            python -m cpplint --filter=-build,-legal,-readability,-runtime,-whitespace,+build/include_order,+whitespace/braces $FILES 2>&1 | tee cpplint.txt
-          fi
-        continue-on-error: true
+          case "${{ matrix.tool }}" in
+            ruff)
+              ruff check . 2>&1 | tee ruff.txt
+              ;;
+            black)
+              black --check . 2>&1 | tee black.txt
+              ;;
+            clang-format)
+              FILES=$(find firmware/arduino/src -type f \( -name "*.cpp" -o -name "*.h" \))
+              if [ -n "$FILES" ]; then
+                clang-format --version | tee clang-format-version.txt
+                clang-format -n --Werror $FILES 2>&1 | tee clang-format.txt
+              fi
+              ;;
+            cpplint)
+              FILES=$(find firmware/arduino/src -type f \( -name "*.cpp" -o -name "*.h" \))
+              if [ -n "$FILES" ]; then
+                python -m cpplint --filter=-build,-legal,-readability,-runtime,-whitespace,+build/include_order,+whitespace/braces $FILES 2>&1 | tee cpplint.txt
+              fi
+              ;;
+          esac
 
       - name: Upload lint logs
         if: ${{ always() }}
         uses: actions/upload-artifact@v4
         with:
-          name: lint-logs
-          if-no-files-found: warn
-          path: |
-            ruff.txt
-            black.txt
-            clang-format.txt
-            clang-format-version.txt
-            cpplint.txt
-
-      - name: Fail if any linter failed
-        if: ${{ always() && (steps.ruff.outcome == 'failure' || steps.black.outcome == 'failure' || steps.clang_format.outcome == 'failure' || steps.cpplint.outcome == 'failure') }}
-        run: exit 1
+          name: lint-logs-${{ matrix.tool }}
+          if-no-files-found: ignore
+          path: "*.txt"
 
