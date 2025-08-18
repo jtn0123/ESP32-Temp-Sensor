@@ -101,11 +101,11 @@ static uint32_t s_timeouts_mask = 0;
 
 #if USE_DISPLAY
 // Shared soft deadline used by display drawing helpers to avoid long loops
-static unsigned long g_display_deadline_ms = 0;
+static uint32_t g_display_deadline_ms = 0;
 #endif
 
 static void pump_network_ms(uint32_t duration_ms) {
-  unsigned long start = millis();
+  uint32_t start = millis();
   while (millis() - start < duration_ms) {
     net_loop();
 #if USE_STATUS_PIXEL
@@ -980,7 +980,7 @@ void setup() {
   }
 
   // Allow retained MQTT to arrive quickly for outside readings (bounded)
-  unsigned long fetch_start_ms = millis();
+  uint32_t fetch_start_ms = millis();
   bool outside_before = net_get_outside().validTemp || net_get_outside().validHum ||
                         net_get_outside().validWeather || net_get_outside().validWind;
   pump_network_ms(static_cast<uint32_t>(FETCH_RETAINED_TIMEOUT_MS));
@@ -1008,17 +1008,17 @@ void setup() {
     do_full = true; // periodic full clears
   }
 
-  unsigned long display_phase_start = millis();
+  uint32_t display_phase_start = millis();
 // Establish a soft deadline visible to drawing helpers
 #ifdef DISPLAY_PHASE_TIMEOUT_MS
-  g_display_deadline_ms = display_phase_start + (unsigned long)DISPLAY_PHASE_TIMEOUT_MS;
+  g_display_deadline_ms = display_phase_start + static_cast<unsigned long>(DISPLAY_PHASE_TIMEOUT_MS);
 #endif
   if (do_full) {
     full_refresh();
   } else {
-    unsigned long sens2_start = millis();
+    uint32_t sens2_start = millis();
     InsideReadings r = read_inside_sensors();
-    uint32_t sens2_ms = (uint32_t)(millis() - sens2_start);
+    uint32_t sens2_ms = static_cast<uint32_t>(millis() - sens2_start);
     if (sens2_ms > static_cast<uint32_t>(SENSOR_PHASE_TIMEOUT_MS)) {
       s_timeouts_mask |= TIMEOUT_BIT_SENSOR;
       Serial.printf("Timeout: sensor read (secondary) exceeded budget ms=%u budget=%u\n", sens2_ms,
@@ -1053,7 +1053,7 @@ void setup() {
       if (isfinite(last_inside_rh))
         nvs_store_float("li_rh", last_inside_rh);
     }
-    unsigned long publish_phase_start = millis();
+    uint32_t publish_phase_start = millis();
     bool publish_any = false;
     if (isfinite(r.temperatureC) && isfinite(r.humidityPct)) {
       bool temp_changed =
@@ -1157,7 +1157,7 @@ void setup() {
 #endif
 #else
   // Headless mode: no display; still connect, read sensors, publish, and sleep
-  unsigned long sens2_start = millis();
+  uint32_t sens2_start = millis();
   InsideReadings r = read_inside_sensors();
   uint32_t sens2_ms = static_cast<uint32_t>(millis() - sens2_start);
   if (sens2_ms > static_cast<uint32_t>(SENSOR_PHASE_TIMEOUT_MS)) {
@@ -1165,7 +1165,7 @@ void setup() {
     Serial.printf("Timeout: sensor read exceeded budget ms=%u budget=%u\n", sens2_ms,
                   static_cast<unsigned>(SENSOR_PHASE_TIMEOUT_MS));
   }
-  unsigned long publish_phase_start = millis();
+  uint32_t publish_phase_start = millis();
   bool publish_any = false;
   if (isfinite(r.temperatureC) && isfinite(r.humidityPct)) {
     bool temp_changed = (!isfinite(last_published_inside_tempC)) ||
@@ -1222,7 +1222,7 @@ void setup() {
   // Persist partial refresh cadence so it survives reset
   g_prefs.putUShort("pcount", partial_counter);
   // Log awake duration and planned sleep for diagnostics
-  Serial.printf("Awake ms: %lu\n", static_cast<unsigned long>(millis()));
+  Serial.printf("Awake ms: %u\n", static_cast<unsigned>(millis()));
 #if DEV_NO_SLEEP
   Serial.println("DEV_NO_SLEEP=1: staying awake for debugging");
   while (true) {
@@ -1237,7 +1237,7 @@ void setup() {
         handle_serial_command_line(buf);
         buf = "";
       } else if (buf.length() < 96) {
-        buf += (char)ch;
+        buf += static_cast<char>(ch);
       }
     }
     // Periodic USB metrics while debugging

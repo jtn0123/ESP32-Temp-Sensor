@@ -125,6 +125,6 @@ inline void go_deep_sleep_seconds(uint32_t seconds) {
     fuelgauge_sleep_between_wakes();
   }
 #endif
-  esp_sleep_enable_timer_wakeup((uint64_t)seconds * 1000000ULL);
+  esp_sleep_enable_timer_wakeup(static_cast<uint64_t>(seconds) * 1000000ULL);
   esp_deep_sleep_start();
 }

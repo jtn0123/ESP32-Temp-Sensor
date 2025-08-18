@@ -190,7 +190,7 @@ inline void ensure_time_synced_if_stale() {
   // Use IDF/Arduino SNTP helper via configTime; keep timeout short
   configTime(0, 0, "pool.ntp.org", "time.nist.gov", "time.google.com");
   // Poll briefly until time looks sane
-  unsigned long start = millis();
+  uint32_t start = millis();
   while (static_cast<uint32_t>(time(nullptr)) < TIME_FRESH_EPOCH_MIN && millis() - start < 2000UL) {
     delay(50);
   }
@@ -298,15 +298,15 @@ inline void offline_drain_if_any() {
     to_send = OFFLINE_DRAIN_MAX_PER_WAKE;
   Serial.printf("Offline: draining %u samples (tail=%u head=%u)\n",
                 static_cast<unsigned>(to_send), static_cast<unsigned>(tail), static_cast<unsigned>(head));
-  unsigned long drain_start_ms = millis();
+  uint32_t drain_start_ms = millis();
   uint32_t bytes_sent = 0;
   uint32_t orig_tail = tail;
   uint32_t processed = 0;
   while (processed < to_send && g_mqtt.connected()) {
     // Time budget check before reading/publishing next sample
     if (OFFLINE_DRAIN_MAX_MS > 0 && (millis() - drain_start_ms) >= OFFLINE_DRAIN_MAX_MS) {
-      Serial.printf("Offline: drain stop (time budget) elapsed_ms=%lu sent=%u bytes=%u\n",
-                    static_cast<unsigned long>(millis() - drain_start_ms),
+      Serial.printf("Offline: drain stop (time budget) elapsed_ms=%u sent=%u bytes=%u\n",
+                    static_cast<unsigned>(millis() - drain_start_ms),
                     static_cast<unsigned>(tail - orig_tail), static_cast<unsigned>(bytes_sent));
       break;
     }
@@ -330,9 +330,9 @@ inline void offline_drain_if_any() {
       // Post-publish budget checks
       if ((OFFLINE_DRAIN_MAX_BYTES > 0 && bytes_sent >= OFFLINE_DRAIN_MAX_BYTES) ||
           (OFFLINE_DRAIN_MAX_MS > 0 && (millis() - drain_start_ms) >= OFFLINE_DRAIN_MAX_MS)) {
-        Serial.printf("Offline: drain stop (%s budget) elapsed_ms=%lu sent=%u bytes=%u\n",
+        Serial.printf("Offline: drain stop (%s budget) elapsed_ms=%u sent=%u bytes=%u\n",
                       (bytes_sent >= OFFLINE_DRAIN_MAX_BYTES ? "byte" : "time"),
-                      static_cast<unsigned long>(millis() - drain_start_ms),
+                      static_cast<unsigned>(millis() - drain_start_ms),
                       static_cast<unsigned>(tail - orig_tail), static_cast<unsigned>(bytes_sent));
         break;
       }
@@ -350,7 +350,7 @@ inline void mqtt_callback(char* topic, uint8_t* payload, unsigned int length) {
   char val[128];
   unsigned int n = length < (sizeof(val) - 1) ? length : (unsigned int)(sizeof(val) - 1);
   for (unsigned int i = 0; i < n; ++i)
-    val[i] = (char)payload[i];
+    val[i] = static_cast<char>(payload[i]);
   val[n] = '\0';
   // Home Assistant birth: when HA announces online, republish discovery and
   // current states
@@ -413,7 +413,7 @@ static void ensure_system_netif_and_loop_inited() {
   done = true;
 }
 
-static bool start_wifi_station_connect_from_nvs(unsigned long timeout_ms) {
+static bool start_wifi_station_connect_from_nvs(uint32_t timeout_ms) {
   WiFi.mode(WIFI_STA);
   WiFi.persistent(false);
   WiFi.setAutoReconnect(true);
@@ -452,7 +452,7 @@ static bool start_wifi_station_connect_from_nvs(unsigned long timeout_ms) {
   esp_wifi_set_config(WIFI_IF_STA, &cfg);
   esp_wifi_start();
   esp_wifi_connect();
-  unsigned long start = millis();
+  uint32_t start = millis();
   while (!WiFi.isConnected() && (millis() - start) < timeout_ms) {
     delay(100);
   }
@@ -539,7 +539,7 @@ static void ensure_wifi_connected_provisioned_impl() {
     } else {
       // Wait until provisioned or timeout
       unsigned long t0 = millis();
-      while (millis() - t0 < (unsigned long)WIFI_PROV_TIMEOUT_SEC * 1000UL) {
+      while (millis() - t0 < static_cast<unsigned long>(WIFI_PROV_TIMEOUT_SEC) * 1000UL) {
         bool prov = false;
         if (wifi_prov_mgr_is_provisioned(&prov) == ESP_OK && prov)
           break;
@@ -701,7 +701,7 @@ inline void ensure_wifi_connected() {
       nvs_store_last_ap(WIFI_SSID, now_bssid);
     }
   } else {
-    Serial.printf("WiFi: connect timeout (status=%d)\n", (int)WiFi.status());
+    Serial.printf("WiFi: connect timeout (status=%d)\n", static_cast<int>(WiFi.status()));
     // Increment consecutive failure count and clear saved BSSID after N misses
     if (have_bssid) {
       uint32_t c = nvs_get_bssid_fail_count();
