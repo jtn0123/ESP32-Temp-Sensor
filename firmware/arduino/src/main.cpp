@@ -1214,7 +1214,7 @@ void setup() {
     snprintf(dbg2, sizeof(dbg2),
              "{\"timeouts\":%u,\"notes\":\"bits:1=sensor,2=fetch,4=display,8="
              "publish\"}",
-             (unsigned)s_timeouts_mask);
+             static_cast<unsigned>(s_timeouts_mask));
     net_publish_debug_json(dbg2, false);
   }
 
