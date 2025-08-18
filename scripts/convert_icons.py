@@ -96,6 +96,7 @@ def c_array_name(name: str) -> str:
 def main():
     header_lines: List[str] = []
     header_lines.append("#pragma once")
+    header_lines.append("// Copyright 2024 Justin")
     header_lines.append("#include <stdint.h>")
     header_lines.append("#include <avr/pgmspace.h>")
     header_lines.append("")
@@ -123,8 +124,8 @@ def main():
         indent = "    "
         hex_item = "0xFF, "
         max_line_len = 80
-        # Be more conservative to guarantee short lines: use fewer bytes per line
-        bytes_per_line = max(1, (max_line_len - len(indent)) // len(hex_item) - 6)
+        # Use a conservative fixed bytes-per-line so generated data lines stay under 80 chars
+        bytes_per_line = 4
         line = indent
         for i, b in enumerate(bits):
             line += f"0x{b:02X}, "
@@ -140,7 +141,7 @@ def main():
     header_lines.append("template<typename GFX>")
     header_lines.append("inline void draw_icon_xbm(GFX& d, int16_t x, int16_t y,")
     header_lines.append("    IconId id, uint16_t color) {")
-    header_lines.append("    switch(id) {")
+    header_lines.append("    switch (id) {")
     for name in ICON_NAMES:
         arr = c_array_name(name)
         enum_name = "ICON_" + name.replace("-", "_").upper()

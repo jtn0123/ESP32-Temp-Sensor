@@ -25,7 +25,7 @@ inline void sensors_begin() {
   }
   g_bme280.setSampling(Adafruit_BME280::MODE_FORCED,
                        Adafruit_BME280::SAMPLING_X1, // temp
-                       Adafruit_BME280::SAMPLING_X1, // pressure (unused)
+                       Adafruit_BME280::SAMPLING_X1, // pressure
                        Adafruit_BME280::SAMPLING_X1, // humidity
                        Adafruit_BME280::FILTER_OFF);
   g_bme280_initialized = true;
@@ -37,6 +37,7 @@ inline void sensors_begin() { /* noop until SHT4x added */ }
 struct InsideReadings {
   float temperatureC = NAN;
   float humidityPct = NAN;
+  float pressureHPa = NAN;
 };
 
 inline InsideReadings read_inside_sensors() {
@@ -49,6 +50,8 @@ inline InsideReadings read_inside_sensors() {
   g_bme280.takeForcedMeasurement();
   r.temperatureC = g_bme280.readTemperature();
   r.humidityPct = g_bme280.readHumidity();
+  // Adafruit_BME280::readPressure returns Pascals; convert to hPa for MQTT/HA
+  r.pressureHPa = g_bme280.readPressure() / 100.0f;
 #endif
   return r;
 }

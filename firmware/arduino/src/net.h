@@ -34,6 +34,7 @@
 // Forward declarations for functions referenced before their definitions
 inline void net_publish_ha_discovery();
 inline void net_publish_inside(float tempC, float rhPct);
+inline void net_publish_pressure(float pressureHPa);
 inline void net_publish_battery(float voltage, int percent);
 inline void net_publish_wifi_rssi(int rssiDbm);
 inline void net_publish_publish_latency_ms(uint32_t publishLatencyMs);
@@ -361,6 +362,9 @@ inline void mqtt_callback(char* topic, uint8_t* payload, unsigned int length) {
       InsideReadings ir = read_inside_sensors();
       if (isfinite(ir.temperatureC) && isfinite(ir.humidityPct)) {
         net_publish_inside(ir.temperatureC, ir.humidityPct);
+      }
+      if (isfinite(ir.pressureHPa)) {
+        net_publish_pressure(ir.pressureHPa);
       }
       BatteryStatus bs = read_battery_status();
       if (isfinite(bs.voltage) && bs.percent >= 0) {
@@ -862,6 +866,18 @@ inline void net_publish_inside(float tempC, float rhPct) {
   g_mqtt.publish(topic, payload, true);
 }
 
+// Publish barometric pressure in hPa
+inline void net_publish_pressure(float pressureHPa) {
+  if (!g_mqtt.connected())
+    return;
+  char topic[128];
+  char payload[32];
+  const char* base = MQTT_PUB_BASE;
+  snprintf(topic, sizeof(topic), "%s/inside/pressure", base);
+  dtostrf(pressureHPa, 0, 1, payload);
+  g_mqtt.publish(topic, payload, true);
+}
+
 inline void net_publish_battery(float voltage, int percent) {
   if (!g_mqtt.connected())
     return;
@@ -969,6 +985,8 @@ inline void net_publish_ha_discovery() {
       suggestedPrecision = 1; // Fahrenheit: one decimal
     else if (strcmp(unit, "V") == 0)
       suggestedPrecision = 2; // Volts: two decimals
+    else if (strcmp(unit, "hPa") == 0)
+      suggestedPrecision = 1; // Pressure: one decimal
     else
       suggestedPrecision = 0; // Percent and others: integer
     // Full HA discovery keys for maximum compatibility; retained
@@ -989,6 +1007,7 @@ inline void net_publish_ha_discovery() {
 
   pub_disc("inside_temp", "Inside Temperature", "°F", "temperature", "inside/temp");
   pub_disc("inside_hum", "Inside Humidity", "%", "humidity", "inside/hum");
+  pub_disc("inside_pressure", "Barometric Pressure", "hPa", "pressure", "inside/pressure");
   pub_disc("battery_volts", "Battery Voltage", "V", "voltage", "battery/voltage");
   pub_disc("battery_pct", "Battery", "%", "battery", "battery/percent");
   // Additional diagnostics published each wake

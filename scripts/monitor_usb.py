@@ -17,6 +17,7 @@ class Metrics:
     tempC: float | None = None
     tempF: float | None = None
     rhPct: float | None = None
+    pressHPa: float | None = None
     wifi: bool = False
     mqtt: bool = False
     v: float | None = None
@@ -33,6 +34,7 @@ def parse_metrics_line(line: str) -> Metrics | None:
             tempC=float(obj["tempC"]) if obj.get("tempC") is not None else None,
             tempF=float(obj["tempF"]) if obj.get("tempF") is not None else None,
             rhPct=float(obj["rhPct"]) if obj.get("rhPct") is not None else None,
+            pressHPa=float(obj["pressHPa"]) if obj.get("pressHPa") is not None else None,
             wifi=bool(obj.get("wifi")),
             mqtt=bool(obj.get("mqtt")),
             v=float(obj["v"]) if obj.get("v") is not None else None,
@@ -54,6 +56,8 @@ def format_metrics(m: Metrics) -> str:
         parts.append(f"tempF={(m.tempC * 9/5) + 32:.2f}")
     if m.rhPct is not None:
         parts.append(f"rh%={m.rhPct:.0f}")
+    if m.pressHPa is not None:
+        parts.append(f"press={m.pressHPa:.1f}hPa")
     parts.append(f"wifi={'up' if m.wifi else 'down'}")
     parts.append(f"mqtt={'up' if m.mqtt else 'down'}")
     if m.v is not None:

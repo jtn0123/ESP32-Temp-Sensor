@@ -46,3 +46,16 @@ def test_format_metrics_rounds_and_composes():
     assert "mqtt=down" in s
     assert "battV=4.08" in s
     assert "batt%=87" in s
+
+
+def test_parse_metrics_with_pressure_and_format_includes_it():
+    line = (
+        '{"event":"metrics","ip":"10.0.0.5","tempC":22.0,'
+        '"rhPct":38,"pressHPa":1013.7,"wifi":true,"mqtt":true,'
+        '"v":4.01,"pct":80}'
+    )
+    m = parse_metrics_line(line)
+    assert m is not None
+    assert abs(m.pressHPa - 1013.7) < 1e-6
+    s = format_metrics(m)
+    assert "press=1013.7hPa" in s

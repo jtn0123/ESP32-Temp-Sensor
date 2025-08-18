@@ -56,6 +56,7 @@ RTC_DATA_ATTR static float last_outside_rh = NAN;
 RTC_DATA_ATTR static int32_t last_icon_id = -1;
 RTC_DATA_ATTR static float last_published_inside_tempC = NAN;
 RTC_DATA_ATTR static float last_published_inside_rh = NAN;
+RTC_DATA_ATTR static float last_published_inside_pressureHPa = NAN;
 RTC_DATA_ATTR static uint32_t last_status_crc = 0;
 RTC_DATA_ATTR static float last_inside_rh = NAN;
 
@@ -80,6 +81,8 @@ static inline void nvs_load_cache_if_unset() {
     last_published_inside_tempC = g_prefs.getFloat("pi_t", NAN);
   if (!isfinite(last_published_inside_rh))
     last_published_inside_rh = g_prefs.getFloat("pi_rh", NAN);
+  if (!isfinite(last_published_inside_pressureHPa))
+    last_published_inside_pressureHPa = g_prefs.getFloat("pi_p", NAN);
   uint16_t pc = g_prefs.getUShort("pcount", 0);
   if (pc > 0)
     partial_counter = pc;
@@ -91,6 +94,7 @@ static inline void nvs_store_uint(const char* key, uint32_t v) { g_prefs.putUInt
 static constexpr float THRESH_TEMP_F = 0.2f;                        // redraw/publish threshold in F
 static constexpr float THRESH_TEMP_C_FROM_F = THRESH_TEMP_F / 1.8f; // ~0.111C
 static constexpr float THRESH_RH = 1.0f;                            // percent
+static constexpr float THRESH_PRESS_HPA = 0.5f;                      // hPa
 
 // Timeout tracking for wake phases
 static uint32_t s_timeouts_mask = 0;
@@ -175,7 +179,7 @@ static inline void status_pixel_tick() {
 }
 #endif
 
-static void emit_metrics_json(float tempC, float rhPct) {
+static void emit_metrics_json(float tempC, float rhPct, float pressHPa) {
   BatteryStatus bs = read_battery_status();
   char ip_c[32];
   net_ip_cstr(ip_c, sizeof(ip_c));
@@ -189,6 +193,9 @@ static void emit_metrics_json(float tempC, float rhPct) {
   Serial.print(',');
   Serial.print("\"rhPct\":");
   Serial.print(isfinite(rhPct) ? rhPct : NAN);
+  Serial.print(',');
+  Serial.print("\"pressHPa\":");
+  Serial.print(isfinite(pressHPa) ? pressHPa : NAN);
   Serial.print(',');
   Serial.print("\"wifi\":");
   Serial.print(net_wifi_is_connected() ? "true" : "false");
@@ -298,7 +305,7 @@ static void handle_serial_command_line(const String& line) {
   }
   if (op == "metrics") {
     InsideReadings latest = read_inside_sensors();
-    emit_metrics_json(latest.temperatureC, latest.humidityPct);
+    emit_metrics_json(latest.temperatureC, latest.humidityPct, latest.pressureHPa);
     return;
   }
   if (op == "sleep") {
@@ -1070,6 +1077,16 @@ void setup() {
         nvs_store_float("pi_rh", last_published_inside_rh);
       }
     }
+    if (isfinite(r.pressureHPa)) {
+      bool p_changed = (!isfinite(last_published_inside_pressureHPa)) ||
+                       fabsf(r.pressureHPa - last_published_inside_pressureHPa) >= THRESH_PRESS_HPA;
+      if (p_changed) {
+        net_publish_pressure(r.pressureHPa);
+        publish_any = true;
+        last_published_inside_pressureHPa = r.pressureHPa;
+        nvs_store_float("pi_p", last_published_inside_pressureHPa);
+      }
+    }
 
     OutsideReadings o = net_get_outside();
     if (o.validTemp) {
@@ -1181,6 +1198,16 @@ void setup() {
       nvs_store_float("pi_rh", last_published_inside_rh);
     }
   }
+  if (isfinite(r.pressureHPa)) {
+    bool p_changed = (!isfinite(last_published_inside_pressureHPa)) ||
+                     fabsf(r.pressureHPa - last_published_inside_pressureHPa) >= THRESH_PRESS_HPA;
+    if (p_changed) {
+      net_publish_pressure(r.pressureHPa);
+      publish_any = true;
+      last_published_inside_pressureHPa = r.pressureHPa;
+      nvs_store_float("pi_p", last_published_inside_pressureHPa);
+    }
+  }
   // Publish a headless status heartbeat to aid validation
   {
     String ip = net_ip();
@@ -1205,7 +1232,7 @@ void setup() {
   // Emit one metrics JSON line over USB for monitor scripts
   {
     InsideReadings latest = read_inside_sensors();
-    emit_metrics_json(latest.temperatureC, latest.humidityPct);
+    emit_metrics_json(latest.temperatureC, latest.humidityPct, latest.pressureHPa);
   }
 
   // Publish a concise timeout summary JSON if MQTT is connected
@@ -1244,7 +1271,7 @@ void setup() {
     static uint32_t last_metrics = 0;
     if (millis() - last_metrics > 2000) {
       InsideReadings latest = read_inside_sensors();
-      emit_metrics_json(latest.temperatureC, latest.humidityPct);
+      emit_metrics_json(latest.temperatureC, latest.humidityPct, latest.pressureHPa);
       last_metrics = millis();
     }
 #if USE_STATUS_PIXEL
