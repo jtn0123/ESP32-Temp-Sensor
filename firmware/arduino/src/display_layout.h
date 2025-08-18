@@ -3,6 +3,7 @@
 // /Users/justin/Documents/Github/ESP32-Temp-Sensor/config/display_geometry.json
 // md5: 6bd893f2d216ab4010b61ef316be9d0b
 #pragma once
+// Copyright 2024 Justin
 
 // Display dimensions
 #ifndef EINK_WIDTH

@@ -9,6 +9,7 @@
 #endif
 #if USE_DISPLAY
 #include <GxEPD2_BW.h>
+#include <GxEPD2_213_B74.h>
 #endif
 
 #include "config.h"

@@ -1,4 +1,5 @@
 #pragma once
+// Copyright 2024 Justin
 
 // Compile-time toggles (filled in later as features land)
 #ifndef USE_DISPLAY
