@@ -1,12 +1,17 @@
 #pragma once
 
-#include "config.h"
-
 // C system / ESP-IDF C headers
 #include <esp_wifi.h>
 #include <time.h>
 
-// Provisioning C headers (guarded)
+// C++/Arduino and third-party headers
+#include <Arduino.h>
+#include <Preferences.h>
+#include <PubSubClient.h>
+#include <WiFi.h>
+
+// Project headers
+#include "config.h"
 #if USE_WIFI_PROVISIONING
 #include <esp_err.h>
 #include <esp_event.h>
@@ -19,14 +24,6 @@
 #include <wifi_provisioning/scheme_ble.h>
 #endif
 #endif
-
-// C++/Arduino and third-party headers
-#include <Arduino.h>
-#include <Preferences.h>
-#include <PubSubClient.h>
-#include <WiFi.h>
-
-// Project headers
 #include "power.h"
 #include "sensors.h"
 
