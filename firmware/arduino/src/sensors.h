@@ -17,6 +17,16 @@ inline void sensors_begin() {
 #ifdef I2C_TIMEOUT_MS
   Wire.setTimeOut(I2C_TIMEOUT_MS);
 #endif
+#if I2C_DEBUG_SCAN
+  Serial.println("I2C: scanning...");
+  for (uint8_t addr = 1; addr < 127; addr++) {
+    Wire.beginTransmission(addr);
+    uint8_t err = Wire.endTransmission();
+    if (err == 0) {
+      Serial.printf("I2C: found 0x%02X\n", addr);
+    }
+  }
+#endif
   // Try default I2C address 0x77 then 0x76
   if (!g_bme280.begin(0x77) && !g_bme280.begin(0x76)) {
     Serial.println("BME280 not found");

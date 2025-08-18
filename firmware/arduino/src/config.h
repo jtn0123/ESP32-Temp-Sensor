@@ -48,6 +48,10 @@
 #ifndef I2C_TIMEOUT_MS
 #define I2C_TIMEOUT_MS 150
 #endif
+// Optional: scan I2C bus and print detected addresses at startup
+#ifndef I2C_DEBUG_SCAN
+#define I2C_DEBUG_SCAN 0
+#endif
 
 // Phase budgets (ms). Keep each phase bounded so a stall can't eat the whole
 // wake.
