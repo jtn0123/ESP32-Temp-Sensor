@@ -237,7 +237,7 @@ inline void offline_set_bounds(uint32_t head, uint32_t tail) {
   g_offline_prefs.putUInt("tail", tail);
 }
 
-inline void offline_key_for(uint32_t seq, char out[16]) { snprintf(out, 16, "s%u", seq); }
+inline void offline_key_for(uint32_t seq, char out[], size_t out_size) { snprintf(out, out_size, "s%u", seq); }
 
 inline void offline_enqueue_sample(float tempC, float rhPct) {
   uint32_t ts = static_cast<uint32_t>(time(nullptr));
@@ -249,12 +249,12 @@ inline void offline_enqueue_sample(float tempC, float rhPct) {
   // Drop oldest if at capacity
   if (head - tail >= OFFLINE_CAPACITY) {
     char delk[16];
-    offline_key_for(tail, delk);
+    offline_key_for(tail, delk, sizeof(delk));
     g_offline_prefs.remove(delk);
     tail++;
   }
   char key[16];
-  offline_key_for(head, key);
+  offline_key_for(head, key, sizeof(key));
   g_offline_prefs.putBytes(key, &s, sizeof(s));
   offline_set_bounds(head + 1, tail);
   g_offline_prefs.end();
@@ -312,7 +312,7 @@ inline void offline_drain_if_any() {
     }
     uint32_t seq = tail;
     char key[16];
-    offline_key_for(seq, key);
+    offline_key_for(seq, key, sizeof(key));
     OfflineSample s{};
     size_t n = g_offline_prefs.getBytes(key, &s, sizeof(s));
     if (n == sizeof(s)) {
@@ -662,10 +662,10 @@ inline void ensure_wifi_connected() {
   esp_wifi_start();
   esp_wifi_connect();
 
-  unsigned long start = millis();
+  uint32_t start = millis();
   // Give BSSID-pinned attempt a shorter window before falling back
-  unsigned long bssid_try_ms =
-      have_bssid ? (WIFI_CONNECT_TIMEOUT_MS > 4000 ? 3000UL : WIFI_CONNECT_TIMEOUT_MS / 2) : 0UL;
+  uint32_t bssid_try_ms =
+      have_bssid ? (WIFI_CONNECT_TIMEOUT_MS > 4000 ? 3000U : WIFI_CONNECT_TIMEOUT_MS / 2) : 0U;
   bool fallback_done = false;
   while (!WiFi.isConnected() && millis() - start < WIFI_CONNECT_TIMEOUT_MS) {
     if (have_bssid && !fallback_done && (millis() - start) >= bssid_try_ms) {
@@ -735,7 +735,7 @@ inline void ensure_mqtt_connected() {
   uint64_t mac = ESP.getEfuseMac();
   // Use lower 24 bits
   snprintf(g_client_id, sizeof(g_client_id), "esp32-room-%06x", (unsigned int)(mac & 0xFFFFFF));
-  unsigned long start = millis();
+  uint32_t start = millis();
   const char* user = nullptr;
   const char* pass = nullptr;
 #ifdef MQTT_USER
@@ -833,7 +833,7 @@ inline void net_ip_cstr(char* out, size_t out_size) {
 }
 
 inline void mqtt_pump(uint32_t duration_ms) {
-  unsigned long start = millis();
+  uint32_t start = millis();
   while (millis() - start < duration_ms) {
     if (g_mqtt.connected())
       g_mqtt.loop();

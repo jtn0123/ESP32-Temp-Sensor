@@ -1011,7 +1011,7 @@ void setup() {
   uint32_t display_phase_start = millis();
 // Establish a soft deadline visible to drawing helpers
 #ifdef DISPLAY_PHASE_TIMEOUT_MS
-  g_display_deadline_ms = display_phase_start + static_cast<unsigned long>(DISPLAY_PHASE_TIMEOUT_MS);
+  g_display_deadline_ms = display_phase_start + static_cast<uint32_t>(DISPLAY_PHASE_TIMEOUT_MS);
 #endif
   if (do_full) {
     full_refresh();
