@@ -1,13 +1,13 @@
-#include <cstdio>
 #include <esp_system.h>
 #include <esp_timer.h>
+#include <cstdio>
 
 // Copyright 2024 Justin
 
-#include "config.h"
-
 #include <Arduino.h>
 #include <Preferences.h>
+
+#include "config.h"
 #if USE_STATUS_PIXEL
 #include <Adafruit_NeoPixel.h>
 #endif
