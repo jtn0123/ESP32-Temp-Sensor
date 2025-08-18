@@ -117,25 +117,58 @@ jobs:
           sudo apt-get install -y clang-format
 
       - name: Lint Python (ruff)
-        run: ruff check .
+        id: ruff
+        shell: bash
+        run: |
+          set -o pipefail
+          ruff check . 2>&1 | tee ruff.txt
+        continue-on-error: true
 
       - name: Check Python formatting (black)
-        run: black --check .
+        id: black
+        shell: bash
+        run: |
+          set -o pipefail
+          black --check . 2>&1 | tee black.txt
+        continue-on-error: true
 
       - name: Check C++ formatting (clang-format)
+        id: clang_format
+        shell: bash
         run: |
-          set -e
+          set -euo pipefail
           FILES=$(find firmware/arduino/src -type f \( -name "*.cpp" -o -name "*.h" \))
           if [ -n "$FILES" ]; then
-            clang-format --version
-            clang-format -n --Werror $FILES
+            clang-format --version | tee clang-format-version.txt
+            clang-format -n --Werror $FILES 2>&1 | tee clang-format.txt
           fi
+        continue-on-error: true
 
       - name: cpplint (include-order and braces only)
+        id: cpplint
+        shell: bash
         run: |
-          set -e
+          set -euo pipefail
           FILES=$(find firmware/arduino/src -type f \( -name "*.cpp" -o -name "*.h" \))
           if [ -n "$FILES" ]; then
-            python -m cpplint --filter=-build,-legal,-readability,-runtime,-whitespace,+build/include_order,+whitespace/braces $FILES
+            python -m cpplint --filter=-build,-legal,-readability,-runtime,-whitespace,+build/include_order,+whitespace/braces $FILES 2>&1 | tee cpplint.txt
           fi
+        continue-on-error: true
+
+      - name: Upload lint logs
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: lint-logs
+          if-no-files-found: warn
+          path: |
+            ruff.txt
+            black.txt
+            clang-format.txt
+            clang-format-version.txt
+            cpplint.txt
+
+      - name: Fail if any linter failed
+        if: ${{ always() && (steps.ruff.outcome == 'failure' || steps.black.outcome == 'failure' || steps.clang_format.outcome == 'failure' || steps.cpplint.outcome == 'failure') }}
+        run: exit 1
 
