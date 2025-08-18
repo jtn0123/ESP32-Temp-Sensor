@@ -1,5 +1,6 @@
 #include <esp_system.h>
 #include <esp_timer.h>
+#include <cstdio>
 
 #include <Arduino.h>
 #include <Preferences.h>
