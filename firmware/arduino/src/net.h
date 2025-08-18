@@ -191,10 +191,10 @@ inline void ensure_time_synced_if_stale() {
   configTime(0, 0, "pool.ntp.org", "time.nist.gov", "time.google.com");
   // Poll briefly until time looks sane
   unsigned long start = millis();
-  while ((uint32_t)time(nullptr) < TIME_FRESH_EPOCH_MIN && millis() - start < 2000UL) {
+  while (static_cast<uint32_t>(time(nullptr)) < TIME_FRESH_EPOCH_MIN && millis() - start < 2000UL) {
     delay(50);
   }
-  uint32_t now_epoch = (uint32_t)time(nullptr);
+  uint32_t now_epoch = static_cast<uint32_t>(time(nullptr));
   if (now_epoch >= TIME_FRESH_EPOCH_MIN) {
     if (g_net_prefs.begin("net", false)) {
       g_net_prefs.putUInt("last_ntp", now_epoch);
@@ -240,7 +240,7 @@ inline void offline_set_bounds(uint32_t head, uint32_t tail) {
 inline void offline_key_for(uint32_t seq, char out[16]) { snprintf(out, 16, "s%u", seq); }
 
 inline void offline_enqueue_sample(float tempC, float rhPct) {
-  uint32_t ts = (uint32_t)time(nullptr);
+  uint32_t ts = static_cast<uint32_t>(time(nullptr));
   OfflineSample s{ts, tempC, rhPct};
   if (!g_offline_prefs.begin("obuf", false))
     return;
@@ -731,7 +731,7 @@ inline void ensure_mqtt_connected() {
   g_mqtt.setBufferSize(1024);
 #endif
   g_mqtt.setCallback(mqtt_callback);
-  Serial.printf("MQTT: connecting to %s:%u...\n", MQTT_HOST, (unsigned)MQTT_PORT);
+  Serial.printf("MQTT: connecting to %s:%u...\n", MQTT_HOST, static_cast<unsigned>(MQTT_PORT));
   uint64_t mac = ESP.getEfuseMac();
   // Use lower 24 bits
   snprintf(g_client_id, sizeof(g_client_id), "esp32-room-%06x", (unsigned int)(mac & 0xFFFFFF));
@@ -828,8 +828,8 @@ inline void net_ip_cstr(char* out, size_t out_size) {
     return;
   }
   IPAddress ip = WiFi.localIP();
-  snprintf(out, out_size, "%u.%u.%u.%u", (unsigned)ip[0], (unsigned)ip[1], (unsigned)ip[2],
-           (unsigned)ip[3]);
+  snprintf(out, out_size, "%u.%u.%u.%u", static_cast<unsigned>(ip[0]), static_cast<unsigned>(ip[1]),
+           static_cast<unsigned>(ip[2]), static_cast<unsigned>(ip[3]));
 }
 
 inline void mqtt_pump(uint32_t duration_ms) {
@@ -898,7 +898,7 @@ inline void net_publish_publish_latency_ms(uint32_t publishLatencyMs) {
   char payload[16];
   const char* base = MQTT_PUB_BASE;
   snprintf(topic, sizeof(topic), "%s/debug/publish_ms", base);
-  snprintf(payload, sizeof(payload), "%u", (unsigned)publishLatencyMs);
+  snprintf(payload, sizeof(payload), "%u", static_cast<unsigned>(publishLatencyMs));
   g_mqtt.publish(topic, payload, true);
 }
 
@@ -952,7 +952,7 @@ inline void net_publish_ha_discovery() {
   snprintf(availTopic, sizeof(availTopic), "%s/availability", MQTT_PUB_BASE);
   // Expire entities slightly after our scheduled wake so HA greys stale values
   // if we miss a cycle
-  uint32_t expireAfterSec = (uint32_t)WAKE_INTERVAL_SEC + 120U;
+  uint32_t expireAfterSec = static_cast<uint32_t>(WAKE_INTERVAL_SEC) + 120U;
 
   // Helper to publish one discovery config
   auto pub_disc = [&](const char* key, const char* name, const char* unit, const char* dev_class,
@@ -981,7 +981,7 @@ inline void net_publish_ha_discovery() {
              "%s\",\"manufacturer\":\"DIY\",\"model\":\"Feather "
              "ESP32-S2\",\"sw_version\":\"%s\"}}",
              name, g_client_id, key, stateTopic, availTopic, unit, dev_class, suggestedPrecision,
-             (unsigned)expireAfterSec, g_client_id, ROOM_NAME, FW_VERSION);
+             static_cast<unsigned>(expireAfterSec), g_client_id, ROOM_NAME, FW_VERSION);
     g_mqtt.publish(discTopic, payload, true);
     Serial.print("HA discovery -> ");
     Serial.println(discTopic);
