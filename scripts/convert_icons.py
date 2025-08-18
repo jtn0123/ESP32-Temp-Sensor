@@ -122,8 +122,6 @@ def main():
         header_lines.append(f"static const uint8_t {arr_name}[] PROGMEM = {{")
         # format bytes as 0x.., and wrap to keep lines <= 80 chars
         indent = "    "
-        hex_item = "0xFF, "
-        max_line_len = 80
         # Use a conservative fixed bytes-per-line so generated data lines stay under 80 chars
         bytes_per_line = 4
         line = indent
@@ -148,7 +146,7 @@ def main():
         header_lines.append(f"    case {enum_name}:")
         # Emit draw call and break on separate lines to keep line length short
         header_lines.append(f"        d.drawXBitmap(x, y, {arr}, ICON_W, ICON_H, color);")
-        header_lines.append(f"        break;")
+        header_lines.append("        break;")
     header_lines.append("    default: break;")
     header_lines.append("    }")
     header_lines.append("}")
