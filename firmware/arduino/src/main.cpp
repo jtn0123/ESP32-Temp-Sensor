@@ -37,7 +37,7 @@ static inline void status_pixel_tick();
 #define EINK_DC 10 // D10
 #endif
 #ifndef EINK_RST
-#define EINK_RST -1 // not used; Wing auto-reset ties to Feather RESET
+#define EINK_RST -1 // FeatherWing ties panel reset to Feather RESET
 #endif
 #ifndef EINK_BUSY
 #define EINK_BUSY 7 // D7
@@ -45,9 +45,18 @@ static inline void status_pixel_tick();
 
 // 2.13" b/w class; choose the one matching your panel
 // B74 works for SSD1680/UC8151 variants used by many 2.13" panels
+// Alternative: DEPG0213BN (also SSD1680 family). Select via -DEINK_PANEL_DEPG0213BN=1
 #if USE_DISPLAY
-GxEPD2_BW<GxEPD2_213_B74, GxEPD2_213_B74::HEIGHT> display(GxEPD2_213_B74(EINK_CS, EINK_DC, EINK_RST,
-                                                                         EINK_BUSY));
+#ifndef EINK_PANEL_DEPG0213BN
+#define EINK_PANEL_DEPG0213BN 0
+#endif
+#if EINK_PANEL_DEPG0213BN
+GxEPD2_BW<GxEPD2_213_DEPG0213BN, GxEPD2_213_DEPG0213BN::HEIGHT> display(
+    GxEPD2_213_DEPG0213BN(EINK_CS, EINK_DC, EINK_RST, EINK_BUSY));
+#else
+GxEPD2_BW<GxEPD2_213_B74, GxEPD2_213_B74::HEIGHT> display(
+    GxEPD2_213_B74(EINK_CS, EINK_DC, EINK_RST, EINK_BUSY));
+#endif
 #endif
 
 RTC_DATA_ATTR static uint16_t partial_counter = 0;
@@ -965,7 +974,7 @@ void setup() {
   if (dbg_ms_sensor > static_cast<uint32_t>(SENSOR_PHASE_TIMEOUT_MS)) {
     s_timeouts_mask |= TIMEOUT_BIT_SENSOR;
     Serial.printf("Timeout: sensor read exceeded budget ms=%u budget=%u\n",
-                  //     dbg_ms_sensor,
+                  static_cast<unsigned>(dbg_ms_sensor),
                   static_cast<unsigned>(SENSOR_PHASE_TIMEOUT_MS));
   }
 
@@ -1027,10 +1036,29 @@ void setup() {
 
 #if USE_DISPLAY
   bool do_full = false;
-  if (partial_counter == 0) {
-    do_full = true; // first ever boot
-  } else if ((partial_counter % FULL_REFRESH_EVERY) == 0) {
-    do_full = true; // periodic full clears
+  static uint32_t g_fw_crc = 0;
+  if (g_fw_crc == 0) {
+    // Derive a simple firmware identity at runtime from constants to detect reflash
+    // This avoids a stale partial counter blocking any draw after flashing.
+    g_fw_crc = 1469598103u;
+    const char* id = FW_VERSION;
+    for (const char* p = id; *p; ++p) {
+      g_fw_crc ^= static_cast<uint32_t>(*p);
+      g_fw_crc *= 16777619u;
+    }
+    uint32_t stored = g_prefs.getUInt("fw_crc", 0);
+    if (stored != g_fw_crc) {
+      do_full = true; // force at least one full render after new firmware
+      g_prefs.putUInt("fw_crc", g_fw_crc);
+      partial_counter = 0;
+    }
+  }
+  if (!do_full) {
+    if (partial_counter == 0) {
+      do_full = true; // first ever boot
+    } else if ((partial_counter % FULL_REFRESH_EVERY) == 0) {
+      do_full = true; // periodic full clears
+    }
   }
 
   uint32_t display_phase_start = millis();
@@ -1179,7 +1207,7 @@ void setup() {
     if (publish_any && ms_publish_phase > static_cast<uint32_t>(PUBLISH_PHASE_TIMEOUT_MS)) {
       s_timeouts_mask |= TIMEOUT_BIT_PUBLISH;
       Serial.printf("Timeout: publish exceeded budget ms=%u budget=%u\n",
-                    //     ms_publish_phase,
+                    static_cast<unsigned>(ms_publish_phase),
                     static_cast<unsigned>(PUBLISH_PHASE_TIMEOUT_MS));
     }
   }
@@ -1189,7 +1217,7 @@ void setup() {
   if (ms_display > static_cast<uint32_t>(DISPLAY_PHASE_TIMEOUT_MS)) {
     s_timeouts_mask |= TIMEOUT_BIT_DISPLAY;
     Serial.printf("Timeout: display phase exceeded budget ms=%u budget=%u\n",
-                  //     ms_display,
+                  static_cast<unsigned>(ms_display),
                   static_cast<unsigned>(DISPLAY_PHASE_TIMEOUT_MS));
   }
   g_display_deadline_ms = 0;
@@ -1203,7 +1231,7 @@ void setup() {
   if (sens2_ms > static_cast<uint32_t>(SENSOR_PHASE_TIMEOUT_MS)) {
     s_timeouts_mask |= TIMEOUT_BIT_SENSOR;
     Serial.printf("Timeout: sensor read exceeded budget ms=%u budget=%u\n",
-                  //     sens2_ms,
+                  static_cast<unsigned>(sens2_ms),
                   static_cast<unsigned>(SENSOR_PHASE_TIMEOUT_MS));
   }
   uint32_t publish_phase_start = millis();
@@ -1250,7 +1278,7 @@ void setup() {
   if (publish_any && ms_publish_phase > static_cast<uint32_t>(PUBLISH_PHASE_TIMEOUT_MS)) {
     s_timeouts_mask |= TIMEOUT_BIT_PUBLISH;
     Serial.printf("Timeout: publish exceeded budget ms=%u budget=%u\n",
-                  //     ms_publish_phase,
+                  static_cast<unsigned>(ms_publish_phase),
                   static_cast<unsigned>(PUBLISH_PHASE_TIMEOUT_MS));
   }
 #endif
