@@ -1,12 +1,13 @@
+#include <cstdio>
 #include <esp_system.h>
 #include <esp_timer.h>
-#include <cstdio>
 
 // Copyright 2024 Justin
 
+#include "config.h"
+
 #include <Arduino.h>
 #include <Preferences.h>
-#include "config.h"
 #if USE_STATUS_PIXEL
 #include <Adafruit_NeoPixel.h>
 #endif
@@ -30,23 +31,23 @@ static inline void status_pixel_tick();
 
 // Feather ESP32-S2 + 2.13" FeatherWing (adjust if needed)
 #ifndef EINK_CS
-#define EINK_CS 9  // D9
+#define EINK_CS 9 // D9
 #endif
 #ifndef EINK_DC
-#define EINK_DC 10  // D10
+#define EINK_DC 10 // D10
 #endif
 #ifndef EINK_RST
-#define EINK_RST -1  // not used; Wing auto-reset ties to Feather RESET
+#define EINK_RST -1 // not used; Wing auto-reset ties to Feather RESET
 #endif
 #ifndef EINK_BUSY
-#define EINK_BUSY 7  // D7
+#define EINK_BUSY 7 // D7
 #endif
 
 // 2.13" b/w class; choose the one matching your panel
 // B74 works for SSD1680/UC8151 variants used by many 2.13" panels
 #if USE_DISPLAY
-GxEPD2_BW<GxEPD2_213_B74, GxEPD2_213_B74::HEIGHT>
-    display(GxEPD2_213_B74(EINK_CS, EINK_DC, EINK_RST, EINK_BUSY));
+GxEPD2_BW<GxEPD2_213_B74, GxEPD2_213_B74::HEIGHT> display(GxEPD2_213_B74(EINK_CS, EINK_DC, EINK_RST,
+                                                                         EINK_BUSY));
 #endif
 
 RTC_DATA_ATTR static uint16_t partial_counter = 0;
@@ -87,19 +88,16 @@ static inline void nvs_load_cache_if_unset() {
   if (pc > 0)
     partial_counter = pc;
 }
-static inline void nvs_store_float(const char* key,
-    float v) { g_prefs.putFloat(key, v); }
-static inline void nvs_store_int(const char* key,
-    int32_t v) { g_prefs.putInt(key, v); }
-static inline void nvs_store_uint(const char* key,
-    uint32_t v) { g_prefs.putUInt(key, v); }
+static inline void nvs_store_float(const char* key, float v) { g_prefs.putFloat(key, v); }
+static inline void nvs_store_int(const char* key, int32_t v) { g_prefs.putInt(key, v); }
+static inline void nvs_store_uint(const char* key, uint32_t v) { g_prefs.putUInt(key, v); }
 
-static constexpr float THRESH_TEMP_F = 0.2f;                        //
+static constexpr float THRESH_TEMP_F = 0.2f; //
 //     redraw/publish threshold in F
-static constexpr float THRESH_TEMP_C_FROM_F = THRESH_TEMP_F / 1.8f;  //
+static constexpr float THRESH_TEMP_C_FROM_F = THRESH_TEMP_F / 1.8f; //
 //     ~0.111C
-static constexpr float THRESH_RH = 1.0f;                            // percent
-static constexpr float THRESH_PRESS_HPA = 0.5f;                      // hPa
+static constexpr float THRESH_RH = 1.0f;        // percent
+static constexpr float THRESH_PRESS_HPA = 0.5f; // hPa
 
 // Timeout tracking for wake phases
 static uint32_t s_timeouts_mask = 0;
@@ -134,11 +132,10 @@ static void pump_network_ms(uint32_t duration_ms) {
 #endif
 #endif
 
-static Adafruit_NeoPixel s_statusPixel(1, STATUS_PIXEL_PIN,
-    NEO_GRB + NEO_KHZ800);
+static Adafruit_NeoPixel s_statusPixel(1, STATUS_PIXEL_PIN, NEO_GRB + NEO_KHZ800);
 static uint32_t s_lastPixelMs = 0;
 static uint8_t s_hue = 0;
-static uint8_t s_breath = 0;  // brightness phase for subtle breathing
+static uint8_t s_breath = 0; // brightness phase for subtle breathing
 
 static uint32_t color_wheel(uint8_t pos) {
   pos = 255 - pos;
@@ -167,17 +164,15 @@ static inline void status_pixel_off() {
 static inline void status_pixel_tick() {
   uint32_t now = millis();
   if (now - s_lastPixelMs < 40)
-    return;  // slower update for smooth, slow cycle
+    return; // slower update for smooth, slow cycle
   s_lastPixelMs = now;
   s_hue++;
   s_breath++;
   // Triangle wave 0..127..0 mapped to brightness range
-  uint8_t amp = (s_breath < 128) ? s_breath : static_cast<uint8_t>(255 -
-    s_breath);
+  uint8_t amp = (s_breath < 128) ? s_breath : static_cast<uint8_t>(255 - s_breath);
   const uint8_t minB = 8;
   const uint8_t maxB = 64;
-  uint8_t level = static_cast<uint8_t>(minB + (static_cast<uint16_t>(amp) *
-    (maxB - minB) / 127));
+  uint8_t level = static_cast<uint8_t>(minB + (static_cast<uint16_t>(amp) * (maxB - minB) / 127));
   // Occasional brief flash for a bit of flair
   if ((s_hue & 0x3F) == 0)
     level = maxB;
@@ -242,7 +237,7 @@ static const char* reset_reason_str(esp_reset_reason_t r) {
     return "ESP_RST_DEEPSLEEP";
   case ESP_RST_SDIO:
     return "ESP_RST_SDIO";
-//   default:
+    //   default:
     return "ESP_RST_UNKNOWN";
   }
 }
@@ -255,7 +250,7 @@ static inline bool reset_reason_is_crash(esp_reset_reason_t r) {
   case ESP_RST_WDT:
   case ESP_RST_BROWNOUT:
     return true;
-//   default:
+    //   default:
     return false;
   }
 }
@@ -282,7 +277,7 @@ static const char* wakeup_cause_str(esp_sleep_wakeup_cause_t c) {
   case ESP_SLEEP_WAKEUP_UART:
     return "UART";
 #endif
-//   default:
+    //   default:
     return "OTHER";
   }
 }
@@ -308,17 +303,15 @@ static void handle_serial_command_line(const String& line) {
     net_ip_cstr(ip_c, sizeof(ip_c));
     BatteryStatus bs = read_battery_status();
     Serial.printf("status ip=%s wifi=%s mqtt=%s v=%.2f pct=%d partial=%u\n",
-//     ip_c,
-                  net_wifi_is_connected() ? "up" : "down",
-    net_mqtt_is_connected() ? "up" : "down",
-//                   bs.voltage, bs.percent,
-    static_cast<unsigned>(partial_counter));
+                  //     ip_c,
+                  net_wifi_is_connected() ? "up" : "down", net_mqtt_is_connected() ? "up" : "down",
+                  //                   bs.voltage, bs.percent,
+                  static_cast<unsigned>(partial_counter));
     return;
   }
   if (op == "metrics") {
     InsideReadings latest = read_inside_sensors();
-    emit_metrics_json(latest.temperatureC, latest.humidityPct,
-    latest.pressureHPa);
+    emit_metrics_json(latest.temperatureC, latest.humidityPct, latest.pressureHPa);
     return;
   }
   if (op == "sleep") {
@@ -360,8 +353,7 @@ static void handle_serial_command_line(const String& line) {
     return;
   }
   if (op == "wificlear") {
-    Serial.println(
-        F("WiFi: clearing provisioned credentials and rebooting..."));
+    Serial.println(F("WiFi: clearing provisioned credentials and rebooting..."));
     bool ok = net_wifi_clear_provisioning();
     Serial.printf("WiFi: clear %s\n", ok ? "ok" : "failed");
     delay(50);
@@ -403,8 +395,7 @@ static void draw_static_chrome() {
   display.drawLine(125, 18, 125, EINK_HEIGHT - 2, GxEPD_BLACK);
   // Draw a thin horizontal rule above the bottom status/weather rows (aligned
   // with sim)
-  display.drawLine(1, STATUS_[1] - 20, EINK_WIDTH - 2, STATUS_[1] - 20,
-    GxEPD_BLACK);
+  display.drawLine(1, STATUS_[1] - 20, EINK_WIDTH - 2, STATUS_[1] - 20, GxEPD_BLACK);
 
   // Header: room name left, time will be drawn separately
   display.setTextColor(GxEPD_BLACK);
@@ -430,14 +421,10 @@ static inline int16_t text_width_default_font(const char* s, uint8_t size) {
 // Forward declaration for status drawing used by maybe_redraw_status
 static void draw_status_line(const BatteryStatus& bs, const char* ip_cstr);
 
-template <typename DrawFn> static inline void draw_in_region(const int rect[4],
+template <typename DrawFn>
+static inline void draw_in_region(const int rect[4],
 
-
-
-
-
-
-    DrawFn drawFn) {
+                                  DrawFn drawFn) {
   const int16_t x = rect[0];
   const int16_t y = rect[1];
   const int16_t w = rect[2];
@@ -459,9 +446,9 @@ template <typename DrawFn> static inline void draw_in_region(const int rect[4],
   } while (display.nextPage());
 }
 
-static inline void draw_right_aligned_text_in_rect(const int rect[4],
-    const char* text, uint8_t textSize, int16_t paddingRight,
-    int16_t baselineOffset) {
+static inline void draw_right_aligned_text_in_rect(const int rect[4], const char* text,
+                                                   uint8_t textSize, int16_t paddingRight,
+                                                   int16_t baselineOffset) {
   draw_in_region(rect, [&](int16_t x, int16_t y, int16_t w, int16_t h) {
     display.setTextColor(GxEPD_BLACK);
     display.setTextSize(textSize);
@@ -473,14 +460,12 @@ static inline void draw_right_aligned_text_in_rect(const int rect[4],
   });
 }
 
-static inline void draw_temp_number_and_units(const int rect[4],
-    const char* temp_f) {
+static inline void draw_temp_number_and_units(const int rect[4], const char* temp_f) {
   // Reserve a small units strip on the right so units do not shift as number
   // width changes
-  const int16_t units_w = 14;  // pixels
+  const int16_t units_w = 14; // pixels
   int num_rect[4] = {rect[0], rect[1], rect[2] - units_w, rect[3]};
-  int units_rect[4] = {rect[0] + rect[2] - units_w, rect[1], units_w,
-    rect[3]};
+  int units_rect[4] = {rect[0] + rect[2] - units_w, rect[1], units_w, rect[3]};
 
   // Center numeric in its sub-rect
   draw_in_region(num_rect, [&](int16_t x, int16_t y, int16_t w, int16_t h) {
@@ -520,9 +505,8 @@ static inline uint32_t fast_crc32(const uint8_t* data, size_t len) {
 }
 
 template <typename DrawFn>
-static inline bool maybe_redraw_numeric(const int rect[4], float currentValue,
-                                        float& lastValue, float threshold,
-                                        DrawFn drawFn) {
+static inline bool maybe_redraw_numeric(const int rect[4], float currentValue, float& lastValue,
+                                        float threshold, DrawFn drawFn) {
   bool should = false;
   if (!isnan(currentValue) &&
       (!isfinite(lastValue) || fabsf(currentValue - lastValue) >= threshold))
@@ -536,8 +520,8 @@ static inline bool maybe_redraw_numeric(const int rect[4], float currentValue,
 }
 
 template <typename T, typename DrawFn>
-static inline bool maybe_redraw_value(const int rect[4], const T& currentValue,
-                                      T& lastValue, DrawFn drawFn) {
+static inline bool maybe_redraw_value(const int rect[4], const T& currentValue, T& lastValue,
+                                      DrawFn drawFn) {
   if (currentValue != lastValue) {
     drawFn();
     lastValue = currentValue;
@@ -546,12 +530,11 @@ static inline bool maybe_redraw_value(const int rect[4], const T& currentValue,
   return false;
 }
 
-static inline bool maybe_redraw_status(const BatteryStatus& bs,
-    const char* ip_cstr,
+static inline bool maybe_redraw_status(const BatteryStatus& bs, const char* ip_cstr,
                                        const int rect[4]) {
   char buf[96];
-  snprintf(buf, sizeof(buf), "IP %s  Batt %.2fV %d%%  ~%dd", ip_cstr,
-           bs.voltage, bs.percent, bs.estimatedDays);
+  snprintf(buf, sizeof(buf), "IP %s  Batt %.2fV %d%%  ~%dd", ip_cstr, bs.voltage, bs.percent,
+           bs.estimatedDays);
   uint32_t crc = fast_crc32((const uint8_t*)buf, strlen(buf));
   if (crc != last_status_crc) {
     draw_status_line(bs, ip_cstr);
@@ -561,8 +544,7 @@ static inline bool maybe_redraw_status(const BatteryStatus& bs,
   return false;
 }
 
-static void make_short_condition_cstr(const char* weather, char* out,
-    size_t out_size) {
+static void make_short_condition_cstr(const char* weather, char* out, size_t out_size) {
   if (!out || out_size == 0)
     return;
   out[0] = '\0';
@@ -589,13 +571,12 @@ static void draw_header_time(const char* time_str) {
   const int16_t y = HEADER_TIME[1];
   const int16_t w = HEADER_TIME[2];
   const int16_t h = HEADER_TIME[3];
-  draw_in_region(HEADER_TIME, [&](int16_t xx, int16_t yy, int16_t ww,
-    int16_t hh) {
+  draw_in_region(HEADER_TIME, [&](int16_t xx, int16_t yy, int16_t ww, int16_t hh) {
     display.setTextColor(GxEPD_BLACK);
     display.setTextSize(1);
     int16_t tw = text_width_default_font(time_str, 1);
     int16_t rx = xx + ww - 2 - tw;
-    int16_t by = yy + hh - 2;  // baseline
+    int16_t by = yy + hh - 2; // baseline
     display.setCursor(rx, by);
     display.print(time_str);
   });
@@ -606,8 +587,7 @@ static void draw_status_line(const BatteryStatus& bs, const char* ip_cstr) {
   const int16_t y = STATUS_[1];
   const int16_t w = STATUS_[2];
   const int16_t h = STATUS_[3];
-  draw_in_region(STATUS_, [&](int16_t xx, int16_t yy, int16_t ww,
-    int16_t hh) {
+  draw_in_region(STATUS_, [&](int16_t xx, int16_t yy, int16_t ww, int16_t hh) {
     display.setTextColor(GxEPD_BLACK);
     display.setTextSize(1);
     int16_t cx = xx + 2;
@@ -615,13 +595,12 @@ static void draw_status_line(const BatteryStatus& bs, const char* ip_cstr) {
     // Low battery cue: draw battery if percent known
     if (bs.percent >= 0) {
       int16_t bx = cx;
-      int16_t by = yy + 1;  // nudge up 1px to center
+      int16_t by = yy + 1; // nudge up 1px to center
       int16_t bw = 13;
       int16_t bh = 7;
       display.drawRect(bx, by, bw, bh, GxEPD_BLACK);
       display.fillRect(bx + bw, by + 2, 2, 3, GxEPD_BLACK);
-      int16_t fillw = static_cast<int16_t>(((bw - 2) * (bs.percent / 100.0f) +
-    0.5f));
+      int16_t fillw = static_cast<int16_t>(((bw - 2) * (bs.percent / 100.0f) + 0.5f));
       if (fillw > 0)
         display.fillRect(bx + 1, by + 1, fillw, bh - 2, GxEPD_BLACK);
       cx += bw + 6;
@@ -634,25 +613,19 @@ static void draw_status_line(const BatteryStatus& bs, const char* ip_cstr) {
     display.getTextBounds(right, 0, 0, &bx, &by, &bw, &bh);
     int16_t rx = xx + ww - 2 - static_cast<int16_t>(bw);
     // Choose, using bounds,
-//     which left label to print based on available width
+    //     which left label to print based on available width
     char left_full[64];
     char left_nobatt[64];
     char left_tail[32];
     snprintf(left_full, sizeof(left_full), "Batt %.2fV %d%% | ~%dd",
-//     bs.voltage,
-//     bs.percent,
+             //     bs.voltage,
+             //     bs.percent,
              bs.estimatedDays);
     snprintf(left_nobatt, sizeof(left_nobatt), "%.2fV %d%% | ~%dd", bs.voltage,
 
-
-
-
-
-
-//     bs.percent,
+             //     bs.percent,
              bs.estimatedDays);
-    snprintf(left_tail, sizeof(left_tail), "%d%% | ~%dd", bs.percent,
-    bs.estimatedDays);
+    snprintf(left_tail, sizeof(left_tail), "%d%% | ~%dd", bs.percent, bs.estimatedDays);
     int16_t available = rx - cx - 2;
     const char* to_print = left_full;
     display.getTextBounds(to_print, 0, 0, &bx, &by, &bw, &bh);
@@ -675,10 +648,8 @@ static void draw_status_line(const BatteryStatus& bs, const char* ip_cstr) {
   });
 }
 
-static void draw_values(const char* in_temp_f, const char* in_rh,
-    const char* out_temp_f,
-                        const char* out_rh, const char* time_str,
-    const char* status) {
+static void draw_values(const char* in_temp_f, const char* in_rh, const char* out_temp_f,
+                        const char* out_rh, const char* time_str, const char* status) {
   display.setTextColor(GxEPD_BLACK);
   // Inside temp: numeric right-aligned, units drawn separately
   draw_temp_number_and_units(INSIDE_TEMP, in_temp_f);
@@ -702,17 +673,13 @@ static void draw_values(const char* in_temp_f, const char* in_rh,
 static IconId map_weather_to_icon(const char* w) {
   String s(w);
   s.toLowerCase();
-  if (s.indexOf("storm") >= 0 || s.indexOf("thunder") >= 0 ||
-    s.indexOf("lightning") >= 0)
+  if (s.indexOf("storm") >= 0 || s.indexOf("thunder") >= 0 || s.indexOf("lightning") >= 0)
     return ICON_WEATHER_LIGHTNING;
-  if (s.indexOf("pour") >= 0 || s.indexOf("rain") >= 0 || s.indexOf("shower")
-    >=
-    0)
+  if (s.indexOf("pour") >= 0 || s.indexOf("rain") >= 0 || s.indexOf("shower") >= 0)
     return ICON_WEATHER_POURING;
   if (s.indexOf("snow") >= 0)
     return ICON_WEATHER_SNOWY;
-  if (s.indexOf("fog") >= 0 || s.indexOf("mist") >= 0 || s.indexOf("haze") >=
-    0)
+  if (s.indexOf("fog") >= 0 || s.indexOf("mist") >= 0 || s.indexOf("haze") >= 0)
     return ICON_WEATHER_FOG;
   if (s.indexOf("part") >= 0)
     return ICON_WEATHER_PARTLY_CLOUDY;
@@ -745,17 +712,14 @@ static void full_refresh() {
 #endif
     char in_temp[16];
     char in_rh[16];
-    snprintf(in_temp, sizeof(in_temp),
-    isfinite(r.temperatureC) ? "%.1f" : "--",
+    snprintf(in_temp, sizeof(in_temp), isfinite(r.temperatureC) ? "%.1f" : "--",
              r.temperatureC * 9.0 / 5.0 + 32.0);
-    snprintf(in_rh, sizeof(in_rh), isfinite(r.humidityPct) ? "%.0f" : "--",
-    r.humidityPct);
+    snprintf(in_rh, sizeof(in_rh), isfinite(r.humidityPct) ? "%.0f" : "--", r.humidityPct);
     OutsideReadings o = net_get_outside();
     char out_temp[16];
     char out_rh[16];
     if (o.validTemp && isfinite(o.temperatureC)) {
-      snprintf(out_temp, sizeof(out_temp), "%.1f",
-    o.temperatureC * 9.0 / 5.0 + 32.0);
+      snprintf(out_temp, sizeof(out_temp), "%.1f", o.temperatureC * 9.0 / 5.0 + 32.0);
     } else if (isfinite(last_outside_f)) {
       snprintf(out_temp, sizeof(out_temp), "%.1f", last_outside_f);
     } else {
@@ -770,8 +734,7 @@ static void full_refresh() {
     }
     BatteryStatus bs = read_battery_status();
     char status[64];
-    snprintf(status, sizeof(status), "IP %s  Batt %.2fV %d%%  ~%dd",
-    net_ip().c_str(), bs.voltage,
+    snprintf(status, sizeof(status), "IP %s  Batt %.2fV %d%%  ~%dd", net_ip().c_str(), bs.voltage,
              bs.percent, bs.estimatedDays);
     draw_values(in_temp, in_rh, out_temp, out_rh, "", status);
     if (o.validWeather) {
@@ -823,8 +786,7 @@ static void full_refresh() {
 }
 
 static void partial_update_inside_temp(const char* in_temp_f, char trend) {
-  draw_in_region(INSIDE_TEMP, [&](int16_t x, int16_t y, int16_t w,
-    int16_t h) {
+  draw_in_region(INSIDE_TEMP, [&](int16_t x, int16_t y, int16_t w, int16_t h) {
     // Numeric + units split: redraw both sub-rects from this region pass
     // Numeric
     const int16_t units_w = 14;
@@ -906,8 +868,7 @@ static void partial_update_inside_rh(const char* in_rh) {
 
 static void partial_update_weather_icon(const char* weather) {
   draw_in_region(OUT_ICON,
-                 [&](int16_t, int16_t, int16_t,
-    int16_t) { draw_weather_icon_region(weather); });
+                 [&](int16_t, int16_t, int16_t, int16_t) { draw_weather_icon_region(weather); });
 }
 
 static void partial_update_outside_wind(const char* wind_str) {
@@ -949,7 +910,7 @@ static void partial_update_outside_hilo(float highC, float lowC) {
     }
   } while (display.nextPage());
 }
-#endif  // USE_DISPLAY
+#endif // USE_DISPLAY
 
 void setup() {
   int64_t t0_us = esp_timer_get_time();
@@ -969,11 +930,11 @@ void setup() {
 #if USE_DISPLAY
 #ifdef EINK_EN_PIN
   pinMode(EINK_EN_PIN, OUTPUT);
-  digitalWrite(EINK_EN_PIN, HIGH);  // enable panel power if gated
+  digitalWrite(EINK_EN_PIN, HIGH); // enable panel power if gated
   delay(5);
 #endif
   display.init(0);
-  display.setRotation(1);  // landscape 250x122 coordinate system
+  display.setRotation(1); // landscape 250x122 coordinate system
 #endif
   nvs_begin_cache();
   nvs_load_cache_if_unset();
@@ -991,7 +952,7 @@ void setup() {
     if (reset_reason_is_crash(rr)) {
       net_publish_last_crash(reset_reason_str(rr));
     } else {
-      net_publish_last_crash(nullptr);  // clear retained key
+      net_publish_last_crash(nullptr); // clear retained key
     }
   }
 
@@ -1000,12 +961,11 @@ void setup() {
   InsideReadings _sensor_probe = read_inside_sensors();
   (void)_sensor_probe;
   int64_t t3_us = esp_timer_get_time();
-  uint32_t dbg_ms_sensor = static_cast<uint32_t>((t3_us - t_sense_start_us) /
-    1000);
+  uint32_t dbg_ms_sensor = static_cast<uint32_t>((t3_us - t_sense_start_us) / 1000);
   if (dbg_ms_sensor > static_cast<uint32_t>(SENSOR_PHASE_TIMEOUT_MS)) {
     s_timeouts_mask |= TIMEOUT_BIT_SENSOR;
     Serial.printf("Timeout: sensor read exceeded budget ms=%u budget=%u\n",
-//     dbg_ms_sensor,
+                  //     dbg_ms_sensor,
                   static_cast<unsigned>(SENSOR_PHASE_TIMEOUT_MS));
   }
 
@@ -1026,18 +986,17 @@ void setup() {
     // Measure publish time using a non-retained probe topic
     int64_t pub_probe_start_us = esp_timer_get_time();
     net_publish_debug_probe("1", false);
-    uint32_t ms_publish = static_cast<uint32_t>((esp_timer_get_time() -
-    pub_probe_start_us) / 1000);
+    uint32_t ms_publish = static_cast<uint32_t>((esp_timer_get_time() - pub_probe_start_us) / 1000);
     // Publish diagnostics: WiFi RSSI and publish latency
     net_publish_wifi_rssi(WiFi.RSSI());
     net_publish_publish_latency_ms(ms_publish);
     uint32_t deep_sleep_us = sleep_scheduled_ms * 1000UL;
     snprintf(dbg, sizeof(dbg),
              "{\"ms_boot_to_wifi\":%u,\"ms_wifi_to_mqtt\":%u,\"ms_sensor_"
-//              "read\":%u,\"ms_publish\":%u,\"sleep_scheduled_ms\":%u,\"deep_"
+             //              "read\":%u,\"ms_publish\":%u,\"sleep_scheduled_ms\":%u,\"deep_"
              "sleep_us\":%u,\"reset_reason\":\"%s\",\"wakeup_cause\":\"%s\"}",
-//              ms_boot_to_wifi, ms_wifi_to_mqtt, ms_sensor_read, ms_publish,
-//     sleep_scheduled_ms,
+             //              ms_boot_to_wifi, ms_wifi_to_mqtt, ms_sensor_read, ms_publish,
+             //     sleep_scheduled_ms,
              deep_sleep_us, reset_reason_str(esp_reset_reason()),
              wakeup_cause_str(esp_sleep_get_wakeup_cause()));
     net_publish_debug_json(dbg, false);
@@ -1045,29 +1004,18 @@ void setup() {
 
   // Allow retained MQTT to arrive quickly for outside readings (bounded)
   uint32_t fetch_start_ms = millis();
-  bool outside_before = net_get_outside().validTemp ||
-    net_get_outside().validHum ||
-                        net_get_outside().validWeather ||
-    net_get_outside().validWind;
+  bool outside_before = net_get_outside().validTemp || net_get_outside().validHum ||
+                        net_get_outside().validWeather || net_get_outside().validWind;
   pump_network_ms(static_cast<uint32_t>(FETCH_RETAINED_TIMEOUT_MS));
   uint32_t ms_fetch = static_cast<uint32_t>(millis() - fetch_start_ms);
-  bool outside_after = net_get_outside().validTemp ||
-    net_get_outside().validHum
-    ||
-                       net_get_outside().validWeather ||
-    net_get_outside().validWind;
-  if (ms_fetch >= static_cast<uint32_t>(FETCH_RETAINED_TIMEOUT_MS) &&
-    !outside_after && !outside_before) {
+  bool outside_after = net_get_outside().validTemp || net_get_outside().validHum ||
+                       net_get_outside().validWeather || net_get_outside().validWind;
+  if (ms_fetch >= static_cast<uint32_t>(FETCH_RETAINED_TIMEOUT_MS) && !outside_after &&
+      !outside_before) {
     s_timeouts_mask |= TIMEOUT_BIT_FETCH;
 
-
-
-
-
-
-    Serial.printf(
-        "Timeout: retained fetch budget reached ms=%u budget=%u (no outside "
-        "data)\n",
+    Serial.printf("Timeout: retained fetch budget reached ms=%u budget=%u (no outside "
+                  "data)\n",
                   ms_fetch, static_cast<unsigned>(FETCH_RETAINED_TIMEOUT_MS));
   }
 
@@ -1080,16 +1028,15 @@ void setup() {
 #if USE_DISPLAY
   bool do_full = false;
   if (partial_counter == 0) {
-    do_full = true;  // first ever boot
+    do_full = true; // first ever boot
   } else if ((partial_counter % FULL_REFRESH_EVERY) == 0) {
-    do_full = true;  // periodic full clears
+    do_full = true; // periodic full clears
   }
 
   uint32_t display_phase_start = millis();
 // Establish a soft deadline visible to drawing helpers
 #ifdef DISPLAY_PHASE_TIMEOUT_MS
-  g_display_deadline_ms = display_phase_start +
-    static_cast<uint32_t>(DISPLAY_PHASE_TIMEOUT_MS);
+  g_display_deadline_ms = display_phase_start + static_cast<uint32_t>(DISPLAY_PHASE_TIMEOUT_MS);
 #endif
   if (do_full) {
     full_refresh();
@@ -1100,26 +1047,17 @@ void setup() {
     if (sens2_ms > static_cast<uint32_t>(SENSOR_PHASE_TIMEOUT_MS)) {
       s_timeouts_mask |= TIMEOUT_BIT_SENSOR;
 
-
-
-
-
-
-    Serial.printf(
-        "Timeout: sensor read (secondary) exceeded budget ms=%u budget=%u\n",
-        sens2_ms, static_cast<unsigned>(SENSOR_PHASE_TIMEOUT_MS));
+      Serial.printf("Timeout: sensor read (secondary) exceeded budget ms=%u budget=%u\n", sens2_ms,
+                    static_cast<unsigned>(SENSOR_PHASE_TIMEOUT_MS));
     }
     char in_temp[16];
     if (isfinite(r.temperatureC)) {
-      snprintf(in_temp, sizeof(in_temp), "%.1f",
-    r.temperatureC * 9.0 / 5.0 + 32.0);
+      snprintf(in_temp, sizeof(in_temp), "%.1f", r.temperatureC * 9.0 / 5.0 + 32.0);
     } else {
       snprintf(in_temp, sizeof(in_temp), "--");
     }
     char trend_in = '0';
-    float now_in_f = isfinite(r.temperatureC) ? (r.temperatureC * 9.0f / 5.0f
-    +
-    32.0f) : NAN;
+    float now_in_f = isfinite(r.temperatureC) ? (r.temperatureC * 9.0f / 5.0f + 32.0f) : NAN;
     if (isfinite(now_in_f) && isfinite(last_inside_f)) {
       float d = now_in_f - last_inside_f;
       if (d >= THRESH_TEMP_F)
@@ -1129,9 +1067,7 @@ void setup() {
     }
     // Only redraw inside temp when changed beyond threshold
     maybe_redraw_numeric(INSIDE_TEMP, now_in_f, last_inside_f, THRESH_TEMP_F,
-                         [&]() {
-                           partial_update_inside_temp(in_temp, trend_in);
-                         });
+                         [&]() { partial_update_inside_temp(in_temp, trend_in); });
     if (isfinite(last_inside_f))
       nvs_store_float("li_f", last_inside_f);
     // Inside RH partial update + publish only when changed beyond thresholds
@@ -1148,11 +1084,9 @@ void setup() {
     if (isfinite(r.temperatureC) && isfinite(r.humidityPct)) {
       bool temp_changed =
           (!isfinite(last_published_inside_tempC)) ||
-          fabsf(r.temperatureC - last_published_inside_tempC) >=
-    THRESH_TEMP_C_FROM_F;
+          fabsf(r.temperatureC - last_published_inside_tempC) >= THRESH_TEMP_C_FROM_F;
       bool rh_changed = (!isfinite(last_published_inside_rh)) ||
-                        fabsf(r.humidityPct - last_published_inside_rh) >=
-    THRESH_RH;
+                        fabsf(r.humidityPct - last_published_inside_rh) >= THRESH_RH;
       if (temp_changed || rh_changed) {
         net_publish_inside(r.temperatureC, r.humidityPct);
         publish_any = true;
@@ -1164,9 +1098,7 @@ void setup() {
     }
     if (isfinite(r.pressureHPa)) {
       bool p_changed = (!isfinite(last_published_inside_pressureHPa)) ||
-                       fabsf(r.pressureHPa -
-    last_published_inside_pressureHPa)
-    >= THRESH_PRESS_HPA;
+                       fabsf(r.pressureHPa - last_published_inside_pressureHPa) >= THRESH_PRESS_HPA;
       if (p_changed) {
         net_publish_pressure(r.pressureHPa);
         publish_any = true;
@@ -1178,8 +1110,7 @@ void setup() {
     OutsideReadings o = net_get_outside();
     if (o.validTemp) {
       char out_temp[16];
-      snprintf(out_temp, sizeof(out_temp), "%.1f",
-    o.temperatureC * 9.0 / 5.0 + 32.0);
+      snprintf(out_temp, sizeof(out_temp), "%.1f", o.temperatureC * 9.0 / 5.0 + 32.0);
       char trend_out = '0';
       float now_out_f = o.temperatureC * 9.0f / 5.0f + 32.0f;
       if (isfinite(last_outside_f)) {
@@ -1190,28 +1121,18 @@ void setup() {
           trend_out = '-';
       }
       bool temp_changed =
-          !isfinite(last_outside_f) || fabsf(now_out_f - last_outside_f) >=
-    THRESH_TEMP_F;
+          !isfinite(last_outside_f) || fabsf(now_out_f - last_outside_f) >= THRESH_TEMP_F;
       if (temp_changed && o.validHum && isfinite(o.humidityPct)) {
         // Merge redraws: update temp and RH in same wake when both changed
-        maybe_redraw_numeric(OUT_TEMP, now_out_f, last_outside_f,
-                             THRESH_TEMP_F,
-                             [&]() {
-                               partial_update_outside_temp(out_temp,
-                                                           trend_out);
-                             });
+        maybe_redraw_numeric(OUT_TEMP, now_out_f, last_outside_f, THRESH_TEMP_F,
+                             [&]() { partial_update_outside_temp(out_temp, trend_out); });
         char out_rh2[16];
         snprintf(out_rh2, sizeof(out_rh2), "%.0f", o.humidityPct);
-        maybe_redraw_numeric(OUT_ROW2_L, o.humidityPct, last_outside_rh,
-                             THRESH_RH,
+        maybe_redraw_numeric(OUT_ROW2_L, o.humidityPct, last_outside_rh, THRESH_RH,
                              [&]() { partial_update_outside_rh(out_rh2); });
       } else {
-        maybe_redraw_numeric(OUT_TEMP, now_out_f, last_outside_f,
-                             THRESH_TEMP_F,
-                             [&]() {
-                               partial_update_outside_temp(out_temp,
-                                                           trend_out);
-                             });
+        maybe_redraw_numeric(OUT_TEMP, now_out_f, last_outside_f, THRESH_TEMP_F,
+                             [&]() { partial_update_outside_temp(out_temp, trend_out); });
       }
       if (isfinite(last_outside_f))
         nvs_store_float("lo_f", last_outside_f);
@@ -1219,19 +1140,15 @@ void setup() {
     if (o.validHum) {
       char out_rh[16];
       snprintf(out_rh, sizeof(out_rh), "%.0f", o.humidityPct);
-      maybe_redraw_numeric(OUT_ROW2_L, o.humidityPct, last_outside_rh,
-                           THRESH_RH,
+      maybe_redraw_numeric(OUT_ROW2_L, o.humidityPct, last_outside_rh, THRESH_RH,
                            [&]() { partial_update_outside_rh(out_rh); });
       if (isfinite(last_outside_rh))
         nvs_store_float("lo_rh", last_outside_rh);
     }
     if (o.validWeather) {
       IconId id = map_weather_to_icon(o.weather);
-      maybe_redraw_value<int32_t>(OUT_ICON, static_cast<int32_t>(id),
-                                  last_icon_id,
-                                  [&]() {
-                                    partial_update_weather_icon(o.weather);
-                                  });
+      maybe_redraw_value<int32_t>(OUT_ICON, static_cast<int32_t>(id), last_icon_id,
+                                  [&]() { partial_update_weather_icon(o.weather); });
       nvs_store_int("icon", last_icon_id);
       char sc[24];
       make_short_condition_cstr(o.weather, sc, sizeof(sc));
@@ -1257,13 +1174,12 @@ void setup() {
       net_publish_battery(bs.voltage, bs.percent);
       publish_any = true;
     }
-    uint32_t ms_publish_phase = publish_any ? static_cast<uint32_t>(millis() -
-    publish_phase_start) : 0;
-    if (publish_any && ms_publish_phase >
-    static_cast<uint32_t>(PUBLISH_PHASE_TIMEOUT_MS)) {
+    uint32_t ms_publish_phase =
+        publish_any ? static_cast<uint32_t>(millis() - publish_phase_start) : 0;
+    if (publish_any && ms_publish_phase > static_cast<uint32_t>(PUBLISH_PHASE_TIMEOUT_MS)) {
       s_timeouts_mask |= TIMEOUT_BIT_PUBLISH;
       Serial.printf("Timeout: publish exceeded budget ms=%u budget=%u\n",
-//     ms_publish_phase,
+                    //     ms_publish_phase,
                     static_cast<unsigned>(PUBLISH_PHASE_TIMEOUT_MS));
     }
   }
@@ -1273,32 +1189,30 @@ void setup() {
   if (ms_display > static_cast<uint32_t>(DISPLAY_PHASE_TIMEOUT_MS)) {
     s_timeouts_mask |= TIMEOUT_BIT_DISPLAY;
     Serial.printf("Timeout: display phase exceeded budget ms=%u budget=%u\n",
-//     ms_display,
+                  //     ms_display,
                   static_cast<unsigned>(DISPLAY_PHASE_TIMEOUT_MS));
   }
   g_display_deadline_ms = 0;
 #endif
 #else
   // Headless mode: no display; still connect, read sensors, publish,
-//     and sleep
+  //     and sleep
   uint32_t sens2_start = millis();
   InsideReadings r = read_inside_sensors();
   uint32_t sens2_ms = static_cast<uint32_t>(millis() - sens2_start);
   if (sens2_ms > static_cast<uint32_t>(SENSOR_PHASE_TIMEOUT_MS)) {
     s_timeouts_mask |= TIMEOUT_BIT_SENSOR;
     Serial.printf("Timeout: sensor read exceeded budget ms=%u budget=%u\n",
-//     sens2_ms,
+                  //     sens2_ms,
                   static_cast<unsigned>(SENSOR_PHASE_TIMEOUT_MS));
   }
   uint32_t publish_phase_start = millis();
   bool publish_any = false;
   if (isfinite(r.temperatureC) && isfinite(r.humidityPct)) {
     bool temp_changed = (!isfinite(last_published_inside_tempC)) ||
-                        fabsf(r.temperatureC - last_published_inside_tempC) >=
-    THRESH_TEMP_C_FROM_F;
+                        fabsf(r.temperatureC - last_published_inside_tempC) >= THRESH_TEMP_C_FROM_F;
     bool rh_changed = (!isfinite(last_published_inside_rh)) ||
-                      fabsf(r.humidityPct - last_published_inside_rh) >=
-    THRESH_RH;
+                      fabsf(r.humidityPct - last_published_inside_rh) >= THRESH_RH;
     if (temp_changed || rh_changed) {
       net_publish_inside(r.temperatureC, r.humidityPct);
       publish_any = true;
@@ -1310,9 +1224,7 @@ void setup() {
   }
   if (isfinite(r.pressureHPa)) {
     bool p_changed = (!isfinite(last_published_inside_pressureHPa)) ||
-                     fabsf(r.pressureHPa - last_published_inside_pressureHPa)
-    >=
-    THRESH_PRESS_HPA;
+                     fabsf(r.pressureHPa - last_published_inside_pressureHPa) >= THRESH_PRESS_HPA;
     if (p_changed) {
       net_publish_pressure(r.pressureHPa);
       publish_any = true;
@@ -1325,8 +1237,7 @@ void setup() {
     String ip = net_ip();
     BatteryStatus bs = read_battery_status();
     char payload[96];
-    snprintf(payload, sizeof(payload), "headless=1 ip=%s v=%.2f pct=%d",
-    ip.c_str(), bs.voltage,
+    snprintf(payload, sizeof(payload), "headless=1 ip=%s v=%.2f pct=%d", ip.c_str(), bs.voltage,
              bs.percent);
     net_publish_status(payload, true);
     if (isfinite(bs.voltage) && bs.percent >= 0) {
@@ -1334,13 +1245,12 @@ void setup() {
       publish_any = true;
     }
   }
-  uint32_t ms_publish_phase = publish_any ? static_cast<uint32_t>(millis() -
-    publish_phase_start) : 0;
-  if (publish_any && ms_publish_phase >
-    static_cast<uint32_t>(PUBLISH_PHASE_TIMEOUT_MS)) {
+  uint32_t ms_publish_phase =
+      publish_any ? static_cast<uint32_t>(millis() - publish_phase_start) : 0;
+  if (publish_any && ms_publish_phase > static_cast<uint32_t>(PUBLISH_PHASE_TIMEOUT_MS)) {
     s_timeouts_mask |= TIMEOUT_BIT_PUBLISH;
     Serial.printf("Timeout: publish exceeded budget ms=%u budget=%u\n",
-//     ms_publish_phase,
+                  //     ms_publish_phase,
                   static_cast<unsigned>(PUBLISH_PHASE_TIMEOUT_MS));
   }
 #endif
@@ -1348,8 +1258,7 @@ void setup() {
   // Emit one metrics JSON line over USB for monitor scripts
   {
     InsideReadings latest = read_inside_sensors();
-    emit_metrics_json(latest.temperatureC, latest.humidityPct,
-    latest.pressureHPa);
+    emit_metrics_json(latest.temperatureC, latest.humidityPct, latest.pressureHPa);
   }
 
   // Publish a concise timeout summary JSON if MQTT is connected
@@ -1388,8 +1297,7 @@ void setup() {
     static uint32_t last_metrics = 0;
     if (millis() - last_metrics > 2000) {
       InsideReadings latest = read_inside_sensors();
-      emit_metrics_json(latest.temperatureC, latest.humidityPct,
-    latest.pressureHPa);
+      emit_metrics_json(latest.temperatureC, latest.humidityPct, latest.pressureHPa);
       last_metrics = millis();
     }
 #if USE_STATUS_PIXEL
@@ -1399,8 +1307,7 @@ void setup() {
   }
 #else
 #if DEV_CYCLE_MODE
-  Serial.printf("Dev cycle: sleeping for %us\n",
-    static_cast<unsigned>(DEV_SLEEP_SEC));
+  Serial.printf("Dev cycle: sleeping for %us\n", static_cast<unsigned>(DEV_SLEEP_SEC));
   nvs_end_cache();
 #if USE_STATUS_PIXEL
   status_pixel_off();
@@ -1418,8 +1325,7 @@ void setup() {
   net_prepare_for_sleep();
   go_deep_sleep_seconds(DEV_SLEEP_SEC);
 #else
-  Serial.printf("Sleeping for %us\n",
-    static_cast<unsigned>(WAKE_INTERVAL_SEC));
+  Serial.printf("Sleeping for %us\n", static_cast<unsigned>(WAKE_INTERVAL_SEC));
 #if USE_DISPLAY
 #ifdef EINK_EN_PIN
   // Power down panel between wakes if gated to save sleep current
