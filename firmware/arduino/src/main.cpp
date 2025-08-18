@@ -1,6 +1,6 @@
+#include <cstdio>
 #include <esp_system.h>
 #include <esp_timer.h>
-#include <cstdio>
 
 // Copyright 2024 Justin
 
