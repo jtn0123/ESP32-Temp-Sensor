@@ -246,7 +246,7 @@ static const char* reset_reason_str(esp_reset_reason_t r) {
     return "ESP_RST_DEEPSLEEP";
   case ESP_RST_SDIO:
     return "ESP_RST_SDIO";
-    //   default:
+  default:
     return "ESP_RST_UNKNOWN";
   }
 }
@@ -259,7 +259,7 @@ static inline bool reset_reason_is_crash(esp_reset_reason_t r) {
   case ESP_RST_WDT:
   case ESP_RST_BROWNOUT:
     return true;
-    //   default:
+  default:
     return false;
   }
 }
@@ -286,7 +286,7 @@ static const char* wakeup_cause_str(esp_sleep_wakeup_cause_t c) {
   case ESP_SLEEP_WAKEUP_UART:
     return "UART";
 #endif
-    //   default:
+  default:
     return "OTHER";
   }
 }
@@ -312,9 +312,11 @@ static void handle_serial_command_line(const String& line) {
     net_ip_cstr(ip_c, sizeof(ip_c));
     BatteryStatus bs = read_battery_status();
     Serial.printf("status ip=%s wifi=%s mqtt=%s v=%.2f pct=%d partial=%u\n",
-                  //     ip_c,
-                  net_wifi_is_connected() ? "up" : "down", net_mqtt_is_connected() ? "up" : "down",
-                  //                   bs.voltage, bs.percent,
+                  ip_c,
+                  net_wifi_is_connected() ? "up" : "down",
+                  net_mqtt_is_connected() ? "up" : "down",
+                  static_cast<double>(bs.voltage),
+                  bs.percent,
                   static_cast<unsigned>(partial_counter));
     return;
   }
