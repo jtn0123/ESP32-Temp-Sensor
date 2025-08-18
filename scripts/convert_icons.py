@@ -119,15 +119,20 @@ def main():
         bits = pack_xbm_bits(img)
         arr_name = c_array_name(name)
         header_lines.append(f"static const uint8_t {arr_name}[] PROGMEM = {{")
-        # format bytes as 0x..,
-        line = "    "
+        # format bytes as 0x.., and wrap to keep lines <= 80 chars
+        indent = "    "
+        hex_item = "0xFF, "
+        max_line_len = 80
+        # Be more conservative to guarantee short lines: use fewer bytes per line
+        bytes_per_line = max(1, (max_line_len - len(indent)) // len(hex_item) - 6)
+        line = indent
         for i, b in enumerate(bits):
             line += f"0x{b:02X}, "
-            if (i + 1) % 12 == 0:
-                header_lines.append(line)
-                line = "    "
+            if (i + 1) % bytes_per_line == 0:
+                header_lines.append(line.rstrip())
+                line = indent
         if line.strip():
-            header_lines.append(line)
+            header_lines.append(line.rstrip())
         header_lines.append("};")
         header_lines.append("")
 
@@ -140,7 +145,9 @@ def main():
         arr = c_array_name(name)
         enum_name = "ICON_" + name.replace("-", "_").upper()
         header_lines.append(f"    case {enum_name}:")
-        header_lines.append(f"        d.drawXBitmap(x, y, {arr}, ICON_W, ICON_H, color); break;")
+        # Emit draw call and break on separate lines to keep line length short
+        header_lines.append(f"        d.drawXBitmap(x, y, {arr}, ICON_W, ICON_H, color);")
+        header_lines.append(f"        break;")
     header_lines.append("    default: break;")
     header_lines.append("    }")
     header_lines.append("}")
