@@ -24,9 +24,9 @@ inline void sensors_begin() {
     return;
   }
   g_bme280.setSampling(Adafruit_BME280::MODE_FORCED,
-                       Adafruit_BME280::SAMPLING_X1,  // temp
-                       Adafruit_BME280::SAMPLING_X1,  // pressure
-                       Adafruit_BME280::SAMPLING_X1,  // humidity
+                       Adafruit_BME280::SAMPLING_X1, // temp
+                       Adafruit_BME280::SAMPLING_X1, // pressure
+                       Adafruit_BME280::SAMPLING_X1, // humidity
                        Adafruit_BME280::FILTER_OFF);
   g_bme280_initialized = true;
 }

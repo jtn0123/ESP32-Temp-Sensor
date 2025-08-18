@@ -2,12 +2,11 @@
 
 // Copyright 2024 Justin
 
-#include <esp_sleep.h>
-
-#include <Arduino.h>
-
 #include "config.h"
 #include "generated_config.h"
+
+#include <Arduino.h>
+#include <esp_sleep.h>
 
 #if USE_MAX17048
 #include <Adafruit_MAX1704X.h>
@@ -89,8 +88,7 @@ inline BatteryStatus read_battery_status() {
       a = m;
       m = t;
     }
-    float v = (m / static_cast<float>(ADC_MAX_COUNTS)) * ADC_REF_V *
-    VBAT_DIVIDER;
+    float v = (m / static_cast<float>(ADC_MAX_COUNTS)) * ADC_REF_V * VBAT_DIVIDER;
     b.voltage = v;
   }
   // Rough SOC estimate from voltage (linear placeholder 3.3V→0%, 4.2V→100%)
@@ -105,14 +103,13 @@ inline BatteryStatus read_battery_status() {
   // Days estimate from duty cycle
   // Average current ~ (active_current * active_fraction + sleep_current *
   // sleep_fraction)
-  float active_fraction = static_cast<float>(ACTIVE_SECONDS) /
-    static_cast<float>(WAKE_INTERVAL_SEC);
+  float active_fraction =
+      static_cast<float>(ACTIVE_SECONDS) / static_cast<float>(WAKE_INTERVAL_SEC);
   if (active_fraction < 0)
     active_fraction = 0;
   if (active_fraction > 1)
     active_fraction = 1;
-  float avg_mA = ACTIVE_CURRENT_MA * active_fraction + SLEEP_CURRENT_MA * (1.0f
-    - active_fraction);
+  float avg_mA = ACTIVE_CURRENT_MA * active_fraction + SLEEP_CURRENT_MA * (1.0f - active_fraction);
   if (avg_mA > 0) {
     float hours = BATTERY_CAPACITY_MAH / avg_mA;
     b.estimatedDays = static_cast<int>(hours / 24.0f + 0.5f);
