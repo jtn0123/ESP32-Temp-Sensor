@@ -2,17 +2,18 @@
 
 #include <Arduino.h>
 #include <esp_sleep.h>
-#include "generated_config.h"
+
 #include "config.h"
+#include "generated_config.h"
 #if USE_MAX17048
-#include <Wire.h>
 #include <Adafruit_MAX1704X.h>
+#include <Wire.h>
 #endif
 
 struct BatteryStatus {
-    float voltage = NAN;
-    int percent = -1;
-    int estimatedDays = -1;
+  float voltage = NAN;
+  int percent = -1;
+  int estimatedDays = -1;
 };
 
 #if USE_MAX17048
@@ -20,86 +21,100 @@ static Adafruit_MAX17048 g_maxfg;
 static bool g_maxfg_initialized = false;
 
 inline void fuelgauge_wake_if_asleep() {
-    if (!g_maxfg_initialized) return;
-    g_maxfg.sleep(false);
+  if (!g_maxfg_initialized) return;
+  g_maxfg.sleep(false);
 }
 
 inline void fuelgauge_quickstart_if_cold_boot(esp_reset_reason_t reason) {
-    if (!g_maxfg_initialized) return;
-    if (reason == ESP_RST_POWERON) {
-        g_maxfg.quickStart();
-    }
+  if (!g_maxfg_initialized) return;
+  if (reason == ESP_RST_POWERON) {
+    g_maxfg.quickStart();
+  }
 }
 
 inline void fuelgauge_sleep_between_wakes() {
-    if (!g_maxfg_initialized) return;
-    g_maxfg.sleep(true);
+  if (!g_maxfg_initialized) return;
+  g_maxfg.sleep(true);
 }
 #endif
 
 inline BatteryStatus read_battery_status() {
-    BatteryStatus b;
+  BatteryStatus b;
 #if USE_MAX17048
-    if (!g_maxfg_initialized) {
-        Wire.begin();
-        #ifdef I2C_TIMEOUT_MS
-        Wire.setTimeOut(I2C_TIMEOUT_MS);
-        #endif
-        g_maxfg_initialized = g_maxfg.begin();
-        if (g_maxfg_initialized) {
-            fuelgauge_wake_if_asleep();
-            fuelgauge_quickstart_if_cold_boot(esp_reset_reason());
-        }
-    }
-    if (g_maxfg_initialized) {
-        b.voltage = g_maxfg.cellVoltage();
-        b.percent = (int)(g_maxfg.cellPercent() + 0.5f);
-    }
+  if (!g_maxfg_initialized) {
+    Wire.begin();
+#ifdef I2C_TIMEOUT_MS
+    Wire.setTimeOut(I2C_TIMEOUT_MS);
 #endif
-    if (!isfinite(b.voltage) && VBAT_ADC_PIN >= 0) {
-        // Reduce IR drop influence: short idle, median-of-3 samples
-        analogReadResolution(12);
-        delay(200);
-        uint16_t r0 = analogRead(VBAT_ADC_PIN);
-        delay(10);
-        uint16_t r1 = analogRead(VBAT_ADC_PIN);
-        delay(10);
-        uint16_t r2 = analogRead(VBAT_ADC_PIN);
-        uint16_t a = r0, m = r1, c = r2;
-        if (a > m) { uint16_t t = a; a = m; m = t; }
-        if (m > c) { uint16_t t = m; m = c; c = t; }
-        if (a > m) { uint16_t t = a; a = m; m = t; }
-        float v = (m / (float)ADC_MAX_COUNTS) * ADC_REF_V * VBAT_DIVIDER;
-        b.voltage = v;
+    g_maxfg_initialized = g_maxfg.begin();
+    if (g_maxfg_initialized) {
+      fuelgauge_wake_if_asleep();
+      fuelgauge_quickstart_if_cold_boot(esp_reset_reason());
     }
-    // Rough SOC estimate from voltage (linear placeholder 3.3V→0%, 4.2V→100%)
-    if (b.percent < 0 && isfinite(b.voltage)) {
-        float pct = (b.voltage - 3.3f) / (4.2f - 3.3f);
-        if (pct < 0) pct = 0; if (pct > 1) pct = 1;
-        b.percent = (int)(pct * 100.0f + 0.5f);
+  }
+  if (g_maxfg_initialized) {
+    b.voltage = g_maxfg.cellVoltage();
+    b.percent = (int)(g_maxfg.cellPercent() + 0.5f);
+  }
+#endif
+  if (!isfinite(b.voltage) && VBAT_ADC_PIN >= 0) {
+    // Reduce IR drop influence: short idle, median-of-3 samples
+    analogReadResolution(12);
+    delay(200);
+    uint16_t r0 = analogRead(VBAT_ADC_PIN);
+    delay(10);
+    uint16_t r1 = analogRead(VBAT_ADC_PIN);
+    delay(10);
+    uint16_t r2 = analogRead(VBAT_ADC_PIN);
+    uint16_t a = r0, m = r1, c = r2;
+    if (a > m) {
+      uint16_t t = a;
+      a = m;
+      m = t;
     }
-    // Days estimate from duty cycle
-    // Average current ~ (active_current * active_fraction + sleep_current * sleep_fraction)
-    float active_fraction = (float)ACTIVE_SECONDS / (float)WAKE_INTERVAL_SEC;
-    if (active_fraction < 0) active_fraction = 0; if (active_fraction > 1) active_fraction = 1;
-    float avg_mA = ACTIVE_CURRENT_MA * active_fraction + SLEEP_CURRENT_MA * (1.0f - active_fraction);
-    if (avg_mA > 0) {
-        float hours = BATTERY_CAPACITY_MAH / avg_mA;
-        b.estimatedDays = (int)(hours / 24.0f + 0.5f);
-    } else {
-        b.estimatedDays = -1;
+    if (m > c) {
+      uint16_t t = m;
+      m = c;
+      c = t;
     }
-    return b;
+    if (a > m) {
+      uint16_t t = a;
+      a = m;
+      m = t;
+    }
+    float v = (m / (float)ADC_MAX_COUNTS) * ADC_REF_V * VBAT_DIVIDER;
+    b.voltage = v;
+  }
+  // Rough SOC estimate from voltage (linear placeholder 3.3V→0%, 4.2V→100%)
+  if (b.percent < 0 && isfinite(b.voltage)) {
+    float pct = (b.voltage - 3.3f) / (4.2f - 3.3f);
+    if (pct < 0) pct = 0;
+    if (pct > 1) pct = 1;
+    b.percent = (int)(pct * 100.0f + 0.5f);
+  }
+  // Days estimate from duty cycle
+  // Average current ~ (active_current * active_fraction + sleep_current *
+  // sleep_fraction)
+  float active_fraction = (float)ACTIVE_SECONDS / (float)WAKE_INTERVAL_SEC;
+  if (active_fraction < 0) active_fraction = 0;
+  if (active_fraction > 1) active_fraction = 1;
+  float avg_mA = ACTIVE_CURRENT_MA * active_fraction +
+                 SLEEP_CURRENT_MA * (1.0f - active_fraction);
+  if (avg_mA > 0) {
+    float hours = BATTERY_CAPACITY_MAH / avg_mA;
+    b.estimatedDays = (int)(hours / 24.0f + 0.5f);
+  } else {
+    b.estimatedDays = -1;
+  }
+  return b;
 }
 
 inline void go_deep_sleep_seconds(uint32_t seconds) {
-    #if USE_MAX17048
-    if (g_maxfg_initialized) {
-        fuelgauge_sleep_between_wakes();
-    }
-    #endif
-    esp_sleep_enable_timer_wakeup((uint64_t)seconds * 1000000ULL);
-    esp_deep_sleep_start();
+#if USE_MAX17048
+  if (g_maxfg_initialized) {
+    fuelgauge_sleep_between_wakes();
+  }
+#endif
+  esp_sleep_enable_timer_wakeup((uint64_t)seconds * 1000000ULL);
+  esp_deep_sleep_start();
 }
-
-

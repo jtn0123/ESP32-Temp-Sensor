@@ -45,15 +45,18 @@ class MqttTestClient:
         if hasattr(mqtt, "CallbackAPIVersion"):
             try:
                 _cbver = mqtt.CallbackAPIVersion.VERSION1
+                # Force MQTT v3.1.1 protocol for broad broker compatibility
                 self.client = mqtt.Client(
                     client_id=client_id,
                     callback_api_version=_cbver,
+                    protocol=mqtt.MQTTv311,
                 )
             except TypeError:
                 # Older 1.x that doesn't accept the keyword
-                self.client = mqtt.Client(client_id=client_id)
+                self.client = mqtt.Client(client_id=client_id, protocol=mqtt.MQTTv311)
         else:
-            self.client = mqtt.Client(client_id=client_id)
+            # paho-mqtt 1.x
+            self.client = mqtt.Client(client_id=client_id, protocol=mqtt.MQTTv311)
         self._host = host
         self._port = port
         self._connected_event = threading.Event()
