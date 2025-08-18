@@ -2,8 +2,11 @@
 #include <esp_timer.h>
 #include <cstdio>
 
+// Copyright 2024 Justin
+
 #include <Arduino.h>
 #include <Preferences.h>
+#include "config.h"
 #if USE_STATUS_PIXEL
 #include <Adafruit_NeoPixel.h>
 #endif
@@ -12,7 +15,6 @@
 #include <GxEPD2_213_B74.h>
 #endif
 
-#include "config.h"
 #if USE_DISPLAY
 #include "display_layout.h"
 #include "icons.h"
