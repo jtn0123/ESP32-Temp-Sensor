@@ -1,8 +1,12 @@
 #include <esp_system.h>
 #include <esp_timer.h>
+#include <cstdio>
+
+// Copyright 2024 Justin
 
 #include <Arduino.h>
 #include <Preferences.h>
+#include "config.h"
 #if USE_STATUS_PIXEL
 #include <Adafruit_NeoPixel.h>
 #endif
@@ -10,7 +14,6 @@
 #include <GxEPD2_BW.h>
 #endif
 
-#include "config.h"
 #if USE_DISPLAY
 #include "display_layout.h"
 #include "icons.h"
@@ -70,7 +73,7 @@ static inline void nvs_load_cache_if_unset() {
   if (!isfinite(last_outside_rh))
     last_outside_rh = g_prefs.getFloat("lo_rh", NAN);
   if (last_icon_id < 0)
-    last_icon_id = (int32_t)g_prefs.getInt("icon", -1);
+    last_icon_id = static_cast<int32_t>(g_prefs.getInt("icon", -1));
   if (last_status_crc == 0)
     last_status_crc = g_prefs.getUInt("st_crc", 0);
   if (!isfinite(last_published_inside_tempC))
@@ -159,10 +162,10 @@ static inline void status_pixel_tick() {
   s_hue++;
   s_breath++;
   // Triangle wave 0..127..0 mapped to brightness range
-  uint8_t amp = (s_breath < 128) ? s_breath : (uint8_t)(255 - s_breath);
+  uint8_t amp = (s_breath < 128) ? s_breath : static_cast<uint8_t>(255 - s_breath);
   const uint8_t minB = 8;
   const uint8_t maxB = 64;
-  uint8_t level = (uint8_t)(minB + ((uint16_t)amp * (maxB - minB) / 127));
+  uint8_t level = static_cast<uint8_t>(minB + (static_cast<uint16_t>(amp) * (maxB - minB) / 127));
   // Occasional brief flash for a bit of flair
   if ((s_hue & 0x3F) == 0)
     level = maxB;
@@ -290,7 +293,7 @@ static void handle_serial_command_line(const String& line) {
     BatteryStatus bs = read_battery_status();
     Serial.printf("status ip=%s wifi=%s mqtt=%s v=%.2f pct=%d partial=%u\n", ip_c,
                   net_wifi_is_connected() ? "up" : "down", net_mqtt_is_connected() ? "up" : "down",
-                  bs.voltage, bs.percent, (unsigned)partial_counter);
+                  bs.voltage, bs.percent, static_cast<unsigned>(partial_counter));
     return;
   }
   if (op == "metrics") {
@@ -304,7 +307,7 @@ static void handle_serial_command_line(const String& line) {
       Serial.println(F("ERR sleep: provide seconds > 0"));
       return;
     }
-    Serial.printf("Sleeping for %us\n", (unsigned)sec);
+    Serial.printf("Sleeping for %us\n", static_cast<unsigned>(sec));
     nvs_end_cache();
 #if USE_STATUS_PIXEL
     status_pixel_off();
@@ -581,7 +584,7 @@ static void draw_status_line(const BatteryStatus& bs, const char* ip_cstr) {
       int16_t bh = 7;
       display.drawRect(bx, by, bw, bh, GxEPD_BLACK);
       display.fillRect(bx + bw, by + 2, 2, 3, GxEPD_BLACK);
-      int16_t fillw = (int16_t)((bw - 2) * (bs.percent / 100.0f) + 0.5f);
+      int16_t fillw = static_cast<int16_t>(((bw - 2) * (bs.percent / 100.0f) + 0.5f));
       if (fillw > 0)
         display.fillRect(bx + 1, by + 1, fillw, bh - 2, GxEPD_BLACK);
       cx += bw + 6;
@@ -592,7 +595,7 @@ static void draw_status_line(const BatteryStatus& bs, const char* ip_cstr) {
     int16_t bx, by;
     uint16_t bw, bh;
     display.getTextBounds(right, 0, 0, &bx, &by, &bw, &bh);
-    int16_t rx = xx + ww - 2 - (int16_t)bw;
+    int16_t rx = xx + ww - 2 - static_cast<int16_t>(bw);
     // Choose, using bounds, which left label to print based on available width
     char left_full[64];
     char left_nobatt[64];
@@ -605,13 +608,13 @@ static void draw_status_line(const BatteryStatus& bs, const char* ip_cstr) {
     int16_t available = rx - cx - 2;
     const char* to_print = left_full;
     display.getTextBounds(to_print, 0, 0, &bx, &by, &bw, &bh);
-    if ((int16_t)bw > available) {
+    if (static_cast<int16_t>(bw) > available) {
       to_print = left_nobatt;
       display.getTextBounds(to_print, 0, 0, &bx, &by, &bw, &bh);
     }
-    if ((int16_t)bw > available) {
+    if (static_cast<int16_t>(bw) > available) {
       display.getTextBounds(left_tail, 0, 0, &bx, &by, &bw, &bh);
-      if ((int16_t)bw <= available) {
+      if (static_cast<int16_t>(bw) <= available) {
         to_print = left_tail;
       } else {
         to_print = "";
@@ -715,7 +718,7 @@ static void full_refresh() {
     draw_values(in_temp, in_rh, out_temp, out_rh, "", status);
     if (o.validWeather) {
       draw_weather_icon_region(o.weather);
-      last_icon_id = (int32_t)map_weather_to_icon(o.weather);
+      last_icon_id = static_cast<int32_t>(map_weather_to_icon(o.weather));
     } else if (last_icon_id >= 0) {
       // Draw last known icon
       int16_t x = OUT_ICON[0];
@@ -937,31 +940,31 @@ void setup() {
   InsideReadings _sensor_probe = read_inside_sensors();
   (void)_sensor_probe;
   int64_t t3_us = esp_timer_get_time();
-  uint32_t dbg_ms_sensor = (uint32_t)((t3_us - t_sense_start_us) / 1000);
-  if (dbg_ms_sensor > (uint32_t)SENSOR_PHASE_TIMEOUT_MS) {
+  uint32_t dbg_ms_sensor = static_cast<uint32_t>((t3_us - t_sense_start_us) / 1000);
+  if (dbg_ms_sensor > static_cast<uint32_t>(SENSOR_PHASE_TIMEOUT_MS)) {
     s_timeouts_mask |= TIMEOUT_BIT_SENSOR;
     Serial.printf("Timeout: sensor read exceeded budget ms=%u budget=%u\n", dbg_ms_sensor,
-                  (unsigned)SENSOR_PHASE_TIMEOUT_MS);
+                  static_cast<unsigned>(SENSOR_PHASE_TIMEOUT_MS));
   }
 
   // Compute scheduled sleep based on build-time mode
   uint32_t sleep_scheduled_ms = 0;
 #if DEV_CYCLE_MODE
-  sleep_scheduled_ms = (uint32_t)DEV_SLEEP_SEC * 1000UL;
+  sleep_scheduled_ms = static_cast<uint32_t>(DEV_SLEEP_SEC) * 1000UL;
 #else
-  sleep_scheduled_ms = (uint32_t)WAKE_INTERVAL_SEC * 1000UL;
+  sleep_scheduled_ms = static_cast<uint32_t>(WAKE_INTERVAL_SEC) * 1000UL;
 #endif
 
   // Build and publish debug JSON with wake metrics and causes
   if (net_mqtt_is_connected()) {
     char dbg[320];
-    uint32_t ms_boot_to_wifi = (uint32_t)((t1_us - t0_us) / 1000);
-    uint32_t ms_wifi_to_mqtt = (uint32_t)((t2_us - t1_us) / 1000);
+    uint32_t ms_boot_to_wifi = static_cast<uint32_t>((t1_us - t0_us) / 1000);
+    uint32_t ms_wifi_to_mqtt = static_cast<uint32_t>((t2_us - t1_us) / 1000);
     uint32_t ms_sensor_read = dbg_ms_sensor;
     // Measure publish time using a non-retained probe topic
     int64_t pub_probe_start_us = esp_timer_get_time();
     net_publish_debug_probe("1", false);
-    uint32_t ms_publish = (uint32_t)((esp_timer_get_time() - pub_probe_start_us) / 1000);
+    uint32_t ms_publish = static_cast<uint32_t>((esp_timer_get_time() - pub_probe_start_us) / 1000);
     // Publish diagnostics: WiFi RSSI and publish latency
     net_publish_wifi_rssi(WiFi.RSSI());
     net_publish_publish_latency_ms(ms_publish);
@@ -980,15 +983,15 @@ void setup() {
   unsigned long fetch_start_ms = millis();
   bool outside_before = net_get_outside().validTemp || net_get_outside().validHum ||
                         net_get_outside().validWeather || net_get_outside().validWind;
-  pump_network_ms((uint32_t)FETCH_RETAINED_TIMEOUT_MS);
-  uint32_t ms_fetch = (uint32_t)(millis() - fetch_start_ms);
+  pump_network_ms(static_cast<uint32_t>(FETCH_RETAINED_TIMEOUT_MS));
+  uint32_t ms_fetch = static_cast<uint32_t>(millis() - fetch_start_ms);
   bool outside_after = net_get_outside().validTemp || net_get_outside().validHum ||
                        net_get_outside().validWeather || net_get_outside().validWind;
-  if (ms_fetch >= (uint32_t)FETCH_RETAINED_TIMEOUT_MS && !outside_after && !outside_before) {
+  if (ms_fetch >= static_cast<uint32_t>(FETCH_RETAINED_TIMEOUT_MS) && !outside_after && !outside_before) {
     s_timeouts_mask |= TIMEOUT_BIT_FETCH;
     Serial.printf("Timeout: retained fetch budget reached ms=%u budget=%u (no outside "
                   "data)\n",
-                  ms_fetch, (unsigned)FETCH_RETAINED_TIMEOUT_MS);
+                  ms_fetch, static_cast<unsigned>(FETCH_RETAINED_TIMEOUT_MS));
   }
 
   // Publish HA discovery once we have MQTT so entities auto-register in Home
@@ -1016,10 +1019,10 @@ void setup() {
     unsigned long sens2_start = millis();
     InsideReadings r = read_inside_sensors();
     uint32_t sens2_ms = (uint32_t)(millis() - sens2_start);
-    if (sens2_ms > (uint32_t)SENSOR_PHASE_TIMEOUT_MS) {
+    if (sens2_ms > static_cast<uint32_t>(SENSOR_PHASE_TIMEOUT_MS)) {
       s_timeouts_mask |= TIMEOUT_BIT_SENSOR;
       Serial.printf("Timeout: sensor read (secondary) exceeded budget ms=%u budget=%u\n", sens2_ms,
-                    (unsigned)SENSOR_PHASE_TIMEOUT_MS);
+                    static_cast<unsigned>(SENSOR_PHASE_TIMEOUT_MS));
     }
     char in_temp[16];
     if (isfinite(r.temperatureC)) {
@@ -1108,7 +1111,7 @@ void setup() {
     }
     if (o.validWeather) {
       IconId id = map_weather_to_icon(o.weather);
-      maybe_redraw_value<int32_t>(OUT_ICON, (int32_t)id, last_icon_id,
+      maybe_redraw_value<int32_t>(OUT_ICON, static_cast<int32_t>(id), last_icon_id,
                                   [&]() { partial_update_weather_icon(o.weather); });
       nvs_store_int("icon", last_icon_id);
       char sc[24];
@@ -1135,20 +1138,20 @@ void setup() {
       net_publish_battery(bs.voltage, bs.percent);
       publish_any = true;
     }
-    uint32_t ms_publish_phase = publish_any ? (uint32_t)(millis() - publish_phase_start) : 0;
-    if (publish_any && ms_publish_phase > (uint32_t)PUBLISH_PHASE_TIMEOUT_MS) {
+    uint32_t ms_publish_phase = publish_any ? static_cast<uint32_t>(millis() - publish_phase_start) : 0;
+    if (publish_any && ms_publish_phase > static_cast<uint32_t>(PUBLISH_PHASE_TIMEOUT_MS)) {
       s_timeouts_mask |= TIMEOUT_BIT_PUBLISH;
       Serial.printf("Timeout: publish exceeded budget ms=%u budget=%u\n", ms_publish_phase,
-                    (unsigned)PUBLISH_PHASE_TIMEOUT_MS);
+                    static_cast<unsigned>(PUBLISH_PHASE_TIMEOUT_MS));
     }
   }
 // End of display phase, check duration and clear deadline
 #ifdef DISPLAY_PHASE_TIMEOUT_MS
-  uint32_t ms_display = (uint32_t)(millis() - display_phase_start);
-  if (ms_display > (uint32_t)DISPLAY_PHASE_TIMEOUT_MS) {
+  uint32_t ms_display = static_cast<uint32_t>(millis() - display_phase_start);
+  if (ms_display > static_cast<uint32_t>(DISPLAY_PHASE_TIMEOUT_MS)) {
     s_timeouts_mask |= TIMEOUT_BIT_DISPLAY;
     Serial.printf("Timeout: display phase exceeded budget ms=%u budget=%u\n", ms_display,
-                  (unsigned)DISPLAY_PHASE_TIMEOUT_MS);
+                  static_cast<unsigned>(DISPLAY_PHASE_TIMEOUT_MS));
   }
   g_display_deadline_ms = 0;
 #endif
@@ -1156,11 +1159,11 @@ void setup() {
   // Headless mode: no display; still connect, read sensors, publish, and sleep
   unsigned long sens2_start = millis();
   InsideReadings r = read_inside_sensors();
-  uint32_t sens2_ms = (uint32_t)(millis() - sens2_start);
-  if (sens2_ms > (uint32_t)SENSOR_PHASE_TIMEOUT_MS) {
+  uint32_t sens2_ms = static_cast<uint32_t>(millis() - sens2_start);
+  if (sens2_ms > static_cast<uint32_t>(SENSOR_PHASE_TIMEOUT_MS)) {
     s_timeouts_mask |= TIMEOUT_BIT_SENSOR;
     Serial.printf("Timeout: sensor read exceeded budget ms=%u budget=%u\n", sens2_ms,
-                  (unsigned)SENSOR_PHASE_TIMEOUT_MS);
+                  static_cast<unsigned>(SENSOR_PHASE_TIMEOUT_MS));
   }
   unsigned long publish_phase_start = millis();
   bool publish_any = false;
@@ -1191,11 +1194,11 @@ void setup() {
       publish_any = true;
     }
   }
-  uint32_t ms_publish_phase = publish_any ? (uint32_t)(millis() - publish_phase_start) : 0;
-  if (publish_any && ms_publish_phase > (uint32_t)PUBLISH_PHASE_TIMEOUT_MS) {
+  uint32_t ms_publish_phase = publish_any ? static_cast<uint32_t>(millis() - publish_phase_start) : 0;
+  if (publish_any && ms_publish_phase > static_cast<uint32_t>(PUBLISH_PHASE_TIMEOUT_MS)) {
     s_timeouts_mask |= TIMEOUT_BIT_PUBLISH;
     Serial.printf("Timeout: publish exceeded budget ms=%u budget=%u\n", ms_publish_phase,
-                  (unsigned)PUBLISH_PHASE_TIMEOUT_MS);
+                  static_cast<unsigned>(PUBLISH_PHASE_TIMEOUT_MS));
   }
 #endif
 
@@ -1211,7 +1214,7 @@ void setup() {
     snprintf(dbg2, sizeof(dbg2),
              "{\"timeouts\":%u,\"notes\":\"bits:1=sensor,2=fetch,4=display,8="
              "publish\"}",
-             (unsigned)s_timeouts_mask);
+             static_cast<unsigned>(s_timeouts_mask));
     net_publish_debug_json(dbg2, false);
   }
 
@@ -1219,7 +1222,7 @@ void setup() {
   // Persist partial refresh cadence so it survives reset
   g_prefs.putUShort("pcount", partial_counter);
   // Log awake duration and planned sleep for diagnostics
-  Serial.printf("Awake ms: %lu\n", (unsigned long)millis());
+  Serial.printf("Awake ms: %lu\n", static_cast<unsigned long>(millis()));
 #if DEV_NO_SLEEP
   Serial.println("DEV_NO_SLEEP=1: staying awake for debugging");
   while (true) {
@@ -1251,7 +1254,7 @@ void setup() {
   }
 #else
 #if DEV_CYCLE_MODE
-  Serial.printf("Dev cycle: sleeping for %us\n", (unsigned)DEV_SLEEP_SEC);
+  Serial.printf("Dev cycle: sleeping for %us\n", static_cast<unsigned>(DEV_SLEEP_SEC));
   nvs_end_cache();
 #if USE_STATUS_PIXEL
   status_pixel_off();
@@ -1269,7 +1272,7 @@ void setup() {
   net_prepare_for_sleep();
   go_deep_sleep_seconds(DEV_SLEEP_SEC);
 #else
-  Serial.printf("Sleeping for %us\n", (unsigned)WAKE_INTERVAL_SEC);
+  Serial.printf("Sleeping for %us\n", static_cast<unsigned>(WAKE_INTERVAL_SEC));
 #if USE_DISPLAY
 #ifdef EINK_EN_PIN
   // Power down panel between wakes if gated to save sleep current

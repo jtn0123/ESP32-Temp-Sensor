@@ -1,5 +1,7 @@
 #pragma once
 
+// Copyright 2024 Justin
+
 #include <esp_sleep.h>
 
 #include <Arduino.h>
@@ -59,7 +61,7 @@ inline BatteryStatus read_battery_status() {
   }
   if (g_maxfg_initialized) {
     b.voltage = g_maxfg.cellVoltage();
-    b.percent = (int)(g_maxfg.cellPercent() + 0.5f);
+    b.percent = static_cast<int>(g_maxfg.cellPercent() + 0.5f);
   }
 #endif
   if (!isfinite(b.voltage) && VBAT_ADC_PIN >= 0) {
@@ -87,7 +89,7 @@ inline BatteryStatus read_battery_status() {
       a = m;
       m = t;
     }
-    float v = (m / (float)ADC_MAX_COUNTS) * ADC_REF_V * VBAT_DIVIDER;
+    float v = (m / static_cast<float>(ADC_MAX_COUNTS)) * ADC_REF_V * VBAT_DIVIDER;
     b.voltage = v;
   }
   // Rough SOC estimate from voltage (linear placeholder 3.3V→0%, 4.2V→100%)
@@ -97,12 +99,12 @@ inline BatteryStatus read_battery_status() {
       pct = 0;
     if (pct > 1)
       pct = 1;
-    b.percent = (int)(pct * 100.0f + 0.5f);
+    b.percent = static_cast<int>(pct * 100.0f + 0.5f);
   }
   // Days estimate from duty cycle
   // Average current ~ (active_current * active_fraction + sleep_current *
   // sleep_fraction)
-  float active_fraction = (float)ACTIVE_SECONDS / (float)WAKE_INTERVAL_SEC;
+  float active_fraction = static_cast<float>(ACTIVE_SECONDS) / static_cast<float>(WAKE_INTERVAL_SEC);
   if (active_fraction < 0)
     active_fraction = 0;
   if (active_fraction > 1)
@@ -110,7 +112,7 @@ inline BatteryStatus read_battery_status() {
   float avg_mA = ACTIVE_CURRENT_MA * active_fraction + SLEEP_CURRENT_MA * (1.0f - active_fraction);
   if (avg_mA > 0) {
     float hours = BATTERY_CAPACITY_MAH / avg_mA;
-    b.estimatedDays = (int)(hours / 24.0f + 0.5f);
+    b.estimatedDays = static_cast<int>(hours / 24.0f + 0.5f);
   } else {
     b.estimatedDays = -1;
   }

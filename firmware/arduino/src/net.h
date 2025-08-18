@@ -1,8 +1,10 @@
 #pragma once
 
+// Copyright 2024 Justin
 // C system / ESP-IDF C headers
 #include <esp_wifi.h>
 #include <time.h>
+#include <cstdio>
 
 // C++/Arduino and third-party headers
 #include <Arduino.h>
@@ -74,7 +76,7 @@ inline bool parse_bssid(const char* str, uint8_t out[6]) {
   if (n != 6)
     return false;
   for (int i = 0; i < 6; ++i)
-    out[i] = (uint8_t)vals[i];
+    out[i] = static_cast<uint8_t>(vals[i]);
   return true;
 }
 
@@ -173,11 +175,11 @@ inline bool time_is_stale() {
     last_sync = g_net_prefs.getUInt("last_ntp", 0);
     g_net_prefs.end();
   }
-  if ((uint32_t)now < TIME_FRESH_EPOCH_MIN)
+  if (static_cast<uint32_t>(now) < TIME_FRESH_EPOCH_MIN)
     return true;
   if (last_sync == 0)
     return true;
-  return ((uint32_t)now - last_sync) > TIME_RESYNC_INTERVAL_SEC;
+  return (static_cast<uint32_t>(now) - last_sync) > TIME_RESYNC_INTERVAL_SEC;
 }
 
 inline void ensure_time_synced_if_stale() {
@@ -189,10 +191,10 @@ inline void ensure_time_synced_if_stale() {
   configTime(0, 0, "pool.ntp.org", "time.nist.gov", "time.google.com");
   // Poll briefly until time looks sane
   unsigned long start = millis();
-  while ((uint32_t)time(nullptr) < TIME_FRESH_EPOCH_MIN && millis() - start < 2000UL) {
+  while (static_cast<uint32_t>(time(nullptr)) < TIME_FRESH_EPOCH_MIN && millis() - start < 2000UL) {
     delay(50);
   }
-  uint32_t now_epoch = (uint32_t)time(nullptr);
+  uint32_t now_epoch = static_cast<uint32_t>(time(nullptr));
   if (now_epoch >= TIME_FRESH_EPOCH_MIN) {
     if (g_net_prefs.begin("net", false)) {
       g_net_prefs.putUInt("last_ntp", now_epoch);
@@ -238,7 +240,7 @@ inline void offline_set_bounds(uint32_t head, uint32_t tail) {
 inline void offline_key_for(uint32_t seq, char out[16]) { snprintf(out, 16, "s%u", seq); }
 
 inline void offline_enqueue_sample(float tempC, float rhPct) {
-  uint32_t ts = (uint32_t)time(nullptr);
+  uint32_t ts = static_cast<uint32_t>(time(nullptr));
   OfflineSample s{ts, tempC, rhPct};
   if (!g_offline_prefs.begin("obuf", false))
     return;
@@ -256,8 +258,8 @@ inline void offline_enqueue_sample(float tempC, float rhPct) {
   g_offline_prefs.putBytes(key, &s, sizeof(s));
   offline_set_bounds(head + 1, tail);
   g_offline_prefs.end();
-  Serial.printf("Offline: queued seq=%u ts=%u (C=%.2f RH=%.0f)\n", (unsigned)head, (unsigned)ts,
-                s.tempC, s.rhPct);
+  Serial.printf("Offline: queued seq=%u ts=%u (C=%.2f RH=%.0f)\n",
+                static_cast<unsigned>(head), static_cast<unsigned>(ts), s.tempC, s.rhPct);
 }
 
 inline uint32_t net_publish_inside_history(uint32_t epoch, float tempC, float rhPct) {
@@ -272,11 +274,11 @@ inline uint32_t net_publish_inside_history(uint32_t epoch, float tempC, float rh
   dtostrf(rhPct, 0, 0, rhbuf);
   char payload[96];
   int plen = snprintf(payload, sizeof(payload), "{\"ts\":%u,\"tempF\":%s,\"rh\":%s}",
-                      (unsigned)epoch, tbuf, rhbuf);
+                      static_cast<unsigned>(epoch), tbuf, rhbuf);
   g_mqtt.publish(topic, payload, false);
   // Approximate bytes published as topic + payload length
-  uint32_t tlen = (uint32_t)strlen(topic);
-  uint32_t blen = (uint32_t)(plen > 0 ? plen : (int)strlen(payload));
+  uint32_t tlen = static_cast<uint32_t>(strlen(topic));
+  uint32_t blen = static_cast<uint32_t>(plen > 0 ? plen : static_cast<int>(strlen(payload)));
   return tlen + blen;
 }
 
@@ -294,8 +296,8 @@ inline void offline_drain_if_any() {
   }
   if (to_send > OFFLINE_DRAIN_MAX_PER_WAKE)
     to_send = OFFLINE_DRAIN_MAX_PER_WAKE;
-  Serial.printf("Offline: draining %u samples (tail=%u head=%u)\n", (unsigned)to_send,
-                (unsigned)tail, (unsigned)head);
+  Serial.printf("Offline: draining %u samples (tail=%u head=%u)\n",
+                static_cast<unsigned>(to_send), static_cast<unsigned>(tail), static_cast<unsigned>(head));
   unsigned long drain_start_ms = millis();
   uint32_t bytes_sent = 0;
   uint32_t orig_tail = tail;
@@ -304,8 +306,8 @@ inline void offline_drain_if_any() {
     // Time budget check before reading/publishing next sample
     if (OFFLINE_DRAIN_MAX_MS > 0 && (millis() - drain_start_ms) >= OFFLINE_DRAIN_MAX_MS) {
       Serial.printf("Offline: drain stop (time budget) elapsed_ms=%lu sent=%u bytes=%u\n",
-                    (unsigned long)(millis() - drain_start_ms), (unsigned)(tail - orig_tail),
-                    (unsigned)bytes_sent);
+                    static_cast<unsigned long>(millis() - drain_start_ms),
+                    static_cast<unsigned>(tail - orig_tail), static_cast<unsigned>(bytes_sent));
       break;
     }
     uint32_t seq = tail;
@@ -330,8 +332,8 @@ inline void offline_drain_if_any() {
           (OFFLINE_DRAIN_MAX_MS > 0 && (millis() - drain_start_ms) >= OFFLINE_DRAIN_MAX_MS)) {
         Serial.printf("Offline: drain stop (%s budget) elapsed_ms=%lu sent=%u bytes=%u\n",
                       (bytes_sent >= OFFLINE_DRAIN_MAX_BYTES ? "byte" : "time"),
-                      (unsigned long)(millis() - drain_start_ms), (unsigned)(tail - orig_tail),
-                      (unsigned)bytes_sent);
+                      static_cast<unsigned long>(millis() - drain_start_ms),
+                      static_cast<unsigned>(tail - orig_tail), static_cast<unsigned>(bytes_sent));
         break;
       }
     } else {
@@ -402,11 +404,11 @@ static void ensure_system_netif_and_loop_inited() {
   esp_err_t e;
   e = esp_netif_init();
   if (e != ESP_OK && e != ESP_ERR_INVALID_STATE) {
-    Serial.printf("esp_netif_init err=%d\n", (int)e);
+    Serial.printf("esp_netif_init err=%d\n", static_cast<int>(e));
   }
   e = esp_event_loop_create_default();
   if (e != ESP_OK && e != ESP_ERR_INVALID_STATE) {
-    Serial.printf("esp_event_loop_create_default err=%d\n", (int)e);
+    Serial.printf("esp_event_loop_create_default err=%d\n", static_cast<int>(e));
   }
   done = true;
 }
@@ -470,7 +472,7 @@ static bool start_wifi_station_connect_from_nvs(unsigned long timeout_ms) {
     }
     return true;
   }
-  Serial.printf("WiFi: connect timeout (status=%d)\n", (int)WiFi.status());
+  Serial.printf("WiFi: connect timeout (status=%d)\n", static_cast<int>(WiFi.status()));
   // Increment consecutive failure count and clear saved BSSID after N misses
   if (have_bssid) {
     uint32_t c = nvs_get_bssid_fail_count();
@@ -729,7 +731,7 @@ inline void ensure_mqtt_connected() {
   g_mqtt.setBufferSize(1024);
 #endif
   g_mqtt.setCallback(mqtt_callback);
-  Serial.printf("MQTT: connecting to %s:%u...\n", MQTT_HOST, (unsigned)MQTT_PORT);
+  Serial.printf("MQTT: connecting to %s:%u...\n", MQTT_HOST, static_cast<unsigned>(MQTT_PORT));
   uint64_t mac = ESP.getEfuseMac();
   // Use lower 24 bits
   snprintf(g_client_id, sizeof(g_client_id), "esp32-room-%06x", (unsigned int)(mac & 0xFFFFFF));
@@ -826,8 +828,8 @@ inline void net_ip_cstr(char* out, size_t out_size) {
     return;
   }
   IPAddress ip = WiFi.localIP();
-  snprintf(out, out_size, "%u.%u.%u.%u", (unsigned)ip[0], (unsigned)ip[1], (unsigned)ip[2],
-           (unsigned)ip[3]);
+  snprintf(out, out_size, "%u.%u.%u.%u", static_cast<unsigned>(ip[0]), static_cast<unsigned>(ip[1]),
+           static_cast<unsigned>(ip[2]), static_cast<unsigned>(ip[3]));
 }
 
 inline void mqtt_pump(uint32_t duration_ms) {
@@ -896,7 +898,7 @@ inline void net_publish_publish_latency_ms(uint32_t publishLatencyMs) {
   char payload[16];
   const char* base = MQTT_PUB_BASE;
   snprintf(topic, sizeof(topic), "%s/debug/publish_ms", base);
-  snprintf(payload, sizeof(payload), "%u", (unsigned)publishLatencyMs);
+  snprintf(payload, sizeof(payload), "%u", static_cast<unsigned>(publishLatencyMs));
   g_mqtt.publish(topic, payload, true);
 }
 
@@ -950,7 +952,7 @@ inline void net_publish_ha_discovery() {
   snprintf(availTopic, sizeof(availTopic), "%s/availability", MQTT_PUB_BASE);
   // Expire entities slightly after our scheduled wake so HA greys stale values
   // if we miss a cycle
-  uint32_t expireAfterSec = (uint32_t)WAKE_INTERVAL_SEC + 120U;
+  uint32_t expireAfterSec = static_cast<uint32_t>(WAKE_INTERVAL_SEC) + 120U;
 
   // Helper to publish one discovery config
   auto pub_disc = [&](const char* key, const char* name, const char* unit, const char* dev_class,
@@ -979,7 +981,7 @@ inline void net_publish_ha_discovery() {
              "%s\",\"manufacturer\":\"DIY\",\"model\":\"Feather "
              "ESP32-S2\",\"sw_version\":\"%s\"}}",
              name, g_client_id, key, stateTopic, availTopic, unit, dev_class, suggestedPrecision,
-             (unsigned)expireAfterSec, g_client_id, ROOM_NAME, FW_VERSION);
+             static_cast<unsigned>(expireAfterSec), g_client_id, ROOM_NAME, FW_VERSION);
     g_mqtt.publish(discTopic, payload, true);
     Serial.print("HA discovery -> ");
     Serial.println(discTopic);
