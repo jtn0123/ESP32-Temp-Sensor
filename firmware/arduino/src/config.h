@@ -48,6 +48,10 @@
 #ifndef I2C_TIMEOUT_MS
 #define I2C_TIMEOUT_MS 150
 #endif
+// Default I2C bus speed
+#ifndef I2C_CLOCK_HZ
+#define I2C_CLOCK_HZ 100000
+#endif
 // Optional: scan I2C bus and print detected addresses at startup
 #ifndef I2C_DEBUG_SCAN
 #define I2C_DEBUG_SCAN 0
