@@ -325,10 +325,11 @@ inline void offline_drain_if_any() {
 
 
 
-    Serial.printf("Offline: drain stop (time budget) elapsed_ms=%u sent=%u bytes=%u\n",
-                    static_cast<unsigned>(millis() - drain_start_ms),
-                    static_cast<unsigned>(tail - orig_tail),
-    static_cast<unsigned>(bytes_sent));
+    Serial.printf(
+        "Offline: drain stop (time budget) elapsed_ms=%u sent=%u bytes=%u\n",
+        static_cast<unsigned>(millis() - drain_start_ms),
+        static_cast<unsigned>(tail - orig_tail),
+        static_cast<unsigned>(bytes_sent));
       break;
     }
     uint32_t seq = tail;
@@ -360,11 +361,11 @@ inline void offline_drain_if_any() {
 
 
 
-    Serial.printf("Offline: drain stop (%s budget) elapsed_ms=%u sent=%u bytes=%u\n",
-                      (bytes_sent >= OFFLINE_DRAIN_MAX_BYTES ? "byte" :
-    "time"),
-                      static_cast<unsigned>(millis() - drain_start_ms),
-                      static_cast<unsigned>(tail - orig_tail),
+    Serial.printf(
+        "Offline: drain stop (%s budget) elapsed_ms=%u sent=%u bytes=%u\n",
+        (bytes_sent >= OFFLINE_DRAIN_MAX_BYTES ? "byte" : "time"),
+        static_cast<unsigned>(millis() - drain_start_ms),
+        static_cast<unsigned>(tail - orig_tail),
     static_cast<unsigned>(bytes_sent));
         break;
       }
@@ -487,10 +488,10 @@ static bool start_wifi_station_connect_from_nvs(uint32_t timeout_ms) {
 
 
 
-    Serial.printf("WiFi: preferring BSSID %02x:%02x:%02x:%02x:%02x:%02x (prov)\n",
-                    prefer_bssid[0], prefer_bssid[1], prefer_bssid[2],
-    prefer_bssid[3],
-                    prefer_bssid[4], prefer_bssid[5]);
+    Serial.printf(
+        "WiFi: preferring BSSID %02x:%02x:%02x:%02x:%02x:%02x (prov)\n",
+        prefer_bssid[0], prefer_bssid[1], prefer_bssid[2], prefer_bssid[3],
+        prefer_bssid[4], prefer_bssid[5]);
     } else {
       memset(cfg.sta.bssid, 0, 6);
       cfg.sta.bssid_set = 0;
@@ -528,12 +529,6 @@ static bool start_wifi_station_connect_from_nvs(uint32_t timeout_ms) {
     c++;
     nvs_set_bssid_fail_count(c);
     if (c >= WIFI_BSSID_FAIL_CLEAR_N) {
-
-
-
-
-
-
     Serial.println("WiFi: clearing saved BSSID after repeated failures (prov)");
       nvs_clear_last_ap();
       nvs_set_bssid_fail_count(0);
@@ -1046,12 +1041,12 @@ inline void net_publish_ha_discovery() {
                       const char* state_suffix) {
     char discTopic[192];
     snprintf(discTopic, sizeof(discTopic), "homeassistant/sensor/%s_%s/config",
-    
-    
-    
-    
-    
-    
+
+
+
+
+
+
     g_client_id, key);
     char stateTopic[192];
     snprintf(stateTopic, sizeof(stateTopic), "%s/%s", MQTT_PUB_BASE,
