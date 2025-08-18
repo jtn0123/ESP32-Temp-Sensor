@@ -76,7 +76,7 @@ inline bool parse_bssid(const char* str, uint8_t out[6]) {
   if (n != 6)
     return false;
   for (int i = 0; i < 6; ++i)
-    out[i] = (uint8_t)vals[i];
+    out[i] = static_cast<uint8_t>(vals[i]);
   return true;
 }
 
@@ -175,11 +175,11 @@ inline bool time_is_stale() {
     last_sync = g_net_prefs.getUInt("last_ntp", 0);
     g_net_prefs.end();
   }
-  if ((uint32_t)now < TIME_FRESH_EPOCH_MIN)
+  if (static_cast<uint32_t>(now) < TIME_FRESH_EPOCH_MIN)
     return true;
   if (last_sync == 0)
     return true;
-  return ((uint32_t)now - last_sync) > TIME_RESYNC_INTERVAL_SEC;
+  return (static_cast<uint32_t>(now) - last_sync) > TIME_RESYNC_INTERVAL_SEC;
 }
 
 inline void ensure_time_synced_if_stale() {
@@ -258,8 +258,8 @@ inline void offline_enqueue_sample(float tempC, float rhPct) {
   g_offline_prefs.putBytes(key, &s, sizeof(s));
   offline_set_bounds(head + 1, tail);
   g_offline_prefs.end();
-  Serial.printf("Offline: queued seq=%u ts=%u (C=%.2f RH=%.0f)\n", (unsigned)head, (unsigned)ts,
-                s.tempC, s.rhPct);
+  Serial.printf("Offline: queued seq=%u ts=%u (C=%.2f RH=%.0f)\n",
+                static_cast<unsigned>(head), static_cast<unsigned>(ts), s.tempC, s.rhPct);
 }
 
 inline uint32_t net_publish_inside_history(uint32_t epoch, float tempC, float rhPct) {
@@ -274,11 +274,11 @@ inline uint32_t net_publish_inside_history(uint32_t epoch, float tempC, float rh
   dtostrf(rhPct, 0, 0, rhbuf);
   char payload[96];
   int plen = snprintf(payload, sizeof(payload), "{\"ts\":%u,\"tempF\":%s,\"rh\":%s}",
-                      (unsigned)epoch, tbuf, rhbuf);
+                      static_cast<unsigned>(epoch), tbuf, rhbuf);
   g_mqtt.publish(topic, payload, false);
   // Approximate bytes published as topic + payload length
-  uint32_t tlen = (uint32_t)strlen(topic);
-  uint32_t blen = (uint32_t)(plen > 0 ? plen : (int)strlen(payload));
+  uint32_t tlen = static_cast<uint32_t>(strlen(topic));
+  uint32_t blen = static_cast<uint32_t>(plen > 0 ? plen : static_cast<int>(strlen(payload)));
   return tlen + blen;
 }
 
@@ -296,8 +296,8 @@ inline void offline_drain_if_any() {
   }
   if (to_send > OFFLINE_DRAIN_MAX_PER_WAKE)
     to_send = OFFLINE_DRAIN_MAX_PER_WAKE;
-  Serial.printf("Offline: draining %u samples (tail=%u head=%u)\n", (unsigned)to_send,
-                (unsigned)tail, (unsigned)head);
+  Serial.printf("Offline: draining %u samples (tail=%u head=%u)\n",
+                static_cast<unsigned>(to_send), static_cast<unsigned>(tail), static_cast<unsigned>(head));
   unsigned long drain_start_ms = millis();
   uint32_t bytes_sent = 0;
   uint32_t orig_tail = tail;
@@ -306,8 +306,8 @@ inline void offline_drain_if_any() {
     // Time budget check before reading/publishing next sample
     if (OFFLINE_DRAIN_MAX_MS > 0 && (millis() - drain_start_ms) >= OFFLINE_DRAIN_MAX_MS) {
       Serial.printf("Offline: drain stop (time budget) elapsed_ms=%lu sent=%u bytes=%u\n",
-                    (unsigned long)(millis() - drain_start_ms), (unsigned)(tail - orig_tail),
-                    (unsigned)bytes_sent);
+                    static_cast<unsigned long>(millis() - drain_start_ms),
+                    static_cast<unsigned>(tail - orig_tail), static_cast<unsigned>(bytes_sent));
       break;
     }
     uint32_t seq = tail;
@@ -332,8 +332,8 @@ inline void offline_drain_if_any() {
           (OFFLINE_DRAIN_MAX_MS > 0 && (millis() - drain_start_ms) >= OFFLINE_DRAIN_MAX_MS)) {
         Serial.printf("Offline: drain stop (%s budget) elapsed_ms=%lu sent=%u bytes=%u\n",
                       (bytes_sent >= OFFLINE_DRAIN_MAX_BYTES ? "byte" : "time"),
-                      (unsigned long)(millis() - drain_start_ms), (unsigned)(tail - orig_tail),
-                      (unsigned)bytes_sent);
+                      static_cast<unsigned long>(millis() - drain_start_ms),
+                      static_cast<unsigned>(tail - orig_tail), static_cast<unsigned>(bytes_sent));
         break;
       }
     } else {

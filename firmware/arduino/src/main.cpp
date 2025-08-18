@@ -12,7 +12,6 @@
 #endif
 #if USE_DISPLAY
 #include <GxEPD2_BW.h>
-#include <GxEPD2_213_B74.h>
 #endif
 
 #if USE_DISPLAY
@@ -163,10 +162,10 @@ static inline void status_pixel_tick() {
   s_hue++;
   s_breath++;
   // Triangle wave 0..127..0 mapped to brightness range
-  uint8_t amp = (s_breath < 128) ? s_breath : (uint8_t)(255 - s_breath);
+  uint8_t amp = (s_breath < 128) ? s_breath : static_cast<uint8_t>(255 - s_breath);
   const uint8_t minB = 8;
   const uint8_t maxB = 64;
-  uint8_t level = (uint8_t)(minB + ((uint16_t)amp * (maxB - minB) / 127));
+  uint8_t level = static_cast<uint8_t>(minB + (static_cast<uint16_t>(amp) * (maxB - minB) / 127));
   // Occasional brief flash for a bit of flair
   if ((s_hue & 0x3F) == 0)
     level = maxB;
@@ -308,7 +307,7 @@ static void handle_serial_command_line(const String& line) {
       Serial.println(F("ERR sleep: provide seconds > 0"));
       return;
     }
-    Serial.printf("Sleeping for %us\n", (unsigned)sec);
+    Serial.printf("Sleeping for %us\n", static_cast<unsigned>(sec));
     nvs_end_cache();
 #if USE_STATUS_PIXEL
     status_pixel_off();
@@ -941,11 +940,11 @@ void setup() {
   InsideReadings _sensor_probe = read_inside_sensors();
   (void)_sensor_probe;
   int64_t t3_us = esp_timer_get_time();
-  uint32_t dbg_ms_sensor = (uint32_t)((t3_us - t_sense_start_us) / 1000);
-  if (dbg_ms_sensor > (uint32_t)SENSOR_PHASE_TIMEOUT_MS) {
+  uint32_t dbg_ms_sensor = static_cast<uint32_t>((t3_us - t_sense_start_us) / 1000);
+  if (dbg_ms_sensor > static_cast<uint32_t>(SENSOR_PHASE_TIMEOUT_MS)) {
     s_timeouts_mask |= TIMEOUT_BIT_SENSOR;
     Serial.printf("Timeout: sensor read exceeded budget ms=%u budget=%u\n", dbg_ms_sensor,
-                  (unsigned)SENSOR_PHASE_TIMEOUT_MS);
+                  static_cast<unsigned>(SENSOR_PHASE_TIMEOUT_MS));
   }
 
   // Compute scheduled sleep based on build-time mode
