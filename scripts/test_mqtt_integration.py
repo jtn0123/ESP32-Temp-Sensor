@@ -97,8 +97,13 @@ class MqttTestClient:
 
     def publish(self, topic: str, payload: str, retain: bool = False, qos: int = 0) -> None:
         result = self.client.publish(topic, payload=payload, retain=retain, qos=qos)
-        # Compatible with paho-mqtt 1.x and 2.x (no timeout argument)
-        result.wait_for_publish()
+        # Avoid waiting for publish completion from within a callback thread to prevent deadlocks
+        # with QoS>0 publishes. In paho, callbacks are invoked on the network loop thread, and
+        # waiting here would block the loop from processing PUBACK/PUBREC/etc.
+        in_callback = bool(getattr(self.client, "in_callback", False))
+        if qos > 0 and not in_callback:
+            # Compatible with paho-mqtt 1.x and 2.x (no timeout argument)
+            result.wait_for_publish()
         if result.rc is not mqtt.MQTT_ERR_SUCCESS:
             raise RuntimeError(f"Publish failed rc={result.rc} topic={topic}")
 

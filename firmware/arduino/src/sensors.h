@@ -1,16 +1,17 @@
 #pragma once
 
+#include "config.h"
+
 #include <Arduino.h>
 #include <Wire.h>
-
-#include "config.h"
 
 #if USE_BME280
 #include <Adafruit_BME280.h>
 static Adafruit_BME280 g_bme280;
 static bool g_bme280_initialized = false;
 inline void sensors_begin() {
-  if (g_bme280_initialized) return;
+  if (g_bme280_initialized)
+    return;
   Wire.begin();
 #ifdef I2C_TIMEOUT_MS
   Wire.setTimeOut(I2C_TIMEOUT_MS);
@@ -22,9 +23,9 @@ inline void sensors_begin() {
     return;
   }
   g_bme280.setSampling(Adafruit_BME280::MODE_FORCED,
-                       Adafruit_BME280::SAMPLING_X1,  // temp
-                       Adafruit_BME280::SAMPLING_X1,  // pressure (unused)
-                       Adafruit_BME280::SAMPLING_X1,  // humidity
+                       Adafruit_BME280::SAMPLING_X1, // temp
+                       Adafruit_BME280::SAMPLING_X1, // pressure (unused)
+                       Adafruit_BME280::SAMPLING_X1, // humidity
                        Adafruit_BME280::FILTER_OFF);
   g_bme280_initialized = true;
 }
@@ -41,7 +42,8 @@ inline InsideReadings read_inside_sensors() {
   InsideReadings r;
 #if USE_BME280
   sensors_begin();
-  if (!g_bme280_initialized) return r;
+  if (!g_bme280_initialized)
+    return r;
   // Forced mode: trigger one measurement for low power
   g_bme280.takeForcedMeasurement();
   r.temperatureC = g_bme280.readTemperature();
