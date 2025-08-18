@@ -538,8 +538,8 @@ static void ensure_wifi_connected_provisioned_impl() {
       Serial.println("WiFiProv: start failed");
     } else {
       // Wait until provisioned or timeout
-      unsigned long t0 = millis();
-      while (millis() - t0 < static_cast<unsigned long>(WIFI_PROV_TIMEOUT_SEC) * 1000UL) {
+      uint32_t t0 = millis();
+      while (millis() - t0 < static_cast<uint32_t>(WIFI_PROV_TIMEOUT_SEC) * 1000U) {
         bool prov = false;
         if (wifi_prov_mgr_is_provisioned(&prov) == ESP_OK && prov)
           break;
