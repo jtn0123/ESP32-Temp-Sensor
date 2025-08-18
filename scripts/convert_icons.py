@@ -8,7 +8,6 @@ Dependencies:
 """
 import io
 import os
-from typing import List
 
 import cairosvg
 from PIL import Image
@@ -17,7 +16,7 @@ PROJECT_ROOT = os.path.dirname(os.path.dirname(__file__))
 SRC_DIR = os.path.join(PROJECT_ROOT, "web", "icons", "mdi")
 OUT_HEADER = os.path.join(PROJECT_ROOT, "firmware", "arduino", "src", "icons_generated.h")
 
-ICON_NAMES: List[str] = [
+ICON_NAMES: list[str] = [
     # weather
     "weather-sunny",
     "weather-partly-cloudy",
@@ -54,7 +53,7 @@ def rasterize_1bit_centered(png_bytes: bytes, invert: bool = False) -> Image.Ima
     with Image.open(io.BytesIO(png_bytes)) as im:
         im = im.convert("L")  # grayscale
         # Fit into 24x24 preserving aspect
-        im.thumbnail((WIDTH, HEIGHT), Image.LANCZOS)
+        im.thumbnail((WIDTH, HEIGHT), Image.Resampling.LANCZOS)
         # Pad to 24x24
         canvas = Image.new("L", (WIDTH, HEIGHT), color=255)
         ox = (WIDTH - im.width) // 2
@@ -69,14 +68,13 @@ def rasterize_1bit_centered(png_bytes: bytes, invert: bool = False) -> Image.Ima
 
 def pack_xbm_bits(img_1bit: Image.Image) -> bytes:
     assert img_1bit.mode == "1"
-    pixels = img_1bit.load()
     out = bytearray()
     for y in range(HEIGHT):
         byte = 0
         bit_count = 0
         for x in range(WIDTH):
             # Pillow '1': 0=black, 255=white
-            bit = 1 if pixels[x, y] == 0 else 0
+            bit = 1 if img_1bit.getpixel((x, y)) == 0 else 0
             # XBM is LSB first within a byte
             byte |= (bit & 1) << bit_count
             bit_count += 1
@@ -93,8 +91,8 @@ def c_array_name(name: str) -> str:
     return name.replace("-", "_") + "_24x24_bits"
 
 
-def main():
-    header_lines: List[str] = []
+def main() -> None:
+    header_lines: list[str] = []
     header_lines.append("#pragma once")
     header_lines.append("// Copyright 2024 Justin")
     header_lines.append("#include <stdint.h>")
