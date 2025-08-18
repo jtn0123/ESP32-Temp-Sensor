@@ -584,7 +584,7 @@ static void draw_status_line(const BatteryStatus& bs, const char* ip_cstr) {
       int16_t bh = 7;
       display.drawRect(bx, by, bw, bh, GxEPD_BLACK);
       display.fillRect(bx + bw, by + 2, 2, 3, GxEPD_BLACK);
-      int16_t fillw = (int16_t)((bw - 2) * (bs.percent / 100.0f) + 0.5f);
+      int16_t fillw = static_cast<int16_t>(((bw - 2) * (bs.percent / 100.0f) + 0.5f));
       if (fillw > 0)
         display.fillRect(bx + 1, by + 1, fillw, bh - 2, GxEPD_BLACK);
       cx += bw + 6;
@@ -595,7 +595,7 @@ static void draw_status_line(const BatteryStatus& bs, const char* ip_cstr) {
     int16_t bx, by;
     uint16_t bw, bh;
     display.getTextBounds(right, 0, 0, &bx, &by, &bw, &bh);
-    int16_t rx = xx + ww - 2 - (int16_t)bw;
+    int16_t rx = xx + ww - 2 - static_cast<int16_t>(bw);
     // Choose, using bounds, which left label to print based on available width
     char left_full[64];
     char left_nobatt[64];
@@ -608,13 +608,13 @@ static void draw_status_line(const BatteryStatus& bs, const char* ip_cstr) {
     int16_t available = rx - cx - 2;
     const char* to_print = left_full;
     display.getTextBounds(to_print, 0, 0, &bx, &by, &bw, &bh);
-    if ((int16_t)bw > available) {
+    if (static_cast<int16_t>(bw) > available) {
       to_print = left_nobatt;
       display.getTextBounds(to_print, 0, 0, &bx, &by, &bw, &bh);
     }
-    if ((int16_t)bw > available) {
+    if (static_cast<int16_t>(bw) > available) {
       display.getTextBounds(left_tail, 0, 0, &bx, &by, &bw, &bh);
-      if ((int16_t)bw <= available) {
+      if (static_cast<int16_t>(bw) <= available) {
         to_print = left_tail;
       } else {
         to_print = "";

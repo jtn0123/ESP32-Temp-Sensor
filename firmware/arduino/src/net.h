@@ -404,11 +404,11 @@ static void ensure_system_netif_and_loop_inited() {
   esp_err_t e;
   e = esp_netif_init();
   if (e != ESP_OK && e != ESP_ERR_INVALID_STATE) {
-    Serial.printf("esp_netif_init err=%d\n", (int)e);
+    Serial.printf("esp_netif_init err=%d\n", static_cast<int>(e));
   }
   e = esp_event_loop_create_default();
   if (e != ESP_OK && e != ESP_ERR_INVALID_STATE) {
-    Serial.printf("esp_event_loop_create_default err=%d\n", (int)e);
+    Serial.printf("esp_event_loop_create_default err=%d\n", static_cast<int>(e));
   }
   done = true;
 }
@@ -472,7 +472,7 @@ static bool start_wifi_station_connect_from_nvs(unsigned long timeout_ms) {
     }
     return true;
   }
-  Serial.printf("WiFi: connect timeout (status=%d)\n", (int)WiFi.status());
+  Serial.printf("WiFi: connect timeout (status=%d)\n", static_cast<int>(WiFi.status()));
   // Increment consecutive failure count and clear saved BSSID after N misses
   if (have_bssid) {
     uint32_t c = nvs_get_bssid_fail_count();
