@@ -1,9 +1,11 @@
-#include "config.h"
+#include <esp_system.h>
+#include <esp_timer.h>
 
 #include <Arduino.h>
 #include <Preferences.h>
-#include <esp_system.h>
-#include <esp_timer.h>
+
+#include "config.h"
+
 #if USE_DISPLAY
 #include "display_layout.h"
 #include "icons.h"

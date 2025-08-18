@@ -1,10 +1,12 @@
 #pragma once
 
+#include <esp_sleep.h>
+
+#include <Arduino.h>
+
 #include "config.h"
 #include "generated_config.h"
 
-#include <Arduino.h>
-#include <esp_sleep.h>
 #if USE_MAX17048
 #include <Adafruit_MAX1704X.h>
 #include <Wire.h>
