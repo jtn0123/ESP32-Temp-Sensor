@@ -9,7 +9,7 @@ Dependencies:
 import io
 import os
 
-import cairosvg
+import cairosvg  # type: ignore[import-untyped]
 from PIL import Image
 
 PROJECT_ROOT = os.path.dirname(os.path.dirname(__file__))
