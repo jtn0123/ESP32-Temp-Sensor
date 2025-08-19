@@ -29,6 +29,10 @@
 static inline void status_pixel_tick();
 #endif
 
+#if USE_DISPLAY
+static void full_refresh();
+#endif
+
 // Feather ESP32-S2 + 2.13" FeatherWing (adjust if needed)
 #ifndef EINK_CS
 #define EINK_CS 9 // D9
@@ -40,7 +44,7 @@ static inline void status_pixel_tick();
 #define EINK_RST -1 // FeatherWing ties panel reset to Feather RESET
 #endif
 #ifndef EINK_BUSY
-#define EINK_BUSY 7 // D7
+#define EINK_BUSY -1 // FeatherWing BUSY not connected; use -1 so library times waits
 #endif
 
 // 2.13" b/w class; choose the one matching your panel
@@ -325,6 +329,15 @@ static void handle_serial_command_line(const String& line) {
     emit_metrics_json(latest.temperatureC, latest.humidityPct, latest.pressureHPa);
     return;
   }
+  if (op == "refresh") {
+#if USE_DISPLAY
+    Serial.println(F("Display: forced full refresh"));
+    full_refresh();
+#else
+    Serial.println(F("Display disabled in this build"));
+#endif
+    return;
+  }
   if (op == "sleep") {
     uint32_t sec = args.toInt();
     if (sec == 0) {
@@ -440,7 +453,12 @@ static inline void draw_in_region(const int rect[4],
   const int16_t y = rect[1];
   const int16_t w = rect[2];
   const int16_t h = rect[3];
-  display.setPartialWindow(x, y, w, h);
+  // Align partial window to 8-pixel byte boundaries on X for SSD1680-class panels
+  // to avoid controller rejects or missing updates on unaligned windows.
+  int16_t ax = x & ~0x07;
+  int16_t ar = x + w; // right edge (exclusive)
+  int16_t aw = static_cast<int16_t>(((ar - ax) + 7) & ~0x07);
+  display.setPartialWindow(ax, y, aw, h);
   display.firstPage();
   do {
     display.fillScreen(GxEPD_WHITE);
@@ -448,12 +466,7 @@ static inline void draw_in_region(const int rect[4],
 #if USE_STATUS_PIXEL
     status_pixel_tick();
 #endif
-#ifdef DISPLAY_PHASE_TIMEOUT_MS
-    if (g_display_deadline_ms > 0 && millis() >= g_display_deadline_ms) {
-      // Stop iterating additional pages to respect deadline
-      break;
-    }
-#endif
+    yield();
   } while (display.nextPage());
 }
 
@@ -721,6 +734,7 @@ static void full_refresh() {
 #if USE_STATUS_PIXEL
     status_pixel_tick();
 #endif
+    yield();
     char in_temp[16];
     char in_rh[16];
     snprintf(in_temp, sizeof(in_temp), isfinite(r.temperatureC) ? "%.1f" : "--",
@@ -788,11 +802,6 @@ static void full_refresh() {
       display.setCursor(OUT_ROW2_R[0], OUT_ROW2_R[1]);
       display.print(ws);
     }
-#ifdef DISPLAY_PHASE_TIMEOUT_MS
-    if (g_display_deadline_ms > 0 && millis() >= g_display_deadline_ms) {
-      break;
-    }
-#endif
   } while (display.nextPage());
 }
 
@@ -919,6 +928,7 @@ static void partial_update_outside_hilo(float highC, float lowC) {
       snprintf(buf, sizeof(buf), "H %.1f\xF8  L %.1f\xF8", hf, lf);
       display.print(buf);
     }
+    yield();
   } while (display.nextPage());
 }
 #endif // USE_DISPLAY
@@ -1014,6 +1024,7 @@ void setup() {
   }
 
   // Allow retained MQTT to arrive quickly for outside readings (bounded)
+  static bool g_outside_warned = false;
   uint32_t fetch_start_ms = millis();
   bool outside_before = net_get_outside().validTemp || net_get_outside().validHum ||
                         net_get_outside().validWeather || net_get_outside().validWind;
@@ -1022,12 +1033,10 @@ void setup() {
   bool outside_after = net_get_outside().validTemp || net_get_outside().validHum ||
                        net_get_outside().validWeather || net_get_outside().validWind;
   if (ms_fetch >= static_cast<uint32_t>(FETCH_RETAINED_TIMEOUT_MS) && !outside_after &&
-      !outside_before) {
+      !outside_before && !g_outside_warned) {
     s_timeouts_mask |= TIMEOUT_BIT_FETCH;
-
-    Serial.printf("Timeout: retained fetch budget reached ms=%u budget=%u (no outside "
-                  "data)\n",
-                  ms_fetch, static_cast<unsigned>(FETCH_RETAINED_TIMEOUT_MS));
+    g_outside_warned = true; // only warn once until outside data later appears
+    Serial.printf("Note: no outside retained data yet (waited %u ms). Continuing...\n", ms_fetch);
   }
 
   // Publish HA discovery once we have MQTT so entities auto-register in Home
