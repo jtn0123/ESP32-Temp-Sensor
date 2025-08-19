@@ -119,6 +119,19 @@ static uint32_t s_timeouts_mask = 0;
 #define TIMEOUT_BIT_DISPLAY (1u << 2)
 #define TIMEOUT_BIT_PUBLISH (1u << 3)
 
+// Short boot diagnostics to help catch crashes/heap issues quickly on USB
+// Forward declarations for helpers defined later in this file
+static const char* reset_reason_str(esp_reset_reason_t r);
+static const char* wakeup_cause_str(esp_sleep_wakeup_cause_t c);
+ 
+static inline void print_boot_diagnostics() {
+  Serial.printf("Reset: %s, Wake: %s\n", reset_reason_str(esp_reset_reason()),
+                wakeup_cause_str(esp_sleep_get_wakeup_cause()));
+  Serial.printf("Heap: free=%u min=%u\n",
+                static_cast<unsigned>(esp_get_free_heap_size()),
+                static_cast<unsigned>(esp_get_minimum_free_heap_size()));
+}
+
 #if USE_DISPLAY
 // Shared soft deadline used by display drawing helpers to avoid long loops
 static uint32_t g_display_deadline_ms = 0;
@@ -938,6 +951,7 @@ void setup() {
   Serial.begin(115200);
   delay(100);
   Serial.println(F("ESP32 eInk Room Node boot"));
+  print_boot_diagnostics();
 
 #if USE_STATUS_PIXEL
   status_pixel_begin();
@@ -989,6 +1003,19 @@ void setup() {
                   static_cast<unsigned>(dbg_ms_sensor),
                   static_cast<unsigned>(SENSOR_PHASE_TIMEOUT_MS));
   }
+  // Print concise boot phase timings on USB for quick inspection
+  {
+    uint32_t ms_boot_to_wifi = static_cast<uint32_t>((t1_us - t0_us) / 1000);
+    uint32_t ms_wifi_to_mqtt = static_cast<uint32_t>((t2_us - t1_us) / 1000);
+    Serial.printf("Boot timing: wifi=%u ms mqtt=%u ms sensor=%u ms\n",
+                  static_cast<unsigned>(ms_boot_to_wifi),
+                  static_cast<unsigned>(ms_wifi_to_mqtt),
+                  static_cast<unsigned>(dbg_ms_sensor));
+    // Repeat reset/wake later so it shows even if early prints were missed
+    Serial.printf("Reset: %s, Wake: %s\n", reset_reason_str(esp_reset_reason()),
+                  wakeup_cause_str(esp_sleep_get_wakeup_cause()));
+    Serial.println("DBG: after boot timing");
+  }
 
   // Compute scheduled sleep based on build-time mode
   uint32_t sleep_scheduled_ms = 0;
@@ -1013,12 +1040,9 @@ void setup() {
     net_publish_publish_latency_ms(ms_publish);
     uint32_t deep_sleep_us = sleep_scheduled_ms * 1000UL;
     snprintf(dbg, sizeof(dbg),
-             "{\"ms_boot_to_wifi\":%u,\"ms_wifi_to_mqtt\":%u,\"ms_sensor_"
-             //              "read\":%u,\"ms_publish\":%u,\"sleep_scheduled_ms\":%u,\"deep_"
-             "sleep_us\":%u,\"reset_reason\":\"%s\",\"wakeup_cause\":\"%s\"}",
-             //              ms_boot_to_wifi, ms_wifi_to_mqtt, ms_sensor_read, ms_publish,
-             //     sleep_scheduled_ms,
-             deep_sleep_us, reset_reason_str(esp_reset_reason()),
+             "{\"ms_boot_to_wifi\":%u,\"ms_wifi_to_mqtt\":%u,\"ms_sensor_read\":%u,\"ms_publish\":%u,\"sleep_scheduled_ms\":%u,\"deep_sleep_us\":%u,\"reset_reason\":\"%s\",\"wakeup_cause\":\"%s\"}",
+             ms_boot_to_wifi, ms_wifi_to_mqtt, ms_sensor_read, ms_publish,
+             sleep_scheduled_ms, deep_sleep_us, reset_reason_str(esp_reset_reason()),
              wakeup_cause_str(esp_sleep_get_wakeup_cause()));
     net_publish_debug_json(dbg, false);
   }
@@ -1028,8 +1052,10 @@ void setup() {
   uint32_t fetch_start_ms = millis();
   bool outside_before = net_get_outside().validTemp || net_get_outside().validHum ||
                         net_get_outside().validWeather || net_get_outside().validWind;
+  Serial.println("DBG: start fetch retained");
   pump_network_ms(static_cast<uint32_t>(FETCH_RETAINED_TIMEOUT_MS));
   uint32_t ms_fetch = static_cast<uint32_t>(millis() - fetch_start_ms);
+  Serial.printf("DBG: after fetch retained ms=%u\n", static_cast<unsigned>(ms_fetch));
   bool outside_after = net_get_outside().validTemp || net_get_outside().validHum ||
                        net_get_outside().validWeather || net_get_outside().validWind;
   if (ms_fetch >= static_cast<uint32_t>(FETCH_RETAINED_TIMEOUT_MS) && !outside_after &&
@@ -1042,7 +1068,9 @@ void setup() {
   // Publish HA discovery once we have MQTT so entities auto-register in Home
   // Assistant
   if (net_mqtt_is_connected()) {
+    Serial.println("DBG: before HA discovery");
     net_publish_ha_discovery();
+    Serial.println("DBG: after HA discovery");
   }
 
 #if USE_DISPLAY
@@ -1078,8 +1106,11 @@ void setup() {
   g_display_deadline_ms = display_phase_start + static_cast<uint32_t>(DISPLAY_PHASE_TIMEOUT_MS);
 #endif
   if (do_full) {
+    Serial.println("DBG: full_refresh start");
     full_refresh();
+    Serial.println("DBG: full_refresh done");
   } else {
+    Serial.println("DBG: partial draw start");
     uint32_t sens2_start = millis();
     InsideReadings r = read_inside_sensors();
     uint32_t sens2_ms = static_cast<uint32_t>(millis() - sens2_start);
@@ -1236,6 +1267,7 @@ void setup() {
 #else
   // Headless mode: no display; still connect, read sensors, publish,
   //     and sleep
+  Serial.println("DBG: headless branch start");
   uint32_t sens2_start = millis();
   InsideReadings r = read_inside_sensors();
   uint32_t sens2_ms = static_cast<uint32_t>(millis() - sens2_start);
@@ -1296,25 +1328,32 @@ void setup() {
 
   // Emit one metrics JSON line over USB for monitor scripts
   {
+    Serial.println("DBG: before metrics json");
     InsideReadings latest = read_inside_sensors();
     emit_metrics_json(latest.temperatureC, latest.humidityPct, latest.pressureHPa);
+    Serial.println("DBG: after metrics json");
   }
 
   // Publish a concise timeout summary JSON if MQTT is connected
   if (net_mqtt_is_connected()) {
+    Serial.println("DBG: before timeout summary json");
     char dbg2[192];
     snprintf(dbg2, sizeof(dbg2),
              "{\"timeouts\":%u,\"notes\":\"bits:1=sensor,2=fetch,4=display,8="
              "publish\"}",
              static_cast<unsigned>(s_timeouts_mask));
     net_publish_debug_json(dbg2, false);
+    Serial.println("DBG: after timeout summary json");
   }
+  // Also emit a compact timeouts mask on USB
+  Serial.printf("Timeouts mask: 0x%02X\n", static_cast<unsigned>(s_timeouts_mask));
 
   partial_counter++;
   // Persist partial refresh cadence so it survives reset
   g_prefs.putUShort("pcount", partial_counter);
   // Log awake duration and planned sleep for diagnostics
   Serial.printf("Awake ms: %u\n", static_cast<unsigned>(millis()));
+  Serial.println("DBG: end of setup (pre-sleep or stay-awake)");
 #if DEV_NO_SLEEP
   Serial.println("DEV_NO_SLEEP=1: staying awake for debugging");
   while (true) {

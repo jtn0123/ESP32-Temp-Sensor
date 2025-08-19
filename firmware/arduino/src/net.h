@@ -799,7 +799,7 @@ inline void ensure_mqtt_connected() {
     // On successful MQTT connection, try to drain any offline backlog
     offline_drain_if_any();
   } else {
-    Serial.println("MQTT: connect timeout/fail");
+    Serial.printf("MQTT: connect timeout/fail (state=%d)\n", g_mqtt.state());
   }
 }
 
