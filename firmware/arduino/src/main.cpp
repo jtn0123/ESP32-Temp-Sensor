@@ -31,6 +31,7 @@ static inline void status_pixel_tick();
 
 #if USE_DISPLAY
 static void full_refresh();
+static void smoke_full_window_test();
 #endif
 
 // Feather ESP32-S2 + 2.13" FeatherWing (adjust if needed)
@@ -347,6 +348,15 @@ static void handle_serial_command_line(const String& line) {
     Serial.println(F("Display: forced full refresh"));
     full_refresh();
 #else
+  if (op == "smoke") {
+#if USE_DISPLAY
+    Serial.println(F("Display: full-window smoke test"));
+    smoke_full_window_test();
+#else
+    Serial.println(F("Display disabled in this build"));
+#endif
+    return;
+  }
     Serial.println(F("Display disabled in this build"));
 #endif
     return;
@@ -818,6 +828,22 @@ static void full_refresh() {
   } while (display.nextPage());
 }
 
+static void smoke_full_window_test() {
+  display.setFullWindow();
+  display.firstPage();
+  do {
+    display.fillScreen(GxEPD_WHITE);
+    // 1px border to validate geometry and orientation visually
+    display.drawRect(0, 0, display.width() - 1, display.height() - 1, GxEPD_BLACK);
+    display.setTextColor(GxEPD_BLACK);
+    display.setTextSize(1);
+    display.setCursor(4, 14);
+    display.print(display.width());
+    display.print("x");
+    display.print(display.height());
+  } while (display.nextPage());
+}
+
 static void partial_update_inside_temp(const char* in_temp_f, char trend) {
   draw_in_region(INSIDE_TEMP, [&](int16_t x, int16_t y, int16_t w, int16_t h) {
     // Numeric + units split: redraw both sub-rects from this region pass
@@ -962,6 +988,7 @@ void setup() {
 #endif
   display.init(0);
   display.setRotation(1); // landscape 250x122 coordinate system
+  Serial.printf("EINK %dx%d (rotation=%d)\n", display.width(), display.height(), 1);
 #endif
   nvs_begin_cache();
   nvs_load_cache_if_unset();
