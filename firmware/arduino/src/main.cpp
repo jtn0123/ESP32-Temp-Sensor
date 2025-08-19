@@ -923,14 +923,7 @@ static void partial_update_outside_condition(const char* short_condition) {
 }
 
 static void partial_update_outside_hilo(float highC, float lowC) {
-  const int16_t x = OUT_ROW2_R[0];
-  const int16_t y = OUT_ROW2_R[1];
-  const int16_t w = OUT_ROW2_R[2];
-  const int16_t h = OUT_ROW2_R[3];
-  display.setPartialWindow(x, y, w, h);
-  display.firstPage();
-  do {
-    display.fillScreen(GxEPD_WHITE);
+  draw_in_region(OUT_ROW2_R, [&](int16_t x, int16_t y, int16_t, int16_t) {
     display.setTextColor(GxEPD_BLACK);
     display.setTextSize(1);
     display.setCursor(x, y);
@@ -941,8 +934,7 @@ static void partial_update_outside_hilo(float highC, float lowC) {
       snprintf(buf, sizeof(buf), "H %.1f\xF8  L %.1f\xF8", hf, lf);
       display.print(buf);
     }
-    yield();
-  } while (display.nextPage());
+  });
 }
 #endif // USE_DISPLAY
 
@@ -1093,6 +1085,11 @@ void setup() {
     }
   }
   if (!do_full) {
+    // Ensure a full refresh after a true power-on reset so the controller's
+    // waveform state is initialized before any partial updates.
+    if (esp_reset_reason() == ESP_RST_POWERON) {
+      do_full = true;
+    }
     if (partial_counter == 0) {
       do_full = true; // first ever boot
     } else if ((partial_counter % FULL_REFRESH_EVERY) == 0) {
