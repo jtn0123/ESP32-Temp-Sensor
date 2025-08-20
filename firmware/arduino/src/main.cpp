@@ -575,7 +575,7 @@ static void draw_static_chrome() {
   display.fillScreen(GxEPD_WHITE);
   // Draw outer border flush to panel extents
   display.drawRect(0, 0, EINK_WIDTH, EINK_HEIGHT, GxEPD_BLACK);
-  display.drawLine(1, 18 + TOP_Y_OFFSET, EINK_WIDTH - 2, 18 + TOP_Y_OFFSET, GxEPD_BLACK);
+  display.drawLine(1, 20 + TOP_Y_OFFSET, EINK_WIDTH - 2, 20 + TOP_Y_OFFSET, GxEPD_BLACK);
   // Extend the center divider to the bottom frame to match the simulator
   display.drawLine(125, 18 + TOP_Y_OFFSET, 125, EINK_HEIGHT - 2, GxEPD_BLACK);
   // Horizontal rule for footer region (aligned to new footer rects)
@@ -789,7 +789,7 @@ static void draw_header_time(const char* time_str) {
 static inline void draw_header_time_direct(const char* time_str) {
   int16_t tw = text_width_default_font(time_str, 1);
   int16_t rx = static_cast<int16_t>(HEADER_TIME[0] + HEADER_TIME[2] - 2 - tw);
-  int16_t by = static_cast<int16_t>(HEADER_TIME[1] + TOP_Y_OFFSET + HEADER_TIME[3] - 2);
+  int16_t by = static_cast<int16_t>(HEADER_TIME[1] + TOP_Y_OFFSET + HEADER_TIME[3] - 4);
   display.setTextColor(GxEPD_BLACK);
   display.setTextSize(1);
   display.setCursor(rx, by);
@@ -1225,8 +1225,7 @@ static void full_refresh() {
     if (o.validWeather) {
       last_icon_id = static_cast<int32_t>(map_weather_to_icon(o.weather));
     }
-    // Outside condition
-    if (o.validWeather) { char sc[24]; make_short_condition_cstr(o.weather, sc, sizeof(sc)); display.setTextSize(1); display.setTextColor(GxEPD_BLACK); display.setCursor(OUT_ROW1_L[0], OUT_ROW1_L[1] + TOP_Y_OFFSET); display.print(sc); }
+    // Outside condition text removed from middle; only show condition in footer
     // Outside temp
     draw_temp_number_and_units_direct(OUT_TEMP[0], static_cast<int16_t>(OUT_TEMP[1] + TOP_Y_OFFSET), OUT_TEMP[2], OUT_TEMP[3], out_temp);
     // Outside RH and wind
@@ -1251,7 +1250,7 @@ static void full_refresh() {
       int16_t h = FOOTER_L[3];
       display.setTextColor(GxEPD_BLACK);
       display.setTextSize(1);
-      int16_t line = static_cast<int16_t>(y + 8);
+      int16_t line = static_cast<int16_t>(y + 10);
       char l1[48]; snprintf(l1, sizeof(l1), "Batt %.2fV %d%%", bs.voltage, bs.percent);
       display.setCursor(x + 2, line); display.print(l1);
       line = static_cast<int16_t>(line + 10);
@@ -1270,11 +1269,11 @@ static void full_refresh() {
       if (o.validWeather || last_icon_id >= 0) {
         char sc[24]; make_short_condition_cstr(o.weather, sc, sizeof(sc));
         // small icon on the left, word to the right
-        int16_t ix = x + 2; int16_t iy = y + 2;
+        int16_t ix = x + 2; int16_t iy = static_cast<int16_t>(y + (h - ICON_H) / 2);
         IconId icon_id = o.validWeather ? map_weather_to_icon(o.weather) : (IconId)last_icon_id;
         draw_icon(display, ix, iy, icon_id, GxEPD_BLACK);
         display.setTextColor(GxEPD_BLACK); display.setTextSize(1);
-        display.setCursor(static_cast<int16_t>(x + 2 + ICON_W + 4), static_cast<int16_t>(y + 10));
+        display.setCursor(static_cast<int16_t>(x + 2 + ICON_W + 4), static_cast<int16_t>(y + h/2 + 2));
         if (o.validWeather) display.print(sc);
       }
     }
