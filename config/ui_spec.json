@@ -1,0 +1,80 @@
+{
+  "schema": "ui-spec@1",
+  "canvas": { "w": 250, "h": 122 },
+  "fonts": {
+    "tokens": {
+      "big":   { "px": 22, "weight": "bold" },
+      "label": { "px": 11, "weight": "bold" },
+      "small": { "px": 10 },
+      "time":  { "px": 11 }
+    }
+  },
+  "rects": {
+    "HEADER_NAME": [6, 2, 160, 14],
+    "HEADER_TIME": [172, 2, 72, 14],
+    "INSIDE_TEMP": [6, 36, 118, 28],
+    "INSIDE_RH":   [6, 66, 118, 14],
+    "INSIDE_TIME": [6, 78, 118, 12],
+    "OUT_TEMP":    [129, 36, 94, 28],
+    "OUT_ICON":    [210, 22, 28, 28],
+    "OUT_ROW2_L":  [131, 78, 44, 12],
+    "OUT_ROW2_R":  [177, 78, 44, 12],
+    "FOOTER_L":    [6, 90, 160, 32],
+    "FOOTER_R":    [170, 90, 74, 32]
+  },
+  "iconMap": [
+    { "match": ["storm", "thunder", "lightning"], "icon": "weather-lightning" },
+    { "match": ["pour", "rain", "shower"],        "icon": "weather-pouring" },
+    { "match": ["snow"],                            "icon": "weather-snowy" },
+    { "match": ["fog", "mist", "haze"],           "icon": "weather-fog" },
+    { "match": ["part"],                            "icon": "weather-partly-cloudy" },
+    { "match": ["cloud", "overcast"],              "icon": "weather-cloudy" },
+    { "match": ["night"],                           "icon": "weather-night" },
+    { "default": true,                               "icon": "weather-sunny" }
+  ],
+  "components": {
+    "header": [
+      { "op": "line", "from": [1, 18], "to": [249, 18] },
+      { "op": "text", "rect": "HEADER_NAME", "font": "label", "align": "left", "text": "{room_name}", "truncate": "ellipsis" },
+      { "op": "timeRight", "rect": "HEADER_TIME", "font": "time", "source": "{time_hhmm}" }
+    ],
+    "inside": [
+      { "op": "labelCentered", "y": 22, "aboveRect": "INSIDE_TEMP", "text": "INSIDE", "font": "label" },
+      { "op": "tempGroupCentered", "rect": "INSIDE_TEMP", "value": "{inside_temp_f}" },
+      { "op": "text", "rect": "INSIDE_RH", "font": "small", "align": "left", "text": "{inside_hum_pct}% RH" },
+      { "op": "text", "rect": "INSIDE_TIME", "font": "small", "align": "left", "text": "{pressure_hpa:.1f} hPa", "when": "has(pressure_hpa)" }
+    ],
+    "outside": [
+      { "op": "labelCentered", "y": 22, "aboveRect": "OUT_TEMP", "text": "OUTSIDE", "font": "label" },
+      { "op": "tempGroupCentered", "rect": "OUT_TEMP", "value": "{outside_temp_f}" },
+      { "op": "text", "rect": "OUT_ROW2_L", "font": "small", "align": "left", "text": "{outside_hum_pct}% RH" },
+      { "op": "text", "rect": "OUT_ROW2_R", "font": "small", "align": "left", "text": "{wind_mps->mph:.1f} mph" }
+    ],
+    "footer_split": [
+      { "op": "batteryGlyph", "x": 8, "y": 92, "w": 13, "h": 7, "percent": "{battery_percent}" },
+      { "op": "text", "x": 26, "y": 90, "font": "small", "text": "Batt {battery_voltage:.2f}V {battery_percent}%" },
+      { "op": "text", "x": 26, "y": 100, "font": "small", "text": "~{days}d" },
+      { "op": "textCenteredIn", "rect": "FOOTER_L", "yOffset": 22, "font": "small", "text": "IP {ip}" },
+      { "op": "iconIn", "rect": "FOOTER_R", "iconFromWeather": "{weather}" },
+      { "op": "shortCondition", "rect": "FOOTER_R", "font": "small", "align": "left", "xOffset": 28 }
+    ]
+  },
+  "variants": {
+    "v1": ["header", "inside", "outside", "footer_split"],
+    "minimal": ["header"]
+  },
+  "defaultVariant": "v1",
+  "regions": {
+    "partial": {
+      "INSIDE_TEMP": ["tempGroupCentered"],
+      "OUT_TEMP": ["tempGroupCentered"],
+      "OUT_ROW2_L": ["text"],
+      "OUT_ROW2_R": ["text"],
+      "HEADER_TIME": ["timeRight"],
+      "FOOTER_L": ["batteryGlyph", "text", "text", "text"],
+      "FOOTER_R": ["iconIn", "shortCondition"]
+    }
+  }
+}
+
+

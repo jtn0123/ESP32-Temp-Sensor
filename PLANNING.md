@@ -73,3 +73,19 @@ Open follow‑ups:
 - Tune partial window merges when both outside temp/RH change (Phase 3).
 - Persist partial refresh cadence in NVS (Phase 3).
 
+### UI Single-Source of Truth (SSOT) — Plan
+
+- Source: `config/ui_spec.json` declares canvas, fonts, rects, components, variants, icon map, and partial regions.
+- Generator: `scripts/gen_ui.py` reads the spec and emits:
+  - Firmware: `firmware/arduino/src/ui_generated.h` and `ui_generated.cpp` (scaffolded now; draw ops to follow), and is wired into PlatformIO `extra_scripts` as a pre-step.
+  - Web: `web/sim/ui_generated.js` exporting `window.UI_SPEC` and a basic `uiMapWeather` helper.
+- Compatibility:
+  - Keep existing geometry generation via `scripts/gen_layout_header.py` so current includes and tests remain stable.
+  - Web sim loads `ui_generated.js` before `sim.js` with no behavior change.
+- Tests added:
+  - `tests/test_ui_spec_schema.py` validates schema presence and rect bounds.
+- Next steps:
+  - Extend generator to compile component ops into C++ enums/arrays and JS structures.
+  - Add firmware integration points: `ui_draw_variant()` and `ui_redraw_region()` that interpret generated ops using the existing drawing helpers.
+  - Replace sim’s hardcoded draw logic with an interpreter that consumes `UI_SPEC` ops while preserving exported test metrics.
+
