@@ -26,6 +26,9 @@
   let oneBitMode = true;
   let GEOMETRY = null; // optional overlay geometry loaded from geometry.json
   let GJSON = null;    // centralized geometry JSON
+  // Enable spec-only render via URL query (?spec=1 or ?specOnly=1)
+  const QS = (typeof window !== 'undefined') ? new URLSearchParams(window.location.search) : new URLSearchParams();
+  const specOnly = (QS.get('spec') === '1' || QS.get('specOnly') === '1');
 
   const FONT_STACK = 'Menlo, Consolas, "DM Mono", "Roboto Mono", monospace';
   const SIZE_SMALL = 11; // general small text
@@ -35,11 +38,35 @@
   const SIZE_BIG = 22;
   const THRESH = 176;
   async function loadCentralGeometry(){
-    const urls = ['../../config/display_geometry.json', 'geometry.json'];
-    for (const url of urls){
-      try{
-        const res = await fetch(url);
-        if(!res.ok) continue;
+    // Prefer generated UI_SPEC if present (single source of truth)
+    try{
+      if (typeof window !== 'undefined' && window.UI_SPEC){
+        const gj = window.UI_SPEC;
+        if (gj && gj.rects){
+          GJSON = gj;
+          WIDTH = gj.canvas?.w || WIDTH;
+          HEIGHT = gj.canvas?.h || HEIGHT;
+          const R = gj.rects;
+          HEADER_NAME = R.HEADER_NAME || HEADER_NAME;
+          HEADER_TIME = R.HEADER_TIME || HEADER_TIME;
+          INSIDE_TEMP = R.INSIDE_TEMP || INSIDE_TEMP;
+          INSIDE_RH   = R.INSIDE_RH   || INSIDE_RH;
+          INSIDE_TIME = R.INSIDE_TIME || INSIDE_TIME;
+          OUT_TEMP    = R.OUT_TEMP    || OUT_TEMP;
+          OUT_ICON    = R.OUT_ICON    || OUT_ICON;
+          OUT_ROW1_L  = R.OUT_ROW1_L  || OUT_ROW1_L;
+          OUT_ROW1_R  = R.OUT_ROW1_R  || OUT_ROW1_R;
+          OUT_ROW2_L  = R.OUT_ROW2_L  || OUT_ROW2_L;
+          OUT_ROW2_R  = R.OUT_ROW2_R  || OUT_ROW2_R;
+          STATUS      = R.STATUS      || STATUS;
+          return;
+        }
+      }
+    }catch(e){ /* ignore, fallback below */ }
+    // Legacy fallback: local geometry.json only
+    try{
+      const res = await fetch('geometry.json');
+      if (res.ok){
         const gj = await res.json();
         if (gj && gj.rects){
           GJSON = gj;
@@ -58,10 +85,9 @@
           OUT_ROW2_L  = R.OUT_ROW2_L  || OUT_ROW2_L;
           OUT_ROW2_R  = R.OUT_ROW2_R  || OUT_ROW2_R;
           STATUS      = R.STATUS      || STATUS;
-          break;
         }
-      }catch(e){ /* try next */ }
-    }
+      }
+    }catch(e){ /* ignore */ }
   }
 
   function applyOneBitThreshold(){
@@ -283,6 +309,10 @@
     const base = key.replace(/[:].*$/, '').replace(/->.*$/, '');
     // Prefer exact key, then fallback for _f suffix
     let v = (data[base] !== undefined) ? data[base] : data[base.replace(/_f$/, '')];
+    // Special-case fw_version to use injected UI_FW_VERSION if not provided in data
+    if ((v === undefined || v === null || v === '') && base === 'fw_version'){
+      try{ if (typeof window !== 'undefined' && typeof window.UI_FW_VERSION === 'string') v = window.UI_FW_VERSION; }catch(e){}
+    }
     if (v === undefined || v === null) return '';
     // Conversions
     if (convMatch && String(v).trim() !== ''){
@@ -397,7 +427,14 @@
               const r = rects[op.rect]; if (!r) break;
               const key = String(op.iconFromWeather||'{weather}').replace(/[{}]/g,'');
               const s = data[key] || data.weather || '';
-              weatherIcon([r[0], r[1], r[0]+r[2], r[1]+r[3]], s);
+              // Use spec icon map if provided to select mdi icon names
+              let iconName = null;
+              try{
+                if (typeof window !== 'undefined' && typeof window.uiMapWeather === 'function' && window.UI_SPEC){
+                  iconName = window.uiMapWeather(s);
+                }
+              }catch(e){ /* ignore */ }
+              weatherIcon([r[0], r[1], r[0]+r[2], r[1]+r[3]], iconName || s);
               break;
             }
             case 'shortCondition': {
@@ -451,6 +488,15 @@
     ctx.fillRect(0,HEIGHT-1,WIDTH,1);
     ctx.fillRect(0,0,1,HEIGHT);
     ctx.fillRect(WIDTH-1,0,1,HEIGHT);
+    // If spec-only requested, render solely from spec and return
+    if (specOnly){
+      try{
+        const variant = (typeof window !== 'undefined' && window.UI_SPEC && window.UI_SPEC.defaultVariant) ? window.UI_SPEC.defaultVariant : 'v1';
+        drawFromSpec(ctx, data, variant);
+      }catch(e){ console.warn('spec-only draw failed', e); }
+      applyOneBitThreshold();
+      return;
+    }
     // Header
     ctx.fillStyle = '#000';
     // thin rules only
@@ -801,6 +847,15 @@
     clear();
     draw(stressMode ? stress : {});
   });
+  const specOnlyEl = document.getElementById('specOnly');
+  if (specOnlyEl){
+    specOnlyEl.checked = specOnly;
+    specOnlyEl.addEventListener('change', ()=>{
+      const url = new URL(window.location.href);
+      if (specOnlyEl.checked) url.searchParams.set('spec','1'); else url.searchParams.delete('spec');
+      window.location.replace(url.toString());
+    });
+  }
   load();
 })();
 
