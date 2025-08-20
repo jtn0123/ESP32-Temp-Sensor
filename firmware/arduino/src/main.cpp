@@ -583,11 +583,12 @@ static void draw_static_chrome() {
   display.fillScreen(GxEPD_WHITE);
   // Draw outer border flush to panel extents
   display.drawRect(0, 0, EINK_WIDTH, EINK_HEIGHT, GxEPD_BLACK);
-  display.drawLine(1, 20 + TOP_Y_OFFSET, EINK_WIDTH - 2, 20 + TOP_Y_OFFSET, GxEPD_BLACK);
+  // Header underline aligned with simulator and other draw paths
+  display.drawLine(1, 18 + TOP_Y_OFFSET, EINK_WIDTH - 2, 18 + TOP_Y_OFFSET, GxEPD_BLACK);
   // Extend the center divider to the bottom frame to match the simulator
   display.drawLine(125, 18 + TOP_Y_OFFSET, 125, EINK_HEIGHT - 2, GxEPD_BLACK);
-  // Horizontal rule for footer region (aligned to new footer rects)
-  display.drawLine(1, FOOTER_L[1] - 2, EINK_WIDTH - 2, FOOTER_L[1] - 2, GxEPD_BLACK);
+  // Horizontal rule for footer region (drawn at top edge of footer)
+  display.drawLine(1, FOOTER_L[1], EINK_WIDTH - 2, FOOTER_L[1], GxEPD_BLACK);
 
   // Header: room name left, time will be drawn separately
   display.setTextColor(GxEPD_BLACK);
@@ -796,8 +797,9 @@ static void draw_header_time(const char* time_str) {
 
 static inline void draw_header_time_direct(const char* time_str) {
   int16_t tw = text_width_default_font(time_str, 1);
-  int16_t rx = static_cast<int16_t>(HEADER_TIME[0] + HEADER_TIME[2] - 2 - tw);
-  int16_t by = static_cast<int16_t>(HEADER_TIME[1] + TOP_Y_OFFSET + HEADER_TIME[3] - 4);
+  // Nudge left and up to align with room name baseline
+  int16_t rx = static_cast<int16_t>(HEADER_TIME[0] + HEADER_TIME[2] - 4 - tw);
+  int16_t by = static_cast<int16_t>(HEADER_TIME[1] + TOP_Y_OFFSET + HEADER_TIME[3] - 5);
   display.setTextColor(GxEPD_BLACK);
   display.setTextSize(1);
   display.setCursor(rx, by);
