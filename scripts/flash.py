@@ -21,9 +21,14 @@ def main() -> int:
     )
     parser.add_argument(
         "--mode",
-        choices=["1h", "3m", "always"],
+        choices=["3m", "1h", "2h", "always"],
         default="1h",
-        help="Sleep behavior: 1h (default), 3m cycle, or always (no sleep)",
+        help="Sleep behavior: 3m, 1h (default), 2h, or always (no sleep)",
+    )
+    parser.add_argument(
+        "--headless",
+        action="store_true",
+        help="Build and flash headless variant (no e-ink)",
     )
     parser.add_argument(
         "--build-only",
@@ -35,12 +40,25 @@ def main() -> int:
     proj = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir))
     arduino_dir = os.path.join(proj, "firmware", "arduino")
 
-    if args.mode == "1h":
-        env = "feather_esp32s2_headless_1h"
-    elif args.mode == "3m":
-        env = "feather_esp32s2_dev2"
+    # Choose base env: headless or display-only
+    env = "feather_esp32s2_headless" if args.headless else "feather_esp32s2_display_only"
+
+    # Build EXTRA_FLAGS to control sleep behavior and wake interval
+    extra_flags = []
+    if args.mode == "always":
+        extra_flags.append("-DDEV_NO_SLEEP=1")
     else:
-        env = "feather_esp32s2_headless_always"
+        # Use WAKE_INTERVAL to override generated_config via environment
+        if args.mode == "3m":
+            os.environ["WAKE_INTERVAL"] = "3m"
+        elif args.mode == "1h":
+            os.environ["WAKE_INTERVAL"] = "1h"
+        elif args.mode == "2h":
+            os.environ["WAKE_INTERVAL"] = "2h"
+
+    # Pass dynamic flags into PlatformIO via EXTRA_FLAGS
+    if extra_flags:
+        os.environ["EXTRA_FLAGS"] = " ".join(extra_flags)
 
     base = ["pio", "run", "-d", arduino_dir, "-e", env]
     if args.build_only:

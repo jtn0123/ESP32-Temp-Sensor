@@ -584,7 +584,7 @@ static void draw_static_chrome() {
   // Draw outer border flush to panel extents
   display.drawRect(0, 0, EINK_WIDTH, EINK_HEIGHT, GxEPD_BLACK);
   // Header underline aligned with simulator and other draw paths
-  display.drawLine(1, 18 + TOP_Y_OFFSET, EINK_WIDTH - 2, 18 + TOP_Y_OFFSET, GxEPD_BLACK);
+  display.drawLine(1, 19 + TOP_Y_OFFSET, EINK_WIDTH - 2, 19 + TOP_Y_OFFSET, GxEPD_BLACK);
   // Extend the center divider to the bottom frame to match the simulator
   display.drawLine(125, 18 + TOP_Y_OFFSET, 125, EINK_HEIGHT - 2, GxEPD_BLACK);
   // Horizontal rule for footer region (drawn at top edge of footer)
@@ -603,7 +603,7 @@ static void draw_static_chrome() {
   display.print(F("OUTSIDE"));
   // Top-right version string within HEADER_TIME box
   display.setCursor(HEADER_TIME[0] + HEADER_TIME[2] - 2 - text_width_default_font("v", 1) - text_width_default_font(FW_VERSION, 1),
-                    HEADER_TIME[1] + TOP_Y_OFFSET + HEADER_TIME[3] - 5);
+                    HEADER_TIME[1] + TOP_Y_OFFSET + HEADER_TIME[3] - 6);
   display.print(F("v"));
   display.print(FW_VERSION);
   // Center time will be drawn later in draw_header_time(_direct)
@@ -805,7 +805,7 @@ static void draw_header_time(const char* time_str) {
 static inline void draw_header_time_direct(const char* time_str) {
   int16_t tw = text_width_default_font(time_str, 1);
   int16_t rx = static_cast<int16_t>(HEADER_CENTER[0] + (HEADER_CENTER[2] - tw) / 2);
-  int16_t by = static_cast<int16_t>(HEADER_CENTER[1] + TOP_Y_OFFSET + HEADER_CENTER[3] - 5);
+  int16_t by = static_cast<int16_t>(HEADER_CENTER[1] + TOP_Y_OFFSET + HEADER_CENTER[3] - 6);
   display.setTextColor(GxEPD_BLACK);
   display.setTextSize(1);
   display.setCursor(rx, by);
@@ -1027,7 +1027,7 @@ static void full_refresh_v2() {
     display.fillScreen(GxEPD_WHITE);
     // Chrome: border, header rule, center divider
     display.drawRect(0, 0, EINK_WIDTH, EINK_HEIGHT, GxEPD_BLACK);
-    display.drawLine(1, 18 + TOP_Y_OFFSET, EINK_WIDTH - 2, 18 + TOP_Y_OFFSET, GxEPD_BLACK);
+    display.drawLine(1, 19 + TOP_Y_OFFSET, EINK_WIDTH - 2, 19 + TOP_Y_OFFSET, GxEPD_BLACK);
     display.drawLine(125, 18 + TOP_Y_OFFSET, 125, EINK_HEIGHT - 2, GxEPD_BLACK);
     // Debug: outline key regions to verify placement
     display.drawRect(INSIDE_TEMP[0], INSIDE_TEMP[1] + TOP_Y_OFFSET, INSIDE_TEMP[2], INSIDE_TEMP[3], GxEPD_BLACK);
@@ -1046,7 +1046,7 @@ static void full_refresh_v2() {
     display.print(F("OUTSIDE"));
     // Top-right version in HEADER_TIME box for this debug view
     display.setCursor(HEADER_TIME[0] + HEADER_TIME[2] - 2 - text_width_default_font("v", 1) - text_width_default_font(FW_VERSION, 1),
-                      HEADER_TIME[1] + TOP_Y_OFFSET + HEADER_TIME[3] - 5);
+                      HEADER_TIME[1] + TOP_Y_OFFSET + HEADER_TIME[3] - 6);
     display.print(F("v"));
     display.print(FW_VERSION);
 
@@ -1330,7 +1330,7 @@ static void full_refresh_minimal() {
     // Border
     display.drawRect(0, 0, EINK_WIDTH, EINK_HEIGHT, GxEPD_BLACK);
     // Header line and center divider
-    display.drawLine(1, 18 + TOP_Y_OFFSET, EINK_WIDTH - 2, 18 + TOP_Y_OFFSET, GxEPD_BLACK);
+    display.drawLine(1, 19 + TOP_Y_OFFSET, EINK_WIDTH - 2, 19 + TOP_Y_OFFSET, GxEPD_BLACK);
     display.drawLine(125, 18 + TOP_Y_OFFSET, 125, EINK_HEIGHT - 2, GxEPD_BLACK);
     // Labels
     display.setTextColor(GxEPD_BLACK);
@@ -1340,7 +1340,7 @@ static void full_refresh_minimal() {
     display.setCursor(6, 22 + TOP_Y_OFFSET);
     display.print(F("INSIDE"));
     display.setCursor(HEADER_TIME[0] + HEADER_TIME[2] - 2 - text_width_default_font("v", 1) - text_width_default_font(FW_VERSION, 1),
-                      HEADER_TIME[1] + TOP_Y_OFFSET + HEADER_TIME[3] - 5);
+                      HEADER_TIME[1] + TOP_Y_OFFSET + HEADER_TIME[3] - 6);
     display.print(F("v"));
     display.print(FW_VERSION);
     // Placeholder values in all regions to exercise layout

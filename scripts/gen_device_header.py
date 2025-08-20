@@ -55,7 +55,18 @@ def main():
             data = yaml.safe_load(f) or {}
     # defaults
     room_name = data.get("room_name", "Room")
-    wake_interval = parse_duration(data.get("wake_interval", "2h"))
+    # Allow environment override for wake interval (e.g., WAKE_INTERVAL=3m or 180)
+    env_wake_str = str(os.environ.get("WAKE_INTERVAL", "")).strip()
+    env_wake_sec = str(os.environ.get("WAKE_INTERVAL_SEC", "")).strip()
+    if env_wake_str:
+        wake_interval = parse_duration(env_wake_str)
+    elif env_wake_sec.isdigit():
+        try:
+            wake_interval = int(env_wake_sec)
+        except Exception:
+            wake_interval = parse_duration(data.get("wake_interval", "2h"))
+    else:
+        wake_interval = parse_duration(data.get("wake_interval", "2h"))
     full_refresh_every = int(data.get("full_refresh_every", 12) or 12)
     outside_source = str(data.get("outside_source", "mqtt"))
     wifi = data.get("wifi", {})
