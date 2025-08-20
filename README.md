@@ -135,17 +135,24 @@ Developer builds:
 
 ### Flash helper script (recommended)
 
-Use `scripts/flash.py` to build and upload common modes without remembering env names.
+Use `scripts/flash.py` to build and upload common modes without remembering env names. You can choose sleep cadence and headless/display with flags.
 
 ```bash
 # 1-hour sleep (default)
 python3 scripts/flash.py
 
-# 3-minute cycle (awake ~3m, sleep ~3m)
+# 2-hour sleep
+python3 scripts/flash.py --mode 2h
+
+# 3-minute sleep
 python3 scripts/flash.py --mode 3m
 
 # Always-on (no sleep)
 python3 scripts/flash.py --mode always
+
+# Headless variants (no e-ink)
+python3 scripts/flash.py --headless --mode 1h
+python3 scripts/flash.py --headless --mode always
 
 # Optional: specify a serial port explicitly
 python3 scripts/flash.py --mode 3m --port /dev/cu.usbmodem101
@@ -155,9 +162,10 @@ python3 scripts/flash.py --mode always --build-only
 ```
 
 Notes:
-- Default mode flashes `env:feather_esp32s2_headless_1h` (headless, 1‑hour sleep).
-- `--mode 3m` flashes `env:feather_esp32s2_dev2`.
-- `--mode always` flashes `env:feather_esp32s2_headless`.
+- Modes are implemented via environment overrides to the generated `generated_config.h`:
+  - `--mode 3m|1h|2h` sets `WAKE_INTERVAL` for config generation.
+  - `--mode always` sets `-DDEV_NO_SLEEP=1`.
+- `--headless` toggles the PlatformIO environment to `feather_esp32s2_headless`; otherwise `feather_esp32s2_display_only` is used for fast layout iteration.
 - Auto‑detect upload port is used unless `--port` is provided.
 
 Commands:
