@@ -92,6 +92,10 @@ RTC_DATA_ATTR static float last_published_inside_rh = NAN;
 RTC_DATA_ATTR static float last_published_inside_pressureHPa = NAN;
 RTC_DATA_ATTR static uint32_t last_status_crc = 0;
 RTC_DATA_ATTR static float last_inside_rh = NAN;
+#if USE_DISPLAY
+// Ensure the very first wake after flashing or power-on does a full render
+RTC_DATA_ATTR static bool needs_full_on_boot = true;
+#endif
 #ifdef FORCE_FULL_ONLY
 static bool g_full_only_mode = true; // compile-time force full refresh only
 #else
@@ -126,6 +130,10 @@ static inline void nvs_load_cache_if_unset() {
     partial_counter = pc;
   // Load render mode (0=partial, 1=full-only)
   g_full_only_mode = g_prefs.getUChar("full_only", 0) != 0;
+  // Default UI variant to v1 if not set
+  if (g_prefs.getUChar("ui_variant", 255) == 255) {
+    g_prefs.putUChar("ui_variant", 1);
+  }
 }
 static inline void nvs_store_float(const char* key, float v) { g_prefs.putFloat(key, v); }
 static inline void nvs_store_int(const char* key, int32_t v) { g_prefs.putInt(key, v); }
@@ -1487,12 +1495,29 @@ void setup() {
 #endif
   nvs_begin_cache();
   nvs_load_cache_if_unset();
+  // Force a clean full refresh on the first boot after flash/power-on
+#if USE_DISPLAY
+  if (needs_full_on_boot) {
+    g_full_only_mode = true;
+    g_prefs.putUChar("full_only", 1);
+    g_prefs.putUShort("pcount", 0);
+  }
+#endif
 
   // Connect Wi-Fi then MQTT while capturing timestamps
   ensure_wifi_connected();
   int64_t t1_us = esp_timer_get_time();
   ensure_mqtt_connected();
   int64_t t2_us = esp_timer_get_time();
+
+  // Draw immediately at least once so the panel is never blank after boot
+#if USE_DISPLAY
+  {
+    Serial.println("DBG: boot full draw pre-publish");
+    full_refresh();
+    needs_full_on_boot = false;
+  }
+#endif
 
   // Crash safety: on panic/WDT/brownout reboot, publish retained last_crash;
   // clear it on clean runs
@@ -1612,6 +1637,9 @@ void setup() {
     if (esp_reset_reason() == ESP_RST_POWERON) {
       do_full = true;
     }
+    if (needs_full_on_boot) {
+      do_full = true;
+    }
     if (g_full_only_mode) {
       do_full = true; // debug: force full if toggled on
     }
@@ -1631,6 +1659,7 @@ void setup() {
     Serial.println("DBG: full_refresh start");
     full_refresh();
     Serial.println("DBG: full_refresh done");
+    needs_full_on_boot = false; // one clean full render completed
   } else {
     if (g_full_only_mode) {
       Serial.println("DBG: full_only_mode=1: overriding to full");

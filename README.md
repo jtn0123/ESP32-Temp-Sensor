@@ -24,10 +24,21 @@
   - Web simulator loads it at runtime (falls back to `web/sim/geometry.json`).
   - Python PNG mock reads it to render a matching 250×122 preview.
   - Firmware header is generated from it.
-- Regenerate the firmware header from JSON before building firmware:
+- Firmware auto-generation:
+  - PlatformIO now runs `scripts/gen_layout_header.py` automatically as a pre-build step for all Arduino envs. You do not need to call it manually.
+  - The generated header is `firmware/arduino/src/display_layout.h`.
+- Manual run (optional): only if you want to re-generate outside of PlatformIO:
 
 ```bash
 python3 scripts/gen_layout_header.py
+```
+
+- Icon bitmaps:
+  - Weather/moon icons are generated from SVGs by `scripts/convert_icons.py` into `firmware/arduino/src/icons_generated.h`.
+  - This is not run every build (icons don't change often). Re-run only after changing the SVGs in `web/icons/mdi/`:
+
+```bash
+python3 scripts/convert_icons.py
 ```
 
 - Tests validate that the mock and sim are in sync (snapshot + pixel checks).
