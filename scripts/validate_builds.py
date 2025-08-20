@@ -27,9 +27,8 @@ def main() -> int:
         "--environments",
         nargs="*",
         default=[
-            "feather_esp32s2",
+            "feather_esp32s2_display_only",
             "feather_esp32s2_headless",
-            "feather_esp32s2_field",
         ],
     )
     args = ap.parse_args()

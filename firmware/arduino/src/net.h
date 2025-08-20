@@ -59,6 +59,9 @@ struct OutsideReadings {
 static WiFiClient g_wifi_client;
 static PubSubClient g_mqtt(g_wifi_client);
 static OutsideReadings g_outside;
+// Optional time (HH:MM) from MQTT; fallback to SNTP/RTC
+static char g_time_hhmm[8] = {0};
+static bool g_have_time_from_mqtt = false;
 static char g_client_id[40];
 static Preferences g_net_prefs;
 static Preferences g_offline_prefs;
@@ -406,6 +409,20 @@ inline void mqtt_callback(char* topic, uint8_t* payload, unsigned int length) {
   } else if (ends_with(topic, "/lo") || ends_with(topic, "/low")) {
     g_outside.lowTempC = atof(val);
     g_outside.validLow = isfinite(g_outside.lowTempC);
+  } else if (ends_with(topic, "/time") || ends_with(topic, "/clock")) {
+    // Accept sanitized HH:MM text for header time
+    char buf[8] = {0};
+    size_t j = 0;
+    for (unsigned int i = 0; i < n && j < sizeof(buf) - 1; ++i) {
+      char c = val[i];
+      if ((c >= '0' && c <= '9') || c == ':') buf[j++] = c;
+    }
+    buf[j] = '\0';
+    if (strlen(buf) == 5 && buf[2] == ':' && isdigit(buf[0]) && isdigit(buf[1]) && isdigit(buf[3]) && isdigit(buf[4])) {
+      strncpy(g_time_hhmm, buf, sizeof(g_time_hhmm));
+      g_time_hhmm[sizeof(g_time_hhmm) - 1] = '\0';
+      g_have_time_from_mqtt = true;
+    }
   }
 }
 
@@ -808,6 +825,19 @@ inline void net_begin() {
   // Refresh time occasionally; quick and only when stale
   ensure_time_synced_if_stale();
   ensure_mqtt_connected();
+}
+
+inline void net_time_hhmm(char* out, size_t out_size) {
+  if (!out || out_size == 0) return;
+  if (g_have_time_from_mqtt && g_time_hhmm[0] != '\0') {
+    strncpy(out, g_time_hhmm, out_size);
+    out[out_size - 1] = '\0';
+    return;
+  }
+  time_t now = time(nullptr);
+  struct tm tm_now;
+  localtime_r(&now, &tm_now);
+  snprintf(out, out_size, "%02d:%02d", tm_now.tm_hour, tm_now.tm_min);
 }
 
 inline void net_loop() {

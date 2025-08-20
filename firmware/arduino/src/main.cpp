@@ -596,11 +596,15 @@ static void draw_static_chrome() {
   display.setCursor(6, 13 + TOP_Y_OFFSET + HEADER_NAME_Y_ADJ);
   display.print(ROOM_NAME);
 
-  // Section labels
+  // Section labels: left 'INSIDE'; top-right shows version; center shows time
   display.setCursor(6, 22 + TOP_Y_OFFSET);
   display.print(F("INSIDE"));
-  display.setCursor(131, 22 + TOP_Y_OFFSET);
-  display.print(F("OUTSIDE"));
+  // Top-right version string within HEADER_TIME box
+  display.setCursor(HEADER_TIME[0] + HEADER_TIME[2] - 2 - text_width_default_font("v", 1) - text_width_default_font(FW_VERSION, 1),
+                    HEADER_TIME[1] + TOP_Y_OFFSET + HEADER_TIME[3] - 5);
+  display.print(F("v"));
+  display.print(FW_VERSION);
+  // Center time will be drawn later in draw_header_time(_direct)
 }
 
 static inline int16_t text_width_default_font(const char* s, uint8_t size) {
@@ -783,13 +787,14 @@ static void make_short_condition_cstr(const char* weather, char* out, size_t out
 }
 
 static void draw_header_time(const char* time_str) {
-  int rect2[4] = {HEADER_TIME[0], static_cast<int16_t>(HEADER_TIME[1] + TOP_Y_OFFSET), HEADER_TIME[2], HEADER_TIME[3]};
+  // Draw centered time within HEADER_CENTER box to avoid overlapping the version
+  int rect2[4] = {HEADER_CENTER[0], static_cast<int16_t>(HEADER_CENTER[1] + TOP_Y_OFFSET), HEADER_CENTER[2], HEADER_CENTER[3]};
   draw_in_region(rect2, [&](int16_t xx, int16_t yy, int16_t ww, int16_t hh) {
     display.setTextColor(GxEPD_BLACK);
     display.setTextSize(1);
     int16_t tw = text_width_default_font(time_str, 1);
-    int16_t rx = xx + ww - 2 - tw;
-    int16_t by = yy + hh - 2; // baseline
+    int16_t rx = static_cast<int16_t>(xx + (ww - tw) / 2);
+    int16_t by = yy + hh - 3; // baseline nudge up to align with room name
     display.setCursor(rx, by);
     display.print(time_str);
   });
@@ -797,9 +802,8 @@ static void draw_header_time(const char* time_str) {
 
 static inline void draw_header_time_direct(const char* time_str) {
   int16_t tw = text_width_default_font(time_str, 1);
-  // Nudge left and up to align with room name baseline
-  int16_t rx = static_cast<int16_t>(HEADER_TIME[0] + HEADER_TIME[2] - 4 - tw);
-  int16_t by = static_cast<int16_t>(HEADER_TIME[1] + TOP_Y_OFFSET + HEADER_TIME[3] - 5);
+  int16_t rx = static_cast<int16_t>(HEADER_CENTER[0] + (HEADER_CENTER[2] - tw) / 2);
+  int16_t by = static_cast<int16_t>(HEADER_CENTER[1] + TOP_Y_OFFSET + HEADER_CENTER[3] - 5);
   display.setTextColor(GxEPD_BLACK);
   display.setTextSize(1);
   display.setCursor(rx, by);
@@ -1036,8 +1040,11 @@ static void full_refresh_v2() {
     display.print(ROOM_NAME);
     display.setCursor(6, 22 + TOP_Y_OFFSET);
     display.print(F("INSIDE"));
-    display.setCursor(131, 22 + TOP_Y_OFFSET);
-    display.print(F("OUTSIDE"));
+    // Top-right version in HEADER_TIME box for this debug view
+    display.setCursor(HEADER_TIME[0] + HEADER_TIME[2] - 2 - text_width_default_font("v", 1) - text_width_default_font(FW_VERSION, 1),
+                      HEADER_TIME[1] + TOP_Y_OFFSET + HEADER_TIME[3] - 5);
+    display.print(F("v"));
+    display.print(FW_VERSION);
 
     // Values from current sensors/network (snapshotted before pages)
     {
@@ -1250,8 +1257,10 @@ static void full_refresh() {
       display.print(pstr);
     }
 
-    // Header time
-    draw_header_time_direct("10:32");
+    // Header time (prefer MQTT/RTC rather than fixed string)
+    char hhmm[8];
+    net_time_hhmm(hhmm, sizeof(hhmm));
+    draw_header_time_direct(hhmm);
     // Footer left: multi-line battery/IP stacked
     {
       int16_t x = FOOTER_L[0];
@@ -1326,8 +1335,10 @@ static void full_refresh_minimal() {
     display.print(ROOM_NAME);
     display.setCursor(6, 22 + TOP_Y_OFFSET);
     display.print(F("INSIDE"));
-    display.setCursor(131, 22 + TOP_Y_OFFSET);
-    display.print(F("OUTSIDE"));
+    display.setCursor(HEADER_TIME[0] + HEADER_TIME[2] - 2 - text_width_default_font("v", 1) - text_width_default_font(FW_VERSION, 1),
+                      HEADER_TIME[1] + TOP_Y_OFFSET + HEADER_TIME[3] - 5);
+    display.print(F("v"));
+    display.print(FW_VERSION);
     // Placeholder values in all regions to exercise layout
     display.setTextSize(2);
     display.setCursor(INSIDE_TEMP[0] + 10, INSIDE_TEMP[1] + TOP_Y_OFFSET + TEMP_Y_ADJ + TEMP_DOWN_ADJ + INSIDE_TEMP[3] - 6);
@@ -1789,7 +1800,9 @@ void setup() {
     }
     // H/L omitted to avoid overlap with wind in right-bottom
     // Update header time and status every wake (status only if changed)
-    draw_header_time("10:32");
+    char hhmm2[8];
+    net_time_hhmm(hhmm2, sizeof(hhmm2));
+    draw_header_time(hhmm2);
     BatteryStatus bs = read_battery_status();
     char ip_c[32];
     net_ip_cstr(ip_c, sizeof(ip_c));

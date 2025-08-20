@@ -45,6 +45,6 @@ lint:
 
 fw:
 	@echo "Building Arduino firmware"
-	cd firmware/arduino && pio run
+	cd firmware/arduino && pio run -e feather_esp32s2_display_only -e feather_esp32s2_headless
 
 
