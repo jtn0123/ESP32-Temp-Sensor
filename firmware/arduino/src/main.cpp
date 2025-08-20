@@ -584,9 +584,11 @@ static void draw_static_chrome() {
   // Draw outer border flush to panel extents
   display.drawRect(0, 0, EINK_WIDTH, EINK_HEIGHT, GxEPD_BLACK);
   // Header underline aligned with simulator and other draw paths
-  display.drawLine(1, 20 + TOP_Y_OFFSET, EINK_WIDTH - 2, 20 + TOP_Y_OFFSET, GxEPD_BLACK);
+  display.drawLine(1, 22 + TOP_Y_OFFSET, EINK_WIDTH - 2, 22 + TOP_Y_OFFSET, GxEPD_BLACK);
   // Extend the center divider to the bottom frame to match the simulator
   display.drawLine(125, 18 + TOP_Y_OFFSET, 125, EINK_HEIGHT - 2, GxEPD_BLACK);
+  // Single header underline between header and content
+  display.drawLine(1, 16 + TOP_Y_OFFSET, EINK_WIDTH - 2, 16 + TOP_Y_OFFSET, GxEPD_BLACK);
   // Horizontal rule for footer region (drawn at top edge of footer)
   display.drawLine(1, FOOTER_L[1], EINK_WIDTH - 2, FOOTER_L[1], GxEPD_BLACK);
 
@@ -1027,7 +1029,8 @@ static void full_refresh_v2() {
     display.fillScreen(GxEPD_WHITE);
     // Chrome: border, header rule, center divider
     display.drawRect(0, 0, EINK_WIDTH, EINK_HEIGHT, GxEPD_BLACK);
-    display.drawLine(1, 20 + TOP_Y_OFFSET, EINK_WIDTH - 2, 20 + TOP_Y_OFFSET, GxEPD_BLACK);
+    // Single header underline between header and content
+    display.drawLine(1, 16 + TOP_Y_OFFSET, EINK_WIDTH - 2, 16 + TOP_Y_OFFSET, GxEPD_BLACK);
     display.drawLine(125, 18 + TOP_Y_OFFSET, 125, EINK_HEIGHT - 2, GxEPD_BLACK);
     // Debug: outline key regions to verify placement
     display.drawRect(INSIDE_TEMP[0], INSIDE_TEMP[1] + TOP_Y_OFFSET, INSIDE_TEMP[2], INSIDE_TEMP[3], GxEPD_BLACK);
@@ -1329,8 +1332,8 @@ static void full_refresh_minimal() {
     display.fillScreen(GxEPD_WHITE);
     // Border
     display.drawRect(0, 0, EINK_WIDTH, EINK_HEIGHT, GxEPD_BLACK);
-    // Header line and center divider
-    display.drawLine(1, 20 + TOP_Y_OFFSET, EINK_WIDTH - 2, 20 + TOP_Y_OFFSET, GxEPD_BLACK);
+    // Single header underline between header and content
+    display.drawLine(1, 16 + TOP_Y_OFFSET, EINK_WIDTH - 2, 16 + TOP_Y_OFFSET, GxEPD_BLACK);
     display.drawLine(125, 18 + TOP_Y_OFFSET, 125, EINK_HEIGHT - 2, GxEPD_BLACK);
     // Labels
     display.setTextColor(GxEPD_BLACK);
@@ -1340,7 +1343,7 @@ static void full_refresh_minimal() {
     display.setCursor(6, 22 + TOP_Y_OFFSET);
     display.print(F("INSIDE"));
     display.setCursor(HEADER_TIME[0] + HEADER_TIME[2] - 2 - text_width_default_font("v", 1) - text_width_default_font(FW_VERSION, 1),
-                      HEADER_TIME[1] + TOP_Y_OFFSET + HEADER_TIME[3] - 6);
+                      HEADER_TIME[1] + TOP_Y_OFFSET + HEADER_TIME[3] - 8);
     display.print(F("v"));
     display.print(FW_VERSION);
     // Placeholder values in all regions to exercise layout

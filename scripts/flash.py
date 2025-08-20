@@ -26,9 +26,13 @@ def main() -> int:
         help="Sleep behavior: 3m, 1h (default), 2h, or always (no sleep)",
     )
     parser.add_argument(
-        "--headless",
-        action="store_true",
-        help="Build and flash headless variant (no e-ink)",
+        "--env",
+        choices=["full", "display", "headless"],
+        default="full",
+        help=(
+            "Select PlatformIO environment: "
+            "full (sensors + display), display (display-only fast loop), headless (no display)."
+        ),
     )
     parser.add_argument(
         "--build-only",
@@ -40,8 +44,13 @@ def main() -> int:
     proj = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir))
     arduino_dir = os.path.join(proj, "firmware", "arduino")
 
-    # Choose base env: headless or display-only
-    env = "feather_esp32s2_headless" if args.headless else "feather_esp32s2_display_only"
+    # Choose base env: full (with sensors + display), display-only, or headless
+    if args.env == "headless":
+        env = "feather_esp32s2_headless"
+    elif args.env == "display":
+        env = "feather_esp32s2_display_only"
+    else:
+        env = "feather_esp32s2"
 
     # Build EXTRA_FLAGS to control sleep behavior and wake interval
     extra_flags = []

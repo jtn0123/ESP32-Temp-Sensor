@@ -13,6 +13,7 @@
   "voltage": "4.01",
   "percent": "76",
   "days": "128"
+  , "pressure_hpa": 1013.2
 }
 
 

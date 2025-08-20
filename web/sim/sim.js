@@ -337,90 +337,128 @@
     const numIn = `${data.inside_temp||'72.5'}`;
     drawTempCentered(INSIDE_TEMP, numIn, 'inside');
     text(INSIDE_RH[0], INSIDE_RH[1], `${data.inside_hum||'47'}% RH`, SIZE_SMALL);
-    // Omit duplicate time here; header shows time
+    // Inside pressure (hPa) in INSIDE_TIME to match device UI (if provided)
+    try{
+      const pressVal = parseFloat((data.pressure_hpa ?? data.press ?? data.inside_pressure));
+      if (isFinite(pressVal)){
+        text(INSIDE_TIME[0], INSIDE_TIME[1], `${pressVal.toFixed(1)} hPa`, SIZE_SMALL);
+      }
+    }catch(e){ /* ignore if not provided */ }
+    // Omit duplicate inside time; header shows time
 
     const numOut = `${data.outside_temp||'68.4'}`;
     drawTempCentered(OUT_TEMP, numOut, 'outside');
-    // Outside details: split RH and wind into two rows to avoid collisions
+    // Outside details (device v1): RH bottom-left, wind bottom-right
     const condition = shortConditionLabel(data.weather || 'Cloudy');
     const rhText = `${data.outside_hum||'53'}% RH`;
     let windMps = parseFloat(data.wind || '4.2');
     if (!isFinite(windMps)) windMps = 4.2;
     const wind = `${(windMps*2.237).toFixed(1)} mph`;
-    // Row 1 (left): RH
-    drawTextInRect(OUT_ROW1_L, rhText, SIZE_SMALL, 'normal', 'left', 1);
-    // Row 2 (left): wind (mph) — nudge down 1px to avoid descender clipping
-    drawTextInRect([OUT_ROW2_L[0], OUT_ROW2_L[1]+1, OUT_ROW2_L[2], OUT_ROW2_L[3]], wind, SIZE_SMALL, 'normal', 'left', 1);
-    // Unified layout: split + three-row status
-    // Three-row left status and right weather area
-    ctx.fillStyle = '#fff';
-    ctx.fillRect(STATUS[0], STATUS[1]-18, 125-STATUS[0], STATUS[3]+22);
-    ctx.fillRect(125, STATUS[1]-18, WIDTH-125-1, STATUS[3]+22);
-    ctx.fillStyle = '#000';
+    // nudge down 1px to avoid descender clipping
+    drawTextInRect([OUT_ROW2_L[0], OUT_ROW2_L[1]+1, OUT_ROW2_L[2], OUT_ROW2_L[3]], rhText, SIZE_SMALL, 'normal', 'left', 1);
+    drawTextInRect([OUT_ROW2_R[0], OUT_ROW2_R[1]+1, OUT_ROW2_R[2], OUT_ROW2_R[3]], wind, SIZE_SMALL, 'normal', 'left', 1);
+    // Prefer firmware footer blocks if available; otherwise fall back to status band + bar
+    const R = (GJSON && GJSON.rects) ? GJSON.rects : {};
+    const FOOTER_L = Array.isArray(R.FOOTER_L) ? R.FOOTER_L : null;
+    const FOOTER_R = Array.isArray(R.FOOTER_R) ? R.FOOTER_R : null;
     const pct = parseInt(data.percent||'76', 10);
-    let   bx = STATUS[0] + 1; // will be adjusted to center the whole battery group
-    const bw = 13, bh = 7;
-    const baseY = STATUS[1] - 18;
-    // horizontal rule above status
-    ctx.fillStyle = '#000';
-    ctx.fillRect(0, baseY - 2, WIDTH, 1);
-    ctx.fillStyle = '#000';
-    // ensure center divider reaches bottom
-    ctx.fillRect(125, 18, 1, HEIGHT-18-1);
-    // Compute centering for the entire battery group (icon + two text rows)
-    const line1 = `Batt ${data.voltage||'4.01'}V`;
-    const line2 = `~${data.days||'128'}d   ${pct}%`;
-    ctx.font = `${SIZE_STATUS}px ${FONT_STACK}`;
-    const textMaxW = Math.max(ctx.measureText(line1).width, ctx.measureText(line2).width);
-    const iconTotalW = bw + 2; // include the battery cap
-    const statusGap = 6; // space between icon and text (distinct from weather gap)
-    const groupW = iconTotalW + statusGap + textMaxW;
-    const leftColLeft = STATUS[0] + 1;
-    const leftColRight = 125 - 2;
-    const groupLeft = leftColLeft + Math.max(0, Math.floor((leftColRight - leftColLeft - groupW) / 2));
-    bx = groupLeft; // shift icon to center the whole group
+    if (FOOTER_L && FOOTER_R){
+      // Footer left: stacked Batt/ETA and centered IP
+      const x = FOOTER_L[0], y = FOOTER_L[1], w = FOOTER_L[2], h = FOOTER_L[3];
+      ctx.fillStyle = '#fff'; ctx.fillRect(x, y, w, h);
+      ctx.fillStyle = '#000';
+      ctx.font = `${SIZE_STATUS}px ${FONT_STACK}`; ctx.fillStyle = '#000';
+      const line1 = `Batt ${data.voltage||'4.01'}V ${pct}%`;
+      const line2 = `~${data.days||'128'}d`;
+      text(x + 2, y + 1, line1, SIZE_STATUS);
+      text(x + 2, y + 11, line2, SIZE_STATUS);
+      const ip = `IP ${data.ip||'192.168.1.42'}`; const iw = ctx.measureText(ip).width;
+      const ipLeft = x + Math.max(0, Math.floor((w - iw)/2));
+      text(ipLeft, y + 21, ip, SIZE_STATUS);
 
-    // Battery glyph (vertically centered between the two top status rows)
-    const by = Math.round(baseY + 8 - bh/2);
-    ctx.strokeStyle = '#000'; ctx.strokeRect(bx, by, bw, bh); ctx.fillStyle = '#000';
-    ctx.fillRect(bx + bw, by + 2, 2, 4);
-    const fillw3 = Math.max(0, Math.min(bw-2, Math.round((bw-2) * (pct/100)))); if (fillw3>0) ctx.fillRect(bx+1, by+1, fillw3, bh-2);
-    // Rows (positioned after centering calculation)
-    const leftTextX = bx + iconTotalW + statusGap;
-    text(leftTextX, baseY-2, line1, SIZE_STATUS);
-    text(leftTextX, baseY+8, line2, SIZE_STATUS);
-    const ip = `IP ${data.ip||'192.168.1.42'}`; const iw = ctx.measureText(ip).width;
-    const ipAreaLeft = leftColLeft; const ipAreaRight = leftColRight;
-    const ipCenterLeft = ipAreaLeft + Math.max(0, Math.floor((ipAreaRight - ipAreaLeft - iw) / 2));
-    ctx.fillStyle = '#fff'; ctx.fillRect(ipAreaLeft-1, baseY+17, ipAreaRight-ipAreaLeft+2, SIZE_STATUS+2);
-    ctx.fillStyle = '#000';
-    text(ipCenterLeft, baseY+18, ip, SIZE_STATUS);
-    // Right weather: scale icon and fit label
-    const cond = shortConditionLabel(data.weather||'Cloudy');
-    const barX = 130, barW = 114, gap = 8, barY = 95;
-    // Draw weather icon about 20% larger than before by inflating its layout width
-    const ICON_DRAW_SCALE = 1.2;
-    let candidateIcon = 26;
-    function eff(iconSize){ return Math.round(iconSize * ICON_DRAW_SCALE); }
-    function fitLabel(iconSize){
-      const iconDrawW = eff(iconSize);
-      const maxText = barW - iconDrawW - gap - 2;
-      let s = cond;
-      while (ctx.measureText(s).width > maxText && s.length > 1) s = s.slice(0,-1);
-      if (s !== cond && s.length>1) s = s.slice(0,-1) + '…';
-      return {label:s, fits: ctx.measureText(s).width <= maxText, icon: iconSize, drawW: iconDrawW};
+      // Footer right: icon + short condition label
+      const rx = FOOTER_R[0], ry = FOOTER_R[1], rw = FOOTER_R[2], rh = FOOTER_R[3];
+      ctx.fillStyle = '#fff'; ctx.fillRect(rx, ry, rw, rh); ctx.fillStyle = '#000';
+      const cond = shortConditionLabel(data.weather||'Cloudy');
+      const iconSelector = (data.moon_phase ? `moon_${(data.moon_phase||'').toLowerCase().replace(/\s+/g,'_')}` : (data.weather||'Cloudy'));
+      const effW = Math.min(24, rw - 28);
+      const effH = Math.min(24, rh - 4);
+      const ix = rx + 2, iy = ry + Math.max(0, Math.floor((rh - effH)/2));
+      weatherIcon([ix, iy, ix + effW, iy + effH], iconSelector);
+      const tx2 = ix + effW + 4; const ty2 = ry + Math.max(0, Math.floor((rh - SIZE_SMALL)/2));
+      text(tx2, ty2, cond, SIZE_SMALL);
+      // Draw OUTSIDE label once
+      text(olx, 22, outsideLabel, SIZE_LABEL, 'bold');
+    } else {
+      // Fallback: legacy status band with centered group and right bar
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(STATUS[0], STATUS[1]-18, 125-STATUS[0], STATUS[3]+22);
+      ctx.fillRect(125, STATUS[1]-18, WIDTH-125-1, STATUS[3]+22);
+      ctx.fillStyle = '#000';
+      let   bx = STATUS[0] + 1; // will be adjusted to center the whole battery group
+      const bw = 13, bh = 7;
+      const baseY = STATUS[1] - 18;
+      // horizontal rule above status
+      ctx.fillStyle = '#000';
+      ctx.fillRect(0, baseY - 2, WIDTH, 1);
+      ctx.fillStyle = '#000';
+      // ensure center divider reaches bottom
+      ctx.fillRect(125, 18, 1, HEIGHT-18-1);
+      // Compute centering for the entire battery group (icon + two text rows)
+      const line1 = `Batt ${data.voltage||'4.01'}V`;
+      const line2 = `~${data.days||'128'}d   ${pct}%`;
+      ctx.font = `${SIZE_STATUS}px ${FONT_STACK}`;
+      const textMaxW = Math.max(ctx.measureText(line1).width, ctx.measureText(line2).width);
+      const iconTotalW = bw + 2; // include the battery cap
+      const statusGap = 6; // space between icon and text (distinct from weather gap)
+      const groupW = iconTotalW + statusGap + textMaxW;
+      const leftColLeft = STATUS[0] + 1;
+      const leftColRight = 125 - 2;
+      const groupLeft = leftColLeft + Math.max(0, Math.floor((leftColRight - leftColLeft - groupW) / 2));
+      bx = groupLeft; // shift icon to center the whole group
+
+      // Battery glyph (vertically centered between the two top status rows)
+      const by = Math.round(baseY + 8 - bh/2);
+      ctx.strokeStyle = '#000'; ctx.strokeRect(bx, by, bw, bh); ctx.fillStyle = '#000';
+      ctx.fillRect(bx + bw, by + 2, 2, 4);
+      const fillw3 = Math.max(0, Math.min(bw-2, Math.round((bw-2) * (pct/100)))); if (fillw3>0) ctx.fillRect(bx+1, by+1, fillw3, bh-2);
+      // Rows (positioned after centering calculation)
+      const leftTextX = bx + iconTotalW + statusGap;
+      text(leftTextX, baseY-2, line1, SIZE_STATUS);
+      text(leftTextX, baseY+8, line2, SIZE_STATUS);
+      const ip = `IP ${data.ip||'192.168.1.42'}`; const iw = ctx.measureText(ip).width;
+      const ipAreaLeft = leftColLeft; const ipAreaRight = leftColRight;
+      const ipCenterLeft = ipAreaLeft + Math.max(0, Math.floor((ipAreaRight - ipAreaLeft - iw) / 2));
+      ctx.fillStyle = '#fff'; ctx.fillRect(ipAreaLeft-1, baseY+17, ipAreaRight-ipAreaLeft+2, SIZE_STATUS+2);
+      ctx.fillStyle = '#000';
+      text(ipCenterLeft, baseY+18, ip, SIZE_STATUS);
+      // Right weather: scale icon and fit label
+      const cond = shortConditionLabel(data.weather||'Cloudy');
+      const barX = 130, barW = 114, gap = 8, barY = 95;
+      // Draw weather icon about 20% larger than before by inflating its layout width
+      const ICON_DRAW_SCALE = 1.2;
+      let candidateIcon = 26;
+      function eff(iconSize){ return Math.round(iconSize * ICON_DRAW_SCALE); }
+      function fitLabel(iconSize){
+        const iconDrawW = eff(iconSize);
+        const maxText = barW - iconDrawW - gap - 2;
+        let s = cond;
+        while (ctx.measureText(s).width > maxText && s.length > 1) s = s.slice(0,-1);
+        if (s !== cond && s.length>1) s = s.slice(0,-1) + '…';
+        return {label:s, fits: ctx.measureText(s).width <= maxText, icon: iconSize, drawW: iconDrawW};
+      }
+      let fit = fitLabel(candidateIcon);
+      while (!fit.fits && candidateIcon > 18){ candidateIcon--; fit = fitLabel(candidateIcon); }
+      const label = fit.label; const iconW = fit.drawW, iconH = fit.drawW;
+      const totalW = iconW + gap + ctx.measureText(label).width;
+      const startX = barX + Math.max(0, Math.floor((barW - totalW)/2));
+      const iconSelector = (data.moon_phase ? `moon_${(data.moon_phase||'').toLowerCase().replace(/\s+/g,'_')}` : (data.weather||'Cloudy'));
+      weatherIcon([startX, barY, startX+iconW, barY+iconH], iconSelector);
+      const labelTop = barY + Math.max(0, Math.floor((iconH - SIZE_SMALL)/2)) + 1;
+      text(startX + iconW + gap, labelTop, label, SIZE_SMALL);
+      // Draw OUTSIDE label once
+      text(olx, 22, outsideLabel, SIZE_LABEL, 'bold');
     }
-    let fit = fitLabel(candidateIcon);
-    while (!fit.fits && candidateIcon > 18){ candidateIcon--; fit = fitLabel(candidateIcon); }
-    const label = fit.label; const iconW = fit.drawW, iconH = fit.drawW;
-    const totalW = iconW + gap + ctx.measureText(label).width;
-    const startX = barX + Math.max(0, Math.floor((barW - totalW)/2));
-    const iconSelector = (data.moon_phase ? `moon_${(data.moon_phase||'').toLowerCase().replace(/\s+/g,'_')}` : (data.weather||'Cloudy'));
-    weatherIcon([startX, barY, startX+iconW, barY+iconH], iconSelector);
-    const labelTop = barY + Math.max(0, Math.floor((iconH - SIZE_SMALL)/2)) + 1;
-    text(startX + iconW + gap, labelTop, label, SIZE_SMALL);
-    // Draw OUTSIDE label once
-    text(olx, 22, outsideLabel, SIZE_LABEL, 'bold');
 
     // Single-row status removed; unified split3 layout renders status above
 
