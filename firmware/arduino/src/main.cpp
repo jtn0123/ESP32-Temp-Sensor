@@ -596,9 +596,11 @@ static void draw_static_chrome() {
   display.setCursor(6, 13 + TOP_Y_OFFSET + HEADER_NAME_Y_ADJ);
   display.print(ROOM_NAME);
 
-  // Section labels: left 'INSIDE'; top-right shows version; center shows time
+  // Section labels: left 'INSIDE', right 'OUTSIDE'; top-right also shows version
   display.setCursor(6, 22 + TOP_Y_OFFSET);
   display.print(F("INSIDE"));
+  display.setCursor(131, 22 + TOP_Y_OFFSET);
+  display.print(F("OUTSIDE"));
   // Top-right version string within HEADER_TIME box
   display.setCursor(HEADER_TIME[0] + HEADER_TIME[2] - 2 - text_width_default_font("v", 1) - text_width_default_font(FW_VERSION, 1),
                     HEADER_TIME[1] + TOP_Y_OFFSET + HEADER_TIME[3] - 5);
@@ -1040,6 +1042,8 @@ static void full_refresh_v2() {
     display.print(ROOM_NAME);
     display.setCursor(6, 22 + TOP_Y_OFFSET);
     display.print(F("INSIDE"));
+    display.setCursor(131, 22 + TOP_Y_OFFSET);
+    display.print(F("OUTSIDE"));
     // Top-right version in HEADER_TIME box for this debug view
     display.setCursor(HEADER_TIME[0] + HEADER_TIME[2] - 2 - text_width_default_font("v", 1) - text_width_default_font(FW_VERSION, 1),
                       HEADER_TIME[1] + TOP_Y_OFFSET + HEADER_TIME[3] - 5);
