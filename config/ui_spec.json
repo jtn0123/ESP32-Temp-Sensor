@@ -12,6 +12,7 @@
   "rects": {
     "HEADER_NAME": [6, 2, 160, 14],
     "HEADER_TIME": [172, 2, 72, 14],
+    "HEADER_CENTER": [100, 2, 50, 14],
     "INSIDE_TEMP": [6, 36, 118, 28],
     "INSIDE_RH":   [6, 66, 118, 14],
     "INSIDE_TIME": [6, 78, 118, 12],
@@ -33,6 +34,12 @@
     { "default": true,                               "icon": "weather-sunny" }
   ],
   "components": {
+    "header_centered": [
+      { "op": "line", "from": [1, 18], "to": [249, 18] },
+      { "op": "text", "rect": "HEADER_NAME", "font": "label", "align": "left", "text": "{room_name}", "truncate": "ellipsis" },
+      { "op": "textCenteredIn", "rect": "HEADER_CENTER", "yOffset": 1, "font": "time", "text": "{time_hhmm}" },
+      { "op": "text", "rect": "HEADER_TIME", "font": "time", "align": "right", "text": "v{fw_version}" }
+    ],
     "header": [
       { "op": "line", "from": [1, 18], "to": [249, 18] },
       { "op": "text", "rect": "HEADER_NAME", "font": "label", "align": "left", "text": "{room_name}", "truncate": "ellipsis" },
@@ -61,9 +68,10 @@
   },
   "variants": {
     "v1": ["header", "inside", "outside", "footer_split"],
+    "v2": ["header_centered", "inside", "outside", "footer_split"],
     "minimal": ["header"]
   },
-  "defaultVariant": "v1",
+  "defaultVariant": "v2",
   "regions": {
     "partial": {
       "INSIDE_TEMP": ["tempGroupCentered"],

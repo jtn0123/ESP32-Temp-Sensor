@@ -274,6 +274,157 @@
     }
   }
 
+  // ---- UI spec interpreter (web) ----
+  function _uiFormatField(data, key){
+    if (!key) return '';
+    // Extract base key, conversion, and format
+    const convMatch = key.match(/->([a-z]+)/);
+    const fmtMatch = key.match(/:(.*)$/);
+    const base = key.replace(/[:].*$/, '').replace(/->.*$/, '');
+    // Prefer exact key, then fallback for _f suffix
+    let v = (data[base] !== undefined) ? data[base] : data[base.replace(/_f$/, '')];
+    if (v === undefined || v === null) return '';
+    // Conversions
+    if (convMatch && String(v).trim() !== ''){
+      const to = convMatch[1];
+      const num = parseFloat(v);
+      if (isFinite(num)){
+        if (to === 'mph') v = num * 2.237;
+      }
+    }
+    // Formatting like .1f
+    if (fmtMatch){
+      const f = fmtMatch[1];
+      const m = f.match(/\.(\d)f/);
+      if (m){
+        const d = parseInt(m[1]);
+        const num = parseFloat(v);
+        if (isFinite(num)) v = num.toFixed(d);
+      }
+    }
+    return String(v);
+  }
+
+  function _uiEvalWhen(expr, data){
+    if (!expr) return true;
+    if (/^has\(/.test(expr)){
+      const k = expr.slice(4, -1);
+      const v = data[k];
+      return !(v === undefined || v === null || v === '');
+    }
+    return true;
+  }
+
+  function drawFromSpec(ctx, data, variantName){
+    try{
+      const spec = (typeof window !== 'undefined' && window.UI_SPEC) ? window.UI_SPEC : {};
+      const rects = spec.rects || {};
+      const fonts = (spec.fonts && spec.fonts.tokens) ? spec.fonts.tokens : {};
+      const pxBig = (fonts.big && fonts.big.px) ? fonts.big.px : SIZE_BIG;
+      const pxSmall = (fonts.small && fonts.small.px) ? fonts.small.px : SIZE_SMALL;
+      const pxLabel = (fonts.label && fonts.label.px) ? fonts.label.px : SIZE_LABEL;
+      const pxTime = (fonts.time && fonts.time.px) ? fonts.time.px : SIZE_TIME;
+      const variants = spec.variants || {};
+      const list = variants[variantName || spec.defaultVariant] || [];
+      for (const cname of list){
+        const ops = (spec.components || {})[cname] || [];
+        for (const op of ops){
+          if (op.when && !_uiEvalWhen(op.when, data)) continue;
+          switch(op.op){
+            case 'line': {
+              const fx = (op.from && op.from[0]) || 0;
+              const fy = (op.from && op.from[1]) || 0;
+              const tx = (op.to && op.to[0]) || 0;
+              const ty = (op.to && op.to[1]) || 0;
+              ctx.fillStyle = '#000';
+              if (fy === ty) ctx.fillRect(Math.min(fx,tx), fy, Math.abs(tx - fx) + 1, 1);
+              else if (fx === tx) ctx.fillRect(fx, Math.min(fy,ty), 1, Math.abs(ty - fy) + 1);
+              break;
+            }
+            case 'text': {
+              const r = op.rect ? rects[op.rect] : null;
+              const fpx = ((fonts[op.font||'small']||{}).px) || pxSmall;
+              const weight = ((fonts[op.font||'small']||{}).weight) || 'normal';
+              const align = op.align || 'left';
+              let s = String(op.text || '');
+              s = s.replace(/\{([^}]+)\}/g, (_,k)=>_uiFormatField(data, k));
+              if (r){
+                drawTextInRect(r, s, fpx, weight, align, 1);
+              } else {
+                text(op.x||0, op.y||0, s, fpx, weight);
+              }
+              break;
+            }
+            case 'timeRight': {
+              const r = rects[op.rect]; if (!r) break;
+              const fpx = ((fonts[op.font||'time']||{}).px) || pxTime;
+              const s = _uiFormatField(data, String(op.source||'{time_hhmm}').replace(/[{}]/g,'')) || (data.time||'');
+              const tw = ctx.measureText(s).width;
+              text(r[0] + r[2] - 2 - tw, r[1] + 1, s, fpx);
+              break;
+            }
+            case 'labelCentered': {
+              const r = rects[op.aboveRect]; if (!r) break;
+              const fpx = ((fonts[op.font||'label']||{}).px) || pxLabel;
+              const weight = ((fonts[op.font||'label']||{}).weight) || 'bold';
+              const lab = String(op.text||'');
+              ctx.font = `${weight} ${fpx}px ${FONT_STACK}`;
+              ctx.textBaseline = 'top'; ctx.fillStyle = '#000';
+              const lw = ctx.measureText(lab).width;
+              const lx = r[0] + Math.floor((r[2] - lw)/2);
+              text(lx, op.y || (r[1] - (fpx+2)), lab, fpx, weight);
+              break;
+            }
+            case 'tempGroupCentered': {
+              const r = rects[op.rect]; if (!r) break;
+              const key = String(op.value||'{inside_temp_f}').replace(/[{}]/g,'');
+              const v = _uiFormatField(data, key) || (data.inside_temp || '');
+              drawTempCentered(r, v, key.includes('outside') ? 'outside' : 'inside');
+              break;
+            }
+            case 'textCenteredIn': {
+              const r = rects[op.rect]; if (!r) break;
+              const fpx = ((fonts[op.font||'small']||{}).px) || pxSmall;
+              const weight = ((fonts[op.font||'small']||{}).weight) || 'normal';
+              const s = String(op.text||'').replace(/\{([^}]+)\}/g, (_,k)=>_uiFormatField(data, k));
+              ctx.font = `${weight} ${fpx}px ${FONT_STACK}`; ctx.textBaseline='top';
+              const tw = ctx.measureText(s).width;
+              const x = r[0] + Math.max(0, Math.floor((r[2]-tw)/2));
+              text(x, (op.yOffset? (r[1]+op.yOffset) : r[1]), s, fpx, weight);
+              break;
+            }
+            case 'iconIn': {
+              const r = rects[op.rect]; if (!r) break;
+              const key = String(op.iconFromWeather||'{weather}').replace(/[{}]/g,'');
+              const s = data[key] || data.weather || '';
+              weatherIcon([r[0], r[1], r[0]+r[2], r[1]+r[3]], s);
+              break;
+            }
+            case 'shortCondition': {
+              const r = rects[op.rect]; if (!r) break;
+              const fpx = ((fonts[op.font||'small']||{}).px) || pxSmall;
+              const s = shortConditionLabel(data.weather || 'Cloudy');
+              const ty = r[1] + Math.max(0, Math.floor((r[3] - fpx)/2));
+              text(r[0] + (op.xOffset||0), ty, s, fpx);
+              break;
+            }
+            case 'batteryGlyph': {
+              const x = op.x||0, y = op.y||0, bw = op.w||13, bh = op.h||7;
+              const pct = parseInt(_uiFormatField(data, String(op.percent||'{battery_percent}').replace(/[{}]/g,''))||'0', 10);
+              ctx.strokeStyle = '#000'; ctx.strokeRect(x, y, bw, bh); ctx.fillStyle = '#000';
+              ctx.fillRect(x + bw, y + 2, 2, 4);
+              const fillw = Math.max(0, Math.min(bw-2, Math.round((bw-2) * (pct/100))));
+              if (fillw > 0) ctx.fillRect(x+1, y+1, fillw, bh-2);
+              break;
+            }
+            default: break;
+          }
+        }
+      }
+    }catch(e){ /* ignore */ }
+  }
+  window.drawFromSpec = drawFromSpec;
+
   const DEFAULTS = {
     room_name: 'Office',
     time: '10:32',
@@ -315,6 +466,15 @@
     const maxNameW = Math.max(0, timeX - 4 - HEADER_NAME[0]);
     textTruncated(HEADER_NAME[0], HEADER_NAME[1]+1, Math.min(maxNameW, HEADER_NAME[2]-2), data.room_name || 'Room', 12, 'bold');
     text(timeX, HEADER_TIME[1]+1, t, SIZE_TIME);
+    // If spec requests version in top-right, draw v + fw_version
+    try{
+      const v = (window.UI_FW_VERSION || (GJSON && GJSON.fw) || (typeof FW_VERSION === 'string' ? FW_VERSION : '') || '');
+      if (v){
+        const vx = HEADER_TIME[0] + HEADER_TIME[2] - 2 - ctx.measureText('v').width - ctx.measureText(v).width;
+        text(vx, HEADER_TIME[1] + HEADER_TIME[3] - 8, 'v', SIZE_TIME);
+        text(vx + ctx.measureText('v').width, HEADER_TIME[1] + HEADER_TIME[3] - 8, v, SIZE_TIME);
+      }
+    }catch(e){ /* ignore */ }
     // Deterministic probe pixel for tests: mark the center of time text box black
     // This avoids font/kerning differences across environments landing on whitespace
     const probeCx = Math.floor(timeX + Math.max(1, Math.floor(tw/2)));
@@ -501,6 +661,14 @@
     }
 
     // Single-row status removed; unified split3 layout renders status above
+
+    // Also draw from generated UI spec (kept additive for now to avoid test regressions)
+    try{
+      if (typeof window !== 'undefined' && typeof window.drawFromSpec === 'function'){
+        const variant = (typeof window.UI_SPEC==='object' && window.UI_SPEC && window.UI_SPEC.defaultVariant) ? window.UI_SPEC.defaultVariant : 'v1';
+        window.drawFromSpec(ctx, data, variant);
+      }
+    }catch(e){ /* ignore if drawFromSpec missing or throws */ }
 
     // partial window overlay
     if (showWindows){

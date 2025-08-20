@@ -154,6 +154,12 @@ def draw_layout(draw: ImageDraw.ImageDraw, data: dict):
     t = data.get("time", "10:32")
     tx = HEADER_TIME[2] - 2 - len(t) * 6
     draw.text((tx, HEADER_TIME[1] + 1), t, font=load_font(10), fill=0)
+    # Optional version string in top-right like device (if provided)
+    v = str(data.get("fw_version") or "").strip()
+    if v:
+        vx = HEADER_TIME[0] + HEADER_TIME[2] - 2 - len("v") * 6 - len(v) * 6
+        draw.text((vx, HEADER_TIME[1] + HEADER_TIME[3] - 8), "v", font=load_font(10), fill=0)
+        draw.text((vx + 6, HEADER_TIME[1] + HEADER_TIME[3] - 8), v, font=load_font(10), fill=0)
 
     # Section labels
     font_lbl = load_font(10)
