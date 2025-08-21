@@ -922,6 +922,18 @@
       window.location.replace(url.toString());
     });
   }
+  const variantSel = document.getElementById('variantMode');
+  if (variantSel){
+    const currentVar = QS.get('variant') || (window.UI_SPEC && window.UI_SPEC.defaultVariant) || 'v1';
+    try {
+      if ([...variantSel.options].some(o=>o.value===currentVar)) variantSel.value = currentVar;
+    } catch(e) {}
+    variantSel.addEventListener('change', ()=>{
+      const url = new URL(window.location.href);
+      if (variantSel.value) url.searchParams.set('variant', variantSel.value); else url.searchParams.delete('variant');
+      window.location.replace(url.toString());
+    });
+  }
   load();
 })();
 
