@@ -16,6 +16,10 @@
 #include <Adafruit_MAX1704X.h>
 #include <Wire.h>
 #endif
+#if USE_LC709203F
+#include <Adafruit_LC709203F.h>
+#include <Wire.h>
+#endif
 
 struct BatteryStatus {
   float voltage = NAN;
@@ -48,6 +52,20 @@ inline void fuelgauge_sleep_between_wakes() {
 }
 #endif
 
+#if USE_LC709203F
+static Adafruit_LC709203F g_lcfg;
+static bool g_lcfg_initialized = false;
+
+inline void lc_wake_if_asleep() { /* LC709203F has no sleep API */ }
+
+inline void lc_quickstart_if_cold_boot(esp_reset_reason_t reason) {
+  (void)reason;
+  // LC709203F does not expose quickstart; ensure it is configured
+}
+
+inline void lc_sleep_between_wakes() { /* no-op */ }
+#endif
+
 inline BatteryStatus read_battery_status() {
   BatteryStatus b;
 #if USE_MAX17048
@@ -65,6 +83,26 @@ inline BatteryStatus read_battery_status() {
   if (g_maxfg_initialized) {
     b.voltage = g_maxfg.cellVoltage();
     b.percent = static_cast<int>(g_maxfg.cellPercent() + 0.5f);
+  }
+#endif
+#if USE_LC709203F
+  if (!g_lcfg_initialized) {
+    Wire.begin();
+#ifdef I2C_TIMEOUT_MS
+    Wire.setTimeOut(I2C_TIMEOUT_MS);
+#endif
+    g_lcfg_initialized = g_lcfg.begin();
+    if (g_lcfg_initialized) {
+      g_lcfg.setPackSize(LC709203F_APA_1000MAH);
+      g_lcfg.setThermistorB(3950);
+      lc_wake_if_asleep();
+      lc_quickstart_if_cold_boot(esp_reset_reason());
+    }
+  }
+  if (g_lcfg_initialized) {
+    b.voltage = g_lcfg.cellVoltage();
+    // LC709203F returns percentage as float
+    b.percent = static_cast<int>(g_lcfg.cellPercent() + 0.5f);
   }
 #endif
   if (!isfinite(b.voltage) && VBAT_ADC_PIN >= 0) {
@@ -127,6 +165,11 @@ inline void go_deep_sleep_seconds(uint32_t seconds) {
 #if USE_MAX17048
   if (g_maxfg_initialized) {
     fuelgauge_sleep_between_wakes();
+  }
+#endif
+#if USE_LC709203F
+  if (g_lcfg_initialized) {
+    lc_sleep_between_wakes();
   }
 #endif
   esp_sleep_enable_timer_wakeup(static_cast<uint64_t>(seconds) * 1000000ULL);

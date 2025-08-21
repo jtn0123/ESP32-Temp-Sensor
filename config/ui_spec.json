@@ -33,7 +33,10 @@
     { "match": ["fog", "mist", "haze"],           "icon": "weather-fog" },
     { "match": ["part"],                            "icon": "weather-partly-cloudy" },
     { "match": ["cloud", "overcast"],              "icon": "weather-cloudy" },
-    { "match": ["night"],                           "icon": "weather-night" },
+    { "match": ["night", "clear-night"],           "icon": "weather-night" },
+    { "match": ["wind"],                            "icon": "weather-windy-variant" },
+    { "match": ["hail"],                            "icon": "weather-snowy" },
+    { "match": ["exceptional"],                     "icon": "weather-cloudy" },
     { "default": true,                               "icon": "weather-sunny" }
   ],
   "components": {
@@ -42,7 +45,8 @@
       { "op": "line", "from": [0, 121], "to": [249, 121] },
       { "op": "line", "from": [0, 0],   "to": [0, 121] },
       { "op": "line", "from": [249, 0], "to": [249, 121] },
-      { "op": "line", "from": [125, 18], "to": [125, 121] }
+      { "op": "line", "from": [125, 18], "to": [125, 121] },
+      { "op": "line", "from": [1, 92], "to": [249, 92] }
     ],
     "header_centered": [
       { "op": "line", "from": [1, 18], "to": [249, 18] },
@@ -81,7 +85,7 @@
     "v2": ["chrome", "header_centered", "inside", "outside", "footer_split"],
     "minimal": ["chrome", "header"]
   },
-  "defaultVariant": "v2",
+  "defaultVariant": "v1",
   "regions": {
     "partial": {
       "INSIDE_TEMP": ["tempGroupCentered"],

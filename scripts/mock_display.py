@@ -209,7 +209,7 @@ def draw_layout(draw: ImageDraw.ImageDraw, data: dict):
     wind_text = f"{wind_mps*2.237:.1f} mph"
     draw.text((OUT_ROW1_R[0], OUT_ROW1_R[1]), wind_text, font=font_sm, fill=0)
     # condition short in bottom-left small box
-    cond_text = str(data.get("weather", "Cloudy")).split(" ")[0]
+    cond_text = str(data.get("weather", "Cloudy")).split(" ")[0].split("-")[0]
     draw.text((OUT_ROW2_L[0], OUT_ROW2_L[1]), cond_text, font=font_sm, fill=0)
 
     # Status

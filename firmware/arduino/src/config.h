@@ -24,6 +24,9 @@
 #ifndef USE_MAX17048
 #define USE_MAX17048 0
 #endif
+#ifndef USE_LC709203F
+#define USE_LC709203F 0
+#endif
 
 // Wi-Fi provisioning (ESP-IDF wifi_prov_mgr) compile-time switch
 #ifndef USE_WIFI_PROVISIONING

@@ -20,6 +20,7 @@
 #include "display_layout.h"
 #include "icons.h"
 #include "ui_ops_generated.h"
+#include "ui_generated.h"
 #endif
 #include "generated_config.h"
 #include "net.h"
@@ -46,10 +47,16 @@ static void partial_update_outside_condition(const char* short_condition);
 static void partial_update_weather_icon(const char* weather);
 static void draw_weather_icon_region_at(int16_t x, int16_t y, int16_t w, int16_t h, const char* weather);
 static void draw_header_time(const char* time_str);
+// Accessor to avoid forward reference ordering issues
+static inline float get_last_outside_f();
 static bool maybe_redraw_status(const BatteryStatus& bs, const char* ip_cstr, const int rect[4]);
 template <typename DrawFnFwd>
 static inline void draw_in_region(const int rect[4], DrawFnFwd drawFn);
 static inline int16_t text_width_default_font(const char* s, uint8_t size);
+// Forward decls used by spec renderer implemented earlier in the file
+static inline void draw_temp_number_and_units(const int rect[4], const char* temp_f);
+static void make_short_condition_cstr(const char* weather, char* out, size_t out_size);
+// Remove duplicate non-inline declaration to avoid separate symbol
 #if USE_UI_SPEC
 // Minimal spec interpreter (full-window only) for variant rendering
 static void draw_from_spec_full(uint8_t variantId);
@@ -77,11 +84,52 @@ static inline const int* rect_ptr_by_id(uint8_t rid) {
   }
 }
 
-static void draw_from_spec_full(uint8_t variantId) {
+// Forward to implementation placed after display declaration
+static void draw_from_spec_full_impl(uint8_t variantId);
+static void draw_from_spec_full(uint8_t variantId) { draw_from_spec_full_impl(variantId); }
+#endif
+#endif
+
+// Feather ESP32-S2 + 2.13" FeatherWing (adjust if needed)
+#ifndef EINK_CS
+#define EINK_CS 9 // D9
+#endif
+#ifndef EINK_DC
+#define EINK_DC 10 // D10
+#endif
+#ifndef EINK_RST
+#define EINK_RST -1 // FeatherWing ties panel reset to Feather RESET
+#endif
+#ifndef EINK_BUSY
+#define EINK_BUSY -1 // FeatherWing BUSY not connected; use -1 so library times waits
+#endif
+
+// 2.13" b/w class; choose the one matching your panel
+// B74 works for SSD1680/UC8151 variants used by many 2.13" panels
+// Alternative: DEPG0213BN (also SSD1680 family). Select via -DEINK_PANEL_DEPG0213BN=1
+#if USE_DISPLAY
+#ifndef EINK_PANEL_DEPG0213BN
+#define EINK_PANEL_DEPG0213BN 0
+#endif
+#if EINK_PANEL_DEPG0213BN
+GxEPD2_BW<GxEPD2_213_DEPG0213BN, GxEPD2_213_DEPG0213BN::HEIGHT> display(
+    GxEPD2_213_DEPG0213BN(EINK_CS, EINK_DC, EINK_RST, EINK_BUSY));
+#else
+// Prefer the explicit GDEY0213B74 class name for clarity on SSD1680 FeatherWing
+GxEPD2_BW<GxEPD2_213_GDEY0213B74, GxEPD2_213_GDEY0213B74::HEIGHT> display(
+    GxEPD2_213_GDEY0213B74(EINK_CS, EINK_DC, EINK_RST, EINK_BUSY));
+#endif
+
+// Now that display exists, provide the implementation using it
+#if USE_UI_SPEC
+static void draw_from_spec_full_impl(uint8_t variantId) {
+  // Ensure TOP_Y_OFFSET is available; if not yet defined, use default 4
+#ifndef TOP_Y_OFFSET
+#define TOP_Y_OFFSET 4
+#endif
   using namespace ui;
   int comp_count = 0;
   const ComponentOps* comps = get_variant_ops(variantId, &comp_count);
-  // Chrome similar to legacy
   display.drawRect(0, 0, EINK_WIDTH, EINK_HEIGHT, GxEPD_BLACK);
   display.drawLine(1, 16 + TOP_Y_OFFSET, EINK_WIDTH - 2, 16 + TOP_Y_OFFSET, GxEPD_BLACK);
   display.drawLine(125, 18 + TOP_Y_OFFSET, 125, EINK_HEIGHT - 2, GxEPD_BLACK);
@@ -103,7 +151,6 @@ static void draw_from_spec_full(uint8_t variantId) {
             if (key == "room_name") return String(ROOM_NAME);
             if (key == "ip") { char ip_c[32]; net_ip_cstr(ip_c, sizeof(ip_c)); return String("IP ") + ip_c; }
             if (key == "fw_version") return String(FW_VERSION);
-            // conversions and formatting are NOP unless we add a data map here
             return String("");
           };
           String templ = op.s0 ? op.s0 : "";
@@ -160,7 +207,7 @@ static void draw_from_spec_full(uint8_t variantId) {
           } else if (r == OUT_TEMP) {
             OutsideReadings orr = net_get_outside();
             if (orr.validTemp && isfinite(orr.temperatureC)) snprintf(temp_buf, sizeof(temp_buf), "%.1f", orr.temperatureC * 9.0/5.0 + 32.0);
-            else if (isfinite(last_outside_f)) snprintf(temp_buf, sizeof(temp_buf), "%.1f", last_outside_f);
+            else if (isfinite(get_last_outside_f())) snprintf(temp_buf, sizeof(temp_buf), "%.1f", get_last_outside_f());
             else snprintf(temp_buf, sizeof(temp_buf), "--");
           }
           draw_temp_number_and_units(r, temp_buf);
@@ -207,43 +254,13 @@ static void draw_from_spec_full(uint8_t variantId) {
     }
   }
 }
-#endif
-#endif
-
-// Feather ESP32-S2 + 2.13" FeatherWing (adjust if needed)
-#ifndef EINK_CS
-#define EINK_CS 9 // D9
-#endif
-#ifndef EINK_DC
-#define EINK_DC 10 // D10
-#endif
-#ifndef EINK_RST
-#define EINK_RST -1 // FeatherWing ties panel reset to Feather RESET
-#endif
-#ifndef EINK_BUSY
-#define EINK_BUSY -1 // FeatherWing BUSY not connected; use -1 so library times waits
-#endif
-
-// 2.13" b/w class; choose the one matching your panel
-// B74 works for SSD1680/UC8151 variants used by many 2.13" panels
-// Alternative: DEPG0213BN (also SSD1680 family). Select via -DEINK_PANEL_DEPG0213BN=1
-#if USE_DISPLAY
-#ifndef EINK_PANEL_DEPG0213BN
-#define EINK_PANEL_DEPG0213BN 0
-#endif
-#if EINK_PANEL_DEPG0213BN
-GxEPD2_BW<GxEPD2_213_DEPG0213BN, GxEPD2_213_DEPG0213BN::HEIGHT> display(
-    GxEPD2_213_DEPG0213BN(EINK_CS, EINK_DC, EINK_RST, EINK_BUSY));
-#else
-// Prefer the explicit GDEY0213B74 class name for clarity on SSD1680 FeatherWing
-GxEPD2_BW<GxEPD2_213_GDEY0213B74, GxEPD2_213_GDEY0213B74::HEIGHT> display(
-    GxEPD2_213_GDEY0213B74(EINK_CS, EINK_DC, EINK_RST, EINK_BUSY));
-#endif
-#endif
+#endif // USE_UI_SPEC
+#endif // USE_DISPLAY
 
 RTC_DATA_ATTR static uint16_t partial_counter = 0;
 RTC_DATA_ATTR static float last_inside_f = NAN;
 RTC_DATA_ATTR static float last_outside_f = NAN;
+static inline float get_last_outside_f() { return last_outside_f; }
 RTC_DATA_ATTR static float last_outside_rh = NAN;
 RTC_DATA_ATTR static int32_t last_icon_id = -1;
 RTC_DATA_ATTR static float last_published_inside_tempC = NAN;
@@ -1011,12 +1028,11 @@ static void draw_status_line(const BatteryStatus& bs, const char* ip_cstr) {
     char left_nobatt[64];
     char left_tail[32];
     snprintf(left_full, sizeof(left_full), "Batt %.2fV %d%% | ~%dd",
-             //     bs.voltage,
-             //     bs.percent,
+             bs.voltage,
+             bs.percent,
              bs.estimatedDays);
     snprintf(left_nobatt, sizeof(left_nobatt), "%.2fV %d%% | ~%dd", bs.voltage,
-
-             //     bs.percent,
+             bs.percent,
              bs.estimatedDays);
     snprintf(left_tail, sizeof(left_tail), "%d%% | ~%dd", bs.percent, bs.estimatedDays);
     int16_t available = rx - cx - 2;

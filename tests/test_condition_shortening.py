@@ -15,7 +15,7 @@ def py_make_short_condition(weather: str) -> str:
     w = weather.strip()
     out = []
     for ch in w:
-        if ch in (" ", "\t", ",", ";", ":", "/"):
+        if ch in (" ", "\t", ",", ";", ":", "/", "-"):
             break
         out.append(ch)
     return "".join(out)
@@ -34,6 +34,8 @@ def mph_from_mps(mps: float) -> float:
         ("Snow/showers", "Snow"),
         ("Fog", "Fog"),
         (" Thunderstorms ", "Thunderstorms"),
+        ("clear-night", "clear"),
+        ("snowy-rainy", "snowy"),
         ("", ""),
     ],
 )

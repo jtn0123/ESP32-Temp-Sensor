@@ -11,6 +11,7 @@ const UiOpHeader kOps_chrome[] = {
     { OP_LINE, 255, 0, 0, 0, 0, 0, 121, NULL, NULL },
     { OP_LINE, 255, 0, 0, 249, 0, 249, 121, NULL, NULL },
     { OP_LINE, 255, 0, 0, 125, 18, 125, 121, NULL, NULL },
+    { OP_LINE, 255, 0, 0, 1, 92, 249, 92, NULL, NULL },
 };
 const int kOps_chrome_count = sizeof(kOps_chrome)/sizeof(kOps_chrome[0]);
 
