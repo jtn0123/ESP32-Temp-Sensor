@@ -186,8 +186,11 @@
                   window.__layoutMetrics.statusLeft.left = leftCol[0];
                   window.__layoutMetrics.statusLeft.right = leftCol[0] + leftCol[2];
                   const textW = ctx.measureText(s).width;
-                  const groupX = Math.min((window.__layoutMetrics.statusLeft.batteryIcon?.x)||x, x);
-                  const groupW = Math.max((window.__layoutMetrics.statusLeft.batteryIcon?.x||x) + 13 + 6 + textW - groupX, textW);
+                  const groupW = 13 + 6 + textW; // icon + gap + text
+                  const left = window.__layoutMetrics.statusLeft.left;
+                  const right = window.__layoutMetrics.statusLeft.right;
+                  const colMid = (left + right) / 2;
+                  const groupX = colMid - groupW / 2;
                   window.__layoutMetrics.statusLeft.batteryGroup = { x: groupX, w: groupW };
                 } else if (s.startsWith('~')){
                   window.__layoutMetrics.statusLeft.line2Y = y;
@@ -203,8 +206,11 @@
                   window.__layoutMetrics.statusLeft.left = leftCol[0];
                   window.__layoutMetrics.statusLeft.right = leftCol[0] + leftCol[2];
                   const textW = ctx.measureText(s).width;
-                  const groupX = Math.min((window.__layoutMetrics.statusLeft.batteryIcon?.x)||x, x);
-                  const groupW = Math.max((window.__layoutMetrics.statusLeft.batteryIcon?.x||x) + 13 + 6 + textW - groupX, textW);
+                  const groupW = 13 + 6 + textW; // icon + gap + text
+                  const left = window.__layoutMetrics.statusLeft.left;
+                  const right = window.__layoutMetrics.statusLeft.right;
+                  const colMid = (left + right) / 2;
+                  const groupX = colMid - groupW / 2;
                   window.__layoutMetrics.statusLeft.batteryGroup = { x: groupX, w: groupW };
                 } else if (s.startsWith('~')){
                   window.__layoutMetrics.statusLeft.line2Y = y;
