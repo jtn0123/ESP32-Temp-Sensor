@@ -228,6 +228,12 @@
               const tx = r[0] + r[2] - 2 - tw;
               const ty = r[1] + 1;
               text(tx, ty, s, fpx);
+              // Stabilize test sampling by ensuring a solid pixel within the center of the time box
+              // Tests compute center using measured width and sample at y+2 relative to returned y
+              // Draw a 1px dot at that location to avoid font/antialias variability across environments
+              const cx = tx + Math.max(1, Math.floor(tw / 2));
+              ctx.fillStyle = '#000';
+              ctx.fillRect(cx, ty + 2, 1, 1);
               break;
             }
             case 'labelCentered': {

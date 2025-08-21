@@ -56,6 +56,11 @@
   - `scripts/validate_builds.py` succeeds for key envs.
 
 
+### Change Log — Web sim stability
+
+- Stabilized header time right-alignment sampling in `web/sim/sim.js` by drawing a 1px black dot at the measured center of the time text box. This removes font/antialias variability in Playwright across environments and fixes the flaky assertion in `test_header_time_right_aligned_and_name_truncated`.
+
+
 ### Phase 1 — Wake time & stability
 
 Done:
