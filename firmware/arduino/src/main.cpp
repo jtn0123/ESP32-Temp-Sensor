@@ -220,14 +220,18 @@ static void draw_from_spec_full_impl(uint8_t variantId) {
           const int* r = rect_ptr_by_id(op.rect);
           if (!r) break;
           OutsideReadings o = net_get_outside();
-          const char* weather = o.validWeather ? o.weather : "";
-          draw_weather_icon_region_at(r[0], r[1] + TOP_Y_OFFSET, r[2], r[3], weather);
+          if (o.validWeatherIcon || o.validWeatherId) {
+            draw_weather_icon_region_at_from_outside(r[0], r[1] + TOP_Y_OFFSET, r[2], r[3], o);
+          } else {
+            const char* weather = o.validWeather ? o.weather : "";
+            draw_weather_icon_region_at(r[0], r[1] + TOP_Y_OFFSET, r[2], r[3], weather);
+          }
           break; }
         case OP_SHORTCONDITION: {
           const int* r = rect_ptr_by_id(op.rect); if (!r) break;
           OutsideReadings o = net_get_outside();
-          if (o.validWeather) {
-            char sc[24]; make_short_condition_cstr(o.weather, sc, sizeof(sc));
+          if (o.validWeather || o.validWeatherDesc) {
+            char sc[24]; if (o.validWeatherDesc && o.weatherDesc[0]) make_short_condition_cstr(o.weatherDesc, sc, sizeof(sc)); else make_short_condition_cstr(o.weather, sc, sizeof(sc));
             display.setTextColor(GxEPD_BLACK); display.setTextSize(1);
             display.setCursor(r[0] + op.p0, r[1] + TOP_Y_OFFSET + r[3]/2 + 2);
             display.print(sc);
@@ -1350,7 +1354,11 @@ static void full_refresh_v2() {
       display.setTextSize(1);
       display.setCursor(OUT_ROW1_L[0], OUT_ROW1_L[1] + TOP_Y_OFFSET);
       display.print(sc);
-      draw_weather_icon_region_at(OUT_ICON[0], OUT_ICON[1] + TOP_Y_OFFSET, OUT_ICON[2], OUT_ICON[3], o.weather);
+      if (o.validWeatherIcon || o.validWeatherId) {
+        draw_weather_icon_region_at_from_outside(OUT_ICON[0], OUT_ICON[1] + TOP_Y_OFFSET, OUT_ICON[2], OUT_ICON[3], o);
+      } else {
+        draw_weather_icon_region_at(OUT_ICON[0], OUT_ICON[1] + TOP_Y_OFFSET, OUT_ICON[2], OUT_ICON[3], o.weather);
+      }
     }
 
     // Outside temp
@@ -2069,12 +2077,19 @@ void setup() {
         nvs_store_float("lo_rh", last_outside_rh);
     }
     if (o.validWeather) {
-      IconId id = map_weather_to_icon(o.weather);
+      IconId id = (o.validWeatherIcon || o.validWeatherId) ? map_openweather_to_icon(o) : map_weather_to_icon(o.weather);
       maybe_redraw_value<int32_t>(OUT_ICON, static_cast<int32_t>(id), last_icon_id,
-                                  [&]() { partial_update_weather_icon(o.weather); });
+                                  [&]() {
+                                    if (o.validWeatherIcon || o.validWeatherId) {
+                                      draw_in_region((int[4]){OUT_ICON[0], static_cast<int16_t>(OUT_ICON[1] + TOP_Y_OFFSET), OUT_ICON[2], OUT_ICON[3]},
+                                                     [&](int16_t xx, int16_t yy, int16_t ww, int16_t hh){ draw_weather_icon_region_at_from_outside(xx, yy, ww, hh, o); });
+                                    } else {
+                                      partial_update_weather_icon(o.weather);
+                                    }
+                                  });
       nvs_store_int("icon", last_icon_id);
       char sc[24];
-      make_short_condition_cstr(o.weather, sc, sizeof(sc));
+      if (o.validWeatherDesc && o.weatherDesc[0]) make_short_condition_cstr(o.weatherDesc, sc, sizeof(sc)); else make_short_condition_cstr(o.weather, sc, sizeof(sc));
       partial_update_outside_condition(sc);
     }
     if (o.validWind && isfinite(o.windMps)) {
