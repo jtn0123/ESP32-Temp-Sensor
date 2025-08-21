@@ -45,12 +45,19 @@ struct OutsideReadings {
   float temperatureC = NAN;
   float humidityPct = NAN;
   char weather[64];
+  // OpenWeatherMap single primary item support
+  int weatherId = 0;              // OWM weather[0].id
+  char weatherDesc[64];           // OWM weather[0].description
+  char weatherIcon[8];            // OWM weather[0].icon (e.g., "10n")
   float windMps = NAN;
   float highTempC = NAN;
   float lowTempC = NAN;
   bool validTemp = false;
   bool validHum = false;
   bool validWeather = false;
+  bool validWeatherId = false;
+  bool validWeatherDesc = false;
+  bool validWeatherIcon = false;
   bool validWind = false;
   bool validHigh = false;
   bool validLow = false;
@@ -396,6 +403,17 @@ inline void mqtt_callback(char* topic, uint8_t* payload, unsigned int length) {
     strncpy(g_outside.weather, val, sizeof(g_outside.weather) - 1);
     g_outside.weather[sizeof(g_outside.weather) - 1] = '\0';
     g_outside.validWeather = g_outside.weather[0] != '\0';
+  } else if (ends_with(topic, "/weather_id")) {
+    g_outside.weatherId = atoi(val);
+    g_outside.validWeatherId = (g_outside.weatherId != 0) || (strcmp(val, "0") == 0);
+  } else if (ends_with(topic, "/weather_desc")) {
+    strncpy(g_outside.weatherDesc, val, sizeof(g_outside.weatherDesc) - 1);
+    g_outside.weatherDesc[sizeof(g_outside.weatherDesc) - 1] = '\0';
+    g_outside.validWeatherDesc = g_outside.weatherDesc[0] != '\0';
+  } else if (ends_with(topic, "/weather_icon")) {
+    strncpy(g_outside.weatherIcon, val, sizeof(g_outside.weatherIcon) - 1);
+    g_outside.weatherIcon[sizeof(g_outside.weatherIcon) - 1] = '\0';
+    g_outside.validWeatherIcon = g_outside.weatherIcon[0] != '\0';
   } else if (ends_with(topic, "/wind") || ends_with(topic, "/wind_mps") ||
              ends_with(topic, "/wind_mph")) {
     float w = atof(val);
@@ -803,6 +821,9 @@ inline void ensure_mqtt_connected() {
     sub("/hum");
     sub("/rh");
     sub("/weather");
+    sub("/weather_id");
+    sub("/weather_desc");
+    sub("/weather_icon");
     sub("/wind");
     sub("/wind_mps");
     sub("/wind_mph");
