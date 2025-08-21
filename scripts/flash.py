@@ -25,13 +25,16 @@ def main() -> int:
         default="1h",
         help="Sleep behavior: 3m, 1h (default), 2h, or always (no sleep)",
     )
+    # Default to the stable display-only firmware. The legacy "full" env is
+    # intentionally not exposed here to avoid accidentally flashing the
+    # experimental spec-renderer build.
     parser.add_argument(
         "--env",
-        choices=["full", "display", "headless"],
-        default="full",
+        choices=["display", "headless"],
+        default="display",
         help=(
             "Select PlatformIO environment: "
-            "full (sensors + display), display (display-only fast loop), headless (no display)."
+            "display (display-only fast loop, default) or headless (no display)."
         ),
     )
     parser.add_argument(
@@ -44,13 +47,11 @@ def main() -> int:
     proj = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir))
     arduino_dir = os.path.join(proj, "firmware", "arduino")
 
-    # Choose base env: full (with sensors + display), display-only, or headless
+    # Choose base env: display-only or headless (full is intentionally omitted)
     if args.env == "headless":
         env = "feather_esp32s2_headless"
-    elif args.env == "display":
-        env = "feather_esp32s2_display_only"
     else:
-        env = "feather_esp32s2"
+        env = "feather_esp32s2_display_only"
 
     # Build EXTRA_FLAGS to control sleep behavior and wake interval
     extra_flags = []
