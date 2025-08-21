@@ -45,7 +45,11 @@ static void partial_update_outside_rh(const char* out_rh);
 static void partial_update_outside_wind(const char* wind_str);
 static void partial_update_outside_condition(const char* short_condition);
 static void partial_update_weather_icon(const char* weather);
+// New helpers: prefer OpenWeather fields (id/icon/desc) when available
+static void partial_update_weather_icon_from_outside(const OutsideReadings& o);
 static void draw_weather_icon_region_at(int16_t x, int16_t y, int16_t w, int16_t h, const char* weather);
+static void draw_weather_icon_region_at_from_outside(int16_t x, int16_t y, int16_t w, int16_t h,
+                                                     const OutsideReadings& o);
 static void draw_header_time(const char* time_str);
 // Accessor to avoid forward reference ordering issues
 static inline float get_last_outside_f();
@@ -1183,6 +1187,49 @@ static IconId map_weather_to_icon(const char* w) {
   if (s.indexOf("night") >= 0)
     return ICON_WEATHER_NIGHT;
   return ICON_WEATHER_SUNNY;
+}
+
+// Map OpenWeather primary item (id/icon) to our icon set; fallback to string mapping
+static IconId map_openweather_to_icon(const OutsideReadings& o) {
+  // Prefer explicit icon code when provided (e.g., "10n") for day/night
+  if (o.validWeatherIcon && o.weatherIcon[0]) {
+    const char* ic = o.weatherIcon;
+    // Normalize length
+    if (strlen(ic) >= 2) {
+      if (strncmp(ic, "01", 2) == 0) return (strchr(ic, 'n') ? ICON_WEATHER_NIGHT : ICON_WEATHER_SUNNY);
+      if (strncmp(ic, "02", 2) == 0) return (strchr(ic, 'n') ? ICON_WEATHER_NIGHT_PARTLY_CLOUDY : ICON_WEATHER_PARTLY_CLOUDY);
+      if (strncmp(ic, "03", 2) == 0) return ICON_WEATHER_CLOUDY;
+      if (strncmp(ic, "04", 2) == 0) return ICON_WEATHER_CLOUDY;
+      if (strncmp(ic, "09", 2) == 0) return ICON_WEATHER_POURING;
+      if (strncmp(ic, "10", 2) == 0) return ICON_WEATHER_POURING;
+      if (strncmp(ic, "11", 2) == 0) return ICON_WEATHER_LIGHTNING;
+      if (strncmp(ic, "13", 2) == 0) return ICON_WEATHER_SNOWY;
+      if (strncmp(ic, "50", 2) == 0) return ICON_WEATHER_FOG;
+    }
+  }
+  // Next, group by weatherId family
+  if (o.validWeatherId) {
+    int gid = o.weatherId / 100;
+    switch (gid) {
+      case 2: return ICON_WEATHER_LIGHTNING; // Thunderstorm
+      case 3: return ICON_WEATHER_POURING;   // Drizzle
+      case 5: {
+        if (o.weatherId == 511) return ICON_WEATHER_SNOWY; // Freezing rain
+        return ICON_WEATHER_POURING;                        // Rain
+      }
+      case 6: return ICON_WEATHER_SNOWY;    // Snow
+      case 7: return ICON_WEATHER_FOG;      // Atmosphere
+      case 8: {
+        if (o.weatherId == 800) return ICON_WEATHER_SUNNY; // Clear
+        if (o.weatherId == 801) return ICON_WEATHER_PARTLY_CLOUDY; // Few clouds
+        // 802..804
+        return ICON_WEATHER_CLOUDY; // Scattered/Broken/Overcast
+      }
+      default: break;
+    }
+  }
+  // Fallback: heuristics from free-form string
+  return map_weather_to_icon(o.weather);
 }
 
 // Experimental isolated UI variant (v2): mirrors minimal layout structure but uses
