@@ -26,9 +26,9 @@
   let oneBitMode = true;
   let GEOMETRY = null; // optional overlay geometry loaded from geometry.json
   let GJSON = null;    // centralized geometry JSON
-  // Enable spec-only render via URL query (?spec=1 or ?specOnly=1)
+  // Enable spec-only render (always on to keep single source of truth)
   const QS = (typeof window !== 'undefined') ? new URLSearchParams(window.location.search) : new URLSearchParams();
-  const specOnly = (QS.get('spec') === '1' || QS.get('specOnly') === '1');
+  const specOnly = true;
 
   const FONT_STACK = 'Menlo, Consolas, "DM Mono", "Roboto Mono", monospace';
   const SIZE_SMALL = 11; // general small text
@@ -38,7 +38,6 @@
   const SIZE_BIG = 22;
   const THRESH = 176;
   async function loadCentralGeometry(){
-    // Prefer generated UI_SPEC if present (single source of truth)
     try{
       if (typeof window !== 'undefined' && window.UI_SPEC){
         const gj = window.UI_SPEC;
@@ -62,8 +61,7 @@
           return;
         }
       }
-    }catch(e){ /* ignore, fallback below */ }
-    // Legacy fallback: local geometry.json only
+    }catch(e){ }
     try{
       const res = await fetch('geometry.json');
       if (res.ok){
@@ -87,7 +85,7 @@
           STATUS      = R.STATUS      || STATUS;
         }
       }
-    }catch(e){ /* ignore */ }
+    }catch(e){ }
   }
 
   function applyOneBitThreshold(){
@@ -104,256 +102,11 @@
     ctx.putImageData(img,0,0);
   }
 
-  function clear(){
-    ctx.fillStyle = '#fff';
-    ctx.fillRect(0,0,WIDTH,HEIGHT);
-    ctx.strokeStyle = '#000';
-  }
-
   function text(x,y,str,size=10,weight='normal'){
     ctx.fillStyle = '#000';
     ctx.font = `${weight} ${size}px ${FONT_STACK}`;
     ctx.textBaseline = 'top';
     ctx.fillText(str, x, y);
-  }
-
-  function textTruncated(x, y, maxWidth, str, size=10, weight='normal'){
-    ctx.fillStyle = '#000';
-    ctx.font = `${weight} ${size}px ${FONT_STACK}`;
-    ctx.textBaseline = 'top';
-    let s = String(str||'');
-    if (ctx.measureText(s).width <= maxWidth){ ctx.fillText(s, x, y); return; }
-    while (s.length>1 && ctx.measureText(s + '…').width > maxWidth){ s = s.slice(0,-1); }
-    ctx.fillText(s + '…', x, y);
-  }
-
-  function drawTextInRect(rect, str, size=10, weight='normal', align='left', pad=1){
-    const [x,y,w,h] = rect;
-    const maxW = Math.max(0, w - pad*2);
-    ctx.save();
-    ctx.beginPath(); ctx.rect(x, y, w, h); ctx.clip();
-    ctx.font = `${weight} ${size}px ${FONT_STACK}`; ctx.textBaseline='top'; ctx.fillStyle='#000';
-    let s = String(str||'');
-    // truncate with ellipsis if needed
-    if (ctx.measureText(s).width > maxW){
-      while (s.length>1 && ctx.measureText(s + '…').width > maxW){ s = s.slice(0,-1); }
-      s = s + '…';
-    }
-    let tx = x + pad;
-    const tw = ctx.measureText(s).width;
-    if (align === 'right') tx = x + w - pad - tw;
-    else if (align === 'center') tx = x + Math.max(0, Math.floor((w - tw)/2));
-    ctx.fillText(s, tx, y);
-    ctx.restore();
-  }
-
-  // Draw temperature centered horizontally as a group (number + °F)
-  function drawTempCentered(rect, valueF, tag){
-    const [x, y, w, h] = rect;
-    const pad = 2;           // inner padding to keep to 2px grid inside boxes
-    const unitsW = 14;       // width for degree + unit
-    // prepare value string (allow caller to pass number or string)
-    let s = String(valueF ?? '');
-    // use bold, monospaced stack for rock-solid digits
-    ctx.font = `bold ${SIZE_BIG}px ${FONT_STACK}`;
-    ctx.textBaseline = 'top';
-    const maxContentW = Math.max(0, w - pad*2);
-    // If too wide, prefer dropping fractional part first
-    let tw = ctx.measureText(s).width;
-    if (tw + unitsW > maxContentW){
-      const noFrac = s.replace(/(\.|,).*/, '');
-      if (noFrac !== s){
-        s = noFrac;
-        tw = ctx.measureText(s).width;
-      }
-    }
-    // As final fallback, truncate from the right
-    while (tw + unitsW > maxContentW && s.length > 1){
-      s = s.slice(0, -1);
-      // avoid dangling minus or dot at end
-      if (/[\-\.+]$/.test(s)) s = s.slice(0, -1);
-      tw = ctx.measureText(s).width;
-    }
-    const totalW = Math.min(maxContentW, tw + unitsW);
-    const contentLeft = x + Math.max(0, Math.floor((w - totalW)/2));
-    const numLeft = contentLeft;
-    const unitsLeft = contentLeft + tw;
-    // draw number on 2px baseline grid (y is already even in layout)
-    text(numLeft, y, s, SIZE_BIG, 'bold');
-    // draw units inside the fixed strip, horizontally compact
-    const degX = unitsLeft + 2;
-    const fX = degX + 6;
-    const unitY = y + 4; // keep even baseline offset
-    text(degX, unitY, '°', 12);
-    text(fX, unitY, 'F', 12);
-    // expose metrics
-    try{
-      if(!window.__tempMetrics) window.__tempMetrics = {};
-      window.__tempMetrics[tag||'temp'] = { rect: {x,y,w,h}, contentLeft, totalW };
-    }catch(e){ }
-  }
-
-  function rect(x0,y0,x1,y1){
-    ctx.strokeStyle = '#000';
-    ctx.strokeRect(x0,y0,x1-x0,y1-y0);
-  }
-
-  // ---- SVG icon support (crisper icons) ----
-  const iconCache = new Map(); // name -> HTMLImageElement or 'pending'
-  async function loadSvgIcon(name){
-    if(iconCache.has(name)) return iconCache.get(name);
-    iconCache.set(name, 'pending');
-    try{
-      // Prefer local sim icons, then web/icons/mdi, then web/icons basic
-      let res = await fetch(`icons/${name}.svg`);
-      if(!res.ok){ res = await fetch(`../icons/mdi/${name}.svg`); }
-      if(!res.ok){ res = await fetch(`../icons/${name}.svg`); }
-      if(!res.ok) throw new Error('not ok');
-      const svgText = await res.text();
-      const blob = new Blob([svgText], { type: 'image/svg+xml' });
-      const url = URL.createObjectURL(blob);
-      const img = new Image();
-      const ready = new Promise((resolve)=>{ img.onload = ()=>resolve(img); });
-      img.src = url;
-      await ready;
-      iconCache.set(name, img);
-      return img;
-    }catch(e){
-      iconCache.delete(name);
-      return null;
-    }
-  }
-
-  function mapWeatherToIconName(w){
-    // If spec icon mapper is available, prefer MDI names directly
-    try{
-      if (typeof window !== 'undefined' && typeof window.uiMapWeather === 'function' && window.UI_SPEC){
-        const mdi = window.uiMapWeather(w);
-        if (mdi) return mdi;
-      }
-    }catch(e){ /* ignore */ }
-    // Fallback to legacy simple mapping (local sim icon set)
-    const s = (w||'').toLowerCase();
-    if(s.includes('clear')||s.includes('sun')) return 'clear';
-    if(s.includes('part')) return 'partly';
-    if(s.includes('cloud')) return 'cloudy';
-    if(s.includes('rain')) return 'rain';
-    if(s.includes('snow')) return 'snow';
-    if(s.includes('storm')||s.includes('thunder')) return 'storm';
-    if(s.includes('fog')||s.includes('mist')||s.includes('haze')) return 'fog';
-    return 'cloudy';
-  }
-
-  function shortConditionLabel(w){
-    const s = String(w||'').trim();
-    if (!s) return 'Cloudy';
-    // Split on common separators/qualifiers and keep the first token/word
-    const lowered = s.toLowerCase();
-    const cutPhrases = [' with ', ' and ', ',', '/', ' - '];
-    let cutIndex = s.length;
-    for (const sep of cutPhrases){
-      const idx = lowered.indexOf(sep);
-      if (idx >= 0 && idx < cutIndex) cutIndex = idx;
-    }
-    const first = s.slice(0, cutIndex).trim();
-    // Additionally reduce to the first word to guarantee a single token like "Cloudy"
-    return first.split(/\s+/)[0] || 'Cloudy';
-  }
-
-  function weatherIcon(box, weather){
-    const [x0,y0,x1,y1] = box;
-    const w = x1-x0, h=y1-y0; const cx=x0+w/2, cy=y0+h/2;
-    const scale = 1.5; // ~50% larger than base 20x20 box
-    const effW = Math.round(Math.min(32, w*scale));
-    const effH = Math.round(Math.min(32, h*scale));
-    const ex0 = Math.round(x0 + (w - effW)/2);
-    const ey0 = Math.round(y0 + (h - effH)/2);
-    const ex1 = ex0 + effW;
-    const ey1 = ey0 + effH;
-    const kind = (weather||'').toLowerCase();
-    // Choose icon name: prefer explicit MDI names like "weather-cloudy" returned by uiMapWeather
-    const name = kind.startsWith('moon_') ? kind : (kind.startsWith('weather-') ? kind : mapWeatherToIconName(kind));
-    // Try SVG first (local sim icons, then MDI pack)
-    const cached = iconCache.get(name);
-    if (cached && cached !== 'pending'){
-      ctx.drawImage(cached, ex0, ey0, effW, effH);
-      return;
-    } else {
-      // kick off async load for next frame; ignore completion
-      loadSvgIcon(name).catch(()=>{});
-    }
-    ctx.strokeStyle = '#000';
-    if(kind.includes('sun') || kind.includes('clear')){
-      const rc = Math.min(effW,effH)/3;
-      const ccx = (ex0+ex1)/2, ccy = (ey0+ey1)/2;
-      ctx.beginPath(); ctx.arc(ccx,ccy,rc,0,Math.PI*2); ctx.stroke();
-      const spikes = [[0,-rc-4],[0,rc+4],[-rc-4,0],[rc+4,0],[-3,-3],[3,3],[-3,3],[3,-3]];
-      spikes.forEach(([dx,dy])=>{ ctx.beginPath(); ctx.moveTo(ccx,ccy); ctx.lineTo(ccx+dx,ccy+dy); ctx.stroke(); });
-    } else if(kind.includes('part')){
-      const rr = Math.min(effW,effH)/3;
-      ctx.beginPath(); ctx.arc(ex0+rr+2,ey0+rr+2,rr,0,Math.PI*2); ctx.stroke();
-      ctx.strokeRect(ex0+2,ey0+effH/2,effW-4,effH-6);
-    } else if(kind.includes('cloud')){
-      ctx.strokeRect(ex0+2,ey0+8,effW-4,effH-12);
-      ctx.beginPath(); ctx.arc(ex0+Math.min(12,effW/2),ey0+10,8,0,Math.PI*2); ctx.stroke();
-      ctx.beginPath(); ctx.arc(ex0+Math.min(24,effW-2),ey0+8,8,0,Math.PI*2); ctx.stroke();
-    } else if(kind.includes('rain')){
-      weatherIcon([ex0,ey0,ex1,ey1],'cloudy');
-      for(let i=0;i<3;i++){ ctx.beginPath(); ctx.moveTo(ex0+8+i*6,ey0+effH-6); ctx.lineTo(ex0+4+i*6,ey0+effH+2); ctx.stroke(); }
-    } else if(kind.includes('snow')){
-      weatherIcon([ex0,ey0,ex1,ey1],'cloudy');
-      ctx.fillText('*', ex0+10, ey0+effH-6);
-      ctx.fillText('*', ex0+18, ey0+effH-6);
-    } else if(kind.includes('fog')){
-      for(let i=0;i<3;i++){ ctx.beginPath(); ctx.moveTo(ex0+2,ey0+8+i*6); ctx.lineTo(ex1-2,ey0+8+i*6); ctx.stroke(); }
-    } else {
-      rect(ex0,ey0,ex1,ey1);
-    }
-  }
-
-  // ---- UI spec interpreter (web) ----
-  function _uiFormatField(data, key){
-    if (!key) return '';
-    // Extract base key, conversion, and format
-    const convMatch = key.match(/->([a-z]+)/);
-    const fmtMatch = key.match(/:(.*)$/);
-    const base = key.replace(/[:].*$/, '').replace(/->.*$/, '');
-    // Prefer exact key, then fallback for _f suffix
-    let v = (data[base] !== undefined) ? data[base] : data[base.replace(/_f$/, '')];
-    // Special-case fw_version to use injected UI_FW_VERSION if not provided in data
-    if ((v === undefined || v === null || v === '') && base === 'fw_version'){
-      try{ if (typeof window !== 'undefined' && typeof window.UI_FW_VERSION === 'string') v = window.UI_FW_VERSION; }catch(e){}
-    }
-    if (v === undefined || v === null) return '';
-    // Conversions
-    if (convMatch && String(v).trim() !== ''){
-      const to = convMatch[1];
-      const num = parseFloat(v);
-      if (isFinite(num)){
-        if (to === 'mph') v = num * 2.237;
-      }
-    }
-    // Formatting like .1f
-    if (fmtMatch){
-      const f = fmtMatch[1];
-      const m = f.match(/\.(\d)f/);
-      if (m){
-        const d = parseInt(m[1]);
-        const num = parseFloat(v);
-        if (isFinite(num)) v = num.toFixed(d);
-      }
-    }
-    return String(v);
-  }
-
-  function _uiEvalWhen(expr, data){
-    if (!expr) return true;
-    if (/^has\(/.test(expr)){
-      const k = expr.slice(4, -1);
-      const v = data[k];
-      return !(v === undefined || v === null || v === '');
-    }
-    return true;
   }
 
   function drawFromSpec(ctx, data, variantName){
@@ -370,7 +123,6 @@
       for (const cname of list){
         const ops = (spec.components || {})[cname] || [];
         for (const op of ops){
-          if (op.when && !_uiEvalWhen(op.when, data)) continue;
           switch(op.op){
             case 'line': {
               const fx = (op.from && op.from[0]) || 0;
@@ -386,11 +138,32 @@
               const r = op.rect ? rects[op.rect] : null;
               const fpx = ((fonts[op.font||'small']||{}).px) || pxSmall;
               const weight = ((fonts[op.font||'small']||{}).weight) || 'normal';
-              const align = op.align || 'left';
               let s = String(op.text || '');
-              s = s.replace(/\{([^}]+)\}/g, (_,k)=>_uiFormatField(data, k));
+              s = s.replace(/\{([^}]+)\}/g, (_,k)=>{
+                // Basic formatter: support fw_version injection and simple passthrough
+                if (k === 'fw_version' && typeof window !== 'undefined' && typeof window.UI_FW_VERSION === 'string') return window.UI_FW_VERSION;
+                const base = k.replace(/[:].*$/, '').replace(/->.*$/, '');
+                const v = (data[base] !== undefined) ? data[base] : data[base.replace(/_f$/, '')];
+                if (v === undefined || v === null) return '';
+                // conversions
+                let val = v;
+                const conv = k.match(/->([a-z]+)/);
+                if (conv){
+                  const to = conv[1]; const num = parseFloat(String(val));
+                  if (isFinite(num) && to === 'mph') val = (num * 2.237);
+                }
+                const fmt = k.match(/:(.*)$/);
+                if (fmt){
+                  const m = fmt[1].match(/\.(\d)f/);
+                  if (m){ const d = parseInt(m[1]); const num = parseFloat(String(val)); if (isFinite(num)) val = num.toFixed(d); }
+                }
+                return String(val);
+              });
               if (r){
-                drawTextInRect(r, s, fpx, weight, align, 1);
+                ctx.save(); ctx.beginPath(); ctx.rect(r[0], r[1], r[2], r[3]); ctx.clip();
+                ctx.font = `${weight} ${fpx}px ${FONT_STACK}`; ctx.textBaseline='top'; ctx.fillStyle='#000';
+                ctx.fillText(s, r[0] + 1, r[1] + 1);
+                ctx.restore();
               } else {
                 text(op.x||0, op.y||0, s, fpx, weight);
               }
@@ -399,9 +172,8 @@
             case 'timeRight': {
               const r = rects[op.rect]; if (!r) break;
               const fpx = ((fonts[op.font||'time']||{}).px) || pxTime;
-              const s = _uiFormatField(data, String(op.source||'{time_hhmm}').replace(/[{}]/g,'')) || (data.time||'');
+              const s = String((data.time||''));
               const tw = ctx.measureText(s).width;
-              // Match firmware: right-aligned, baseline near bottom of rect
               const tx = r[0] + r[2] - 2 - tw;
               const ty = r[1] + r[3] - 2;
               text(tx, ty, s, fpx);
@@ -412,8 +184,7 @@
               const fpx = ((fonts[op.font||'label']||{}).px) || pxLabel;
               const weight = ((fonts[op.font||'label']||{}).weight) || 'bold';
               const lab = String(op.text||'');
-              ctx.font = `${weight} ${fpx}px ${FONT_STACK}`;
-              ctx.textBaseline = 'top'; ctx.fillStyle = '#000';
+              ctx.font = `${weight} ${fpx}px ${FONT_STACK}`; ctx.textBaseline='top'; ctx.fillStyle='#000';
               const lw = ctx.measureText(lab).width;
               const lx = r[0] + Math.floor((r[2] - lw)/2);
               text(lx, op.y || (r[1] - (fpx+2)), lab, fpx, weight);
@@ -421,52 +192,51 @@
             }
             case 'tempGroupCentered': {
               const r = rects[op.rect]; if (!r) break;
-              const key = String(op.value||'{inside_temp_f}').replace(/[{}]/g,'');
-              const v = _uiFormatField(data, key) || (data.inside_temp || '');
-              drawTempCentered(r, v, key.includes('outside') ? 'outside' : 'inside');
+              // Render number + units centered; simplified fixed approach
+              const [x,y,w,h] = r;
+              ctx.font = `bold ${SIZE_BIG}px ${FONT_STACK}`; ctx.textBaseline='top';
+              let s = String((op.value||'').toString().replace(/[{}]/g,''));
+              s = String(data[s] ?? '');
+              const unitsW = 14; const tw = ctx.measureText(s).width;
+              const totalW = Math.min(Math.max(0,w-2), tw + unitsW);
+              const left = x + Math.max(0, Math.floor((w - totalW)/2));
+              text(left, y, s, SIZE_BIG, 'bold');
+              text(left + tw + 2, y + 4, '°', 12);
+              text(left + tw + 8, y + 4, 'F', 12);
               break;
             }
             case 'textCenteredIn': {
               const r = rects[op.rect]; if (!r) break;
               const fpx = ((fonts[op.font||'small']||{}).px) || pxSmall;
               const weight = ((fonts[op.font||'small']||{}).weight) || 'normal';
-              const s = String(op.text||'').replace(/\{([^}]+)\}/g, (_,k)=>_uiFormatField(data, k));
+              const raw = String(op.text||'');
+              const s = raw.replace(/\{([^}]+)\}/g, (_,k)=>String(data[k]||''));
               ctx.font = `${weight} ${fpx}px ${FONT_STACK}`; ctx.textBaseline='top';
               const tw = ctx.measureText(s).width;
               const x = r[0] + Math.max(0, Math.floor((r[2]-tw)/2));
-              // Special-case HEADER_CENTER time to match firmware baseline (bottom-6)
-              const isHeaderCenter = !!(op.rect === 'HEADER_CENTER');
-              const yTop = isHeaderCenter ? (r[1] + r[3] - 6 - fpx) : (op.yOffset ? (r[1] + op.yOffset) : r[1]);
+              const yTop = (op.yOffset? (r[1]+op.yOffset) : r[1]);
               text(x, yTop, s, fpx, weight);
               break;
             }
             case 'iconIn': {
               const r = rects[op.rect]; if (!r) break;
-              const key = String(op.iconFromWeather||'{weather}').replace(/[{}]/g,'');
-              const s = data[key] || data.weather || '';
-              // Use spec icon map if provided to select mdi icon names
-              let iconName = null;
-              try{
-                if (typeof window !== 'undefined' && typeof window.uiMapWeather === 'function' && window.UI_SPEC){
-                  iconName = window.uiMapWeather(s);
-                }
-              }catch(e){ /* ignore */ }
-              weatherIcon([r[0], r[1], r[0]+r[2], r[1]+r[3]], iconName || s);
+              // Placeholder box for icons in spec-only path
+              ctx.strokeStyle = '#000';
+              ctx.strokeRect(r[0], r[1], r[2], r[3]);
               break;
             }
             case 'shortCondition': {
               const r = rects[op.rect]; if (!r) break;
               const fpx = ((fonts[op.font||'small']||{}).px) || pxSmall;
-              const s = shortConditionLabel(data.weather || 'Cloudy');
+              const s = String((window.lastData && window.lastData.weather) || 'Cloudy').split(/[\s-]+/)[0];
               const ty = r[1] + Math.max(0, Math.floor((r[3] - fpx)/2));
               text(r[0] + (op.xOffset||0), ty, s, fpx);
               break;
             }
             case 'batteryGlyph': {
               const x = op.x||0, y = op.y||0, bw = op.w||13, bh = op.h||7;
-              const pct = parseInt(_uiFormatField(data, String(op.percent||'{battery_percent}').replace(/[{}]/g,''))||'0', 10);
+              const pct = parseInt(String((window.lastData && window.lastData.percent) || 0), 10);
               ctx.strokeStyle = '#000'; ctx.strokeRect(x, y, bw, bh); ctx.fillStyle = '#000';
-              // Battery cap height matches firmware (3px tall)
               ctx.fillRect(x + bw, y + 2, 2, 3);
               const fillw = Math.max(0, Math.min(bw-2, Math.round((bw-2) * (pct/100))));
               if (fillw > 0) ctx.fillRect(x+1, y+1, fillw, bh-2);
@@ -476,7 +246,7 @@
           }
         }
       }
-    }catch(e){ /* ignore */ }
+    }catch(e){ }
   }
   window.drawFromSpec = drawFromSpec;
 
@@ -497,330 +267,19 @@
   let lastData = { ...DEFAULTS };
 
   function draw(data){
-    console.log('[sim] draw()', data);
     if (data && typeof data === 'object' && Object.keys(data).length) lastData = data;
-    clear();
-    // Frame (crisp 1px border)
-    ctx.fillStyle = '#000';
-    ctx.fillRect(0,0,WIDTH,1);
-    ctx.fillRect(0,HEIGHT-1,WIDTH,1);
-    ctx.fillRect(0,0,1,HEIGHT);
-    ctx.fillRect(WIDTH-1,0,1,HEIGHT);
-    // Horizontal rule above status (expected around y≈92)
-    try {
-      const yRule = (STATUS && Array.isArray(STATUS)) ? (STATUS[1] - 20) : 92;
-      ctx.fillRect(0, yRule, WIDTH, 1);
-    } catch(e) {}
-    // If spec-only requested, render spec-only and return (chrome now in spec)
-    if (specOnly){
-      try{
-        // Device defaults to v1; honor ?variant=... override
-        const qsVar = QS.get('variant');
-        const variant = (qsVar && qsVar.length) ? qsVar : 'v1';
-        const fn = (typeof window !== 'undefined' && (window.drawFromSpec || window.drawFromSpecGen)) ? (window.drawFromSpec || window.drawFromSpecGen) : null;
-        if (typeof fn === 'function'){
-          fn(ctx, data, variant);
-        } else {
-          console.warn('[sim] spec-only: no drawFromSpec present; UI_SPEC?', typeof window!=='undefined'?window.UI_SPEC:undefined);
-          // Visual hint so page isn't blank if renderer missing
-          ctx.fillStyle = '#000';
-          ctx.font = `normal 10px ${FONT_STACK}`;
-          ctx.fillText('[spec] renderer not found', 4, 4);
-        }
-        // Version overlay handled by spec's header components
-      }catch(e){
-        console.error('[sim] spec-only draw error', e);
-        ctx.fillStyle = '#000';
-        ctx.font = `normal 10px ${FONT_STACK}`;
-        ctx.fillText('[spec] error', 4, 4);
-      }
-      applyOneBitThreshold();
-      return;
+    // Render via spec only
+    const variant = QS.get('variant') || (typeof window!=='undefined' && window.UI_SPEC && window.UI_SPEC.defaultVariant) || 'v1';
+    ctx.fillStyle = '#fff'; ctx.fillRect(0,0,WIDTH,HEIGHT);
+    if (typeof window !== 'undefined' && typeof window.drawFromSpec === 'function'){
+      window.drawFromSpec(ctx, lastData, variant);
     }
-    // Header
-    ctx.fillStyle = '#000';
-    // thin rules only
-    ctx.fillRect(0,18,WIDTH,1);
-    // extend center divider all the way to the bottom frame (to y=HEIGHT-1)
-    ctx.fillRect(125,18,1,HEIGHT-18-1);
-    // left name, right time (use font state to measure and to draw)
-    const t = data.time || '10:32';
-    ctx.font = `${SIZE_TIME}px ${FONT_STACK}`; ctx.textBaseline='top'; ctx.fillStyle = '#000';
-    const tw = ctx.measureText(t).width;
-    const timeX = HEADER_TIME[0] + HEADER_TIME[2] - 2 - tw;
-    // Reserve a hard 4px gap before the time block
-    const maxNameW = Math.max(0, timeX - 4 - HEADER_NAME[0]);
-    // Draw truncated name with label font for consistent width
-    ctx.font = `bold 12px ${FONT_STACK}`; ctx.textBaseline='top'; ctx.fillStyle = '#000';
-    (function(){ let s=String(data.room_name||'Room'); const maxW=Math.min(maxNameW, HEADER_NAME[2]-2); while (s.length>1 && ctx.measureText(s+'…').width>maxW){ s=s.slice(0,-1);} if(ctx.measureText(s).width>maxW) s=s+'…'; ctx.fillText(s, HEADER_NAME[0], HEADER_NAME[1]+1); })();
-    // Time text
-    ctx.font = `${SIZE_TIME}px ${FONT_STACK}`; ctx.textBaseline='top'; ctx.fillStyle = '#000';
-    ctx.fillText(t, timeX, HEADER_TIME[1]+1);
-    // Expose time metrics for tests
-    try{
-      window.__timeMetrics = { x: timeX, y: HEADER_TIME[1]+1, w: Math.max(1, Math.floor(tw)), h: SIZE_TIME, rt: [HEADER_TIME[0], HEADER_TIME[1], HEADER_TIME[2], HEADER_TIME[3]] };
-    }catch(e){}
-    // If spec requests version in top-right, draw v + fw_version
-    try{
-      const v = (window.UI_FW_VERSION || (GJSON && GJSON.fw) || (typeof FW_VERSION === 'string' ? FW_VERSION : '') || '');
-      if (v){
-        const vx = HEADER_TIME[0] + HEADER_TIME[2] - 2 - ctx.measureText('v').width - ctx.measureText(v).width;
-        text(vx, HEADER_TIME[1] + HEADER_TIME[3] - 8, 'v', SIZE_TIME);
-        text(vx + ctx.measureText('v').width, HEADER_TIME[1] + HEADER_TIME[3] - 8, v, SIZE_TIME);
-      }
-    }catch(e){ /* ignore */ }
-    // Deterministic probe pixel for tests: mark the center of time text box black
-    // This avoids font/kerning differences across environments landing on whitespace
-    const probeCx = Math.floor(timeX + Math.max(1, Math.floor(tw/2)));
-    ctx.fillStyle = '#000';
-    ctx.fillRect(probeCx, HEADER_TIME[1]+3, 1, 1);
-
-    // Labels centered above their columns
-    ctx.fillStyle = '#000';
-    const insideLabel = 'INSIDE';
-    const outsideLabel = 'OUTSIDE';
-    // Measure using the same style we draw with (bold) so centering is accurate
-    ctx.font = `bold ${SIZE_LABEL}px ${FONT_STACK}`;
-    const ilw = ctx.measureText(insideLabel).width;
-    const olw = ctx.measureText(outsideLabel).width;
-    const ilx = INSIDE_TEMP[0] + Math.floor((INSIDE_TEMP[2] - ilw) / 2);
-    let olx = OUT_TEMP[0] + Math.floor((OUT_TEMP[2] - olw) / 2);
-    text(ilx, 22, insideLabel, SIZE_LABEL, 'bold');
-
-    // Values: numeric right-aligned with fixed units strip
-    const numIn = `${data.inside_temp||'72.5'}`;
-    drawTempCentered(INSIDE_TEMP, numIn, 'inside');
-    text(INSIDE_RH[0], INSIDE_RH[1], `${data.inside_hum||'47'}% RH`, SIZE_SMALL);
-    // Inside pressure (hPa) in INSIDE_TIME to match device UI (if provided)
-    try{
-      const pressVal = parseFloat((data.pressure_hpa ?? data.press ?? data.inside_pressure));
-      if (isFinite(pressVal)){
-        text(INSIDE_TIME[0], INSIDE_TIME[1], `${pressVal.toFixed(1)} hPa`, SIZE_SMALL);
-      }
-    }catch(e){ /* ignore if not provided */ }
-    // Omit duplicate inside time; header shows time
-
-    const numOut = `${data.outside_temp||'68.4'}`;
-    drawTempCentered(OUT_TEMP, numOut, 'outside');
-    // Outside details (device v1): RH bottom-left, wind bottom-right
-    const condition = shortConditionLabel(data.weather || 'Cloudy');
-    const rhText = `${data.outside_hum||'53'}% RH`;
-    let windMps = parseFloat(data.wind || '4.2');
-    if (!isFinite(windMps)) windMps = 4.2;
-    const wind = `${(windMps*2.237).toFixed(1)} mph`;
-    // nudge down 1px to avoid descender clipping
-    drawTextInRect([OUT_ROW2_L[0], OUT_ROW2_L[1]+1, OUT_ROW2_L[2], OUT_ROW2_L[3]], rhText, SIZE_SMALL, 'normal', 'left', 1);
-    drawTextInRect([OUT_ROW2_R[0], OUT_ROW2_R[1]+1, OUT_ROW2_R[2], OUT_ROW2_R[3]], wind, SIZE_SMALL, 'normal', 'left', 1);
-    // Prefer firmware footer blocks if available; otherwise fall back to status band + bar
-    const R = (GJSON && GJSON.rects) ? GJSON.rects : {};
-    const FOOTER_L = Array.isArray(R.FOOTER_L) ? R.FOOTER_L : null;
-    const FOOTER_R = Array.isArray(R.FOOTER_R) ? R.FOOTER_R : null;
-    const pct = parseInt(data.percent||'76', 10);
-    // Shared metrics used by tests; populate within branches below
-    let leftColLeft = 0, leftColRight = 0, baseY = 0;
-    let bx = 0, by = 0, bw = 13, bh = 7, groupLeft = 0, groupW = 0, leftTextX = 0;
-    let ipCenterLeft = 0, iw = 0;
-    let barX = 0, barW = 0, barY = 0, gap = 8, startX = 0, iconW = 0, iconH = 0, totalW = 0, labelTop = 0;
-    let label = '';
-    if (FOOTER_L && FOOTER_R){
-      // Footer left: battery glyph + two lines + centered IP, with group centering
-      const x = FOOTER_L[0], y = FOOTER_L[1], w = FOOTER_L[2], h = FOOTER_L[3];
-      ctx.fillStyle = '#fff'; ctx.fillRect(x, y, w, h);
-      ctx.fillStyle = '#000';
-      ctx.font = `${SIZE_STATUS}px ${FONT_STACK}`;
-      const line1 = `Batt ${data.voltage||'4.01'}V ${pct}%`;
-      const line2 = `~${data.days||'128'}d`;
-      // Compute centered battery group metrics within left footer rect
-      leftColLeft = x + 1;
-      leftColRight = x + w - 2;
-      baseY = y + 3; // so that line1 at baseY-2 == y+1, line2 at baseY+8 == y+11
-      bw = 13; bh = 7;
-      const iconTotalW = bw + 2; // include battery cap
-      const statusGap = 6;
-      const textMaxW = Math.max(ctx.measureText(line1).width, ctx.measureText(line2).width);
-      groupW = iconTotalW + statusGap + textMaxW;
-      groupLeft = leftColLeft + Math.max(0, Math.floor((leftColRight - leftColLeft - groupW) / 2));
-      bx = groupLeft;
-      by = Math.round(baseY + 8 - bh/2);
-      leftTextX = bx + iconTotalW + statusGap;
-      // Draw battery glyph
-      ctx.strokeStyle = '#000'; ctx.strokeRect(bx, by, bw, bh); ctx.fillStyle = '#000';
-      ctx.fillRect(bx + bw, by + 2, 2, 4);
-      const fillw3 = Math.max(0, Math.min(bw-2, Math.round((bw-2) * (pct/100)))); if (fillw3>0) ctx.fillRect(bx+1, by+1, fillw3, bh-2);
-      // Rows
-      text(leftTextX, baseY-2, line1, SIZE_STATUS);
-      text(leftTextX, baseY+8, line2, SIZE_STATUS);
-      // Centered IP row
-      const ip = `IP ${data.ip||'192.168.1.42'}`; iw = ctx.measureText(ip).width;
-      const ipAreaLeft = leftColLeft; const ipAreaRight = leftColRight;
-      ipCenterLeft = ipAreaLeft + Math.max(0, Math.floor((ipAreaRight - ipAreaLeft - iw) / 2));
-      ctx.fillStyle = '#000';
-      text(ipCenterLeft, baseY+18, ip, SIZE_STATUS);
-
-      // Footer right: icon + short condition label centered within right footer rect
-      const rx = FOOTER_R[0], ry = FOOTER_R[1], rw = FOOTER_R[2], rh = FOOTER_R[3];
-      ctx.fillStyle = '#fff'; ctx.fillRect(rx, ry, rw, rh); ctx.fillStyle = '#000';
-      const cond = shortConditionLabel(data.weather||'Cloudy');
-      const iconSelector = (data.moon_phase ? `moon_${(data.moon_phase||'').toLowerCase().replace(/\s+/g,'_')}` : (data.weather||'Cloudy'));
-      barX = rx; barW = rw; gap = 8; barY = ry + Math.max(0, Math.floor((rh - 24)/2));
-      let candidateIcon = Math.min(24, rw - 32);
-      if (candidateIcon < 18) candidateIcon = 18;
-      function fitLabel(iconSize){
-        const maxText = barW - iconSize - gap - 2;
-        let s = cond;
-        while (ctx.measureText(s).width > maxText && s.length > 1) s = s.slice(0,-1);
-        if (s !== cond && s.length>1) s = s.slice(0,-1) + '…';
-        return {label:s, fits: ctx.measureText(s).width <= maxText, icon: iconSize};
-      }
-      let fit = fitLabel(candidateIcon);
-      while (!fit.fits && candidateIcon > 18){ candidateIcon--; fit = fitLabel(candidateIcon); }
-      label = fit.label; iconW = fit.icon; iconH = fit.icon;
-      totalW = iconW + gap + ctx.measureText(label).width;
-      startX = barX + Math.max(0, Math.floor((barW - totalW)/2));
-      const ix = startX, iy = barY;
-      weatherIcon([ix, iy, ix + iconW, iy + iconH], iconSelector);
-      labelTop = iy + Math.max(0, Math.floor((iconH - SIZE_SMALL)/2)) + 1;
-      text(ix + iconW + gap, labelTop, label, SIZE_SMALL);
-      // Draw OUTSIDE label once
-      text(olx, 22, outsideLabel, SIZE_LABEL, 'bold');
-    } else {
-      // Fallback: legacy status band with centered group and right bar
-      ctx.fillStyle = '#fff';
-      ctx.fillRect(STATUS[0], STATUS[1]-18, 125-STATUS[0], STATUS[3]+22);
-      ctx.fillRect(125, STATUS[1]-18, WIDTH-125-1, STATUS[3]+22);
-      ctx.fillStyle = '#000';
-      bx = STATUS[0] + 1; // will be adjusted to center the whole battery group
-      bw = 13; bh = 7;
-      baseY = STATUS[1] - 18;
-      // horizontal rule above status
-      ctx.fillStyle = '#000';
-      ctx.fillRect(0, baseY - 2, WIDTH, 1);
-      ctx.fillStyle = '#000';
-      // ensure center divider reaches bottom
-      ctx.fillRect(125, 18, 1, HEIGHT-18-1);
-      // Compute centering for the entire battery group (icon + two text rows)
-      const line1 = `Batt ${data.voltage||'4.01'}V`;
-      const line2 = `~${data.days||'128'}d   ${pct}%`;
-      ctx.font = `${SIZE_STATUS}px ${FONT_STACK}`;
-      const textMaxW = Math.max(ctx.measureText(line1).width, ctx.measureText(line2).width);
-      const iconTotalW = bw + 2; // include the battery cap
-      const statusGap = 6; // space between icon and text (distinct from weather gap)
-      groupW = iconTotalW + statusGap + textMaxW;
-      leftColLeft = STATUS[0] + 1;
-      leftColRight = 125 - 2;
-      groupLeft = leftColLeft + Math.max(0, Math.floor((leftColRight - leftColLeft - groupW) / 2));
-      bx = groupLeft; // shift icon to center the whole group
-
-      // Battery glyph (vertically centered between the two top status rows)
-      by = Math.round(baseY + 8 - bh/2);
-      ctx.strokeStyle = '#000'; ctx.strokeRect(bx, by, bw, bh); ctx.fillStyle = '#000';
-      ctx.fillRect(bx + bw, by + 2, 2, 4);
-      const fillw3 = Math.max(0, Math.min(bw-2, Math.round((bw-2) * (pct/100)))); if (fillw3>0) ctx.fillRect(bx+1, by+1, fillw3, bh-2);
-      // Rows (positioned after centering calculation)
-      leftTextX = bx + iconTotalW + statusGap;
-      text(leftTextX, baseY-2, line1, SIZE_STATUS);
-      text(leftTextX, baseY+8, line2, SIZE_STATUS);
-      const ip = `IP ${data.ip||'192.168.1.42'}`; iw = ctx.measureText(ip).width;
-      const ipAreaLeft = leftColLeft; const ipAreaRight = leftColRight;
-      ipCenterLeft = ipAreaLeft + Math.max(0, Math.floor((ipAreaRight - ipAreaLeft - iw) / 2));
-      ctx.fillStyle = '#fff'; ctx.fillRect(ipAreaLeft-1, baseY+17, ipAreaRight-ipAreaLeft+2, SIZE_STATUS+2);
-      ctx.fillStyle = '#000';
-      text(ipCenterLeft, baseY+18, ip, SIZE_STATUS);
-      // Right weather: scale icon and fit label
-      const cond = shortConditionLabel(data.weather||'Cloudy');
-      barX = 130; barW = 114; gap = 8; barY = 95;
-      // Draw weather icon about 20% larger than before by inflating its layout width
-      const ICON_DRAW_SCALE = 1.2;
-      let candidateIcon = 26;
-      function eff(iconSize){ return Math.round(iconSize * ICON_DRAW_SCALE); }
-      function fitLabel(iconSize){
-        const iconDrawW = eff(iconSize);
-        const maxText = barW - iconDrawW - gap - 2;
-        let s = cond;
-        while (ctx.measureText(s).width > maxText && s.length > 1) s = s.slice(0,-1);
-        if (s !== cond && s.length>1) s = s.slice(0,-1) + '…';
-        return {label:s, fits: ctx.measureText(s).width <= maxText, icon: iconSize, drawW: iconDrawW};
-      }
-      let fit = fitLabel(candidateIcon);
-      while (!fit.fits && candidateIcon > 18){ candidateIcon--; fit = fitLabel(candidateIcon); }
-      label = fit.label; iconW = fit.drawW; iconH = fit.drawW;
-      totalW = iconW + gap + ctx.measureText(label).width;
-      startX = barX + Math.max(0, Math.floor((barW - totalW)/2));
-      const iconSelector = (data.moon_phase ? `moon_${(data.moon_phase||'').toLowerCase().replace(/\s+/g,'_')}` : (data.weather||'Cloudy'));
-      weatherIcon([startX, barY, startX+iconW, barY+iconH], iconSelector);
-      labelTop = barY + Math.max(0, Math.floor((iconH - SIZE_SMALL)/2)) + 1;
-      text(startX + iconW + gap, labelTop, label, SIZE_SMALL);
-      // Draw OUTSIDE label once
-      text(olx, 22, outsideLabel, SIZE_LABEL, 'bold');
-    }
-
-    // Single-row status removed; unified split3 layout renders status above
-
-    // Also draw from generated UI spec (kept additive for now to avoid test regressions)
-    try{
-      if (typeof window !== 'undefined' && typeof window.drawFromSpec === 'function'){
-        const variant = (typeof window.UI_SPEC==='object' && window.UI_SPEC && window.UI_SPEC.defaultVariant) ? window.UI_SPEC.defaultVariant : 'v1';
-        window.drawFromSpec(ctx, data, variant);
-      }
-    }catch(e){ /* ignore if drawFromSpec missing or throws */ }
-
-    // partial window overlay
-    if (showWindows){
-      ctx.strokeStyle = '#888';
-      ctx.setLineDash([3,2]);
-      let rects = [];
-      if (GEOMETRY && typeof GEOMETRY === 'object'){
-        for (const key of Object.keys(GEOMETRY)){
-          const r = GEOMETRY[key];
-          if (Array.isArray(r) && r.length === 4) rects.push(r);
-        }
-      } else {
-        rects = [HEADER_NAME, HEADER_TIME, INSIDE_TEMP, INSIDE_RH, INSIDE_TIME, OUT_TEMP, OUT_ICON, OUT_ROW1_L, OUT_ROW1_R, OUT_ROW2_L, OUT_ROW2_R, STATUS];
-      }
-      rects.forEach(([x,y,w,h])=>{ ctx.strokeRect(x,y,w,h); });
-      ctx.setLineDash([]);
-    }
-
-    // Expose layout metrics for automated tests/debugging
-    try{
-      window.__layoutMetrics = {
-        canvas: { width: WIDTH, height: HEIGHT },
-        labels: {
-          inside: { x: ilx + ilw/2, text: insideLabel },
-          outside: { x: olx + olw/2, text: outsideLabel }
-        },
-        statusLeft: {
-          left: leftColLeft,
-          right: leftColRight,
-          baseY: baseY,
-          batteryIcon: { x: bx, y: by, w: bw, h: bh },
-          batteryGroup: { x: groupLeft, w: groupW, textLeft: leftTextX },
-          line1Y: baseY-2,
-          line2Y: baseY+8,
-          ip: { x: ipCenterLeft, w: iw, y: baseY+18 }
-        },
-        weather: {
-          bar: { x: barX, w: barW, y: barY },
-          iconBox: { x: startX, y: barY, w: iconW, h: iconH },
-          label: { x: startX + iconW + gap, y: labelTop, text: label },
-          totalW: totalW
-        },
-        outsideRows: {
-          row1L: { x: OUT_ROW1_L[0], y: OUT_ROW1_L[1], w: OUT_ROW1_L[2], h: OUT_ROW1_L[3] },
-          row2L: { x: OUT_ROW2_L[0], y: OUT_ROW2_L[1]+1, w: OUT_ROW2_L[2], h: OUT_ROW2_L[3] }
-        }
-      };
-    }catch(e){ /* ignore if window not accessible */ }
-
-    // Optional: convert to 1-bit threshold rendering pass
     applyOneBitThreshold();
   }
 
   async function load(){
     await loadCentralGeometry();
-    // Draw defaults immediately for instant feedback
     draw(lastData);
-    // Try to load overlay geometry (cache-busted)
     try{
       const gres = await fetch('geometry.json?v=2');
       if (gres.ok){ GEOMETRY = await gres.json(); }
@@ -829,52 +288,31 @@
       const res = await fetch('sample_data.json');
       if(!res.ok) throw new Error('fetch failed');
       const data = await res.json();
-      console.log('[sim] loaded sample_data.json');
-      lastData = data;
-      draw(lastData);
-    } catch(e){
-      console.warn('[sim] using defaults', e);
-    }
+      lastData = data; draw(lastData);
+    } catch(e){ }
   }
 
-  // Partial update demo on refresh: only redraw time region
   document.getElementById('refresh').addEventListener('click', async ()=>{
     try{
       const res = await fetch('sample_data.json');
       const data = await res.json();
       data.time = new Date().toTimeString().slice(0,5);
-      // clear the header time box and redraw just that region (right-aligned)
+      lastData = data;
+      // Partial redraw demo: clear header time rect and re-render spec variant
       const [hx,hy,hw,hh] = HEADER_TIME;
-      ctx.fillStyle = '#fff';
-      ctx.fillRect(hx,hy,hw,hh);
-      const tw = ctx.measureText(data.time).width;
-      text(hx + hw - 2 - tw, hy+1, data.time, SIZE_TIME);
-      // brief outline to show the partial region
-      ctx.strokeStyle = '#000';
-      ctx.strokeRect(hx,hy,hw,hh);
-      // Re-apply 1-bit threshold to ensure no grayscale AA from partial update
+      ctx.fillStyle = '#fff'; ctx.fillRect(hx,hy,hw,hh);
+      const variant = QS.get('variant') || (window.UI_SPEC && window.UI_SPEC.defaultVariant) || 'v1';
+      if (typeof window !== 'undefined' && typeof window.drawFromSpec === 'function'){
+        window.drawFromSpec(ctx, lastData, variant);
+      }
       applyOneBitThreshold();
-      setTimeout(()=>{ /* no-op */ }, 100);
-    }catch(e){
-      load();
-    }
+    }catch(e){ load(); }
   });
   document.getElementById('showWindows').addEventListener('change', (e)=>{
-    showWindows = !!e.target.checked;
-    clear();
-    draw({});
+    showWindows = !!e.target.checked; draw({});
   });
   document.getElementById('stressMode').addEventListener('change', (e)=>{
-  const layoutSel = document.getElementById('layoutMode');
-  if (layoutSel){
-    layoutSel.addEventListener('change', ()=>{
-      clear();
-      draw(lastData);
-      setTimeout(()=>draw(lastData), 0);
-    });
-  }
     stressMode = !!e.target.checked;
-    // draw immediately with extreme values to reveal layout issues
     const stress = {
       room_name: 'Extremely Long Room Name Example',
       time: '23:59',
@@ -892,24 +330,14 @@
       days: '1',
       ip: '10.1.2.3'
     };
-    clear();
     draw(stressMode ? stress : {});
   });
   const specOnlyEl = document.getElementById('specOnly');
-  if (specOnlyEl){
-    specOnlyEl.checked = specOnly;
-    specOnlyEl.addEventListener('change', ()=>{
-      const url = new URL(window.location.href);
-      if (specOnlyEl.checked) url.searchParams.set('spec','1'); else url.searchParams.delete('spec');
-      window.location.replace(url.toString());
-    });
-  }
+  if (specOnlyEl){ specOnlyEl.checked = true; specOnlyEl.disabled = true; }
   const variantSel = document.getElementById('variantMode');
   if (variantSel){
     const currentVar = QS.get('variant') || (window.UI_SPEC && window.UI_SPEC.defaultVariant) || 'v1';
-    try {
-      if ([...variantSel.options].some(o=>o.value===currentVar)) variantSel.value = currentVar;
-    } catch(e) {}
+    try { if ([...variantSel.options].some(o=>o.value===currentVar)) variantSel.value = currentVar; } catch(e) {}
     variantSel.addEventListener('change', ()=>{
       const url = new URL(window.location.href);
       if (variantSel.value) url.searchParams.set('variant', variantSel.value); else url.searchParams.delete('variant');

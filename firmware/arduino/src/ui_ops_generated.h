@@ -55,26 +55,39 @@ static constexpr const char* kVariantNames[] = {
 };
 
 static constexpr const char* kVariant_minimal_components[] = {
+    "chrome",
     "header",
 };
 static constexpr const char* kVariant_v1_components[] = {
+    "chrome",
     "header",
     "inside",
     "outside",
     "footer_split",
 };
 static constexpr const char* kVariant_v2_components[] = {
+    "chrome",
     "header_centered",
     "inside",
     "outside",
     "footer_split",
 };
 
+static constexpr int kComponent_chrome_opcount = 5;
 static constexpr int kComponent_header_centered_opcount = 4;
 static constexpr int kComponent_header_opcount = 3;
 static constexpr int kComponent_inside_opcount = 4;
 static constexpr int kComponent_outside_opcount = 4;
 static constexpr int kComponent_footer_split_opcount = 6;
-static constexpr int kTotalOpCount = 21;
+static constexpr int kTotalOpCount = 26;
+
+struct ComponentOps { const UiOpHeader* ops; int count; const char* name; };
+extern const ComponentOps kVariant_minimal_ops[];
+extern const int kVariant_minimal_ops_count;
+extern const ComponentOps kVariant_v1_ops[];
+extern const int kVariant_v1_ops_count;
+extern const ComponentOps kVariant_v2_ops[];
+extern const int kVariant_v2_ops_count;
+extern const ComponentOps* get_variant_ops(uint8_t variantId, int* outCount);
 
 } // namespace ui

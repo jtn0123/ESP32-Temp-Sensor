@@ -19,6 +19,7 @@
 #if USE_DISPLAY
 #include "display_layout.h"
 #include "icons.h"
+#include "ui_ops_generated.h"
 #endif
 #include "generated_config.h"
 #include "net.h"
@@ -49,6 +50,164 @@ static bool maybe_redraw_status(const BatteryStatus& bs, const char* ip_cstr, co
 template <typename DrawFnFwd>
 static inline void draw_in_region(const int rect[4], DrawFnFwd drawFn);
 static inline int16_t text_width_default_font(const char* s, uint8_t size);
+#if USE_UI_SPEC
+// Minimal spec interpreter (full-window only) for variant rendering
+static void draw_from_spec_full(uint8_t variantId);
+
+// Utility to map RectId->rect pointer
+static inline const int* rect_ptr_by_id(uint8_t rid) {
+  using namespace ui;
+  switch (rid) {
+  case ui::RECT_HEADER_NAME: return HEADER_NAME;
+  case ui::RECT_HEADER_TIME: return HEADER_TIME;
+  case ui::RECT_HEADER_CENTER: return HEADER_CENTER;
+  case ui::RECT_INSIDE_TEMP: return INSIDE_TEMP;
+  case ui::RECT_INSIDE_RH: return INSIDE_RH;
+  case ui::RECT_INSIDE_TIME: return INSIDE_TIME;
+  case ui::RECT_OUT_TEMP: return OUT_TEMP;
+  case ui::RECT_OUT_ICON: return OUT_ICON;
+  case ui::RECT_OUT_ROW1_L: return OUT_ROW1_L;
+  case ui::RECT_OUT_ROW1_R: return OUT_ROW1_R;
+  case ui::RECT_OUT_ROW2_L: return OUT_ROW2_L;
+  case ui::RECT_OUT_ROW2_R: return OUT_ROW2_R;
+  case ui::RECT_FOOTER_L: return FOOTER_L;
+  case ui::RECT_FOOTER_R: return FOOTER_R;
+  case ui::RECT_STATUS: return STATUS_;
+  default: return nullptr;
+  }
+}
+
+static void draw_from_spec_full(uint8_t variantId) {
+  using namespace ui;
+  int comp_count = 0;
+  const ComponentOps* comps = get_variant_ops(variantId, &comp_count);
+  // Chrome similar to legacy
+  display.drawRect(0, 0, EINK_WIDTH, EINK_HEIGHT, GxEPD_BLACK);
+  display.drawLine(1, 16 + TOP_Y_OFFSET, EINK_WIDTH - 2, 16 + TOP_Y_OFFSET, GxEPD_BLACK);
+  display.drawLine(125, 18 + TOP_Y_OFFSET, 125, EINK_HEIGHT - 2, GxEPD_BLACK);
+  for (int ci = 0; ci < comp_count; ++ci) {
+    const ComponentOps& co = comps[ci];
+    for (int i = 0; i < co.count; ++i) {
+      const UiOpHeader& op = co.ops[i];
+      switch (op.kind) {
+        case OP_LINE: {
+          int16_t x0 = op.p0, y0 = op.p1, x1 = op.p2, y1 = op.p3;
+          if (y0 == y1) { for (int16_t x = x0; x <= x1; ++x) display.drawPixel(x, y0, GxEPD_BLACK); }
+          else if (x0 == x1) { for (int16_t y = y0; y <= y1; ++y) display.drawPixel(x0, y, GxEPD_BLACK); }
+          break; }
+        case OP_TEXT: {
+          const int* r = rect_ptr_by_id(op.rect);
+          int16_t tx = op.p0;
+          int16_t ty = op.p1 + TOP_Y_OFFSET;
+          auto fmt_field = [&](const String& key)->String{
+            if (key == "room_name") return String(ROOM_NAME);
+            if (key == "ip") { char ip_c[32]; net_ip_cstr(ip_c, sizeof(ip_c)); return String("IP ") + ip_c; }
+            if (key == "fw_version") return String(FW_VERSION);
+            // conversions and formatting are NOP unless we add a data map here
+            return String("");
+          };
+          String templ = op.s0 ? op.s0 : "";
+          String out; out.reserve(templ.length()+8);
+          int start = 0;
+          while (true) {
+            int lb = templ.indexOf('{', start); if (lb < 0) { out += templ.substring(start); break; }
+            int rb = templ.indexOf('}', lb+1); if (rb < 0) { out += templ.substring(start); break; }
+            out += templ.substring(start, lb);
+            String key = templ.substring(lb+1, rb);
+            out += fmt_field(key);
+            start = rb + 1;
+          }
+          display.setTextColor(GxEPD_BLACK);
+          display.setTextSize(1);
+          if (r && tx == 0 && (op.align == ALIGN_RIGHT || op.align == ALIGN_CENTER)) {
+            int16_t tw = text_width_default_font(out.c_str(), 1);
+            tx = r[0] + 1;
+            if (op.align == ALIGN_RIGHT) tx = r[0] + r[2] - 2 - tw;
+            else if (op.align == ALIGN_CENTER) tx = r[0] + (r[2] - tw) / 2;
+            ty = r[1] + TOP_Y_OFFSET + 1;
+          }
+          display.setCursor(tx, ty);
+          display.print(out.c_str());
+          break; }
+        case OP_TIMERIGHT: {
+          char hhmm[8]; net_time_hhmm(hhmm, sizeof(hhmm));
+          int16_t tw = text_width_default_font(hhmm, 1);
+          int16_t rx = static_cast<int16_t>(HEADER_TIME[0] + HEADER_TIME[2] - 2 - tw);
+          int16_t by = static_cast<int16_t>(HEADER_TIME[1] + TOP_Y_OFFSET + HEADER_TIME[3] - 2);
+          display.setTextColor(GxEPD_BLACK);
+          display.setTextSize(1);
+          display.setCursor(rx, by);
+          display.print(hhmm);
+          break; }
+        case OP_LABELCENTERED: {
+          const int* r = rect_ptr_by_id(op.rect);
+          if (!r) break;
+          display.setTextColor(GxEPD_BLACK);
+          display.setTextSize(1);
+          int16_t tw = text_width_default_font(op.s0 ? op.s0 : "", 1);
+          int16_t tx = r[0] + (r[2] - tw) / 2;
+          int16_t ty = r[1] + TOP_Y_OFFSET - 14 + op.p0;
+          display.setCursor(tx, ty);
+          display.print(op.s0 ? op.s0 : "");
+          break; }
+        case OP_TEMPGROUPCENTERED: {
+          const int* r = rect_ptr_by_id(op.rect);
+          if (!r) break;
+          char temp_buf[16]; temp_buf[0] = 0;
+          if (r == INSIDE_TEMP) {
+            InsideReadings ir = read_inside_sensors();
+            if (isfinite(ir.temperatureC)) snprintf(temp_buf, sizeof(temp_buf), "%.1f", ir.temperatureC * 9.0/5.0 + 32.0); else snprintf(temp_buf, sizeof(temp_buf), "--");
+          } else if (r == OUT_TEMP) {
+            OutsideReadings orr = net_get_outside();
+            if (orr.validTemp && isfinite(orr.temperatureC)) snprintf(temp_buf, sizeof(temp_buf), "%.1f", orr.temperatureC * 9.0/5.0 + 32.0);
+            else if (isfinite(last_outside_f)) snprintf(temp_buf, sizeof(temp_buf), "%.1f", last_outside_f);
+            else snprintf(temp_buf, sizeof(temp_buf), "--");
+          }
+          draw_temp_number_and_units(r, temp_buf);
+          break; }
+        case OP_ICONIN: {
+          const int* r = rect_ptr_by_id(op.rect);
+          if (!r) break;
+          OutsideReadings o = net_get_outside();
+          const char* weather = o.validWeather ? o.weather : "";
+          draw_weather_icon_region_at(r[0], r[1] + TOP_Y_OFFSET, r[2], r[3], weather);
+          break; }
+        case OP_SHORTCONDITION: {
+          const int* r = rect_ptr_by_id(op.rect); if (!r) break;
+          OutsideReadings o = net_get_outside();
+          if (o.validWeather) {
+            char sc[24]; make_short_condition_cstr(o.weather, sc, sizeof(sc));
+            display.setTextColor(GxEPD_BLACK); display.setTextSize(1);
+            display.setCursor(r[0] + op.p0, r[1] + TOP_Y_OFFSET + r[3]/2 + 2);
+            display.print(sc);
+          }
+          break; }
+        case OP_TEXTCENTEREDIN: {
+          const int* r = rect_ptr_by_id(op.rect); if (!r) break;
+          String templ = op.s0 ? op.s0 : "";
+          char ip_c[32]; net_ip_cstr(ip_c, sizeof(ip_c));
+          templ.replace("{ip}", ip_c);
+          display.setTextColor(GxEPD_BLACK); display.setTextSize(1);
+          int16_t tw = text_width_default_font(templ.c_str(), 1);
+          int16_t tx = r[0] + (r[2] - tw) / 2;
+          int16_t ty = r[1] + op.p0;
+          display.setCursor(tx, ty);
+          display.print(templ.c_str());
+          break; }
+        case OP_BATTERYGLYPH: {
+          BatteryStatus bs = read_battery_status();
+          int16_t bx = op.p0, by = op.p1, bw = op.p2, bh = op.p3;
+          display.drawRect(bx, by, bw, bh, GxEPD_BLACK);
+          display.fillRect(static_cast<int16_t>(bx + bw), static_cast<int16_t>(by + 2), 2, 3, GxEPD_BLACK);
+          int16_t fillw = static_cast<int16_t>(((bw - 2) * (bs.percent / 100.0f) + 0.5f));
+          if (fillw > 0) display.fillRect(static_cast<int16_t>(bx + 1), static_cast<int16_t>(by + 1), fillw, static_cast<int16_t>(bh - 2), GxEPD_BLACK);
+          break; }
+        default: break;
+      }
+    }
+  }
+}
+#endif
 #endif
 
 // Feather ESP32-S2 + 2.13" FeatherWing (adjust if needed)
@@ -782,7 +941,9 @@ static void make_short_condition_cstr(const char* weather, char* out, size_t out
   size_t i = 0;
   while (*p && i < out_size - 1) {
     char c = *p;
-    if (c == ' ' || c == '\t' || c == ',' || c == ';' || c == ':' || c == '/')
+    // Treat common separators and hyphen as delimiters so HA values like
+    // "clear-night" or "snowy-rainy" shorten to a single word.
+    if (c == ' ' || c == '\t' || c == ',' || c == ';' || c == ':' || c == '/' || c == '-')
       break;
     out[i++] = c;
     p++;
@@ -965,6 +1126,32 @@ static void draw_values(const char* in_temp_f, const char* in_rh, const char* ou
 static IconId map_weather_to_icon(const char* w) {
   String s(w);
   s.toLowerCase();
+  // First handle Home Assistant recommended values exactly
+  // https://developers.home-assistant.io/docs/core/entity/weather/#recommended-values-for-state-and-condition
+  if (s == "clear-night") return ICON_WEATHER_NIGHT;
+  if (s == "cloudy") return ICON_WEATHER_CLOUDY;
+  if (s == "exceptional") return ICON_WEATHER_CLOUDY; // generic fallback
+  if (s == "fog") return ICON_WEATHER_FOG;
+  if (s == "hail") return ICON_WEATHER_SNOWY; // approximate
+  if (s == "lightning") return ICON_WEATHER_LIGHTNING;
+  if (s == "lightning-rainy") return ICON_WEATHER_LIGHTNING; // prefer lightning cue
+  if (s == "partlycloudy") return ICON_WEATHER_PARTLY_CLOUDY;
+  if (s == "pouring") return ICON_WEATHER_POURING;
+  if (s == "rainy") return ICON_WEATHER_POURING;
+  if (s == "snowy") return ICON_WEATHER_SNOWY;
+  if (s == "snowy-rainy") return ICON_WEATHER_SNOWY; // approximate
+  if (s == "sunny") return ICON_WEATHER_SUNNY;
+  if (s == "windy" || s == "windy-variant") return ICON_WEATHER_CLOUDY; // approximate
+  // Also accept explicit MDI icon names if passed through
+  if (s == "weather-sunny") return ICON_WEATHER_SUNNY;
+  if (s == "weather-partly-cloudy") return ICON_WEATHER_PARTLY_CLOUDY;
+  if (s == "weather-cloudy") return ICON_WEATHER_CLOUDY;
+  if (s == "weather-fog") return ICON_WEATHER_FOG;
+  if (s == "weather-pouring" || s == "weather-rainy") return ICON_WEATHER_POURING;
+  if (s == "weather-snowy") return ICON_WEATHER_SNOWY;
+  if (s == "weather-lightning") return ICON_WEATHER_LIGHTNING;
+  if (s == "weather-night") return ICON_WEATHER_NIGHT;
+  if (s == "weather-night-partly-cloudy") return ICON_WEATHER_NIGHT_PARTLY_CLOUDY;
   if (s.indexOf("storm") >= 0 || s.indexOf("thunder") >= 0 || s.indexOf("lightning") >= 0)
     return ICON_WEATHER_LIGHTNING;
   if (s.indexOf("pour") >= 0 || s.indexOf("rain") >= 0 || s.indexOf("shower") >= 0)
@@ -986,6 +1173,16 @@ static IconId map_weather_to_icon(const char* w) {
 // production data sources and drawing helpers to validate paged full refresh flow
 // without legacy overlap logic. This is selectable via `ui v2`.
 static void full_refresh_v2() {
+  // If UI spec is enabled, render using generated ops for variant v2
+#if USE_UI_SPEC
+  display.setFullWindow();
+  display.firstPage();
+  do {
+    display.fillScreen(GxEPD_WHITE);
+    draw_from_spec_full(static_cast<uint8_t>(ui::UIVAR_V2));
+  } while (display.nextPage());
+  return;
+#endif
   // Snapshot dynamic data ONCE so each page draws identical content
   InsideReadings r = read_inside_sensors();
   OutsideReadings o = net_get_outside();
@@ -1206,6 +1403,16 @@ static void draw_weather_icon_region_at(int16_t x, int16_t y, int16_t w, int16_t
 }
 
 static void full_refresh() {
+  // If UI spec is enabled, render using generated ops for variant v1
+#if USE_UI_SPEC
+  display.setFullWindow();
+  display.firstPage();
+  do {
+    display.fillScreen(GxEPD_WHITE);
+    draw_from_spec_full(static_cast<uint8_t>(ui::UIVAR_V1));
+  } while (display.nextPage());
+  return;
+#endif
   // Snapshot values to ensure identical draw across pages
   InsideReadings r = read_inside_sensors();
   OutsideReadings o = net_get_outside();
@@ -1534,7 +1741,15 @@ void setup() {
 #if USE_DISPLAY
   {
     Serial.println("DBG: boot full draw pre-publish");
-    full_refresh();
+    // Honor stored UI variant for initial render
+    uint8_t uivar = g_prefs.getUChar("ui_variant", 1);
+    if (uivar == 0) {
+      full_refresh_minimal();
+    } else if (uivar == 2) {
+      full_refresh_v2();
+    } else {
+      full_refresh();
+    }
     needs_full_on_boot = false;
   }
 #endif
