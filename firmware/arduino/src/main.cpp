@@ -1236,6 +1236,16 @@ static IconId map_openweather_to_icon(const OutsideReadings& o) {
   return map_weather_to_icon(o.weather);
 }
 
+// Draw weather icon region using OutsideReadings object (prefer OpenWeather hints)
+static void draw_weather_icon_region_at_from_outside(int16_t x, int16_t y, int16_t w, int16_t h,
+                                                     const OutsideReadings& o) {
+  display.fillRect(x, y, w, h, GxEPD_WHITE);
+  int16_t ix = static_cast<int16_t>(x + (w - ICON_W) / 2);
+  int16_t iy = static_cast<int16_t>(y + (h - ICON_H) / 2);
+  IconId icon_id = map_openweather_to_icon(o);
+  draw_icon(display, ix, iy, icon_id, GxEPD_BLACK);
+}
+
 // Experimental isolated UI variant (v2): mirrors minimal layout structure but uses
 // production data sources and drawing helpers to validate paged full refresh flow
 // without legacy overlap logic. This is selectable via `ui v2`.
@@ -2081,7 +2091,8 @@ void setup() {
       maybe_redraw_value<int32_t>(OUT_ICON, static_cast<int32_t>(id), last_icon_id,
                                   [&]() {
                                     if (o.validWeatherIcon || o.validWeatherId) {
-                                      draw_in_region((int[4]){OUT_ICON[0], static_cast<int16_t>(OUT_ICON[1] + TOP_Y_OFFSET), OUT_ICON[2], OUT_ICON[3]},
+                                      int rect_tmp[4] = { OUT_ICON[0], static_cast<int16_t>(OUT_ICON[1] + TOP_Y_OFFSET), OUT_ICON[2], OUT_ICON[3] };
+                                      draw_in_region(rect_tmp,
                                                      [&](int16_t xx, int16_t yy, int16_t ww, int16_t hh){ draw_weather_icon_region_at_from_outside(xx, yy, ww, hh, o); });
                                     } else {
                                       partial_update_weather_icon(o.weather);
