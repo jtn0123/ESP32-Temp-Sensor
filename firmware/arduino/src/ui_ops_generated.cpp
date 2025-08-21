@@ -5,6 +5,15 @@
 
 namespace ui {
 
+const UiOpHeader kOps_chrome[] = {
+    { OP_LINE, 255, 0, 0, 0, 0, 249, 0, NULL, NULL },
+    { OP_LINE, 255, 0, 0, 0, 121, 249, 121, NULL, NULL },
+    { OP_LINE, 255, 0, 0, 0, 0, 0, 121, NULL, NULL },
+    { OP_LINE, 255, 0, 0, 249, 0, 249, 121, NULL, NULL },
+    { OP_LINE, 255, 0, 0, 125, 18, 125, 121, NULL, NULL },
+};
+const int kOps_chrome_count = sizeof(kOps_chrome)/sizeof(kOps_chrome[0]);
+
 const UiOpHeader kOps_header_centered[] = {
     { OP_LINE, 255, 0, 0, 1, 18, 249, 18, NULL, NULL },
     { OP_TEXT, 3, 1, 0, 0, 0, 0, 0, "{room_name}", NULL },
@@ -38,12 +47,43 @@ const int kOps_outside_count = sizeof(kOps_outside)/sizeof(kOps_outside[0]);
 
 const UiOpHeader kOps_footer_split[] = {
     { OP_BATTERYGLYPH, 255, 0, 0, 8, 92, 13, 7, "battery_percent", NULL },
-    { OP_TEXT, 255, 2, 0, 0, 0, 0, 0, "Batt {battery_voltage:.2f}V {battery_percent}%", NULL },
-    { OP_TEXT, 255, 2, 0, 0, 0, 0, 0, "~{days}d", NULL },
+    { OP_TEXT, 255, 2, 0, 26, 90, 0, 0, "Batt {battery_voltage:.2f}V {battery_percent}%", NULL },
+    { OP_TEXT, 255, 2, 0, 26, 100, 0, 0, "~{days}d", NULL },
     { OP_TEXTCENTEREDIN, 0, 2, 2, 22, 0, 0, 0, "IP {ip}", NULL },
     { OP_ICONIN, 1, 0, 0, 0, 0, 0, 0, "weather", NULL },
     { OP_SHORTCONDITION, 1, 2, 0, 28, 0, 0, 0, NULL, NULL },
 };
 const int kOps_footer_split_count = sizeof(kOps_footer_split)/sizeof(kOps_footer_split[0]);
+
+const ComponentOps kVariant_v1_ops[] = {
+    { kOps_chrome, kOps_chrome_count, "chrome" },
+    { kOps_header, kOps_header_count, "header" },
+    { kOps_inside, kOps_inside_count, "inside" },
+    { kOps_outside, kOps_outside_count, "outside" },
+    { kOps_footer_split, kOps_footer_split_count, "footer_split" },
+};
+const int kVariant_v1_ops_count = sizeof(kVariant_v1_ops)/sizeof(kVariant_v1_ops[0]);
+
+const ComponentOps kVariant_v2_ops[] = {
+    { kOps_chrome, kOps_chrome_count, "chrome" },
+    { kOps_header_centered, kOps_header_centered_count, "header_centered" },
+    { kOps_inside, kOps_inside_count, "inside" },
+    { kOps_outside, kOps_outside_count, "outside" },
+    { kOps_footer_split, kOps_footer_split_count, "footer_split" },
+};
+const int kVariant_v2_ops_count = sizeof(kVariant_v2_ops)/sizeof(kVariant_v2_ops[0]);
+
+const ComponentOps kVariant_minimal_ops[] = {
+    { kOps_chrome, kOps_chrome_count, "chrome" },
+    { kOps_header, kOps_header_count, "header" },
+};
+const int kVariant_minimal_ops_count = sizeof(kVariant_minimal_ops)/sizeof(kVariant_minimal_ops[0]);
+
+const ComponentOps* get_variant_ops(uint8_t variantId, int* outCount){
+  if (variantId == 0) { if(outCount) *outCount = kVariant_minimal_ops_count; return kVariant_minimal_ops; }
+  else if (variantId == 1) { if(outCount) *outCount = kVariant_v1_ops_count; return kVariant_v1_ops; }
+  else if (variantId == 2) { if(outCount) *outCount = kVariant_v2_ops_count; return kVariant_v2_ops; }
+  if(outCount) *outCount = 0; return nullptr;
+}
 
 } // namespace ui

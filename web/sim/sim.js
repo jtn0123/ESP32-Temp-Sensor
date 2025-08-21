@@ -434,7 +434,10 @@
               ctx.font = `${weight} ${fpx}px ${FONT_STACK}`; ctx.textBaseline='top';
               const tw = ctx.measureText(s).width;
               const x = r[0] + Math.max(0, Math.floor((r[2]-tw)/2));
-              text(x, (op.yOffset? (r[1]+op.yOffset) : r[1]), s, fpx, weight);
+              // Special-case HEADER_CENTER time to match firmware baseline (bottom-6)
+              const isHeaderCenter = !!(op.rect === 'HEADER_CENTER');
+              const yTop = isHeaderCenter ? (r[1] + r[3] - 6 - fpx) : (op.yOffset ? (r[1] + op.yOffset) : r[1]);
+              text(x, yTop, s, fpx, weight);
               break;
             }
             case 'iconIn': {
@@ -508,22 +511,12 @@
       const yRule = (STATUS && Array.isArray(STATUS)) ? (STATUS[1] - 20) : 92;
       ctx.fillRect(0, yRule, WIDTH, 1);
     } catch(e) {}
-    // If spec-only requested, render using spec plus device-style chrome and return
+    // If spec-only requested, render spec-only and return (chrome now in spec)
     if (specOnly){
       try{
         // Device defaults to v1; honor ?variant=... override
         const qsVar = QS.get('variant');
         const variant = (qsVar && qsVar.length) ? qsVar : 'v1';
-        // Draw device-style chrome to match firmware rendering
-        ctx.fillStyle = '#000';
-        // Frame
-        ctx.fillRect(0,0,WIDTH,1);
-        ctx.fillRect(0,HEIGHT-1,WIDTH,1);
-        ctx.fillRect(0,0,1,HEIGHT);
-        ctx.fillRect(WIDTH-1,0,1,HEIGHT);
-        // Header underline and center divider
-        ctx.fillRect(0,18,WIDTH,1);
-        ctx.fillRect(125,18,1,HEIGHT-19);
         const fn = (typeof window !== 'undefined' && (window.drawFromSpec || window.drawFromSpecGen)) ? (window.drawFromSpec || window.drawFromSpecGen) : null;
         if (typeof fn === 'function'){
           fn(ctx, data, variant);
@@ -534,18 +527,7 @@
           ctx.font = `normal 10px ${FONT_STACK}`;
           ctx.fillText('[spec] renderer not found', 4, 4);
         }
-        // Overlay firmware-style version at top-right within HEADER_TIME rect
-        try{
-          const R = (GJSON && GJSON.rects) ? GJSON.rects : (window.UI_SPEC && window.UI_SPEC.rects ? window.UI_SPEC.rects : {});
-          const rt = R.HEADER_TIME || [172,2,72,14];
-          const ver = (window.UI_FW_VERSION || (GJSON && GJSON.fw) || (typeof FW_VERSION === 'string' ? FW_VERSION : '') || '');
-          if (ver){
-            ctx.font = `${SIZE_TIME}px ${FONT_STACK}`; ctx.fillStyle = '#000'; ctx.textBaseline = 'top';
-            const vx = rt[0] + rt[2] - 2 - ctx.measureText('v').width - ctx.measureText(ver).width;
-            text(vx, rt[1] + rt[3] - 8, 'v', SIZE_TIME);
-            text(vx + ctx.measureText('v').width, rt[1] + rt[3] - 8, ver, SIZE_TIME);
-          }
-        }catch(e){ /* ignore */ }
+        // Version overlay handled by spec's header components
       }catch(e){
         console.error('[sim] spec-only draw error', e);
         ctx.fillStyle = '#000';
