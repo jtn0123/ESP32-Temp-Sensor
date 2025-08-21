@@ -108,6 +108,11 @@ inline BatteryStatus read_battery_status() {
   if (!isfinite(b.voltage) && VBAT_ADC_PIN >= 0) {
     // Reduce IR drop influence: short idle, median-of-3 samples
     analogReadResolution(12);
+#if defined(ARDUINO_ARCH_ESP32)
+    // Extend input range so VBAT/div fits without saturating ADC
+    analogSetPinAttenuation(VBAT_ADC_PIN, ADC_11db);
+    adcAttachPin(VBAT_ADC_PIN);
+#endif
     delay(200);
     uint16_t r0 = analogRead(VBAT_ADC_PIN);
     delay(10);
