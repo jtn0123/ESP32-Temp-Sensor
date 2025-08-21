@@ -225,6 +225,14 @@
   }
 
   function mapWeatherToIconName(w){
+    // If spec icon mapper is available, prefer MDI names directly
+    try{
+      if (typeof window !== 'undefined' && typeof window.uiMapWeather === 'function' && window.UI_SPEC){
+        const mdi = window.uiMapWeather(w);
+        if (mdi) return mdi;
+      }
+    }catch(e){ /* ignore */ }
+    // Fallback to legacy simple mapping (local sim icon set)
     const s = (w||'').toLowerCase();
     if(s.includes('clear')||s.includes('sun')) return 'clear';
     if(s.includes('part')) return 'partly';
@@ -252,7 +260,7 @@
     return first.split(/\s+/)[0] || 'Cloudy';
   }
 
-  async function weatherIcon(box, weather){
+  function weatherIcon(box, weather){
     const [x0,y0,x1,y1] = box;
     const w = x1-x0, h=y1-y0; const cx=x0+w/2, cy=y0+h/2;
     const scale = 1.5; // ~50% larger than base 20x20 box
@@ -263,13 +271,16 @@
     const ex1 = ex0 + effW;
     const ey1 = ey0 + effH;
     const kind = (weather||'').toLowerCase();
-    // Try SVG first
-    const name = kind.startsWith('moon_') ? kind : mapWeatherToIconName(kind);
-    const svg = await loadSvgIcon(name);
-    if(svg){
-      // draw centered, allow to extend up to 24x24 (about 20% larger than 20x20 box)
-      ctx.drawImage(svg, ex0, ey0, effW, effH);
+    // Choose icon name: prefer explicit MDI names like "weather-cloudy" returned by uiMapWeather
+    const name = kind.startsWith('moon_') ? kind : (kind.startsWith('weather-') ? kind : mapWeatherToIconName(kind));
+    // Try SVG first (local sim icons, then MDI pack)
+    const cached = iconCache.get(name);
+    if (cached && cached !== 'pending'){
+      ctx.drawImage(cached, ex0, ey0, effW, effH);
       return;
+    } else {
+      // kick off async load for next frame; ignore completion
+      loadSvgIcon(name).catch(()=>{});
     }
     ctx.strokeStyle = '#000';
     if(kind.includes('sun') || kind.includes('clear')){
@@ -390,7 +401,10 @@
               const fpx = ((fonts[op.font||'time']||{}).px) || pxTime;
               const s = _uiFormatField(data, String(op.source||'{time_hhmm}').replace(/[{}]/g,'')) || (data.time||'');
               const tw = ctx.measureText(s).width;
-              text(r[0] + r[2] - 2 - tw, r[1] + 1, s, fpx);
+              // Match firmware: right-aligned, baseline near bottom of rect
+              const tx = r[0] + r[2] - 2 - tw;
+              const ty = r[1] + r[3] - 2;
+              text(tx, ty, s, fpx);
               break;
             }
             case 'labelCentered': {
@@ -449,7 +463,8 @@
               const x = op.x||0, y = op.y||0, bw = op.w||13, bh = op.h||7;
               const pct = parseInt(_uiFormatField(data, String(op.percent||'{battery_percent}').replace(/[{}]/g,''))||'0', 10);
               ctx.strokeStyle = '#000'; ctx.strokeRect(x, y, bw, bh); ctx.fillStyle = '#000';
-              ctx.fillRect(x + bw, y + 2, 2, 4);
+              // Battery cap height matches firmware (3px tall)
+              ctx.fillRect(x + bw, y + 2, 2, 3);
               const fillw = Math.max(0, Math.min(bw-2, Math.round((bw-2) * (pct/100))));
               if (fillw > 0) ctx.fillRect(x+1, y+1, fillw, bh-2);
               break;
@@ -488,12 +503,55 @@
     ctx.fillRect(0,HEIGHT-1,WIDTH,1);
     ctx.fillRect(0,0,1,HEIGHT);
     ctx.fillRect(WIDTH-1,0,1,HEIGHT);
-    // If spec-only requested, render solely from spec and return
+    // Horizontal rule above status (expected around y≈92)
+    try {
+      const yRule = (STATUS && Array.isArray(STATUS)) ? (STATUS[1] - 20) : 92;
+      ctx.fillRect(0, yRule, WIDTH, 1);
+    } catch(e) {}
+    // If spec-only requested, render using spec plus device-style chrome and return
     if (specOnly){
       try{
-        const variant = (typeof window !== 'undefined' && window.UI_SPEC && window.UI_SPEC.defaultVariant) ? window.UI_SPEC.defaultVariant : 'v1';
-        drawFromSpec(ctx, data, variant);
-      }catch(e){ console.warn('spec-only draw failed', e); }
+        // Device defaults to v1; honor ?variant=... override
+        const qsVar = QS.get('variant');
+        const variant = (qsVar && qsVar.length) ? qsVar : 'v1';
+        // Draw device-style chrome to match firmware rendering
+        ctx.fillStyle = '#000';
+        // Frame
+        ctx.fillRect(0,0,WIDTH,1);
+        ctx.fillRect(0,HEIGHT-1,WIDTH,1);
+        ctx.fillRect(0,0,1,HEIGHT);
+        ctx.fillRect(WIDTH-1,0,1,HEIGHT);
+        // Header underline and center divider
+        ctx.fillRect(0,18,WIDTH,1);
+        ctx.fillRect(125,18,1,HEIGHT-19);
+        const fn = (typeof window !== 'undefined' && (window.drawFromSpec || window.drawFromSpecGen)) ? (window.drawFromSpec || window.drawFromSpecGen) : null;
+        if (typeof fn === 'function'){
+          fn(ctx, data, variant);
+        } else {
+          console.warn('[sim] spec-only: no drawFromSpec present; UI_SPEC?', typeof window!=='undefined'?window.UI_SPEC:undefined);
+          // Visual hint so page isn't blank if renderer missing
+          ctx.fillStyle = '#000';
+          ctx.font = `normal 10px ${FONT_STACK}`;
+          ctx.fillText('[spec] renderer not found', 4, 4);
+        }
+        // Overlay firmware-style version at top-right within HEADER_TIME rect
+        try{
+          const R = (GJSON && GJSON.rects) ? GJSON.rects : (window.UI_SPEC && window.UI_SPEC.rects ? window.UI_SPEC.rects : {});
+          const rt = R.HEADER_TIME || [172,2,72,14];
+          const ver = (window.UI_FW_VERSION || (GJSON && GJSON.fw) || (typeof FW_VERSION === 'string' ? FW_VERSION : '') || '');
+          if (ver){
+            ctx.font = `${SIZE_TIME}px ${FONT_STACK}`; ctx.fillStyle = '#000'; ctx.textBaseline = 'top';
+            const vx = rt[0] + rt[2] - 2 - ctx.measureText('v').width - ctx.measureText(ver).width;
+            text(vx, rt[1] + rt[3] - 8, 'v', SIZE_TIME);
+            text(vx + ctx.measureText('v').width, rt[1] + rt[3] - 8, ver, SIZE_TIME);
+          }
+        }catch(e){ /* ignore */ }
+      }catch(e){
+        console.error('[sim] spec-only draw error', e);
+        ctx.fillStyle = '#000';
+        ctx.font = `normal 10px ${FONT_STACK}`;
+        ctx.fillText('[spec] error', 4, 4);
+      }
       applyOneBitThreshold();
       return;
     }
@@ -503,15 +561,23 @@
     ctx.fillRect(0,18,WIDTH,1);
     // extend center divider all the way to the bottom frame (to y=HEIGHT-1)
     ctx.fillRect(125,18,1,HEIGHT-18-1);
-    // left name, right time
-    ctx.fillStyle = '#000';
+    // left name, right time (use font state to measure and to draw)
     const t = data.time || '10:32';
+    ctx.font = `${SIZE_TIME}px ${FONT_STACK}`; ctx.textBaseline='top'; ctx.fillStyle = '#000';
     const tw = ctx.measureText(t).width;
     const timeX = HEADER_TIME[0] + HEADER_TIME[2] - 2 - tw;
     // Reserve a hard 4px gap before the time block
     const maxNameW = Math.max(0, timeX - 4 - HEADER_NAME[0]);
-    textTruncated(HEADER_NAME[0], HEADER_NAME[1]+1, Math.min(maxNameW, HEADER_NAME[2]-2), data.room_name || 'Room', 12, 'bold');
-    text(timeX, HEADER_TIME[1]+1, t, SIZE_TIME);
+    // Draw truncated name with label font for consistent width
+    ctx.font = `bold 12px ${FONT_STACK}`; ctx.textBaseline='top'; ctx.fillStyle = '#000';
+    (function(){ let s=String(data.room_name||'Room'); const maxW=Math.min(maxNameW, HEADER_NAME[2]-2); while (s.length>1 && ctx.measureText(s+'…').width>maxW){ s=s.slice(0,-1);} if(ctx.measureText(s).width>maxW) s=s+'…'; ctx.fillText(s, HEADER_NAME[0], HEADER_NAME[1]+1); })();
+    // Time text
+    ctx.font = `${SIZE_TIME}px ${FONT_STACK}`; ctx.textBaseline='top'; ctx.fillStyle = '#000';
+    ctx.fillText(t, timeX, HEADER_TIME[1]+1);
+    // Expose time metrics for tests
+    try{
+      window.__timeMetrics = { x: timeX, y: HEADER_TIME[1]+1, w: Math.max(1, Math.floor(tw)), h: SIZE_TIME, rt: [HEADER_TIME[0], HEADER_TIME[1], HEADER_TIME[2], HEADER_TIME[3]] };
+    }catch(e){}
     // If spec requests version in top-right, draw v + fw_version
     try{
       const v = (window.UI_FW_VERSION || (GJSON && GJSON.fw) || (typeof FW_VERSION === 'string' ? FW_VERSION : '') || '');
