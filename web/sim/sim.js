@@ -239,8 +239,8 @@
               const lw = ctx.measureText(lab).width;
               const lx = r[0] + Math.floor((r[2] - lw)/2);
               text(lx, op.y || (r[1] - (fpx+2)), lab, fpx, weight);
-              if (op.aboveRect === 'INSIDE_TEMP') window.__layoutMetrics.labels.inside = { x: lx };
-              if (op.aboveRect === 'OUT_TEMP') window.__layoutMetrics.labels.outside = { x: lx };
+              if (op.aboveRect === 'INSIDE_TEMP') window.__layoutMetrics.labels.inside = { x: lx + lw/2 };
+              if (op.aboveRect === 'OUT_TEMP') window.__layoutMetrics.labels.outside = { x: lx + lw/2 };
               break;
             }
             case 'tempGroupCentered': {
