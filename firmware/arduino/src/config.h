@@ -17,15 +17,20 @@
 #ifndef DEV_SLEEP_SEC
 #define DEV_SLEEP_SEC 180
 #endif
+#ifndef USE_SHT40
 #define USE_SHT40 0
+#endif
+#ifndef USE_BME280
 #define USE_BME280 1
+#endif
 #define USE_MQTT 1
 #define USE_ESPHOME_API 0
+// Support either fuel gauge; runtime probe decides which one is present
 #ifndef USE_MAX17048
-#define USE_MAX17048 0
+#define USE_MAX17048 1
 #endif
 #ifndef USE_LC709203F
-#define USE_LC709203F 0
+#define USE_LC709203F 1
 #endif
 
 // Wi-Fi provisioning (ESP-IDF wifi_prov_mgr) compile-time switch
