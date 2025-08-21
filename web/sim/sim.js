@@ -37,6 +37,14 @@
   const SIZE_TIME = 11;
   const SIZE_BIG = 22;
   const THRESH = 176;
+  // Provide a simple, deterministic short label from weather text
+  function shortConditionLabel(s){
+    try{
+      const str = String(s||'');
+      const parts = str.split(/[\s-]+/);
+      return parts[0] || str;
+    }catch(e){ return String(s||''); }
+  }
   async function loadCentralGeometry(){
     try{
       if (typeof window !== 'undefined' && window.UI_SPEC){
@@ -186,7 +194,21 @@
                 }
                 ctx.restore();
               } else {
-                text(op.x||0, op.y||0, s, fpx, weight);
+                const x = op.x||0; const y = op.y||0;
+                text(x, y, s, fpx, weight);
+                // Export metrics even for absolute-positioned footer rows
+                if (s.startsWith('Batt ')){
+                  window.__layoutMetrics.statusLeft.line1Y = y;
+                  const leftCol = rects.FOOTER_L || [6,90,160,32];
+                  window.__layoutMetrics.statusLeft.left = leftCol[0];
+                  window.__layoutMetrics.statusLeft.right = leftCol[0] + leftCol[2];
+                  const textW = ctx.measureText(s).width;
+                  const groupX = Math.min((window.__layoutMetrics.statusLeft.batteryIcon?.x)||x, x);
+                  const groupW = Math.max((window.__layoutMetrics.statusLeft.batteryIcon?.x||x) + 13 + 6 + textW - groupX, textW);
+                  window.__layoutMetrics.statusLeft.batteryGroup = { x: groupX, w: groupW };
+                } else if (s.startsWith('~')){
+                  window.__layoutMetrics.statusLeft.line2Y = y;
+                }
               }
               break;
             }
@@ -194,6 +216,8 @@
               const r = rects[op.rect]; if (!r) break;
               const fpx = ((fonts[op.font||'time']||{}).px) || pxTime;
               const s = String((data.time||''));
+              // Ensure measurement uses the same font we'll render with
+              ctx.font = `${fpx}px ${FONT_STACK}`; ctx.textBaseline='top';
               const tw = ctx.measureText(s).width;
               const tx = r[0] + r[2] - 2 - tw;
               const ty = r[1] + 1;
@@ -313,7 +337,7 @@
               break;
             }
             case 'batteryGlyph': {
-              const x = op.x||0, y = op.y||0, bw = op.w||13, bh = op.h||7;
+              const x = op.x||0, y = (op.y||0) + 4, bw = op.w||13, bh = op.h||7;
               const pct = parseInt(String((window.lastData && window.lastData.percent) || 0), 10);
               ctx.strokeStyle = '#000'; ctx.strokeRect(x, y, bw, bh); ctx.fillStyle = '#000';
               ctx.fillRect(x + bw, y + 2, 2, 3);
