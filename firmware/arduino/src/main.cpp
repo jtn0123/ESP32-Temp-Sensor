@@ -101,16 +101,16 @@ static void draw_from_spec_full(uint8_t variantId) { draw_from_spec_full_impl(va
 
 // Feather ESP32-S2 + 2.13" FeatherWing (adjust if needed)
 #ifndef EINK_CS
-#define EINK_CS 9 // D9
+#define EINK_CS 9  // D9
 #endif
 #ifndef EINK_DC
-#define EINK_DC 10 // D10
+#define EINK_DC 10  // D10
 #endif
 #ifndef EINK_RST
-#define EINK_RST -1 // FeatherWing ties panel reset to Feather RESET
+#define EINK_RST -1  // FeatherWing ties panel reset to Feather RESET
 #endif
 #ifndef EINK_BUSY
-#define EINK_BUSY -1 // FeatherWing BUSY not connected; use -1 so library times waits
+#define EINK_BUSY -1  // FeatherWing BUSY not connected; use -1 so library times waits
 #endif
 
 // 2.13" b/w class; choose the one matching your panel
@@ -267,8 +267,8 @@ static void draw_from_spec_full_impl(uint8_t variantId) {
     }
   }
 }
-#endif // USE_UI_SPEC
-#endif // USE_DISPLAY
+#endif  // USE_UI_SPEC
+#endif  // USE_DISPLAY
 
 RTC_DATA_ATTR static uint16_t partial_counter = 0;
 // Track number of wakes from deep sleep (monotonic until power loss)
@@ -290,9 +290,9 @@ RTC_DATA_ATTR static float last_inside_rh = NAN;
 RTC_DATA_ATTR static bool needs_full_on_boot = true;
 #endif
 #ifdef FORCE_FULL_ONLY
-static bool g_full_only_mode = true; // compile-time force full refresh only
+static bool g_full_only_mode = true;  // compile-time force full refresh only
 #else
-static bool g_full_only_mode = false; // when true, always do full refresh (debug)
+static bool g_full_only_mode = false;  // when true, always do full refresh (debug)
 #endif
 
 static Preferences g_prefs;
@@ -329,12 +329,12 @@ static inline void nvs_store_float(const char* key, float v) { g_prefs.putFloat(
 static inline void nvs_store_int(const char* key, int32_t v) { g_prefs.putInt(key, v); }
 static inline void nvs_store_uint(const char* key, uint32_t v) { g_prefs.putUInt(key, v); }
 
-static constexpr float THRESH_TEMP_F = 0.2f; //
-//     redraw/publish threshold in F
-static constexpr float THRESH_TEMP_C_FROM_F = THRESH_TEMP_F / 1.8f; //
-//     ~0.111C
+static constexpr float THRESH_TEMP_F = 0.2f;  //
+  //     redraw/publish threshold in F
+static constexpr float THRESH_TEMP_C_FROM_F = THRESH_TEMP_F / 1.8f;  //
+  //     ~0.111C
 static constexpr float THRESH_RH = 1.0f;        // percent
-static constexpr float THRESH_PRESS_HPA = 0.5f; // hPa
+static constexpr float THRESH_PRESS_HPA = 0.5f;  // hPa
 
 // Timeout tracking for wake phases
 static uint32_t s_timeouts_mask = 0;
@@ -403,7 +403,7 @@ static void pump_network_ms(uint32_t duration_ms) {
 static Adafruit_NeoPixel s_statusPixel(1, STATUS_PIXEL_PIN, NEO_GRB + NEO_KHZ800);
 static uint32_t s_lastPixelMs = 0;
 static uint8_t s_hue = 0;
-static uint8_t s_breath = 0; // brightness phase for subtle breathing
+static uint8_t s_breath = 0;  // brightness phase for subtle breathing
 
 static uint32_t color_wheel(uint8_t pos) {
   pos = 255 - pos;
@@ -432,7 +432,7 @@ static inline void status_pixel_off() {
 static inline void status_pixel_tick() {
   uint32_t now = millis();
   if (now - s_lastPixelMs < 40)
-    return; // slower update for smooth, slow cycle
+    return;  // slower update for smooth, slow cycle
   s_lastPixelMs = now;
   s_hue++;
   s_breath++;
@@ -821,7 +821,7 @@ static inline void draw_in_region(const int rect[4],
   // Align partial window to 8-pixel byte boundaries on X for SSD1680-class panels
   // to avoid controller rejects or missing updates on unaligned windows.
   int16_t ax = x & ~0x07;
-  int16_t ar = x + w; // right edge (exclusive)
+  int16_t ar = x + w;  // right edge (exclusive)
   int16_t aw = static_cast<int16_t>(((ar - ax) + 7) & ~0x07);
   display.setPartialWindow(ax, y, aw, h);
   display.firstPage();
@@ -852,7 +852,7 @@ static inline void draw_right_aligned_text_in_rect(const int rect[4], const char
 static inline void draw_temp_number_and_units(const int rect[4], const char* temp_f) {
   // Reserve a small units strip on the right so units do not shift as number
   // width changes
-  const int16_t units_w = 14; // pixels
+  const int16_t units_w = 14;  // pixels
   int num_rect[4] = {rect[0], rect[1], rect[2] - units_w, rect[3]};
   int units_rect[4] = {rect[0] + rect[2] - units_w, rect[1], units_w, rect[3]};
 
@@ -988,7 +988,7 @@ static void draw_header_time(const char* time_str) {
     display.setTextSize(1);
     int16_t tw = text_width_default_font(time_str, 1);
     int16_t rx = static_cast<int16_t>(xx + (ww - tw) / 2);
-    int16_t by = yy + hh - 3; // baseline nudge up to align with room name
+    int16_t by = yy + hh - 3;  // baseline nudge up to align with room name
     display.setCursor(rx, by);
     display.print(time_str);
   });
