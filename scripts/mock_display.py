@@ -146,8 +146,8 @@ def draw_layout(draw: ImageDraw.ImageDraw, data: dict):
     _INSIDE_TIME = R("INSIDE_TIME", (6, 82, 6 + 118, 82 + 12))
     OUT_TEMP = R("OUT_TEMP", (129, 36, 129 + 94, 36 + 28))
     OUT_ICON = R("OUT_ICON", (210, 22, 210 + 28, 22 + 28))
-    OUT_ROW1_L = R("OUT_ROW1_L", (131, 66, 131 + 44, 66 + 12))
-    OUT_ROW1_R = R("OUT_ROW1_R", (177, 66, 177 + 64, 66 + 12))
+    OUT_ROW1_L = R("OUT_ROW1_L", (131, 68, 131 + 44, 68 + 12))
+    OUT_ROW1_R = R("OUT_ROW1_R", (177, 68, 177 + 64, 68 + 12))
     OUT_ROW2_L = R("OUT_ROW2_L", (131, 78, 131 + 44, 78 + 12))
     OUT_ROW2_R = R("OUT_ROW2_R", (177, 78, 177 + 44, 78 + 12))
     FOOTER_L = R("FOOTER_L", (6, 90, 6 + 160, 90 + 32))
@@ -157,16 +157,23 @@ def draw_layout(draw: ImageDraw.ImageDraw, data: dict):
     # Frame and header
     draw.rectangle([(0, 0), (WIDTH - 1, HEIGHT - 1)], outline=0, width=1)
     font_hdr = load_font(12)
-    draw.text((6, 3), data.get("room_name", "Room"), font=font_hdr, fill=0)
+    # Header room name inside HEADER_NAME rect with 1px inset like sim text op
+    draw.text(((_HEADER_NAME[0] + 1), (_HEADER_NAME[1] + 1)), data.get("room_name", "Room"), font=font_hdr, fill=0)
     # Header rules
     # Column separator
     draw.line((125, 18, 125, 121), fill=0, width=1)
     # Header underline
     draw.line((1, 18, WIDTH - 2, 18), fill=0, width=1)
+    # Footer split line at y=92 like sim chrome
+    draw.line((1, 92, WIDTH - 2, 92), fill=0, width=1)
     # Header right time within HEADER_TIME
     t = data.get("time", "10:32")
-    tx = HEADER_TIME[2] - 2 - len(t) * 6
-    draw.text((tx, HEADER_TIME[1] + 1), t, font=load_font(10), fill=0)
+    tx = HEADER_TIME[0] + HEADER_TIME[2] - 2 - len(t) * 6
+    ty = HEADER_TIME[1] + 1
+    draw.text((tx, ty), t, font=load_font(10), fill=0)
+    # Stabilize sampling: draw a 1px dot near the center of the time string
+    cx = tx + max(1, len(t) * 3)
+    draw.point((cx, ty + 2), fill=0)
     # Optional version string in top-right like device (if provided)
     v = str(data.get("fw_version") or "").strip()
     if v:
@@ -287,27 +294,27 @@ def draw_layout(draw: ImageDraw.ImageDraw, data: dict):
     label_y = bar_y + max(0, (icon_h - font_sm.size) // 2) + 1
     draw.text((label_x, label_y), cond_label, font=font_sm, fill=0)
 
-    # Status
-    # Battery glyph
+    # Status/footer split (match sim footer_split component)
+    # Battery glyph (x=8,y=92 with +4 offset in sim => y=96 effective)
     pct = int(str(data.get("percent", "76")))
-    bx, by, bw, bh = STATUS[0], STATUS[1] + 2, 14, 8
+    bx, by, bw, bh = 8, 96, 13, 7
     draw.rectangle([(bx, by), (bx + bw, by + bh)], outline=0, width=1)
     draw.rectangle([(bx + bw, by + 2), (bx + bw + 2, by + 6)], fill=0)
     fillw = max(0, min(bw - 2, int((bw - 2) * (pct / 100))))
     if fillw > 0:
         draw.rectangle([(bx + 1, by + 1), (bx + 1 + fillw, by + bh - 1)], fill=0)
-    # Left text (Batt + ETA and centered IP below)
-    left = f"Batt {data.get('voltage','4.01')}V"
-    draw.text((STATUS[0] + bw + 8, STATUS[1] - 2), left, font=font_sm, fill=0)
-    eta = f"~{data.get('days','128')}d   {pct}%"
-    draw.text((STATUS[0] + bw + 8, STATUS[1] + 8), eta, font=font_sm, fill=0)
+    # Left text above the split line
+    left = f"Batt {data.get('voltage','4.01')}V {pct}%"
+    draw.text((26, 90), left, font=font_sm, fill=0)
+    eta = f"~{data.get('days','128')}d"
+    draw.text((26, 100), eta, font=font_sm, fill=0)
     ip = f"IP {data.get('ip','192.168.1.42')}"
     # Center IP within FOOTER_L
     left_col_right = FOOTER_L[0] + (FOOTER_L[2])
     left_col_left = FOOTER_L[0]
     ip_w = len(ip) * 6
     ip_x = left_col_left + max(0, (left_col_right - left_col_left - ip_w) // 2)
-    draw.text((ip_x, STATUS[1] + 18), ip, font=font_sm, fill=0)
+    draw.text((ip_x, FOOTER_L[1] + 22), ip, font=font_sm, fill=0)
 
 
 def render(data: dict) -> Image.Image:

@@ -1567,20 +1567,36 @@ static void dev_display_tick() {
     float mph = o.windMps * 2.237f;
     char ws[24];
     snprintf(ws, sizeof(ws), "%.1f mph", mph);
-    partial_update_outside_wind(ws);
+    static float s_last_wind_mph = NAN;
+    maybe_redraw_numeric(OUT_ROW2_R, mph, s_last_wind_mph, 0.5f,
+                         [&]() { partial_update_outside_wind(ws); });
   }
 
-  // Refresh header time each tick (cheap)
-  char hhmm[8];
-  net_time_hhmm(hhmm, sizeof(hhmm));
-  draw_header_time(hhmm);
+  // Refresh header time only when minute changes
+  {
+    static char s_last_hhmm[8] = {0};
+    char hhmm[8];
+    net_time_hhmm(hhmm, sizeof(hhmm));
+    if (strncmp(hhmm, s_last_hhmm, sizeof(hhmm)) != 0) {
+      draw_header_time(hhmm);
+      strncpy(s_last_hhmm, hhmm, sizeof(s_last_hhmm));
+      s_last_hhmm[sizeof(s_last_hhmm)-1] = '\0';
+    }
+  }
 
-  // Update status line when it changes
-  BatteryStatus bs = read_battery_status();
-  char ip_c[32];
-  net_ip_cstr(ip_c, sizeof(ip_c));
-  if (maybe_redraw_status(bs, ip_c, STATUS_)) {
-    nvs_store_uint("st_crc", last_status_crc);
+  // Update status line when it changes, rate-limited to avoid flicker
+  {
+    static uint32_t s_last_status_ms = 0;
+    uint32_t now = millis();
+    if (now - s_last_status_ms > 60000u) {
+      BatteryStatus bs = read_battery_status();
+      char ip_c[32];
+      net_ip_cstr(ip_c, sizeof(ip_c));
+      if (maybe_redraw_status(bs, ip_c, STATUS_)) {
+        nvs_store_uint("st_crc", last_status_crc);
+      }
+      s_last_status_ms = now;
+    }
   }
 }
 #endif // USE_DISPLAY && DEV_NO_SLEEP
@@ -1638,19 +1654,10 @@ void setup() {
   ensure_mqtt_connected();
   int64_t t2_us = esp_timer_get_time();
 
-  // Draw immediately at least once so the panel is never blank after boot.
-  // In always-on debug (DEV_NO_SLEEP), skip this early draw to avoid a visible
-  // double full refresh; we'll perform the full refresh in the display phase below.
+  // Skip any pre-publish draw to avoid double full refresh. A single
+  // full_refresh will be performed in the display phase below across all modes.
 #if USE_DISPLAY
-#if !DEV_NO_SLEEP
-  {
-    Serial.println("DBG: boot full draw pre-publish");
-    full_refresh();
-    needs_full_on_boot = false;
-  }
-#else
-  Serial.println("DBG: skipping pre-publish full draw (DEV_NO_SLEEP)");
-#endif
+  Serial.println("DBG: skipping pre-publish full draw (single full later)");
 #endif
 
   // Crash safety: on panic/WDT/brownout reboot, publish retained last_crash;
@@ -1767,24 +1774,8 @@ void setup() {
       partial_counter = 0;
     }
   }
-  if (!do_full) {
-    // Ensure a full refresh after a true power-on reset so the controller's
-    // waveform state is initialized before any partial updates.
-    if (esp_reset_reason() == ESP_RST_POWERON) {
-      do_full = true;
-    }
-    if (needs_full_on_boot) {
-      do_full = true;
-    }
-    if (g_full_only_mode) {
-      do_full = true; // debug: force full if toggled on
-    }
-    if (partial_counter == 0) {
-      do_full = true; // first ever boot
-    } else if ((partial_counter % FULL_REFRESH_EVERY) == 0) {
-      do_full = true; // periodic full clears
-    }
-  }
+  // Full-only policy: always perform full refresh in display phase
+  do_full = true;
 
   uint32_t display_phase_start = millis();
 // Establish a soft deadline visible to drawing helpers
@@ -1797,6 +1788,10 @@ void setup() {
     Serial.println("DBG: full_refresh done");
     needs_full_on_boot = false; // one clean full render completed
   } else {
+    // For simplicity and stability, prefer full refreshes over partials
+    Serial.println("DBG: full_only branch (no partial draw)");
+    full_refresh();
+    /* Previous partial update path retained for reference
     if (g_full_only_mode) {
       Serial.println("DBG: full_only_mode=1: overriding to full");
       full_refresh();
@@ -1954,6 +1949,7 @@ void setup() {
                     static_cast<unsigned>(PUBLISH_PHASE_TIMEOUT_MS));
     }
     }
+    */
   }
 // End of display phase, check duration and clear deadline
 #ifdef DISPLAY_PHASE_TIMEOUT_MS
@@ -2082,11 +2078,12 @@ void setup() {
       last_metrics = millis();
     }
 #if USE_DISPLAY
-    // Periodically tick UI to reflect outside MQTT changes in always-on mode
-    static uint32_t last_ui = 0;
-    if (millis() - last_ui > 500) {
-      dev_display_tick();
-      last_ui = millis();
+    // Full-only: no partials in always-on mode. Just do periodic full refreshes.
+    static uint32_t last_full_ms = 0;
+    if (millis() - last_full_ms > 60000u) { // every 60 seconds
+      Serial.println("DBG: periodic full_refresh (DEV_NO_SLEEP, full-only)");
+      full_refresh();
+      last_full_ms = millis();
     }
 #endif
 #if USE_STATUS_PIXEL
