@@ -185,11 +185,11 @@ inline bool ends_with(const char* s, const char* suffix) {
 
 // -------------------- Time sync (SNTP) --------------------
 #ifndef TIME_FRESH_EPOCH_MIN
-#define TIME_FRESH_EPOCH_MIN 1609459200UL // 2021-01-01,
+#define TIME_FRESH_EPOCH_MIN 1609459200UL  // 2021-01-01,
 //     anything earlier considered stale
 #endif
 #ifndef TIME_RESYNC_INTERVAL_SEC
-#define TIME_RESYNC_INTERVAL_SEC (24UL * 60UL * 60UL) // once per day
+#define TIME_RESYNC_INTERVAL_SEC (24UL * 60UL * 60UL)  // once per day
 #endif
 
 inline bool time_is_stale() {
@@ -232,7 +232,7 @@ inline void ensure_time_synced_if_stale() {
 
 // -------------------- Offline buffer (NVS ring) --------------------
 #ifndef OFFLINE_CAPACITY
-#define OFFLINE_CAPACITY 96U // number of samples to retain when offline
+#define OFFLINE_CAPACITY 96U  // number of samples to retain when offline
 #endif
 #ifndef OFFLINE_DRAIN_MAX_PER_WAKE
 #define OFFLINE_DRAIN_MAX_PER_WAKE 64U
@@ -333,7 +333,6 @@ inline void offline_drain_if_any() {
   while (processed < to_send && g_mqtt.connected()) {
     // Time budget check before reading/publishing next sample
     if (OFFLINE_DRAIN_MAX_MS > 0 && (millis() - drain_start_ms) >= OFFLINE_DRAIN_MAX_MS) {
-
       Serial.printf("Offline: drain stop (time budget) elapsed_ms=%u sent=%u bytes=%u\n",
                     static_cast<unsigned>(millis() - drain_start_ms),
                     static_cast<unsigned>(tail - orig_tail), static_cast<unsigned>(bytes_sent));
@@ -359,7 +358,6 @@ inline void offline_drain_if_any() {
       // Post-publish budget checks
       if ((OFFLINE_DRAIN_MAX_BYTES > 0 && bytes_sent >= OFFLINE_DRAIN_MAX_BYTES) ||
           (OFFLINE_DRAIN_MAX_MS > 0 && (millis() - drain_start_ms) >= OFFLINE_DRAIN_MAX_MS)) {
-
         Serial.printf("Offline: drain stop (%s budget) elapsed_ms=%u sent=%u bytes=%u\n",
                       (bytes_sent >= OFFLINE_DRAIN_MAX_BYTES ? "byte" : "time"),
                       static_cast<unsigned>(millis() - drain_start_ms),
@@ -606,10 +604,10 @@ static void ensure_wifi_connected_provisioned_impl() {
     char service_name[16];
     uint64_t mac = ESP.getEfuseMac();
     snprintf(service_name, sizeof(service_name), "PROV_%06X", (unsigned int)(mac & 0xFFFFFF));
-    const char* service_key = NULL; // open softAP by default
+    const char* service_key = NULL;  // open softAP by default
 #if WIFI_PROV_SECURITY == 1
     wifi_prov_security_t sec = WIFI_PROV_SECURITY_1;
-    const char* pop = "esp32-pop"; // customize via build flag if desired
+    const char* pop = "esp32-pop";  // customize via build flag if desired
 #else
     wifi_prov_security_t sec = WIFI_PROV_SECURITY_0;
     const char* pop = NULL;
