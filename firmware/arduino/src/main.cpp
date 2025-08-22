@@ -195,9 +195,15 @@ static void draw_from_spec_full_impl(uint8_t variantId) {
           int start = 0;
           while (true) {
             int lb = templ.indexOf('{', start);
-            if (lb < 0) { out += templ.substring(start); break; }
+            if (lb < 0) {
+              out += templ.substring(start);
+              break;
+            }
             int rb = templ.indexOf('}', lb+1);
-            if (rb < 0) { out += templ.substring(start); break; }
+            if (rb < 0) {
+              out += templ.substring(start);
+              break;
+            }
             out += templ.substring(start, lb);
             String key = templ.substring(lb+1, rb);
             out += fmt_field(key);
@@ -279,17 +285,25 @@ static void draw_from_spec_full_impl(uint8_t variantId) {
           }
           break; }
         case OP_SHORTCONDITION: {
-          const int* r = rect_ptr_by_id(op.rect); if (!r) break;
+          const int* r = rect_ptr_by_id(op.rect);
+          if (!r) break;
           OutsideReadings o = net_get_outside();
           if (o.validWeather || o.validWeatherDesc) {
-            char sc[24]; if (o.validWeatherDesc && o.weatherDesc[0]) make_short_condition_cstr(o.weatherDesc, sc, sizeof(sc)); else make_short_condition_cstr(o.weather, sc, sizeof(sc));
-            display.setTextColor(GxEPD_BLACK); display.setTextSize(1);
+            char sc[24];
+            if (o.validWeatherDesc && o.weatherDesc[0]) {
+              make_short_condition_cstr(o.weatherDesc, sc, sizeof(sc));
+            } else {
+              make_short_condition_cstr(o.weather, sc, sizeof(sc));
+            }
+            display.setTextColor(GxEPD_BLACK);
+            display.setTextSize(1);
             display.setCursor(r[0] + op.p0, r[1] + TOP_Y_OFFSET + r[3]/2 + 2);
             display.print(sc);
           }
           break; }
         case OP_TEXTCENTEREDIN: {
-          const int* r = rect_ptr_by_id(op.rect); if (!r) break;
+          const int* r = rect_ptr_by_id(op.rect);
+          if (!r) break;
           String templ = op.s0 ? op.s0 : "";
           char ip_c[32]; net_ip_cstr(ip_c, sizeof(ip_c));
           templ.replace("{ip}", ip_c);
@@ -393,7 +407,7 @@ static uint32_t s_timeouts_mask = 0;
 // Forward declarations for helpers defined later in this file
 static const char* reset_reason_str(esp_reset_reason_t r);
 static const char* wakeup_cause_str(esp_sleep_wakeup_cause_t c);
- 
+
 static inline void print_boot_diagnostics() {
   Serial.printf("Reset: %s, Wake: %s\n", reset_reason_str(esp_reset_reason()),
                 wakeup_cause_str(esp_sleep_get_wakeup_cause()));
