@@ -50,7 +50,8 @@ static void partial_update_outside_condition(const char* short_condition);
 static void partial_update_weather_icon(const char* weather);
 // New helpers: prefer OpenWeather fields (id/icon/desc) when available
 static void partial_update_weather_icon_from_outside(const OutsideReadings& o);
-static void draw_weather_icon_region_at(int16_t x, int16_t y, int16_t w, int16_t h, const char* weather);
+static void draw_weather_icon_region_at(int16_t x, int16_t y, int16_t w,
+                                        int16_t h, const char* weather);
 static void draw_weather_icon_region_at_from_outside(int16_t x, int16_t y,
                                                       int16_t w, int16_t h,
                                                       const OutsideReadings& o);
@@ -153,7 +154,8 @@ static void draw_from_spec_full_impl(uint8_t variantId) {
   int comp_count = 0;
   const ComponentOps* comps = get_variant_ops(variantId, &comp_count);
   display.drawRect(0, 0, EINK_WIDTH, EINK_HEIGHT, GxEPD_BLACK);
-  display.drawLine(1, 16 + TOP_Y_OFFSET, EINK_WIDTH - 2, 16 + TOP_Y_OFFSET, GxEPD_BLACK);
+  display.drawLine(1, 16 + TOP_Y_OFFSET, EINK_WIDTH - 2, 16 + TOP_Y_OFFSET,
+                   GxEPD_BLACK);
   display.drawLine(125, 18 + TOP_Y_OFFSET, 125, EINK_HEIGHT - 2, GxEPD_BLACK);
   for (int ci = 0; ci < comp_count; ++ci) {
     const ComponentOps& co = comps[ci];
