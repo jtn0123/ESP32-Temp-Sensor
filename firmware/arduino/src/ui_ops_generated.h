@@ -49,25 +49,12 @@ enum UiOpKind {
 struct UiOpHeader { uint8_t kind; uint8_t rect; uint8_t font; uint8_t align; int16_t p0; int16_t p1; int16_t p2; int16_t p3; const char* s0; const char* s1; };
 
 static constexpr const char* kVariantNames[] = {
-    "minimal",
     "v1",
-    "v2",
 };
 
-static constexpr const char* kVariant_minimal_components[] = {
-    "chrome",
-    "header",
-};
 static constexpr const char* kVariant_v1_components[] = {
     "chrome",
     "header",
-    "inside",
-    "outside",
-    "footer_split",
-};
-static constexpr const char* kVariant_v2_components[] = {
-    "chrome",
-    "header_centered",
     "inside",
     "outside",
     "footer_split",
@@ -82,12 +69,8 @@ static constexpr int kComponent_footer_split_opcount = 6;
 static constexpr int kTotalOpCount = 27;
 
 struct ComponentOps { const UiOpHeader* ops; int count; const char* name; };
-extern const ComponentOps kVariant_minimal_ops[];
-extern const int kVariant_minimal_ops_count;
 extern const ComponentOps kVariant_v1_ops[];
 extern const int kVariant_v1_ops_count;
-extern const ComponentOps kVariant_v2_ops[];
-extern const int kVariant_v2_ops_count;
 extern const ComponentOps* get_variant_ops(uint8_t variantId, int* outCount);
 
 } // namespace ui

@@ -81,9 +81,7 @@
     ]
   },
   "variants": {
-    "v1": ["chrome", "header", "inside", "outside", "footer_split"],
-    "v2": ["chrome", "header_centered", "inside", "outside", "footer_split"],
-    "minimal": ["chrome", "header"]
+    "v1": ["chrome", "header", "inside", "outside", "footer_split"]
   },
   "defaultVariant": "v1",
   "regions": {

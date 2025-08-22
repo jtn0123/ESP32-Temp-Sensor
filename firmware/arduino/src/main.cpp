@@ -39,9 +39,7 @@ static void dev_display_tick();
 
 #if USE_DISPLAY
 static void full_refresh();
-static void full_refresh_v2();
 static void smoke_full_window_test();
-static void full_refresh_minimal();
 // Forward decls for per-region test commands
 static void partial_update_inside_temp(const char* in_temp_f, char trend);
 static void partial_update_inside_rh(const char* in_rh);
@@ -321,10 +319,7 @@ static inline void nvs_load_cache_if_unset() {
     partial_counter = pc;
   // Load render mode (0=partial, 1=full-only)
   g_full_only_mode = g_prefs.getUChar("full_only", 0) != 0;
-  // Default UI variant to v1 if not set
-  if (g_prefs.getUChar("ui_variant", 255) == 255) {
-    g_prefs.putUChar("ui_variant", 1);
-  }
+  // Remove legacy ui_variant preference; single UI variant remains
 }
 static inline void nvs_store_float(const char* key, float v) { g_prefs.putFloat(key, v); }
 static inline void nvs_store_int(const char* key, int32_t v) { g_prefs.putInt(key, v); }
@@ -575,7 +570,7 @@ static void handle_serial_command_line(const String& line) {
   if (op == "help" || op == "h" || op == "?") {
     Serial.print(F("Commands: help | status | metrics | sleep <sec> | "));
     Serial.print(F("reboot | wifi | mqtt | pub <tempF> <rh%> | "));
-    Serial.print(F("mode <full|partial> | ui <minimal|v1|v2> | "));
+    Serial.print(F("mode <full|partial> | "));
     Serial.println(F("ptest <inside_temp|inside_rh|outside_temp|outside_rh|wind|condition|icon|status|header_time>"));
     return;
   }
@@ -656,15 +651,8 @@ static void handle_serial_command_line(const String& line) {
   if (op == "refresh") {
 #if USE_DISPLAY
     Serial.println(F("Display: forced full refresh"));
-    // Choose UI variant based on preference key
-    uint8_t uivar = g_prefs.getUChar("ui_variant", 1); // 0=minimal,1=v1,2=v2
-    if (uivar == 0) {
-      full_refresh_minimal();
-    } else if (uivar == 2) {
-      full_refresh_v2();
-    } else {
-      full_refresh();
-    }
+    // Single UI variant (v1)
+    full_refresh();
 #else
     Serial.println(F("Display disabled in this build"));
 #endif
@@ -752,21 +740,7 @@ static void handle_serial_command_line(const String& line) {
     }
     return;
   }
-  if (op == "ui") {
-    if (args == "minimal") {
-      g_prefs.putUChar("ui_variant", 0);
-      Serial.println(F("UI set: minimal"));
-    } else if (args == "v1") {
-      g_prefs.putUChar("ui_variant", 1);
-      Serial.println(F("UI set: v1 (current)"));
-    } else if (args == "v2") {
-      g_prefs.putUChar("ui_variant", 2);
-      Serial.println(F("UI set: v2 (isolation)"));
-    } else {
-      Serial.println(F("Usage: ui <minimal|v1|v2>"));
-    }
-    return;
-  }
+  // 'ui' command removed; only one UI variant is supported now
   if (op == "pub") {
     // pub <tempF> <rh%>
     float tf = NAN, rh = NAN;
@@ -1272,236 +1246,6 @@ static void draw_weather_icon_region_at_from_outside(int16_t x, int16_t y, int16
   draw_icon(display, ix, iy, icon_id, GxEPD_BLACK);
 }
 
-// Experimental isolated UI variant (v2): mirrors minimal layout structure but uses
-// production data sources and drawing helpers to validate paged full refresh flow
-// without legacy overlap logic. This is selectable via `ui v2`.
-static void full_refresh_v2() {
-  // If UI spec is enabled, render using generated ops for variant v2
-#if USE_UI_SPEC
-  display.setFullWindow();
-  display.firstPage();
-  do {
-    display.fillScreen(GxEPD_WHITE);
-    draw_from_spec_full(static_cast<uint8_t>(ui::UIVAR_V2));
-  } while (display.nextPage());
-  return;
-#endif
-  // Snapshot dynamic data ONCE so each page draws identical content
-  InsideReadings r = read_inside_sensors();
-  OutsideReadings o = net_get_outside();
-  BatteryStatus bs = read_battery_status();
-  char ip_c[32];
-  net_ip_cstr(ip_c, sizeof(ip_c));
-
-  char in_temp[16];
-  snprintf(in_temp, sizeof(in_temp), isfinite(r.temperatureC) ? "%.1f" : "--",
-           r.temperatureC * 9.0 / 5.0 + 32.0);
-  char in_rh[16];
-  if (isfinite(r.humidityPct)) snprintf(in_rh, sizeof(in_rh), "%.0f", r.humidityPct); else strncpy(in_rh, "--", sizeof(in_rh));
-
-  bool have_weather = o.validWeather;
-  char sc[24];
-  if (have_weather) make_short_condition_cstr(o.weather, sc, sizeof(sc));
-  int32_t icon_to_draw = have_weather ? static_cast<int32_t>(map_weather_to_icon(o.weather)) : -1;
-
-  char out_temp[16];
-  if (o.validTemp && isfinite(o.temperatureC)) {
-    snprintf(out_temp, sizeof(out_temp), "%.1f", o.temperatureC * 9.0 / 5.0 + 32.0);
-  } else if (isfinite(last_outside_f)) {
-    snprintf(out_temp, sizeof(out_temp), "%.1f", last_outside_f);
-  } else {
-    snprintf(out_temp, sizeof(out_temp), "--");
-  }
-  char out_rh[16];
-  bool have_out_rh = false;
-  if (o.validHum && isfinite(o.humidityPct)) {
-    snprintf(out_rh, sizeof(out_rh), "%.0f", o.humidityPct); have_out_rh = true;
-  } else if (isfinite(last_outside_rh)) {
-    snprintf(out_rh, sizeof(out_rh), "%.0f", last_outside_rh); have_out_rh = true;
-  }
-  char ws[24];
-  bool have_ws = false;
-  if (o.validWind && isfinite(o.windMps)) { float mph = o.windMps * 2.237f; snprintf(ws, sizeof(ws), "%.1f mph", mph); have_ws = true; }
-
-  display.setFullWindow();
-  display.firstPage();
-  do {
-    display.fillScreen(GxEPD_WHITE);
-    // Chrome: border, header rule, center divider
-    display.drawRect(0, 0, EINK_WIDTH, EINK_HEIGHT, GxEPD_BLACK);
-    // Single header underline between header and content
-    display.drawLine(1, 16 + TOP_Y_OFFSET, EINK_WIDTH - 2, 16 + TOP_Y_OFFSET, GxEPD_BLACK);
-    display.drawLine(125, 18 + TOP_Y_OFFSET, 125, EINK_HEIGHT - 2, GxEPD_BLACK);
-    // Debug: outline key regions to verify placement
-    display.drawRect(INSIDE_TEMP[0], INSIDE_TEMP[1] + TOP_Y_OFFSET, INSIDE_TEMP[2], INSIDE_TEMP[3], GxEPD_BLACK);
-    display.drawRect(OUT_TEMP[0], OUT_TEMP[1] + TOP_Y_OFFSET, OUT_TEMP[2], OUT_TEMP[3], GxEPD_BLACK);
-    display.drawRect(STATUS_[0], STATUS_[1], STATUS_[2], STATUS_[3], GxEPD_BLACK);
-    display.drawRect(HEADER_TIME[0], HEADER_TIME[1] + TOP_Y_OFFSET, HEADER_TIME[2], HEADER_TIME[3], GxEPD_BLACK);
-
-    // Labels
-    display.setTextColor(GxEPD_BLACK);
-    display.setTextSize(1);
-    display.setCursor(6, 13 + TOP_Y_OFFSET + HEADER_NAME_Y_ADJ);
-    display.print(ROOM_NAME);
-    display.setCursor(6, 22 + TOP_Y_OFFSET);
-    display.print(F("INSIDE"));
-    display.setCursor(131, 22 + TOP_Y_OFFSET);
-    display.print(F("OUTSIDE"));
-    // Top-right version in HEADER_TIME box for this debug view
-    display.setCursor(HEADER_TIME[0] + HEADER_TIME[2] - 2 - text_width_default_font("v", 1) - text_width_default_font(FW_VERSION, 1),
-                      HEADER_TIME[1] + TOP_Y_OFFSET + HEADER_TIME[3] - 8);
-    display.print(F("v"));
-    display.print(FW_VERSION);
-
-    // Values from current sensors/network (snapshotted before pages)
-    {
-      // Direct draw inside temp (avoid nested paged draws)
-      int16_t ix = INSIDE_TEMP[0];
-      int16_t iy = static_cast<int16_t>(INSIDE_TEMP[1] + TOP_Y_OFFSET);
-      int16_t iw = INSIDE_TEMP[2];
-      int16_t ih = INSIDE_TEMP[3];
-      const int16_t units_w = 14;
-      display.setTextColor(GxEPD_BLACK);
-      display.setTextSize(2);
-      int16_t x1, y1; uint16_t bw, bh;
-      display.getTextBounds(in_temp, 0, 0, &x1, &y1, &bw, &bh);
-      int16_t targetX = static_cast<int16_t>(ix + (iw - units_w - static_cast<int16_t>(bw)) / 2);
-      int16_t targetY = static_cast<int16_t>(iy + (ih - static_cast<int16_t>(bh)) / 2);
-      int16_t baseX = static_cast<int16_t>(targetX - x1);
-      int16_t baseY = static_cast<int16_t>(targetY - y1);
-      display.setCursor(baseX, baseY);
-      display.print(in_temp);
-      display.setTextSize(1);
-      int16_t ux = static_cast<int16_t>(ix + iw - units_w + 2);
-      int16_t uy = static_cast<int16_t>(baseY - 2);
-      display.setCursor(ux, uy);
-      display.print("\xF8");
-      display.setCursor(static_cast<int16_t>(ux + 6), uy);
-      display.print("F");
-    }
-    // Inside RH
-    display.setTextSize(1);
-    display.setCursor(INSIDE_RH[0], INSIDE_RH[1] + TOP_Y_OFFSET);
-    display.print(in_rh);
-    display.print("% RH");
-
-    // Outside condition and icon
-    if (have_weather) {
-      display.setTextSize(1);
-      display.setCursor(OUT_ROW1_L[0], OUT_ROW1_L[1] + TOP_Y_OFFSET);
-      display.print(sc);
-      if (o.validWeatherIcon || o.validWeatherId) {
-        draw_weather_icon_region_at_from_outside(OUT_ICON[0], OUT_ICON[1] + TOP_Y_OFFSET, OUT_ICON[2], OUT_ICON[3], o);
-      } else {
-        draw_weather_icon_region_at(OUT_ICON[0], OUT_ICON[1] + TOP_Y_OFFSET, OUT_ICON[2], OUT_ICON[3], o.weather);
-      }
-    }
-
-    // Outside temp
-    {
-      // Direct draw outside temp (avoid nested paged draws)
-      int16_t ox = OUT_TEMP[0];
-      int16_t oy = static_cast<int16_t>(OUT_TEMP[1] + TOP_Y_OFFSET);
-      int16_t ow = OUT_TEMP[2];
-      int16_t oh = OUT_TEMP[3];
-      const int16_t units_w = 14;
-      display.setTextColor(GxEPD_BLACK);
-      display.setTextSize(2);
-      int16_t x1, y1; uint16_t bw, bh;
-      display.getTextBounds(out_temp, 0, 0, &x1, &y1, &bw, &bh);
-      int16_t targetX = static_cast<int16_t>(ox + (ow - units_w - static_cast<int16_t>(bw)) / 2);
-      int16_t targetY = static_cast<int16_t>(oy + (oh - static_cast<int16_t>(bh)) / 2);
-      int16_t baseX = static_cast<int16_t>(targetX - x1);
-      int16_t baseY = static_cast<int16_t>(targetY - y1);
-      display.setCursor(baseX, baseY);
-      display.print(out_temp);
-      display.setTextSize(1);
-      int16_t ux = static_cast<int16_t>(ox + ow - units_w + 2);
-      int16_t uy = static_cast<int16_t>(baseY - 2);
-      display.setCursor(ux, uy);
-      display.print("\xF8");
-      display.setCursor(static_cast<int16_t>(ux + 6), uy);
-      display.print("F");
-    }
-
-    // Outside RH and wind
-    if (have_out_rh) {
-      display.setTextSize(1);
-      display.setCursor(OUT_ROW2_L[0], OUT_ROW2_L[1] + TOP_Y_OFFSET);
-      display.print(out_rh);
-      display.print("% RH");
-    }
-    if (have_ws) {
-      display.setTextSize(1);
-      display.setCursor(OUT_ROW2_R[0], OUT_ROW2_R[1] + TOP_Y_OFFSET);
-      display.print(ws);
-    }
-
-    // Header time (direct)
-    {
-      const char* time_str = "10:32";
-      int16_t tw = text_width_default_font(time_str, 1);
-      int16_t rx = static_cast<int16_t>(HEADER_TIME[0] + HEADER_TIME[2] - 2 - tw);
-      int16_t by = static_cast<int16_t>(HEADER_TIME[1] + TOP_Y_OFFSET + HEADER_TIME[3] - 2);
-      display.setTextColor(GxEPD_BLACK);
-      display.setTextSize(1);
-      display.setCursor(rx, by);
-      display.print(time_str);
-    }
-    // Status line (direct; using snapshotted bs/ip)
-    {
-      int16_t xx = STATUS_[0];
-      int16_t yy = static_cast<int16_t>(STATUS_[1] + STATUS_Y_ADJ);
-      int16_t ww = STATUS_[2];
-      int16_t hh = STATUS_[3];
-      display.setTextColor(GxEPD_BLACK);
-      display.setTextSize(1);
-      int16_t cx = static_cast<int16_t>(xx + 2);
-      int16_t cy = static_cast<int16_t>(yy + hh - 4);
-      if (bs.percent >= 0) {
-        int16_t bx = cx;
-        int16_t by = static_cast<int16_t>(yy + 1);
-        int16_t bw2 = 13;
-        int16_t bh2 = 7;
-        display.drawRect(bx, by, bw2, bh2, GxEPD_BLACK);
-        display.fillRect(static_cast<int16_t>(bx + bw2), static_cast<int16_t>(by + 2), 2, 3, GxEPD_BLACK);
-        int16_t fillw = static_cast<int16_t>(((bw2 - 2) * (bs.percent / 100.0f) + 0.5f));
-        if (fillw > 0) display.fillRect(static_cast<int16_t>(bx + 1), static_cast<int16_t>(by + 1), fillw, static_cast<int16_t>(bh2 - 2), GxEPD_BLACK);
-        cx = static_cast<int16_t>(cx + bw2 + 6);
-      }
-      char right[48];
-      snprintf(right, sizeof(right), "IP %s", ip_c);
-      int16_t bx, by2; uint16_t bw3, bh3;
-      display.getTextBounds(right, 0, 0, &bx, &by2, &bw3, &bh3);
-      int16_t rx = static_cast<int16_t>(xx + ww - 2 - static_cast<int16_t>(bw3));
-      char left_full[64];
-      char left_nobatt[64];
-      char left_tail[32];
-      snprintf(left_full, sizeof(left_full), "Batt %.2fV %d%% | ~%dd", bs.voltage, bs.percent, bs.estimatedDays);
-      snprintf(left_nobatt, sizeof(left_nobatt), "%.2fV %d%% | ~%dd", bs.voltage, bs.percent, bs.estimatedDays);
-      snprintf(left_tail, sizeof(left_tail), "%d%% | ~%dd", bs.percent, bs.estimatedDays);
-      int16_t available = static_cast<int16_t>(rx - cx - 2);
-      const char* to_print = left_full;
-      display.getTextBounds(to_print, 0, 0, &bx, &by2, &bw3, &bh3);
-      if (static_cast<int16_t>(bw3) > available) {
-        to_print = left_nobatt;
-        display.getTextBounds(to_print, 0, 0, &bx, &by2, &bw3, &bh3);
-      }
-      if (static_cast<int16_t>(bw3) > available) {
-        display.getTextBounds(left_tail, 0, 0, &bx, &by2, &bw3, &bh3);
-        if (static_cast<int16_t>(bw3) <= available) {
-          to_print = left_tail;
-        } else {
-          to_print = "";
-        }
-      }
-      display.setCursor(cx, cy);
-      display.print(to_print);
-      display.setCursor(rx, cy);
-      display.print(right);
-    }
-  } while (display.nextPage());
-}
 static void draw_weather_icon_region_at(int16_t x, int16_t y, int16_t w, int16_t h, const char* weather) {
   display.fillRect(x, y, w, h, GxEPD_WHITE);
   int16_t ix = x + (w - ICON_W) / 2;
@@ -1639,52 +1383,7 @@ static void smoke_full_window_test() {
   Serial.printf("Pages drawn: %lu\n", (unsigned long)page_count);
 }
 
-static void full_refresh_minimal() {
-  display.setFullWindow();
-  display.firstPage();
-  do {
-    display.fillScreen(GxEPD_WHITE);
-    // Border
-    display.drawRect(0, 0, EINK_WIDTH, EINK_HEIGHT, GxEPD_BLACK);
-    // Single header underline between header and content
-    display.drawLine(1, 16 + TOP_Y_OFFSET, EINK_WIDTH - 2, 16 + TOP_Y_OFFSET, GxEPD_BLACK);
-    display.drawLine(125, 18 + TOP_Y_OFFSET, 125, EINK_HEIGHT - 2, GxEPD_BLACK);
-    // Labels
-    display.setTextColor(GxEPD_BLACK);
-    display.setTextSize(1);
-    display.setCursor(6, 13 + TOP_Y_OFFSET + HEADER_NAME_Y_ADJ);
-    display.print(ROOM_NAME);
-    display.setCursor(6, 22 + TOP_Y_OFFSET);
-    display.print(F("INSIDE"));
-    display.setCursor(HEADER_TIME[0] + HEADER_TIME[2] - 2 - text_width_default_font("v", 1) - text_width_default_font(FW_VERSION, 1),
-                      HEADER_TIME[1] + TOP_Y_OFFSET + HEADER_TIME[3] - 8);
-    display.print(F("v"));
-    display.print(FW_VERSION);
-    // Placeholder values in all regions to exercise layout
-    display.setTextSize(2);
-    display.setCursor(INSIDE_TEMP[0] + 10, INSIDE_TEMP[1] + TOP_Y_OFFSET + TEMP_Y_ADJ + TEMP_DOWN_ADJ + INSIDE_TEMP[3] - 6);
-    display.print(F("72.0"));
-    display.setTextSize(1);
-    display.setCursor(INSIDE_RH[0], INSIDE_RH[1] + TOP_Y_OFFSET);
-    display.print(F("45% RH"));
-    display.setCursor(OUT_ROW1_L[0], OUT_ROW1_L[1] + TOP_Y_OFFSET);
-    display.print(F("Cloudy"));
-    int16_t tx = OUT_TEMP[0] + 6;
-    int16_t ty = OUT_TEMP[1] + TOP_Y_OFFSET + TEMP_Y_ADJ + TEMP_DOWN_ADJ + OUT_TEMP[3] - 6;
-    display.setCursor(tx, ty);
-    display.setTextSize(2);
-    display.print(F("68.5"));
-    display.setTextSize(1);
-    display.setCursor(tx + 56, ty + TEMP_UNITS_Y_ADJ);
-    display.print("\xF8");
-    display.setCursor(tx + 62, ty + TEMP_UNITS_Y_ADJ);
-    display.print("F");
-    display.setCursor(OUT_ROW2_L[0], OUT_ROW2_L[1] + TOP_Y_OFFSET);
-    display.print(F("38% RH"));
-    display.setCursor(OUT_ROW2_R[0], OUT_ROW2_R[1] + TOP_Y_OFFSET);
-    display.print(F("4.5 mph"));
-  } while (display.nextPage());
-}
+// Removed minimal debug full_refresh
 
 static void partial_update_inside_temp(const char* in_temp_f, char trend) {
   int rect[4] = {INSIDE_TEMP[0], static_cast<int16_t>(INSIDE_TEMP[1] + TOP_Y_OFFSET), INSIDE_TEMP[2], INSIDE_TEMP[3]};
@@ -1939,15 +1638,7 @@ void setup() {
 #if USE_DISPLAY
   {
     Serial.println("DBG: boot full draw pre-publish");
-    // Honor stored UI variant for initial render
-    uint8_t uivar = g_prefs.getUChar("ui_variant", 1);
-    if (uivar == 0) {
-      full_refresh_minimal();
-    } else if (uivar == 2) {
-      full_refresh_v2();
-    } else {
-      full_refresh();
-    }
+    full_refresh();
     needs_full_on_boot = false;
   }
 #endif

@@ -65,25 +65,8 @@ const ComponentOps kVariant_v1_ops[] = {
 };
 const int kVariant_v1_ops_count = sizeof(kVariant_v1_ops)/sizeof(kVariant_v1_ops[0]);
 
-const ComponentOps kVariant_v2_ops[] = {
-    { kOps_chrome, kOps_chrome_count, "chrome" },
-    { kOps_header_centered, kOps_header_centered_count, "header_centered" },
-    { kOps_inside, kOps_inside_count, "inside" },
-    { kOps_outside, kOps_outside_count, "outside" },
-    { kOps_footer_split, kOps_footer_split_count, "footer_split" },
-};
-const int kVariant_v2_ops_count = sizeof(kVariant_v2_ops)/sizeof(kVariant_v2_ops[0]);
-
-const ComponentOps kVariant_minimal_ops[] = {
-    { kOps_chrome, kOps_chrome_count, "chrome" },
-    { kOps_header, kOps_header_count, "header" },
-};
-const int kVariant_minimal_ops_count = sizeof(kVariant_minimal_ops)/sizeof(kVariant_minimal_ops[0]);
-
 const ComponentOps* get_variant_ops(uint8_t variantId, int* outCount){
-  if (variantId == 0) { if(outCount) *outCount = kVariant_minimal_ops_count; return kVariant_minimal_ops; }
-  else if (variantId == 1) { if(outCount) *outCount = kVariant_v1_ops_count; return kVariant_v1_ops; }
-  else if (variantId == 2) { if(outCount) *outCount = kVariant_v2_ops_count; return kVariant_v2_ops; }
+  if (variantId == 0) { if(outCount) *outCount = kVariant_v1_ops_count; return kVariant_v1_ops; }
   if(outCount) *outCount = 0; return nullptr;
 }
 
