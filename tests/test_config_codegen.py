@@ -40,7 +40,8 @@ def _gen_device_header_with_env(env_overrides: dict[str, str]) -> str:
 
 
 def _extract_define(text: str, name: str) -> str | None:
-    m = re.search(rf"^#define\\s+{re.escape(name)}\\s+(.+)$", text, re.M)
+    # Robustly match a single #define NAME value line across environments
+    m = re.search(rf"(?m)^#define\s+{re.escape(name)}\s+([^\r\n]+)\s*$", text)
     return m.group(1).strip() if m else None
 
 
@@ -64,7 +65,15 @@ def test_flash_mode_always_sets_no_sleep_flag(tmp_path):
     harness.write_text(
         (
             "import os, sys\n"
-            "ROOT=os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))\n"
+            # Compute project root by walking up until we see scripts/flash.py
+            "_d=os.path.abspath(os.path.dirname(__file__))\n"
+            "ROOT=None\n"
+            "for _ in range(6):\n"
+            "    cand=os.path.abspath(os.path.join(_d, '..', '..'))\n"
+            "    if os.path.exists(os.path.join(cand,'scripts','flash.py')):\n"
+            "        ROOT=cand; break\n"
+            "    _d=cand\n"
+            "if ROOT is None: ROOT=os.getcwd()\n"
             "sys.path.insert(0, ROOT)\n"
             "from scripts import flash\n"
             "def fake_run(cmd):\n"
