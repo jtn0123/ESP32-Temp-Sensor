@@ -1044,7 +1044,8 @@ static inline bool maybe_redraw_status(const BatteryStatus& bs,
                                        const char* ip_cstr, const int rect[4]) {
   char buf[96];
   // Stacked footer signature (3-row status)
-  snprintf(buf, sizeof(buf), "B%.2f|%d|D%d|IP%s", bs.voltage, bs.percent, bs.estimatedDays, ip_cstr);
+  snprintf(buf, sizeof(buf), "B%.2f|%d|D%d|IP%s", bs.voltage, bs.percent,
+           bs.estimatedDays, ip_cstr);
   uint32_t crc = fast_crc32((const uint8_t*)buf, strlen(buf));
   if (crc != last_status_crc) {
     draw_status_line(bs, ip_cstr);
@@ -1054,7 +1055,8 @@ static inline bool maybe_redraw_status(const BatteryStatus& bs,
   return false;
 }
 
-static void make_short_condition_cstr(const char* weather, char* out, size_t out_size) {
+static void make_short_condition_cstr(const char* weather, char* out,
+                                      size_t out_size) {
   if (!out || out_size == 0)
     return;
   out[0] = '\0';
@@ -1070,7 +1072,8 @@ static void make_short_condition_cstr(const char* weather, char* out, size_t out
     char c = *p;
     // Treat common separators and hyphen as delimiters so HA values like
     // "clear-night" or "snowy-rainy" shorten to a single word.
-    if (c == ' ' || c == '\t' || c == ',' || c == ';' || c == ':' || c == '/' || c == '-')
+    if (c == ' ' || c == '\t' || c == ',' || c == ';' || c == ':' || c == '/' ||
+        c == '-')
       break;
     out[i++] = c;
     p++;
@@ -1080,7 +1083,9 @@ static void make_short_condition_cstr(const char* weather, char* out, size_t out
 
 static void draw_header_time(const char* time_str) {
   // Draw centered time within HEADER_CENTER box to avoid overlapping the version
-  int rect2[4] = {HEADER_CENTER[0], static_cast<int16_t>(HEADER_CENTER[1] + TOP_Y_OFFSET), HEADER_CENTER[2], HEADER_CENTER[3]};
+  int rect2[4] = {HEADER_CENTER[0],
+                  static_cast<int16_t>(HEADER_CENTER[1] + TOP_Y_OFFSET),
+                  HEADER_CENTER[2], HEADER_CENTER[3]};
   draw_in_region(rect2, [&](int16_t xx, int16_t yy, int16_t ww, int16_t hh) {
     display.setTextColor(GxEPD_BLACK);
     display.setTextSize(1);
@@ -2158,7 +2163,7 @@ void setup() {
       changed_at_ms = millis();
     }
     // Wait a short window to coalesce multiple retained/alias updates
-    if (pending_outside_refresh && (millis() - changed_at_ms) > 500u) {
+    if (pending_outside_refresh && (millis() - changed_at_ms) > MQTT_OUTSIDE_DEBOUNCE_MS) {
       Serial.println("DBG: debounced MQTT outside change -> full_refresh");
       full_refresh();
       pending_outside_refresh = false;

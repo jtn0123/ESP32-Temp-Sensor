@@ -79,3 +79,7 @@
 #ifndef PUBLISH_PHASE_TIMEOUT_MS
 #define PUBLISH_PHASE_TIMEOUT_MS 800
 #endif
+// Debounce window to coalesce multiple MQTT outside updates before a draw
+#ifndef MQTT_OUTSIDE_DEBOUNCE_MS
+#define MQTT_OUTSIDE_DEBOUNCE_MS 1200
+#endif
