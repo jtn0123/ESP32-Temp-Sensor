@@ -1,5 +1,6 @@
 {
-  "version": 1,
+  "layout_version": 1,
+  "layout_crc": "0x8A4560A1",
   "canvas": {
     "w": 250,
     "h": 122
