@@ -145,14 +145,14 @@ def draw_layout(draw: ImageDraw.ImageDraw, data: dict):
     INSIDE_RH = R("INSIDE_RH", (6, 66, 6 + 118, 66 + 14))
     _INSIDE_TIME = R("INSIDE_TIME", (6, 82, 6 + 118, 82 + 12))
     OUT_TEMP = R("OUT_TEMP", (129, 36, 129 + 94, 36 + 28))
-    OUT_ICON = R("OUT_ICON", (210, 22, 210 + 28, 22 + 28))
-    OUT_ROW1_L = R("OUT_ROW1_L", (131, 68, 131 + 44, 68 + 12))
-    OUT_ROW1_R = R("OUT_ROW1_R", (177, 68, 177 + 64, 68 + 12))
+    R("OUT_ICON", (210, 22, 210 + 28, 22 + 28))
+    R("OUT_ROW1_L", (131, 68, 131 + 44, 68 + 12))
+    R("OUT_ROW1_R", (177, 68, 177 + 64, 68 + 12))
     OUT_ROW2_L = R("OUT_ROW2_L", (131, 78, 131 + 44, 78 + 12))
     OUT_ROW2_R = R("OUT_ROW2_R", (177, 78, 177 + 44, 78 + 12))
     FOOTER_L = R("FOOTER_L", (6, 90, 6 + 160, 90 + 32))
     FOOTER_R = R("FOOTER_R", (170, 90, 170 + 74, 90 + 32))
-    STATUS = R("STATUS", (6, 112, 6 + 238, 112 + 10))
+    R("STATUS", (6, 112, 6 + 238, 112 + 10))
 
     # Frame and header
     draw.rectangle([(0, 0), (WIDTH - 1, HEIGHT - 1)], outline=0, width=1)

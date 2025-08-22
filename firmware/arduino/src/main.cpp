@@ -190,11 +190,14 @@ static void draw_from_spec_full_impl(uint8_t variantId) {
             return String("");
           };
           String templ = op.s0 ? op.s0 : "";
-          String out; out.reserve(templ.length()+8);
+          String out;
+          out.reserve(templ.length()+8);
           int start = 0;
           while (true) {
-            int lb = templ.indexOf('{', start); if (lb < 0) { out += templ.substring(start); break; }
-            int rb = templ.indexOf('}', lb+1); if (rb < 0) { out += templ.substring(start); break; }
+            int lb = templ.indexOf('{', start);
+            if (lb < 0) { out += templ.substring(start); break; }
+            int rb = templ.indexOf('}', lb+1);
+            if (rb < 0) { out += templ.substring(start); break; }
             out += templ.substring(start, lb);
             String key = templ.substring(lb+1, rb);
             out += fmt_field(key);
@@ -205,8 +208,10 @@ static void draw_from_spec_full_impl(uint8_t variantId) {
           if (r && tx == 0 && (op.align == ALIGN_RIGHT || op.align == ALIGN_CENTER)) {
             int16_t tw = text_width_default_font(out.c_str(), 1);
             tx = r[0] + 1;
-            if (op.align == ALIGN_RIGHT) tx = r[0] + r[2] - 2 - tw;
-            else if (op.align == ALIGN_CENTER) tx = r[0] + (r[2] - tw) / 2;
+            if (op.align == ALIGN_RIGHT)
+              tx = r[0] + r[2] - 2 - tw;
+            else if (op.align == ALIGN_CENTER)
+              tx = r[0] + (r[2] - tw) / 2;
             ty = r[1] + TOP_Y_OFFSET + 1;
           }
           display.setCursor(tx, ty);
@@ -216,7 +221,8 @@ static void draw_from_spec_full_impl(uint8_t variantId) {
           char hhmm[8]; net_time_hhmm(hhmm, sizeof(hhmm));
           int16_t tw = text_width_default_font(hhmm, 1);
           int16_t rx = static_cast<int16_t>(HEADER_TIME[0] + HEADER_TIME[2] - 2 - tw);
-          int16_t by = static_cast<int16_t>(HEADER_TIME[1] + TOP_Y_OFFSET + HEADER_TIME[3] - 2);
+          int16_t by = static_cast<int16_t>(HEADER_TIME[1] + TOP_Y_OFFSET +
+                                            HEADER_TIME[3] - 2);
           display.setTextColor(GxEPD_BLACK);
           display.setTextSize(1);
           display.setCursor(rx, by);
