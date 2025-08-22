@@ -97,9 +97,9 @@ def test_device_publishes_ui_debug_from_outdoor_aliases():
     sub = MqttTestClient(mqtt_host, mqtt_port, client_id=f"e2e-sub-{_now_ms()}")
     sub.connect()
     msgs = sub.subscribe_and_wait(f"{pub_base}/debug_ui", expected_count=1, timeout_s=10.0)
-    assert msgs, f"No debug_ui retained received from {pub_base}/debug_ui"
+    assert msgs, f"No debug_ui message received from {pub_base}/debug_ui"
     payload, retained = msgs[0]
-    assert retained, "debug_ui should be retained"
+    # Live publish may arrive as non-retained; verify retained on a fresh subscriber next
     data = json.loads(payload)
     assert data.get("event") == "ui_debug"
     outside = data.get("outside") or {}
@@ -115,6 +115,13 @@ def test_device_publishes_ui_debug_from_outdoor_aliases():
         assert str(outside["weather"]).lower().startswith("partly")
     if outside.get("weatherId") is not None:
         assert int(outside["weatherId"]) == expected["weatherId"]
+
+    # Verify a fresh subscriber receives retained debug_ui (command or boot snapshot)
+    val = MqttTestClient(mqtt_host, mqtt_port, client_id=f"e2e-val-{_now_ms()}")
+    val.connect()
+    msgs_val = val.subscribe_and_wait(f"{pub_base}/debug_ui", expected_count=1, timeout_s=5.0)
+    assert msgs_val and msgs_val[0][1] is True, "debug_ui should be retained for new subscribers"
+    val.disconnect()
 
     # Also verify the device publishes a layout identity retained
     msgs_layout = sub.subscribe_and_wait(f"{pub_base}/layout", expected_count=1, timeout_s=5.0)
