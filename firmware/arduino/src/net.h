@@ -42,6 +42,8 @@ inline void net_publish_pressure(float pressureHPa);
 inline void net_publish_battery(float voltage, int percent);
 inline void net_publish_wifi_rssi(int rssiDbm);
 inline void net_publish_publish_latency_ms(uint32_t publishLatencyMs);
+// Forward declaration for UI debug snapshot publisher
+inline void net_publish_debug_ui(const char* payload, bool retain);
 
 struct OutsideReadings {
   float temperatureC = NAN;

@@ -674,7 +674,8 @@ static void handle_serial_command_line(const String& line) {
   }
   if (op == "metrics") {
     InsideReadings latest = read_inside_sensors();
-    emit_metrics_json(latest.temperatureC, latest.humidityPct, latest.pressureHPa);
+    emit_metrics_json(latest.temperatureC, latest.humidityPct,
+                      latest.pressureHPa);
     return;
   }
   if (op == "ptest") {
@@ -716,7 +717,8 @@ static void handle_serial_command_line(const String& line) {
       Serial.println(F("ptest: status done"));
     } else if (which == "header_time") {
       // Draw a test time string in header time region
-      draw_in_region(HEADER_TIME, [&](int16_t xx, int16_t yy, int16_t ww, int16_t hh) {
+      draw_in_region(HEADER_TIME,
+                      [&](int16_t xx, int16_t yy, int16_t ww, int16_t hh) {
         display.setTextColor(GxEPD_BLACK);
         display.setTextSize(1);
         int16_t rx = xx + ww - 2 - text_width_default_font("10:32", 1);
@@ -726,7 +728,8 @@ static void handle_serial_command_line(const String& line) {
       });
       Serial.println(F("ptest: header_time done"));
     } else {
-      Serial.println(F("Usage: ptest <inside_temp|inside_rh|outside_temp|outside_rh|wind|condition|icon|status|header_time>"));
+      Serial.println(F("Usage: ptest <inside_temp|inside_rh|outside_temp|"));
+      Serial.println(F("outside_rh|wind|condition|icon|status|header_time>"));
     }
 #else
     Serial.println(F("Display disabled in this build"));
@@ -799,7 +802,8 @@ static void handle_serial_command_line(const String& line) {
     return;
   }
   if (op == "wificlear") {
-    Serial.println(F("WiFi: clearing provisioned credentials and rebooting..."));
+    Serial.println(F("WiFi: clearing provisioned credentials and "));
+    Serial.println(F("rebooting..."));
     bool ok = net_wifi_clear_provisioning();
     Serial.printf("WiFi: clear %s\n", ok ? "ok" : "failed");
     delay(50);
