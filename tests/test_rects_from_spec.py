@@ -13,5 +13,3 @@ def test_rects_ui_spec_match_geometry_json():
     rects_spec = ui.get("rects", {})
     rects_geom = geom.get("rects", {})
     assert rects_spec == rects_geom
-
-

@@ -22,8 +22,17 @@ def _read_wake_interval_sec() -> int:
     return int(m.group(1)) if m else 3600
 
 
-def _build_discovery_payload(*, device_id: str, room_name: str, pub_base: str, key: str,
-                             name: str, unit: str, dev_class: str, state_suffix: str) -> str:
+def _build_discovery_payload(
+    *,
+    device_id: str,
+    room_name: str,
+    pub_base: str,
+    key: str,
+    name: str,
+    unit: str,
+    dev_class: str,
+    state_suffix: str,
+) -> str:
     availability_topic = f"{pub_base}/availability"
     state_topic = f"{pub_base}/{state_suffix}"
     wake = _read_wake_interval_sec()
@@ -153,5 +162,3 @@ def test_mqtt_discovery_contract(mosquitto_broker):
 
     ha.disconnect()
     publisher.disconnect()
-
-

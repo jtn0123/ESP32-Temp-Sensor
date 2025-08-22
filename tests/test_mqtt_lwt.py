@@ -68,7 +68,9 @@ time.sleep(10)
         end_at = time.time() + 3.0
         while time.time() < end_at and not got_offline.is_set():
             time.sleep(0.05)
-        assert got_offline.is_set(), f"Did not see LWT offline on {availability_topic}; events={events}"
+        assert (
+            got_offline.is_set()
+        ), f"Did not see LWT offline on {availability_topic}; events={events}"
     finally:
         try:
             if proc and proc.poll() is None:
@@ -80,5 +82,3 @@ time.sleep(10)
         except Exception:
             pass
         sub.disconnect()
-
-

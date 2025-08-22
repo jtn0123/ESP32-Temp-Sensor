@@ -91,5 +91,3 @@ def test_flash_mode_always_sets_no_sleep_flag(tmp_path):
     assert env_map.get("EXTRA_FLAGS", "").find("-DDEV_NO_SLEEP=1") >= 0
     # WAKE_INTERVAL should be empty in always mode
     assert env_map.get("WAKE_INTERVAL", "") == ""
-
-

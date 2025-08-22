@@ -16,11 +16,7 @@ def _try_yaml_lint() -> None:
         [
             "python3",
             "-c",
-            (
-                "import sys,yaml;"
-                "yaml.safe_load(open(sys.argv[1],'r').read());"
-                "print('OK')"
-            ),
+            ("import sys,yaml;" "yaml.safe_load(open(sys.argv[1],'r').read());" "print('OK')"),
             os.path.join(ROOT, "homeassistant", "mqtt_outdoor_publish.yaml"),
         ],
         capture_output=True,
@@ -98,5 +94,3 @@ def test_homeassistant_yaml_loads_and_retained_topics_present():
 
     sub.disconnect()
     pub.disconnect()
-
-

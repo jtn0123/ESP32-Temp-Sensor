@@ -83,5 +83,3 @@ def test_device_yaml_schema_and_ranges():
         return
     data = _load_yaml(path)
     _validate_yaml(data)
-
-

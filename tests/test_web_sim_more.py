@@ -228,6 +228,7 @@ def test_header_time_right_aligned_and_name_truncated():
 )
 def test_mock_vs_web_sim_pixel_diff(tmp_path):
     from playwright.sync_api import sync_playwright
+
     # Optional numpy for pixel diff math
     try:
         import numpy as np
@@ -236,6 +237,7 @@ def test_mock_vs_web_sim_pixel_diff(tmp_path):
     # Render mock PNG to a buffer
     import importlib.util as _ilu
     import os as _os
+
     ROOT = _os.path.dirname(_os.path.dirname(__file__))
     _scripts = _os.path.join(ROOT, "scripts")
     _module_path = _os.path.join(_scripts, "mock_display.py")
@@ -270,9 +272,11 @@ def test_mock_vs_web_sim_pixel_diff(tmp_path):
             page = browser.new_page(viewport={"width": 250, "height": 122})
             page.goto(f"http://127.0.0.1:{port}/index.html", wait_until="load")
             page.wait_for_timeout(300)
+
             # Feed data via fetch override route
             def handle_route(route):
                 route.fulfill(status=200, content_type="application/json", body=json.dumps(data))
+
             page.route("**/sample_data.json", handle_route)
             page.reload(wait_until="load")
             page.wait_for_timeout(300)
@@ -290,7 +294,7 @@ def test_mock_vs_web_sim_pixel_diff(tmp_path):
     # Convert RGBA array to 1-bit similar to sim threshold
     W, H = mock_img.size
     arr = np.array(pix, dtype=np.uint8).reshape(H, W, 4)
-    y = (0.2126*arr[:,:,0] + 0.7152*arr[:,:,1] + 0.0722*arr[:,:,2])
+    y = 0.2126 * arr[:, :, 0] + 0.7152 * arr[:, :, 1] + 0.0722 * arr[:, :, 2]
     sim_bin = (y < 176).astype(np.uint8)
 
     mock_bin = np.array(mock_img, dtype=np.uint8)
@@ -305,7 +309,8 @@ def test_mock_vs_web_sim_pixel_diff(tmp_path):
     mock_img.save(mock_path)
     # Save a visualization of differences
     from PIL import Image
-    vis = Image.fromarray((diff*255).astype(np.uint8), mode='L')
+
+    vis = Image.fromarray((diff * 255).astype(np.uint8), mode="L")
     vis.save(os.path.join(out_dir, "pixel_diff.png"))
     # Allow a small number of differing pixels due to font/antialiasing/thresholds
     assert num_diff < 2000

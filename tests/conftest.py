@@ -59,5 +59,3 @@ def mosquitto_broker():
                 proc.kill()
             except Exception:
                 pass
-
-

@@ -30,6 +30,7 @@ def _start_http_server(root: str, port: int) -> subprocess.Popen:
 )
 def test_web_sim_screenshot_matches_golden_with_tolerance(tmp_path):
     from playwright.sync_api import sync_playwright
+
     try:
         import numpy as np
     except Exception:
@@ -74,10 +75,11 @@ def test_web_sim_screenshot_matches_golden_with_tolerance(tmp_path):
             bytes_png = page.screenshot(clip={"x": 0, "y": 0, "width": 250, "height": 122})
 
             import PIL.Image
+
             cur = PIL.Image.open(io.BytesIO(bytes_png))
             # Convert to 1-bit thresholded like sim
             arr = np.array(cur, dtype=np.uint8)
-            y = (0.2126 * arr[:, :, 0] + 0.7152 * arr[:, :, 1] + 0.0722 * arr[:, :, 2])
+            y = 0.2126 * arr[:, :, 0] + 0.7152 * arr[:, :, 1] + 0.0722 * arr[:, :, 2]
             cur_bin = (y < 176).astype(np.uint8)
 
             # Golden path
@@ -85,7 +87,9 @@ def test_web_sim_screenshot_matches_golden_with_tolerance(tmp_path):
             golden_png = os.path.join(golden_dir, "golden_web_sim.png")
             if not os.path.exists(golden_png):
                 if os.environ.get("CI"):
-                    raise AssertionError("golden_web_sim.png missing; commit golden or update baseline")
+                    raise AssertionError(
+                        "golden_web_sim.png missing; commit golden or update baseline"
+                    )
                 os.makedirs(golden_dir, exist_ok=True)
                 with open(golden_png, "wb") as f:
                     f.write(bytes_png)
@@ -93,7 +97,11 @@ def test_web_sim_screenshot_matches_golden_with_tolerance(tmp_path):
             else:
                 ref = PIL.Image.open(golden_png)
                 ref_arr = np.array(ref, dtype=np.uint8)
-                ry = (0.2126 * ref_arr[:, :, 0] + 0.7152 * ref_arr[:, :, 1] + 0.0722 * ref_arr[:, :, 2])
+                ry = (
+                    0.2126 * ref_arr[:, :, 0]
+                    + 0.7152 * ref_arr[:, :, 1]
+                    + 0.0722 * ref_arr[:, :, 2]
+                )
                 ref_bin = (ry < 176).astype(np.uint8)
                 diff = np.abs(ref_bin - cur_bin)
                 num_diff = int(diff.sum())
@@ -104,5 +112,3 @@ def test_web_sim_screenshot_matches_golden_with_tolerance(tmp_path):
     finally:
         server.terminate()
         server.wait(timeout=2)
-
-

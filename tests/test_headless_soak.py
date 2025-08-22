@@ -47,5 +47,3 @@ def test_soak_budget_from_sample_serial():
     # Availability should flip offline at least once per cycle in soak
     if avail_online > 0:
         assert avail_offline >= 1, "expected at least one offline availability by cycle end"
-
-

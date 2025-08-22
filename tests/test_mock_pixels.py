@@ -66,5 +66,3 @@ def test_mock_png_matches_golden_with_small_tolerance():
         diff = _count_pixel_diff(g, cur)
         # 5 pixels max difference
         assert diff <= 5, f"Pixel diff too high: {diff} > 5"
-
-

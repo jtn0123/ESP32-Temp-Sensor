@@ -45,7 +45,10 @@ def main() -> int:
         post = subprocess.check_output(["git", "status", "--porcelain"], cwd=repo).decode()
         # If running in CI with a clean tree, any change indicates out-of-date generated files
         if pre.strip() == "" and post.strip() != "":
-            print("ERROR: Generated headers are out-of-date. Run scripts/gen_ui.py and commit.", file=sys.stderr)
+            print(
+                "ERROR: Generated headers are out-of-date. Run scripts/gen_ui.py and commit.",
+                file=sys.stderr,
+            )
             return 2
     except Exception as e:
         # Non-fatal locally; still proceed with builds

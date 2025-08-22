@@ -42,7 +42,11 @@ def _extract_icons_and_arrays(text: str) -> Tuple[List[str], Dict[str, bytes]]:
 
 def test_icon_header_contains_required_icons_and_lengths():
     # Ensure header is up to date with the current SVGs
-    r = subprocess.run(["python3", os.path.join(ROOT, "scripts", "convert_icons.py")], capture_output=True, text=True)
+    r = subprocess.run(
+        ["python3", os.path.join(ROOT, "scripts", "convert_icons.py")],
+        capture_output=True,
+        text=True,
+    )
     assert r.returncode == 0, r.stdout + r.stderr
     with open(HEADER, "r") as f:
         content = f.read()
@@ -97,7 +101,15 @@ def test_icon_svgs_exist_for_declared_names():
         expect_files.append(f"{n}.svg")
     missing = [fn for fn in expect_files if not os.path.exists(os.path.join(SRC_DIR, fn))]
     # Only warn on extras that are not strictly required; but do fail if core weather icons are missing
-    core = {"weather-sunny.svg", "weather-partly-cloudy.svg", "weather-cloudy.svg", "weather-fog.svg", "weather-pouring.svg", "weather-snowy.svg", "weather-lightning.svg"}
+    core = {
+        "weather-sunny.svg",
+        "weather-partly-cloudy.svg",
+        "weather-cloudy.svg",
+        "weather-fog.svg",
+        "weather-pouring.svg",
+        "weather-snowy.svg",
+        "weather-lightning.svg",
+    }
     missing_core = [m for m in missing if m in core]
     assert not missing_core, f"Missing core icon SVGs: {missing_core}"
 
@@ -119,6 +131,6 @@ def test_icon_crc_matches_golden():
     with open(GOLDEN, "r") as f:
         golden_lines = [ln.strip() for ln in f if ln.strip()]
     actual_lines = [ln.strip() for ln in lines]
-    assert actual_lines == golden_lines, "Icon CRC/lengths differ from golden; re-generate if intentional"
-
-
+    assert (
+        actual_lines == golden_lines
+    ), "Icon CRC/lengths differ from golden; re-generate if intentional"
