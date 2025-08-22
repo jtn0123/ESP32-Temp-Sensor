@@ -2,10 +2,10 @@
 import json
 import os
 import pathlib
-import sys
-from typing import Any, Dict
 import subprocess
+import sys
 import zlib
+from typing import Any, Dict
 
 try:
     import yaml  # type: ignore
@@ -227,7 +227,24 @@ def emit_web_js(spec: Dict[str, Any]) -> str:
     lines.append("window.UI_LAYOUT_VERSION = " + json.dumps(layout_version) + ";")
     lines.append('window.UI_LAYOUT_CRC = "0x%08X";' % crc)
     lines.append(
-        "(function(){ function _mapWeather(iconMap, weather){ var s=String(weather||'').toLowerCase(); if(!iconMap||!Array.isArray(iconMap)) return null; for(var i=0;i<iconMap.length;i++){ var rule=iconMap[i]; if(rule && Array.isArray(rule.match)){ for(var j=0;j<rule.match.length;j++){ var m=rule.match[j]; if(s.indexOf(String(m).toLowerCase())>=0) return rule.icon; } } else if(rule && rule.default){ return rule.icon; } } return null; } window.uiMapWeather = function(w){ var spec = window.UI_SPEC || {}; return _mapWeather(spec.iconMap, w); }; })();"
+        (
+            "(function(){"
+            " function _mapWeather(iconMap, weather){"
+            " var s=String(weather||'').toLowerCase();"
+            " if(!iconMap||!Array.isArray(iconMap)) return null;"
+            " for(var i=0;i<iconMap.length;i++){"
+            " var rule=iconMap[i];"
+            " if(rule && Array.isArray(rule.match)){"
+            " for(var j=0;j<rule.match.length;j++){"
+            " var m=rule.match[j];"
+            " if(s.indexOf(String(m).toLowerCase())>=0) return rule.icon;"
+            " } } else if(rule && rule.default){ return rule.icon; } }"
+            " return null; }"
+            " window.uiMapWeather = function(w){"
+            " var spec = window.UI_SPEC || {};"
+            " return _mapWeather(spec.iconMap, w); };"
+            " })();"
+        )
     )
     return "\n".join(lines) + "\n"
 
@@ -320,7 +337,12 @@ def emit_fw_ops_header(spec: Dict[str, Any]) -> str:
     lines.append("")
     # Simple op header (future: multiple op payload shapes)
     lines.append(
-        "struct UiOpHeader { uint8_t kind; uint8_t rect; uint8_t font; uint8_t align; int16_t p0; int16_t p1; int16_t p2; int16_t p3; const char* s0; const char* s1; };"
+        (
+            "struct UiOpHeader { "
+            "uint8_t kind; uint8_t rect; uint8_t font; uint8_t align; "
+            "int16_t p0; int16_t p1; int16_t p2; int16_t p3; "
+            "const char* s0; const char* s1; };"
+        )
     )
     lines.append("")
     # Variant names
@@ -494,10 +516,14 @@ def emit_fw_ops_cpp(spec: Dict[str, Any]) -> str:
             lines.append(f'    {{ {ops_arr_name(cn)}, kOps_{cn}_count, "{cn}" }},')
         lines.append("};")
         lines.append(
-            f"const int kVariant_{vname}_ops_count = sizeof(kVariant_{vname}_ops)/sizeof(kVariant_{vname}_ops[0]);"
+            (
+                f"const int kVariant_{vname}_ops_count = "
+                f"sizeof(kVariant_{vname}_ops)/sizeof(kVariant_{vname}_ops[0]);"
+            )
         )
         lines.append("")
-    # Provide a simple id->array lookup using the same id order as header (minimal,v1,v2, then others)
+    # Provide a simple id->array lookup using the same id order as header
+    # (minimal, v1, v2, then others)
     # Build the same order
     order: list[str] = []
     if "minimal" in variants:
@@ -512,7 +538,10 @@ def emit_fw_ops_cpp(spec: Dict[str, Any]) -> str:
     for idx, vn in enumerate(order):
         prefix = "  if" if idx == 0 else "  else if"
         lines.append(
-            f"{prefix} (variantId == {idx}) {{ if(outCount) *outCount = kVariant_{vn}_ops_count; return kVariant_{vn}_ops; }}"
+            (
+                f"{prefix} (variantId == {idx}) {{ if(outCount) *outCount = "
+                f"kVariant_{vn}_ops_count; return kVariant_{vn}_ops; }}"
+            )
         )
     lines.append("  if(outCount) *outCount = 0; return nullptr;")
     lines.append("}")

@@ -1,10 +1,8 @@
-import binascii
-import io
 import os
 import re
-from typing import Dict, List, Tuple
 import subprocess
 import zlib
+from typing import Dict, List, Tuple
 
 
 ROOT = os.path.dirname(os.path.dirname(__file__))
@@ -99,8 +97,11 @@ def test_icon_svgs_exist_for_declared_names():
         else:
             n = n.replace("_", "-")
         expect_files.append(f"{n}.svg")
-    missing = [fn for fn in expect_files if not os.path.exists(os.path.join(SRC_DIR, fn))]
-    # Only warn on extras that are not strictly required; but do fail if core weather icons are missing
+    missing = [
+        fn for fn in expect_files if not os.path.exists(os.path.join(SRC_DIR, fn))
+    ]
+    # Only warn on extras that are not strictly required; but do fail if core
+    # weather icons are missing
     core = {
         "weather-sunny.svg",
         "weather-partly-cloudy.svg",

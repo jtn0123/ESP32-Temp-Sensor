@@ -58,11 +58,23 @@ def main() -> int:
             draw_type = page.evaluate("()=>typeof window.drawFromSpec")
             draw_gen_type = page.evaluate("()=>typeof window.drawFromSpecGen")
             pix = page.evaluate(
-                "()=>{ const c=document.getElementById('epd'); const d=c.getContext('2d').getImageData(5,18,1,1).data; return [d[0],d[1],d[2]]; }"
+                (
+                    "()=>{"
+                    " const c=document.getElementById('epd');"
+                    " const d=c.getContext('2d').getImageData(5,18,1,1).data;"
+                    " return [d[0],d[1],d[2]];"
+                    " }"
+                )
             )
             # Fetch generated JS and print prefix
             text_prefix = page.evaluate(
-                "async ()=>{ const res=await fetch('ui_generated.js?v=4'); const txt=await res.text(); return txt.slice(0,300); }"
+                (
+                    "async ()=>{"
+                    " const res=await fetch('ui_generated.js?v=4');"
+                    " const txt=await res.text();"
+                    " return txt.slice(0,300);"
+                    " }"
+                )
             )
             out_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "out")
             os.makedirs(out_dir, exist_ok=True)

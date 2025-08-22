@@ -44,7 +44,8 @@ def test_mock_png_matches_golden_with_small_tolerance():
     }
     img = md.render(data)
 
-    # Golden: derive from versioned md5 snapshot when present, else the current image becomes the baseline
+    # Golden: derive from versioned md5 snapshot when present,
+    # else the current image becomes the baseline
     golden_dir = os.path.join(ROOT, "tests")
     golden_png = os.path.join(golden_dir, "golden_default.png")
     if not os.path.exists(golden_png):

@@ -1,9 +1,6 @@
 import os
 import re
-import shutil
 import subprocess
-import tempfile
-
 
 ROOT = os.path.dirname(os.path.dirname(__file__))
 
