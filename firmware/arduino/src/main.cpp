@@ -982,8 +982,10 @@ static inline void draw_temp_number_and_units_direct(int16_t x, int16_t y,
   display.setTextSize(2);
   int16_t x1, y1; uint16_t bw, bh;
   display.getTextBounds(temp_f, 0, 0, &x1, &y1, &bw, &bh);
-  int16_t targetX = static_cast<int16_t>(x + (w - units_w - static_cast<int16_t>(bw)) / 2);
-  int16_t targetY = static_cast<int16_t>(y + (h - static_cast<int16_t>(bh)) / 2);
+  int16_t targetX = static_cast<int16_t>(x + (w - units_w -
+                                            static_cast<int16_t>(bw)) / 2);
+  int16_t targetY = static_cast<int16_t>(y + (h - static_cast<int16_t>(bh)) /
+                                         2);
   int16_t baseX = static_cast<int16_t>(targetX - x1);
   int16_t baseY = static_cast<int16_t>(targetY - y1);
   display.setCursor(baseX, baseY);
@@ -1012,7 +1014,8 @@ static inline uint32_t fast_crc32(const uint8_t* data, size_t len) {
 }
 
 template <typename DrawFn>
-static inline bool maybe_redraw_numeric(const int rect[4], float currentValue, float& lastValue,
+static inline bool maybe_redraw_numeric(const int rect[4], float currentValue,
+                                        float& lastValue,
                                         float threshold, DrawFn drawFn) {
   bool should = false;
   if (!isnan(currentValue) &&
@@ -1027,8 +1030,8 @@ static inline bool maybe_redraw_numeric(const int rect[4], float currentValue, f
 }
 
 template <typename T, typename DrawFn>
-static inline bool maybe_redraw_value(const int rect[4], const T& currentValue, T& lastValue,
-                                      DrawFn drawFn) {
+static inline bool maybe_redraw_value(const int rect[4], const T& currentValue,
+                                      T& lastValue, DrawFn drawFn) {
   if (currentValue != lastValue) {
     drawFn();
     lastValue = currentValue;
@@ -1037,8 +1040,8 @@ static inline bool maybe_redraw_value(const int rect[4], const T& currentValue, 
   return false;
 }
 
-static inline bool maybe_redraw_status(const BatteryStatus& bs, const char* ip_cstr,
-                                       const int rect[4]) {
+static inline bool maybe_redraw_status(const BatteryStatus& bs,
+                                       const char* ip_cstr, const int rect[4]) {
   char buf[96];
   // Stacked footer signature (3-row status)
   snprintf(buf, sizeof(buf), "B%.2f|%d|D%d|IP%s", bs.voltage, bs.percent, bs.estimatedDays, ip_cstr);
@@ -2146,14 +2149,21 @@ void setup() {
   Serial.println("DEV_NO_SLEEP=1: staying awake for debugging");
   while (true) {
     net_loop();
-    // Full-screen refresh immediately when any outside MQTT field changes
+    // Aggregate outside MQTT changes: debounce full refresh to avoid cycling
 #if USE_DISPLAY
+    static bool pending_outside_refresh = false;
+    static uint32_t changed_at_ms = 0;
     if (net_consume_outside_dirty()) {
-      Serial.println("DBG: MQTT outside change -> full_refresh");
+      pending_outside_refresh = true;
+      changed_at_ms = millis();
+    }
+    // Wait a short window to coalesce multiple retained/alias updates
+    if (pending_outside_refresh && (millis() - changed_at_ms) > 500u) {
+      Serial.println("DBG: debounced MQTT outside change -> full_refresh");
       full_refresh();
+      pending_outside_refresh = false;
       // Reset periodic full timer to avoid double refresh soon after
       // (variable declared below)
-      // We'll update last_full_ms after it's declared in the block below
     }
 #endif
     // Handle line-oriented serial commands
