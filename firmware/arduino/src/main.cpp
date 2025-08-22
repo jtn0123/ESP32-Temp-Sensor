@@ -941,8 +941,8 @@ static inline bool maybe_redraw_value(const int rect[4], const T& currentValue, 
 static inline bool maybe_redraw_status(const BatteryStatus& bs, const char* ip_cstr,
                                        const int rect[4]) {
   char buf[96];
-  snprintf(buf, sizeof(buf), "IP %s  Batt %.2fV %d%%  ~%dd", ip_cstr, bs.voltage, bs.percent,
-           bs.estimatedDays);
+  // Stacked footer signature (3-row status)
+  snprintf(buf, sizeof(buf), "B%.2f|%d|D%d|IP%s", bs.voltage, bs.percent, bs.estimatedDays, ip_cstr);
   uint32_t crc = fast_crc32((const uint8_t*)buf, strlen(buf));
   if (crc != last_status_crc) {
     draw_status_line(bs, ip_cstr);
@@ -1001,67 +1001,35 @@ static inline void draw_header_time_direct(const char* time_str) {
 }
 
 static void draw_status_line(const BatteryStatus& bs, const char* ip_cstr) {
-  const int16_t x = STATUS_[0];
-  const int16_t y = STATUS_[1];
-  const int16_t w = STATUS_[2];
-  const int16_t h = STATUS_[3];
-  draw_in_region(STATUS_, [&](int16_t xx, int16_t yy, int16_t ww, int16_t hh) {
+  // Render stacked footer content inside FOOTER_L (battery lines + centered IP)
+  draw_in_region(FOOTER_L, [&](int16_t x, int16_t y, int16_t w, int16_t h) {
+    display.fillRect(x, y, w, h, GxEPD_WHITE);
     display.setTextColor(GxEPD_BLACK);
     display.setTextSize(1);
-    int16_t cx = xx + 2;
-    int16_t cy = yy + hh - 4;
-    // Low battery cue: draw battery if percent known
+    int16_t cx = static_cast<int16_t>(x + 2);
+    // Battery glyph to the left of text when percent available
     if (bs.percent >= 0) {
       int16_t bx = cx;
-      int16_t by = yy + 1; // nudge up 1px to center
+      int16_t by = static_cast<int16_t>(y + 2);
       int16_t bw = 13;
       int16_t bh = 7;
       display.drawRect(bx, by, bw, bh, GxEPD_BLACK);
-      display.fillRect(bx + bw, by + 2, 2, 3, GxEPD_BLACK);
+      display.fillRect(static_cast<int16_t>(bx + bw), static_cast<int16_t>(by + 2), 2, 3, GxEPD_BLACK);
       int16_t fillw = static_cast<int16_t>(((bw - 2) * (bs.percent / 100.0f) + 0.5f));
-      if (fillw > 0)
-        display.fillRect(bx + 1, by + 1, fillw, bh - 2, GxEPD_BLACK);
-      cx += bw + 6;
+      if (fillw > 0) display.fillRect(static_cast<int16_t>(bx + 1), static_cast<int16_t>(by + 1), fillw, static_cast<int16_t>(bh - 2), GxEPD_BLACK);
+      cx = static_cast<int16_t>(cx + bw + 6);
     }
-    // Right-aligned IP using bounds for exact fitting
-    char right[48];
-    snprintf(right, sizeof(right), "IP %s", ip_cstr);
-    int16_t bx, by;
-    uint16_t bw, bh;
-    display.getTextBounds(right, 0, 0, &bx, &by, &bw, &bh);
-    int16_t rx = xx + ww - 2 - static_cast<int16_t>(bw);
-    // Choose, using bounds,
-    //     which left label to print based on available width
-    char left_full[64];
-    char left_nobatt[64];
-    char left_tail[32];
-    snprintf(left_full, sizeof(left_full), "Batt %.2fV %d%% | ~%dd",
-             bs.voltage,
-             bs.percent,
-             bs.estimatedDays);
-    snprintf(left_nobatt, sizeof(left_nobatt), "%.2fV %d%% | ~%dd", bs.voltage,
-             bs.percent,
-             bs.estimatedDays);
-    snprintf(left_tail, sizeof(left_tail), "%d%% | ~%dd", bs.percent, bs.estimatedDays);
-    int16_t available = rx - cx - 2;
-    const char* to_print = left_full;
-    display.getTextBounds(to_print, 0, 0, &bx, &by, &bw, &bh);
-    if (static_cast<int16_t>(bw) > available) {
-      to_print = left_nobatt;
-      display.getTextBounds(to_print, 0, 0, &bx, &by, &bw, &bh);
-    }
-    if (static_cast<int16_t>(bw) > available) {
-      display.getTextBounds(left_tail, 0, 0, &bx, &by, &bw, &bh);
-      if (static_cast<int16_t>(bw) <= available) {
-        to_print = left_tail;
-      } else {
-        to_print = "";
-      }
-    }
-    display.setCursor(cx, cy);
-    display.print(to_print);
-    display.setCursor(rx, cy);
-    display.print(right);
+    int16_t line = static_cast<int16_t>(y + 10);
+    char l1[48]; snprintf(l1, sizeof(l1), "Batt %.2fV %d%%", bs.voltage, bs.percent);
+    display.setCursor(cx, line); display.print(l1);
+    line = static_cast<int16_t>(line + 10);
+    char l2[48]; snprintf(l2, sizeof(l2), "~%dd", bs.estimatedDays);
+    display.setCursor(cx, line); display.print(l2);
+    line = static_cast<int16_t>(line + 10);
+    char l3[56]; snprintf(l3, sizeof(l3), "IP %s", ip_cstr);
+    int16_t bx, by; uint16_t bw, bh; display.getTextBounds(l3, 0, 0, &bx, &by, &bw, &bh);
+    int16_t ipx = static_cast<int16_t>(x + (w - static_cast<int16_t>(bw)) / 2);
+    display.setCursor(ipx, line); display.print(l3);
   });
 }
 
