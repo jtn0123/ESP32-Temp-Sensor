@@ -6,7 +6,6 @@ import pytest
 
 from scripts.test_mqtt_integration import MqttTestClient, _now_ms
 
-
 ROOT = os.path.dirname(os.path.dirname(__file__))
 
 

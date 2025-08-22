@@ -3,8 +3,8 @@ import hashlib
 import json
 import os
 import pathlib
-import zlib
 from typing import Any, Dict, List
+import zlib
 
 # Support both direct CLI and PlatformIO pre-script execution where __file__ may
 # not be defined. Fall back to the project root from the working directory.

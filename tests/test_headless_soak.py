@@ -3,7 +3,6 @@ import statistics
 
 from scripts.parse_debug_json import parse_debug_payload
 
-
 ROOT = os.path.dirname(os.path.dirname(__file__))
 
 

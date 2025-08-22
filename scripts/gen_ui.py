@@ -4,8 +4,8 @@ import os
 import pathlib
 import subprocess
 import sys
-import zlib
 from typing import Any, Dict
+import zlib
 
 try:
     import yaml  # type: ignore

@@ -1,9 +1,8 @@
 import os
 import re
 import subprocess
-import zlib
 from typing import Dict, List, Tuple
-
+import zlib
 
 ROOT = os.path.dirname(os.path.dirname(__file__))
 HEADER = os.path.join(ROOT, "firmware", "arduino", "src", "icons_generated.h")

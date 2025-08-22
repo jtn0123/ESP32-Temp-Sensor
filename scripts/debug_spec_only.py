@@ -24,9 +24,9 @@ def _start_http_server(root: str, port: int) -> subprocess.Popen:
 
 def main() -> int:
     try:
-        from playwright.sync_api import sync_playwright  # type: ignore
-    except Exception as e:
-        print("Playwright not installed:", e)
+        from playwright.sync_api import sync_playwright
+    except Exception as exc:
+        print("Playwright not installed:", exc)
         return 2
 
     web_root = os.path.join(os.path.dirname(os.path.dirname(__file__)), "web", "sim")
@@ -40,14 +40,27 @@ def main() -> int:
         with sync_playwright() as p:
             browser = p.chromium.launch()
             page = browser.new_page(viewport={"width": 250, "height": 122})
-            page.on("console", lambda m: logs.append(f"[{m.type}] {m.text}"))
-            page.on("pageerror", lambda e: errs.append(str(e)))
-            page.on(
-                "requestfailed",
-                lambda r: fails.append(
-                    f"FAIL {r.method} {r.url} {r.failure.error_text if r.failure else ''}"
-                ),
-            )
+            # Handlers typed with Any to satisfy static type checking
+            from typing import Any
+
+            def _on_console(msg: Any) -> None:
+                kind = getattr(msg, "type", "log")
+                text = getattr(msg, "text", "")
+                logs.append(f"[{kind}] {text}")
+
+            def _on_pageerror(err: Any) -> None:
+                errs.append(str(err))
+
+            def _on_requestfailed(req: Any) -> None:
+                fail = getattr(req, "failure", None)
+                err_txt = getattr(fail, "error_text", "") if fail is not None else ""
+                method = getattr(req, "method", "")
+                url = getattr(req, "url", "")
+                fails.append(f"FAIL {method} {url} {err_txt}")
+
+            page.on("console", _on_console)
+            page.on("pageerror", _on_pageerror)
+            page.on("requestfailed", _on_requestfailed)
             url = f"http://127.0.0.1:{port}/index.html?spec=1&v=4"
             page.goto(url, wait_until="load")
             page.wait_for_timeout(700)
@@ -99,8 +112,8 @@ def main() -> int:
                 print(line)
             if errs:
                 print("Page errors:")
-                for e in errs:
-                    print(" ", e)
+                for msg in errs:
+                    print(" ", msg)
             if fails:
                 print("Request failed:")
                 for f in fails:

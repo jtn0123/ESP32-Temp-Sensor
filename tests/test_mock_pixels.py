@@ -1,7 +1,6 @@
 import importlib.util
 import os
 
-
 ROOT = os.path.dirname(os.path.dirname(__file__))
 _scripts = os.path.join(ROOT, "scripts")
 _module_path = os.path.join(_scripts, "mock_display.py")
