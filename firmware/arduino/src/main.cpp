@@ -323,7 +323,7 @@ static void draw_from_spec_full_impl(uint8_t variantId) {
           display.fillRect(static_cast<int16_t>(bx + bw),
                            static_cast<int16_t>(by + 2), 2, 3, GxEPD_BLACK);
           int16_t fillw = static_cast<int16_t>(((bw - 2) * (bs.percent / 100.0f) +
-                                               0.5f));
+                                                0.5f));
           if (fillw > 0)
             display.fillRect(static_cast<int16_t>(bx + 1),
                              static_cast<int16_t>(by + 1), fillw,
@@ -345,7 +345,8 @@ RTC_DATA_ATTR static float last_outside_f = NAN;
 static inline float get_last_outside_f() { return last_outside_f; }
 RTC_DATA_ATTR static float last_outside_rh = NAN;
 RTC_DATA_ATTR static int32_t last_icon_id = -1;
-// Track last rendered footer weather (icon + short text) to avoid redundant redraws
+// Track last rendered footer weather (icon + short text) to avoid
+// redundant redraws
 RTC_DATA_ATTR static uint32_t last_footer_weather_crc = 0;
 RTC_DATA_ATTR static float last_published_inside_tempC = NAN;
 RTC_DATA_ATTR static float last_published_inside_rh = NAN;
@@ -359,7 +360,8 @@ RTC_DATA_ATTR static bool needs_full_on_boot = true;
 #ifdef FORCE_FULL_ONLY
 static bool g_full_only_mode = true;  // compile-time force full refresh only
 #else
-static bool g_full_only_mode = false;  // when true, always do full refresh (debug)
+static bool g_full_only_mode = false;  // when true, always do full refresh
+                                        // (debug)
 #endif
 
 static Preferences g_prefs;
