@@ -513,10 +513,13 @@ static inline void status_pixel_tick() {
   s_hue++;
   s_breath++;
   // Triangle wave 0..127..0 mapped to brightness range
-  uint8_t amp = (s_breath < 128) ? s_breath : static_cast<uint8_t>(255 - s_breath);
+  uint8_t amp = (s_breath < 128) ? s_breath :
+                static_cast<uint8_t>(255 - s_breath);
   const uint8_t minB = 8;
   const uint8_t maxB = 64;
-  uint8_t level = static_cast<uint8_t>(minB + (static_cast<uint16_t>(amp) * (maxB - minB) / 127));
+  uint8_t level = static_cast<uint8_t>(minB +
+                                       (static_cast<uint16_t>(amp) *
+                                        (maxB - minB) / 127));
   // Occasional brief flash for a bit of flair
   if ((s_hue & 0x3F) == 0)
     level = maxB;
@@ -537,7 +540,8 @@ static void emit_metrics_json(float tempC, float rhPct, float pressHPa) {
   Serial.print("\"layout_crc\":\"");
   {
     char crcbuf[12];
-    snprintf(crcbuf, sizeof(crcbuf), "0x%08X", static_cast<unsigned>(LAYOUT_CRC));
+    snprintf(crcbuf, sizeof(crcbuf), "0x%08X",
+              static_cast<unsigned>(LAYOUT_CRC));
     Serial.print(crcbuf);
   }
   Serial.print("\"");
@@ -651,7 +655,8 @@ static void handle_serial_command_line(const String& line) {
     Serial.print(F("Commands: help | status | metrics | sleep <sec> | "));
     Serial.print(F("reboot | wifi | mqtt | pub <tempF> <rh%> | "));
     Serial.print(F("mode <full|partial> | "));
-    Serial.println(F("ptest <inside_temp|inside_rh|outside_temp|outside_rh|wind|condition|icon|status|header_time>"));
+    Serial.println(F("ptest <inside_temp|inside_rh|outside_temp|outside_rh|wind|"));
+    Serial.println(F("condition|icon|status|header_time>"));
     return;
   }
   if (op == "status") {
