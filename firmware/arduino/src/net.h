@@ -733,7 +733,7 @@ inline void ensure_wifi_connected() {
   cfg.sta.scan_method = WIFI_FAST_SCAN;
   cfg.sta.threshold.rssi = WIFI_RSSI_THRESHOLD;
   cfg.sta.threshold.authmode = WIFI_AUTHMODE_THRESHOLD;
-  cfg.sta.channel = 0; // do not hard-lock channel
+  cfg.sta.channel = 0;  // do not hard-lock channel
   if (have_bssid) {
     memcpy(cfg.sta.bssid, prefer_bssid, 6);
     cfg.sta.bssid_set = 1;
@@ -1111,7 +1111,7 @@ inline void net_publish_ha_discovery() {
     // HA
     int suggestedPrecision = 0;
     if (strcmp(unit, "°F") == 0)
-      suggestedPrecision = 1; // Fahrenheit: one decimal
+      suggestedPrecision = 1;  // Fahrenheit: one decimal
     else if (strcmp(unit, "V") == 0)
       suggestedPrecision = 2; // Volts: two decimals
     else if (strcmp(unit, "hPa") == 0)
