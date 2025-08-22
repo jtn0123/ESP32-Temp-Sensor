@@ -59,28 +59,39 @@ class MqttTestClient:
             self.client = mqtt.Client(client_id=client_id, protocol=mqtt.MQTTv311)
         self._host = host
         self._port = port
+        # Optional credentials (for secured brokers)
+        self._user = os.environ.get("MQTT_USER") or os.environ.get("E2E_MQTT_USER") or ""
+        self._pass = os.environ.get("MQTT_PASS") or os.environ.get("E2E_MQTT_PASS") or ""
         self._connected_event = threading.Event()
         self._disconnected_event = threading.Event()
         self._subscribe_cond = threading.Condition()
         self._subscribed_mids: set[int] = set()
 
         # Support both v1 and v2 callback signatures
-        def on_connect(client, userdata, flags, rc=None, properties=None):  # type: ignore[no-redef]
+        def on_connect(client, userdata, flags, rc=None, properties=None):
             self._connected_event.set()
 
-        def on_disconnect(client, userdata, rc=None, properties=None):  # type: ignore[no-redef]
+        def on_disconnect(client, userdata, rc=None, properties=None):
             self._disconnected_event.set()
 
         self.client.on_connect = on_connect
         self.client.on_disconnect = on_disconnect
 
         # Handle SUBACK for confirming subscription registration (v1 and v2 compatible)
-        def on_subscribe(client, userdata, mid, granted_qos, properties=None):  # type: ignore[no-redef]
+        def on_subscribe(client, userdata, mid, granted_qos, properties=None):
             with self._subscribe_cond:
                 self._subscribed_mids.add(int(mid))
                 self._subscribe_cond.notify_all()
 
         self.client.on_subscribe = on_subscribe
+
+        # Apply credentials if provided
+        if self._user:
+            try:
+                self.client.username_pw_set(self._user, self._pass or None)
+            except Exception:
+                # Fallback/no-op if library version differs
+                pass
 
     def connect(self, timeout_s: float = 10.0) -> None:
         self.client.connect(self._host, self._port, keepalive=30)
@@ -131,7 +142,7 @@ class MqttTestClient:
         messages: List[Tuple[str, bool]] = []
         got_all = threading.Event()
 
-        def on_message(client, userdata, msg):  # type: ignore[no-redef]
+        def on_message(client, userdata, msg):
             messages.append((msg.payload.decode("utf-8", "ignore"), bool(msg.retain)))
             if len(messages) >= expected_count:
                 got_all.set()
@@ -271,7 +282,7 @@ def main() -> None:
     events: List[Tuple[str, bool]] = []
     got_all = threading.Event()
 
-    def on_msg(client, userdata, msg):  # type: ignore[no-redef]
+    def on_msg(client, userdata, msg):
         events.append((msg.payload.decode("utf-8", "ignore"), bool(msg.retain)))
         if len(events) >= 3:
             got_all.set()
@@ -305,7 +316,7 @@ def main() -> None:
     dbg_events: List[Tuple[str, bool]] = []
     got_dbg = threading.Event()
 
-    def on_dbg(client, userdata, msg):  # type: ignore[no-redef]
+    def on_dbg(client, userdata, msg):
         dbg_events.append((msg.payload.decode("utf-8", "ignore"), bool(msg.retain)))
         got_dbg.set()
 

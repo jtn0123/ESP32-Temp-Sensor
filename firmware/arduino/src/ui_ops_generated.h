@@ -74,4 +74,4 @@ extern const ComponentOps kVariant_v1_ops[];
 extern const int kVariant_v1_ops_count;
 extern const ComponentOps* get_variant_ops(uint8_t variantId, int* outCount);
 
-} // namespace ui
+}  // namespace ui
