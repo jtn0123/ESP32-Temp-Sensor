@@ -53,6 +53,8 @@ static void partial_update_weather_icon_from_outside(const OutsideReadings& o);
 static void draw_weather_icon_region_at(int16_t x, int16_t y, int16_t w, int16_t h, const char* weather);
 static void draw_weather_icon_region_at_from_outside(int16_t x, int16_t y, int16_t w, int16_t h,
                                                      const OutsideReadings& o);
+// Footer-only weather updater to keep geometry consistent with full renders
+static void partial_update_footer_weather_from_outside(const OutsideReadings& o);
 static void draw_header_time(const char* time_str);
 // Accessor to avoid forward reference ordering issues
 static inline float get_last_outside_f();
@@ -276,6 +278,8 @@ RTC_DATA_ATTR static float last_outside_f = NAN;
 static inline float get_last_outside_f() { return last_outside_f; }
 RTC_DATA_ATTR static float last_outside_rh = NAN;
 RTC_DATA_ATTR static int32_t last_icon_id = -1;
+// Track last rendered footer weather (icon + short text) to avoid redundant redraws
+RTC_DATA_ATTR static uint32_t last_footer_weather_crc = 0;
 RTC_DATA_ATTR static float last_published_inside_tempC = NAN;
 RTC_DATA_ATTR static float last_published_inside_rh = NAN;
 RTC_DATA_ATTR static float last_published_inside_pressureHPa = NAN;
@@ -1272,7 +1276,10 @@ static void full_refresh() {
 
     // Clear the legacy top-right icon region; the icon is now footer-only
     display.fillRect(OUT_ICON[0], OUT_ICON[1] + TOP_Y_OFFSET, OUT_ICON[2], OUT_ICON[3], GxEPD_WHITE);
-    if (o.validWeather) {
+    // Track last icon id using OpenWeather hints when available for consistency
+    if (o.validWeatherIcon || o.validWeatherId) {
+      last_icon_id = static_cast<int32_t>(map_openweather_to_icon(o));
+    } else if (o.validWeather) {
       last_icon_id = static_cast<int32_t>(map_weather_to_icon(o.weather));
     }
     // Outside condition text removed from middle; only show condition in footer
@@ -1318,15 +1325,23 @@ static void full_refresh() {
       int16_t y = FOOTER_R[1];
       int16_t w = FOOTER_R[2];
       int16_t h = FOOTER_R[3];
-      if (o.validWeather || last_icon_id >= 0) {
-        char sc[24]; make_short_condition_cstr(o.weather, sc, sizeof(sc));
+      if (o.validWeather || o.validWeatherId || o.validWeatherIcon || last_icon_id >= 0) {
+        char sc[24];
+        if (o.validWeatherDesc && o.weatherDesc[0]) make_short_condition_cstr(o.weatherDesc, sc, sizeof(sc));
+        else make_short_condition_cstr(o.weather, sc, sizeof(sc));
         // small icon on the left, word to the right
         int16_t ix = x + 2; int16_t iy = static_cast<int16_t>(y + (h - ICON_H) / 2);
-        IconId icon_id = o.validWeather ? map_weather_to_icon(o.weather) : (IconId)last_icon_id;
+        IconId icon_id = (o.validWeatherIcon || o.validWeatherId)
+                         ? map_openweather_to_icon(o)
+                         : (o.validWeather ? map_weather_to_icon(o.weather) : (IconId)last_icon_id);
         draw_icon(display, ix, iy, icon_id, GxEPD_BLACK);
         display.setTextColor(GxEPD_BLACK); display.setTextSize(1);
         display.setCursor(static_cast<int16_t>(x + 2 + ICON_W + 4), static_cast<int16_t>(y + h/2 + 2));
-        if (o.validWeather) display.print(sc);
+        if (o.validWeather || o.validWeatherDesc) display.print(sc);
+        // Update footer weather CRC cache for always-on parity immediately after a full render
+        char sig[64];
+        snprintf(sig, sizeof(sig), "I%d|%s", static_cast<int>(icon_id), (o.validWeather||o.validWeatherDesc)?sc:"");
+        last_footer_weather_crc = fast_crc32(reinterpret_cast<const uint8_t*>(sig), strlen(sig));
       }
     }
   } while (display.nextPage());
@@ -1466,6 +1481,31 @@ static void partial_update_outside_hilo(float highC, float lowC) {
     }
   });
 }
+
+// Footer-only weather updater using the same geometry as full renders
+static void partial_update_footer_weather_from_outside(const OutsideReadings& o) {
+  draw_in_region(FOOTER_R, [&](int16_t x, int16_t y, int16_t w, int16_t h) {
+    display.fillRect(x, y, w, h, GxEPD_WHITE);
+    // Icon at left
+    int16_t ix = static_cast<int16_t>(x + 2);
+    int16_t iy = static_cast<int16_t>(y + (h - ICON_H) / 2);
+    IconId icon_id;
+    if (o.validWeatherIcon || o.validWeatherId) icon_id = map_openweather_to_icon(o);
+    else if (o.validWeather) icon_id = map_weather_to_icon(o.weather);
+    else icon_id = (last_icon_id >= 0) ? static_cast<IconId>(last_icon_id) : ICON_WEATHER_SUNNY;
+    draw_icon(display, ix, iy, icon_id, GxEPD_BLACK);
+    // Short condition text to the right of the icon
+    char sc[24]; sc[0] = '\0';
+    if (o.validWeatherDesc && o.weatherDesc[0]) make_short_condition_cstr(o.weatherDesc, sc, sizeof(sc));
+    else if (o.validWeather) make_short_condition_cstr(o.weather, sc, sizeof(sc));
+    if (sc[0]) {
+      display.setTextColor(GxEPD_BLACK);
+      display.setTextSize(1);
+      display.setCursor(static_cast<int16_t>(x + 2 + ICON_W + 4), static_cast<int16_t>(y + h/2 + 2));
+      display.print(sc);
+    }
+  });
+}
 #endif // USE_DISPLAY
 
 #if USE_DISPLAY && DEV_NO_SLEEP
@@ -1504,26 +1544,22 @@ static void dev_display_tick() {
   }
 
   if (o.validWeather || o.validWeatherId || o.validWeatherIcon) {
+    // Build a signature of footer weather (icon id + short condition) and redraw only on change
     IconId id = (o.validWeatherIcon || o.validWeatherId) ? map_openweather_to_icon(o)
-                                                         : map_weather_to_icon(o.weather);
-    maybe_redraw_value<int32_t>(OUT_ICON, static_cast<int32_t>(id), last_icon_id, [&]() {
-      if (o.validWeatherIcon || o.validWeatherId) {
-        int rect_tmp[4] = {OUT_ICON[0], static_cast<int16_t>(OUT_ICON[1] + TOP_Y_OFFSET), OUT_ICON[2], OUT_ICON[3]};
-        draw_in_region(rect_tmp, [&](int16_t xx, int16_t yy, int16_t ww, int16_t hh) {
-          draw_weather_icon_region_at_from_outside(xx, yy, ww, hh, o);
-        });
-      } else {
-        partial_update_weather_icon(o.weather);
-      }
-    });
-    nvs_store_int("icon", last_icon_id);
-    if (o.validWeather || o.validWeatherDesc) {
-      char sc[24];
-      if (o.validWeatherDesc && o.weatherDesc[0])
-        make_short_condition_cstr(o.weatherDesc, sc, sizeof(sc));
-      else
-        make_short_condition_cstr(o.weather, sc, sizeof(sc));
-      partial_update_outside_condition(sc);
+                                                         : (o.validWeather ? map_weather_to_icon(o.weather) : ICON_WEATHER_SUNNY);
+    char sc[24]; sc[0] = '\0';
+    if (o.validWeatherDesc && o.weatherDesc[0])
+      make_short_condition_cstr(o.weatherDesc, sc, sizeof(sc));
+    else if (o.validWeather)
+      make_short_condition_cstr(o.weather, sc, sizeof(sc));
+    char sig[64];
+    snprintf(sig, sizeof(sig), "I%d|%s", static_cast<int>(id), sc);
+    uint32_t crc = fast_crc32(reinterpret_cast<const uint8_t*>(sig), strlen(sig));
+    if (crc != last_footer_weather_crc) {
+      partial_update_footer_weather_from_outside(o);
+      last_footer_weather_crc = crc;
+      last_icon_id = static_cast<int32_t>(id);
+      nvs_store_int("icon", last_icon_id);
     }
   }
 
@@ -1602,13 +1638,19 @@ void setup() {
   ensure_mqtt_connected();
   int64_t t2_us = esp_timer_get_time();
 
-  // Draw immediately at least once so the panel is never blank after boot
+  // Draw immediately at least once so the panel is never blank after boot.
+  // In always-on debug (DEV_NO_SLEEP), skip this early draw to avoid a visible
+  // double full refresh; we'll perform the full refresh in the display phase below.
 #if USE_DISPLAY
+#if !DEV_NO_SLEEP
   {
     Serial.println("DBG: boot full draw pre-publish");
     full_refresh();
     needs_full_on_boot = false;
   }
+#else
+  Serial.println("DBG: skipping pre-publish full draw (DEV_NO_SLEEP)");
+#endif
 #endif
 
   // Crash safety: on panic/WDT/brownout reboot, publish retained last_crash;

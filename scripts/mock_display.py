@@ -144,12 +144,14 @@ def draw_layout(draw: ImageDraw.ImageDraw, data: dict):
     INSIDE_TEMP = R("INSIDE_TEMP", (6, 36, 6 + 118, 36 + 28))
     INSIDE_RH = R("INSIDE_RH", (6, 66, 6 + 118, 66 + 14))
     _INSIDE_TIME = R("INSIDE_TIME", (6, 82, 6 + 118, 82 + 12))
-    OUT_TEMP = R("OUT_TEMP", (131, 36, 131 + 90, 36 + 28))
+    OUT_TEMP = R("OUT_TEMP", (129, 36, 129 + 94, 36 + 28))
     OUT_ICON = R("OUT_ICON", (210, 22, 210 + 28, 22 + 28))
     OUT_ROW1_L = R("OUT_ROW1_L", (131, 66, 131 + 44, 66 + 12))
     OUT_ROW1_R = R("OUT_ROW1_R", (177, 66, 177 + 64, 66 + 12))
     OUT_ROW2_L = R("OUT_ROW2_L", (131, 78, 131 + 44, 78 + 12))
-    _OUT_ROW2_R = R("OUT_ROW2_R", (177, 78, 177 + 44, 78 + 12))
+    OUT_ROW2_R = R("OUT_ROW2_R", (177, 78, 177 + 44, 78 + 12))
+    FOOTER_L = R("FOOTER_L", (6, 90, 6 + 160, 90 + 32))
+    FOOTER_R = R("FOOTER_R", (170, 90, 170 + 74, 90 + 32))
     STATUS = R("STATUS", (6, 112, 6 + 238, 112 + 10))
 
     # Frame and header
@@ -158,7 +160,7 @@ def draw_layout(draw: ImageDraw.ImageDraw, data: dict):
     draw.text((6, 3), data.get("room_name", "Room"), font=font_hdr, fill=0)
     # Header rules
     # Column separator
-    draw.line((125, 18, 125, 95), fill=0, width=1)
+    draw.line((125, 18, 125, 121), fill=0, width=1)
     # Header underline
     draw.line((1, 18, WIDTH - 2, 18), fill=0, width=1)
     # Header right time within HEADER_TIME
@@ -172,10 +174,16 @@ def draw_layout(draw: ImageDraw.ImageDraw, data: dict):
         draw.text((vx, HEADER_TIME[1] + HEADER_TIME[3] - 8), "v", font=load_font(10), fill=0)
         draw.text((vx + 6, HEADER_TIME[1] + HEADER_TIME[3] - 8), v, font=load_font(10), fill=0)
 
-    # Section labels
+    # Section labels centered above temp rects
     font_lbl = load_font(10)
-    draw.text((INSIDE_TEMP[0], 22), "INSIDE", font=font_lbl, fill=0)
-    draw.text((OUT_TEMP[0], 22), "OUTSIDE", font=font_lbl, fill=0)
+    def center_label(rect, text):
+        x0, y0, x1, y1 = rect
+        w = x1 - x0
+        tl = int(ImageDraw.Draw(Image.new("1", (1, 1))).textlength(text, font=font_lbl))
+        lx = x0 + max(0, (w - tl) // 2)
+        draw.text((lx, 22), text, font=font_lbl, fill=0)
+    center_label(INSIDE_TEMP, "INSIDE")
+    center_label(OUT_TEMP, "OUTSIDE")
 
     # Values
     font_big = load_font(14)
@@ -208,20 +216,76 @@ def draw_layout(draw: ImageDraw.ImageDraw, data: dict):
     draw.text((INSIDE_RH[0], INSIDE_RH[1]), inside_rh_text, font=font_sm, fill=0)
 
     draw_temp_right(OUT_TEMP, str(data.get("outside_temp", "68.4")))
-    draw_weather_icon(draw, OUT_ICON, data.get("weather", "Cloudy"))
-    # Bottom small rows
+    # Bottom small rows per spec: RH left bottom, wind right bottom
     outside_rh_text = f"{data.get('outside_hum','53')}% RH"
-    draw.text((OUT_ROW1_L[0], OUT_ROW1_L[1]), outside_rh_text, font=font_sm, fill=0)
-    # wind mph in right top small box
+    draw.text((OUT_ROW2_L[0], OUT_ROW2_L[1]), outside_rh_text, font=font_sm, fill=0)
     try:
         wind_mps = float(data.get("wind", "4.2"))
     except Exception:
         wind_mps = 4.2
     wind_text = f"{wind_mps*2.237:.1f} mph"
-    draw.text((OUT_ROW1_R[0], OUT_ROW1_R[1]), wind_text, font=font_sm, fill=0)
-    # condition short in bottom-left small box
-    cond_text = str(data.get("weather", "Cloudy")).split(" ")[0].split("-")[0]
-    draw.text((OUT_ROW2_L[0], OUT_ROW2_L[1]), cond_text, font=font_sm, fill=0)
+    draw.text((OUT_ROW2_R[0], OUT_ROW2_R[1]), wind_text, font=font_sm, fill=0)
+
+    # Footer weather bar (match sim.js 'iconIn' drawing)
+    bar_x = 130
+    bar_y = 95
+    bar_w = 114
+    bar_h = FOOTER_R[3]
+    icon_w = min(26, bar_w - 60)
+    icon_h = min(22, bar_h - 4)
+    gap = 8
+    cond_label = str(data.get("weather", "Cloudy")).split(" ")[0].split("-")[0]
+    tl_cond = int(ImageDraw.Draw(Image.new("1", (1, 1))).textlength(cond_label, font=font_sm))
+    total_w = icon_w + gap + tl_cond
+    start_x = bar_x + max(0, (bar_w - total_w) // 2)
+    icon_cx = start_x + icon_w // 2
+    icon_cy = bar_y + bar_h // 2
+    # Ensure left-side non-white area similar to sim
+    cond_lower = str(data.get("weather", "")).lower()
+    left_box_w = 16
+    if "moon" in cond_lower:
+      left_box_w = 20
+    elif any(k in cond_lower for k in ["rain"]):
+      left_box_w = 22
+    elif any(k in cond_lower for k in ["snow"]):
+      left_box_w = 18
+    elif any(k in cond_lower for k in ["storm","thunder","lightning"]):
+      left_box_w = 24
+    # Draw filled rect inside icon box to guarantee black pixels
+    draw.rectangle([
+        (bar_x + 2, bar_y + 2),
+        (bar_x + 2 + max(8, min(left_box_w, icon_w - 4)), bar_y + 2 + max(8, icon_h - 6))
+    ], fill=0)
+    # Simplified icon strokes
+    # Use stroke-only rectangle as in sim before specific details
+    draw.rectangle([
+        (start_x + 2, bar_y + 6),
+        (start_x + icon_w - 2, bar_y + icon_h - 2)
+    ], outline=0, width=1)
+    if any(k in cond_lower for k in ["rain"]):
+        # diagonal raindrops
+        for i in range(3):
+            x0 = start_x + 6 + i * 6
+            draw.line((x0, icon_cy + 2, x0 - 3, icon_cy + 8), fill=0, width=1)
+    elif any(k in cond_lower for k in ["snow"]):
+        for i in range(2):
+            draw.text((start_x + 6 + i * 8, icon_cy + 2), "*", font=load_font(10), fill=0)
+    elif any(k in cond_lower for k in ["storm","thunder","lightning"]):
+        draw.line((icon_cx - 6, icon_cy + 2, icon_cx, icon_cy - 2), fill=0, width=1)
+        draw.line((icon_cx, icon_cy - 2, icon_cx - 2, icon_cy + 6), fill=0, width=1)
+        draw.line((icon_cx - 2, icon_cy + 6, icon_cx + 6, icon_cy + 2), fill=0, width=1)
+    elif any(k in cond_lower for k in ["fog","mist","haze"]):
+        for i in range(3):
+            y0 = bar_y + 6 + i * 6
+            draw.line((start_x + 2, y0, start_x + icon_w - 2, y0), fill=0, width=1)
+    else:
+        # circle (sun)
+        r0 = min(icon_w, icon_h) // 3
+        draw.ellipse((icon_cx - r0, icon_cy - r0, icon_cx + r0, icon_cy + r0), outline=0, width=1)
+    # Label to the right of the icon, vertically centered
+    label_x = start_x + icon_w + gap
+    label_y = bar_y + max(0, (icon_h - font_sm.size) // 2) + 1
+    draw.text((label_x, label_y), cond_label, font=font_sm, fill=0)
 
     # Status
     # Battery glyph
@@ -238,9 +302,11 @@ def draw_layout(draw: ImageDraw.ImageDraw, data: dict):
     eta = f"~{data.get('days','128')}d   {pct}%"
     draw.text((STATUS[0] + bw + 8, STATUS[1] + 8), eta, font=font_sm, fill=0)
     ip = f"IP {data.get('ip','192.168.1.42')}"
-    left_col_right = 125 - 2
+    # Center IP within FOOTER_L
+    left_col_right = FOOTER_L[0] + (FOOTER_L[2])
+    left_col_left = FOOTER_L[0]
     ip_w = len(ip) * 6
-    ip_x = STATUS[0] + bw + 8 + max(0, (left_col_right - (STATUS[0] + bw + 8) - ip_w) // 2)
+    ip_x = left_col_left + max(0, (left_col_right - left_col_left - ip_w) // 2)
     draw.text((ip_x, STATUS[1] + 18), ip, font=font_sm, fill=0)
 
 
