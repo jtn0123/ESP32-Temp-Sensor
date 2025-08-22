@@ -37,13 +37,24 @@ def read_until_connected_from_serial(port: str, baud: int, timeout_s: float) -> 
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description="Check Wi-Fi join time from serial or log file")
+    ap = argparse.ArgumentParser(
+        description="Check Wi-Fi join time from serial or log file"
+    )
     g = ap.add_mutually_exclusive_group(required=True)
-    g.add_argument("--port", help="Serial port (e.g. /dev/cu.usbmodem*, /dev/tty.usbserial*)")
-    g.add_argument("--from-file", dest="from_file", help="Path to a text log file to parse")
+    g.add_argument(
+        "--port",
+        help="Serial port (e.g. /dev/cu.usbmodem*, /dev/tty.usbserial*)"
+    )
+    g.add_argument(
+        "--from-file", dest="from_file", help="Path to a text log file to parse"
+    )
     ap.add_argument("--baud", type=int, default=115200)
-    ap.add_argument("--timeout", type=float, default=20.0, help="Serial wait timeout seconds")
-    ap.add_argument("--max-ms", type=int, default=6000, help="Maximum acceptable join time in ms")
+    ap.add_argument(
+        "--timeout", type=float, default=20.0, help="Serial wait timeout seconds"
+    )
+    ap.add_argument(
+        "--max-ms", type=int, default=6000, help="Maximum acceptable join time in ms"
+    )
     args = ap.parse_args()
 
     lines: List[str]
@@ -51,15 +62,24 @@ def main() -> int:
         with open(args.from_file, "r", encoding="utf-8", errors="ignore") as f:
             lines = [ln.rstrip("\n") for ln in f]
     else:
-        lines = read_until_connected_from_serial(args.port, args.baud, args.timeout)
+        lines = read_until_connected_from_serial(
+            args.port, args.baud, args.timeout
+        )
 
     evt = parse(lines)
-    print(f"ssid={evt.ssid} ip={evt.ip} rssi={evt.rssi_dbm} join_ms={evt.join_ms}")
+    print(
+        f"ssid={evt.ssid} ip={evt.ip} rssi={evt.rssi_dbm} join_ms={evt.join_ms}"
+    )
     if evt.ip is None:
-        print("ERROR: did not observe WiFi connected in logs", file=sys.stderr)
+        print(
+            "ERROR: did not observe WiFi connected in logs", file=sys.stderr
+        )
         return 2
     if evt.join_ms is not None and evt.join_ms > args.max_ms:
-        print(f"ERROR: join_ms {evt.join_ms} exceeds max {args.max_ms}", file=sys.stderr)
+        print(
+            f"ERROR: join_ms {evt.join_ms} exceeds max {args.max_ms}",
+            file=sys.stderr
+        )
         return 3
     return 0
 

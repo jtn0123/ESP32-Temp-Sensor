@@ -1826,14 +1826,17 @@ void setup() {
   // is displayed for the OUTSIDE and footer weather blocks.
   if (net_mqtt_is_connected()) {
     OutsideReadings o = net_get_outside();
-    char buf[256];
+    char buf[320];
+    char hhmm_dbg[8];
+    net_time_hhmm(hhmm_dbg, sizeof(hhmm_dbg));
     float tempF = (o.validTemp && isfinite(o.temperatureC)) ? (o.temperatureC * 9.0f / 5.0f + 32.0f) : NAN;
     const char* w = (o.validWeather && o.weather[0]) ? o.weather : NULL;
     const char* wd = (o.validWeatherDesc && o.weatherDesc[0]) ? o.weatherDesc : NULL;
     const char* wi = (o.validWeatherIcon && o.weatherIcon[0]) ? o.weatherIcon : NULL;
-    // Use simple JSON composition to avoid heavy deps
+    // Include time used for header to aid troubleshooting
     snprintf(buf, sizeof(buf),
-             "{\"event\":\"ui_debug\",\"outside\":{\"tempF\":%s,\"rhPct\":%s,\"windMps\":%s,\"weather\":%s,\"weatherId\":%d,\"weatherDesc\":%s,\"weatherIcon\":%s}}",
+             "{\"event\":\"ui_debug\",\"time\":\"%s\",\"outside\":{\"tempF\":%s,\"rhPct\":%s,\"windMps\":%s,\"weather\":%s,\"weatherId\":%d,\"weatherDesc\":%s,\"weatherIcon\":%s}}",
+             hhmm_dbg,
              (isfinite(tempF) ? String(tempF, 1).c_str() : "null"),
              (o.validHum && isfinite(o.humidityPct) ? String(o.humidityPct, 0).c_str() : "null"),
              (o.validWind && isfinite(o.windMps) ? String(o.windMps, 1).c_str() : "null"),
