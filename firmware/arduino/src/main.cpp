@@ -32,6 +32,11 @@
 static inline void status_pixel_tick();
 #endif
 
+#if USE_DISPLAY && DEV_NO_SLEEP
+// In always-on display builds, tick the UI when outside MQTT values change
+static void dev_display_tick();
+#endif
+
 #if USE_DISPLAY
 static void full_refresh();
 static void full_refresh_v2();
@@ -1796,6 +1801,87 @@ static void partial_update_outside_hilo(float highC, float lowC) {
 }
 #endif // USE_DISPLAY
 
+#if USE_DISPLAY && DEV_NO_SLEEP
+// Periodic UI updater for always-on display build. Applies partial redraws when
+// outside MQTT values change beyond thresholds. Also refreshes header time and
+// status line opportunistically.
+static void dev_display_tick() {
+  // Pump outside readings and update UI regions when data changes
+  OutsideReadings o = net_get_outside();
+
+  if (o.validTemp) {
+    char out_temp[16];
+    snprintf(out_temp, sizeof(out_temp), "%.1f", o.temperatureC * 9.0f / 5.0f + 32.0f);
+    char trend_out = '0';
+    float now_out_f = o.temperatureC * 9.0f / 5.0f + 32.0f;
+    if (isfinite(last_outside_f)) {
+      float d = now_out_f - last_outside_f;
+      if (d >= THRESH_TEMP_F)
+        trend_out = '+';
+      else if (d <= -THRESH_TEMP_F)
+        trend_out = '-';
+    }
+    maybe_redraw_numeric(OUT_TEMP, now_out_f, last_outside_f, THRESH_TEMP_F,
+                         [&]() { partial_update_outside_temp(out_temp, trend_out); });
+    if (isfinite(last_outside_f))
+      nvs_store_float("lo_f", last_outside_f);
+  }
+
+  if (o.validHum) {
+    char out_rh[16];
+    snprintf(out_rh, sizeof(out_rh), "%.0f", o.humidityPct);
+    maybe_redraw_numeric(OUT_ROW2_L, o.humidityPct, last_outside_rh, THRESH_RH,
+                         [&]() { partial_update_outside_rh(out_rh); });
+    if (isfinite(last_outside_rh))
+      nvs_store_float("lo_rh", last_outside_rh);
+  }
+
+  if (o.validWeather || o.validWeatherId || o.validWeatherIcon) {
+    IconId id = (o.validWeatherIcon || o.validWeatherId) ? map_openweather_to_icon(o)
+                                                         : map_weather_to_icon(o.weather);
+    maybe_redraw_value<int32_t>(OUT_ICON, static_cast<int32_t>(id), last_icon_id, [&]() {
+      if (o.validWeatherIcon || o.validWeatherId) {
+        int rect_tmp[4] = {OUT_ICON[0], static_cast<int16_t>(OUT_ICON[1] + TOP_Y_OFFSET), OUT_ICON[2], OUT_ICON[3]};
+        draw_in_region(rect_tmp, [&](int16_t xx, int16_t yy, int16_t ww, int16_t hh) {
+          draw_weather_icon_region_at_from_outside(xx, yy, ww, hh, o);
+        });
+      } else {
+        partial_update_weather_icon(o.weather);
+      }
+    });
+    nvs_store_int("icon", last_icon_id);
+    if (o.validWeather || o.validWeatherDesc) {
+      char sc[24];
+      if (o.validWeatherDesc && o.weatherDesc[0])
+        make_short_condition_cstr(o.weatherDesc, sc, sizeof(sc));
+      else
+        make_short_condition_cstr(o.weather, sc, sizeof(sc));
+      partial_update_outside_condition(sc);
+    }
+  }
+
+  if (o.validWind && isfinite(o.windMps)) {
+    float mph = o.windMps * 2.237f;
+    char ws[24];
+    snprintf(ws, sizeof(ws), "%.1f mph", mph);
+    partial_update_outside_wind(ws);
+  }
+
+  // Refresh header time each tick (cheap)
+  char hhmm[8];
+  net_time_hhmm(hhmm, sizeof(hhmm));
+  draw_header_time(hhmm);
+
+  // Update status line when it changes
+  BatteryStatus bs = read_battery_status();
+  char ip_c[32];
+  net_ip_cstr(ip_c, sizeof(ip_c));
+  if (maybe_redraw_status(bs, ip_c, STATUS_)) {
+    nvs_store_uint("st_crc", last_status_crc);
+  }
+}
+#endif // USE_DISPLAY && DEV_NO_SLEEP
+
 void setup() {
   int64_t t0_us = esp_timer_get_time();
   Serial.begin(115200);
@@ -2294,6 +2380,14 @@ void setup() {
       emit_metrics_json(latest.temperatureC, latest.humidityPct, latest.pressureHPa);
       last_metrics = millis();
     }
+#if USE_DISPLAY
+    // Periodically tick UI to reflect outside MQTT changes in always-on mode
+    static uint32_t last_ui = 0;
+    if (millis() - last_ui > 500) {
+      dev_display_tick();
+      last_ui = millis();
+    }
+#endif
 #if USE_STATUS_PIXEL
     status_pixel_tick();
 #endif
