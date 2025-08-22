@@ -442,4 +442,25 @@ python3 scripts/mqtt_headless_check.py --host <MQTT_HOST> --user <USER> --passwo
 
 - Store Wi‑Fi/MQTT credentials only in `config/device.yaml`. That file and the generated `firmware/arduino/src/generated_config.h` are already ignored by Git.
 
+### Dev-cycle sleep/wake checklist
+
+- Manual sleep test over USB:
+  - Send `sleep <sec>` (e.g., `sleep 180`).
+  - Expect USB: `Sleeping for 180s` followed by a retained MQTT `status` payload like `sleeping=1 sec=180`.
+  - On wake, USB prints include `Reset: ..., Wake: ...` and `RTC wake count: N` (increments each cycle).
+  - MQTT `sensors/<room>/debug` JSON includes `rtc_wake_count` and `wakeup_cause` (expect `TIMER`).
+
+- Rails timing:
+  - Display and sensor rails are powered off before deep sleep with a short 5 ms discharge delay.
+  - On boot, if the e‑ink rail is gated, it is enabled and given a 10 ms settle before driver init.
+
+- Normal cycle:
+  - Before each scheduled sleep, firmware publishes a retained `status` heartbeat: `sleeping=1 sec=<WAKE_INTERVAL_SEC>`.
+  - Broker availability topic also flips to `offline` just before sleep; Home Assistant will grey stale entities slightly after `expire_after`.
+
+- If a wake is missed or partial:
+  - Check USB logs for last printed lines and the `Timeouts mask`.
+  - Verify MQTT retained `status` and the last `debug` payload; confirm `rtc_wake_count` changes across cycles.
+  - If issues persist, try disabling partial refresh (USB: `mode full`) to isolate e‑ink timing, or set `-DUSE_STATUS_PIXEL=0` to minimize rail load.
+
 

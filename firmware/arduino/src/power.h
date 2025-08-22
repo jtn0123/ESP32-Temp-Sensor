@@ -201,9 +201,8 @@ inline BatteryStatus read_battery_status() {
       pct = 1;
     b.percent = static_cast<int>(pct * 100.0f + 0.5f);
   }
-  // Days estimate from duty cycle
-  // Average current ~ (active_current * active_fraction + sleep_current *
-  // sleep_fraction)
+  // Days estimate based on current remaining charge (if percent known).
+  // Average current ~ (active_current * active_fraction + sleep_current * sleep_fraction)
   float active_fraction =
       static_cast<float>(ACTIVE_SECONDS) / static_cast<float>(WAKE_INTERVAL_SEC);
   if (active_fraction < 0)
@@ -212,7 +211,12 @@ inline BatteryStatus read_battery_status() {
     active_fraction = 1;
   float avg_mA = ACTIVE_CURRENT_MA * active_fraction + SLEEP_CURRENT_MA * (1.0f - active_fraction);
   if (avg_mA > 0) {
-    float hours = BATTERY_CAPACITY_MAH / avg_mA;
+    // Prefer remaining capacity based on current percent; fall back to full capacity if unknown
+    float remaining_mAh = BATTERY_CAPACITY_MAH;
+    if (b.percent >= 0 && b.percent <= 100) {
+      remaining_mAh = BATTERY_CAPACITY_MAH * (static_cast<float>(b.percent) / 100.0f);
+    }
+    float hours = remaining_mAh / avg_mA;
     b.estimatedDays = static_cast<int>(hours / 24.0f + 0.5f);
   } else {
     b.estimatedDays = -1;
@@ -231,6 +235,14 @@ inline void go_deep_sleep_seconds(uint32_t seconds) {
     lc_sleep_between_wakes();
   }
 #endif
+  // Be defensive: clear any previous wake sources before configuring new one
+  // Some cores retain wake bits across resets; this ensures a clean slate.
+  esp_sleep_disable_wakeup_source(ESP_SLEEP_WAKEUP_ALL);
+  // Timer wakeup for requested interval
   esp_sleep_enable_timer_wakeup(static_cast<uint64_t>(seconds) * 1000000ULL);
+  // Give serial a brief chance to flush and MQTT/WiFi to quiesce completely
+  Serial.flush();
+  delay(10);
+  // Enter deep sleep
   esp_deep_sleep_start();
 }

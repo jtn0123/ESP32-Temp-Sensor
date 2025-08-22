@@ -266,6 +266,8 @@ static void draw_from_spec_full_impl(uint8_t variantId) {
 #endif // USE_DISPLAY
 
 RTC_DATA_ATTR static uint16_t partial_counter = 0;
+// Track number of wakes from deep sleep (monotonic until power loss)
+RTC_DATA_ATTR static uint32_t rtc_wake_count = 0;
 RTC_DATA_ATTR static float last_inside_f = NAN;
 RTC_DATA_ATTR static float last_outside_f = NAN;
 static inline float get_last_outside_f() { return last_outside_f; }
@@ -676,11 +678,19 @@ static void handle_serial_command_line(const String& line) {
 #if defined(EINK_EN_PIN)
     pinMode(EINK_EN_PIN, OUTPUT);
     digitalWrite(EINK_EN_PIN, LOW);
+    delay(5);
 #endif
 #ifdef SENSORS_EN_PIN
     pinMode(SENSORS_EN_PIN, OUTPUT);
     digitalWrite(SENSORS_EN_PIN, LOW);
+    delay(5);
 #endif
+    // Publish a retained heartbeat indicating planned sleep
+    {
+      char hb[96];
+      snprintf(hb, sizeof(hb), "sleeping=1 sec=%u", static_cast<unsigned>(sec));
+      net_publish_status(hb, true);
+    }
     // Cleanly disconnect and power down radios before sleeping
     net_prepare_for_sleep();
     go_deep_sleep_seconds(sec);
@@ -1781,6 +1791,16 @@ void setup() {
   delay(100);
   Serial.println(F("ESP32 eInk Room Node boot"));
   print_boot_diagnostics();
+  // Increment RTC wake counter on any reset except true power-on
+  if (esp_reset_reason() == ESP_RST_DEEPSLEEP || esp_reset_reason() == ESP_RST_SW ||
+      esp_reset_reason() == ESP_RST_WDT || esp_reset_reason() == ESP_RST_PANIC ||
+      esp_reset_reason() == ESP_RST_BROWNOUT || esp_reset_reason() == ESP_RST_TASK_WDT ||
+      esp_reset_reason() == ESP_RST_INT_WDT) {
+    rtc_wake_count++;
+  } else {
+    // On power-on, reset counter to zero
+    rtc_wake_count = 0;
+  }
 
 #if USE_STATUS_PIXEL
   status_pixel_begin();
@@ -1795,7 +1815,7 @@ void setup() {
 #ifdef EINK_EN_PIN
   pinMode(EINK_EN_PIN, OUTPUT);
   digitalWrite(EINK_EN_PIN, HIGH); // enable panel power if gated
-  delay(5);
+  delay(10);
 #endif
   display.init(0);
   display.setRotation(1); // landscape 250x122 coordinate system
@@ -1895,10 +1915,10 @@ void setup() {
     net_publish_publish_latency_ms(ms_publish);
     uint32_t deep_sleep_us = sleep_scheduled_ms * 1000UL;
     snprintf(dbg, sizeof(dbg),
-             "{\"ms_boot_to_wifi\":%u,\"ms_wifi_to_mqtt\":%u,\"ms_sensor_read\":%u,\"ms_publish\":%u,\"sleep_scheduled_ms\":%u,\"deep_sleep_us\":%u,\"reset_reason\":\"%s\",\"wakeup_cause\":\"%s\"}",
+             "{\"ms_boot_to_wifi\":%u,\"ms_wifi_to_mqtt\":%u,\"ms_sensor_read\":%u,\"ms_publish\":%u,\"sleep_scheduled_ms\":%u,\"deep_sleep_us\":%u,\"reset_reason\":\"%s\",\"wakeup_cause\":\"%s\",\"rtc_wake_count\":%u}",
              ms_boot_to_wifi, ms_wifi_to_mqtt, ms_sensor_read, ms_publish,
              sleep_scheduled_ms, deep_sleep_us, reset_reason_str(esp_reset_reason()),
-             wakeup_cause_str(esp_sleep_get_wakeup_cause()));
+             wakeup_cause_str(esp_sleep_get_wakeup_cause()), static_cast<unsigned>(rtc_wake_count));
     net_publish_debug_json(dbg, false);
   }
 
@@ -2214,6 +2234,7 @@ void setup() {
     InsideReadings latest = read_inside_sensors();
     emit_metrics_json(latest.temperatureC, latest.humidityPct, latest.pressureHPa);
     Serial.println("DBG: after metrics json");
+    Serial.printf("RTC wake count: %u\n", static_cast<unsigned>(rtc_wake_count));
   }
 
   // Publish a concise timeout summary JSON if MQTT is connected
@@ -2281,7 +2302,14 @@ void setup() {
 #ifdef SENSORS_EN_PIN
   pinMode(SENSORS_EN_PIN, OUTPUT);
   digitalWrite(SENSORS_EN_PIN, LOW);
+  delay(5);
 #endif
+  // Pre-sleep heartbeat for dev cycle
+  {
+    char hb[96];
+    snprintf(hb, sizeof(hb), "sleeping=1 sec=%u", static_cast<unsigned>(DEV_SLEEP_SEC));
+    net_publish_status(hb, true);
+  }
   net_prepare_for_sleep();
   go_deep_sleep_seconds(DEV_SLEEP_SEC);
 #else
@@ -2300,7 +2328,14 @@ void setup() {
 #ifdef SENSORS_EN_PIN
   pinMode(SENSORS_EN_PIN, OUTPUT);
   digitalWrite(SENSORS_EN_PIN, LOW);
+  delay(5);
 #endif
+  // Pre-sleep heartbeat for normal cycle
+  {
+    char hb[96];
+    snprintf(hb, sizeof(hb), "sleeping=1 sec=%u", static_cast<unsigned>(WAKE_INTERVAL_SEC));
+    net_publish_status(hb, true);
+  }
   net_prepare_for_sleep();
   go_deep_sleep_seconds(WAKE_INTERVAL_SEC);
 #endif
