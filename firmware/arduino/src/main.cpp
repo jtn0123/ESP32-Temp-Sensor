@@ -248,16 +248,19 @@ static void draw_from_spec_full_impl(uint8_t variantId) {
           if (r == INSIDE_TEMP) {
             InsideReadings ir = read_inside_sensors();
             if (isfinite(ir.temperatureC)) {
-              snprintf(temp_buf, sizeof(temp_buf), "%.1f", ir.temperatureC * 9.0/5.0 + 32.0);
+              snprintf(temp_buf, sizeof(temp_buf), "%.1f",
+                        ir.temperatureC * 9.0/5.0 + 32.0);
             } else {
               snprintf(temp_buf, sizeof(temp_buf), "--");
             }
           } else if (r == OUT_TEMP) {
             OutsideReadings orr = net_get_outside();
             if (orr.validTemp && isfinite(orr.temperatureC)) {
-              snprintf(temp_buf, sizeof(temp_buf), "%.1f", orr.temperatureC * 9.0/5.0 + 32.0);
+              snprintf(temp_buf, sizeof(temp_buf), "%.1f",
+                        orr.temperatureC * 9.0/5.0 + 32.0);
             } else if (isfinite(get_last_outside_f())) {
-              snprintf(temp_buf, sizeof(temp_buf), "%.1f", get_last_outside_f());
+              snprintf(temp_buf, sizeof(temp_buf), "%.1f",
+                        get_last_outside_f());
             } else {
               snprintf(temp_buf, sizeof(temp_buf), "--");
             }
