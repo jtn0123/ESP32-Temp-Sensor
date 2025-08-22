@@ -297,8 +297,8 @@ def test_mock_vs_web_sim_pixel_diff(tmp_path):
     # Normalize to 0/1 to match sim_bin
     mock_bin = (mock_bin > 0).astype(np.uint8)
     # Compute absolute difference and allow small tolerance window
-    diff = np.abs(sim_bin - mock_bin)
-    num_diff = int(diff.sum())
+    diff = np.abs(sim_bin.astype(np.int16) - mock_bin.astype(np.int16))
+    num_diff = int((diff != 0).sum())
     # Save artifacts
     out_dir = _ensure_out_dir()
     mock_path = os.path.join(out_dir, "expected.png")
