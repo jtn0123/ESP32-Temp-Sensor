@@ -14,9 +14,7 @@ def test_soak_budget_from_sample_serial():
         assert True
         return
 
-    lines = (
-        open(sample_path, "r", encoding="utf-8", errors="ignore").read().splitlines()
-    )
+    lines = open(sample_path, "r", encoding="utf-8", errors="ignore").read().splitlines()
     # Accept JSON metrics lines if present (produced by headless envs).
     # Some samples may not include them.
     boot_to_wifi = []

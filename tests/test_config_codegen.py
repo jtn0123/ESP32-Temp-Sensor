@@ -71,13 +71,14 @@ def test_mqtt_subscribe_base_matches_device_yaml():
 
     # Load device.yaml when present; otherwise use sample.yaml
     import yaml  # type: ignore
+
     dev_path = os.path.join(ROOT, "config", "device.yaml")
     if not os.path.exists(dev_path):
         dev_path = os.path.join(ROOT, "config", "device.sample.yaml")
     with open(dev_path, "r") as f:
         data = yaml.safe_load(f) or {}
-    mqtt = (data.get("mqtt") or {})
-    base_topics = (mqtt.get("base_topics") or {})
+    mqtt = data.get("mqtt") or {}
+    base_topics = mqtt.get("base_topics") or {}
     sub_base_yaml = str(base_topics.get("subscribe", "")).strip()
     assert sub_base_yaml, "mqtt.base_topics.subscribe missing in device yaml"
 

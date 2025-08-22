@@ -158,7 +158,12 @@ def draw_layout(draw: ImageDraw.ImageDraw, data: dict):
     draw.rectangle([(0, 0), (WIDTH - 1, HEIGHT - 1)], outline=0, width=1)
     font_hdr = load_font(12)
     # Header room name inside HEADER_NAME rect with 1px inset like sim text op
-    draw.text(((_HEADER_NAME[0] + 1), (_HEADER_NAME[1] + 1)), data.get("room_name", "Room"), font=font_hdr, fill=0)
+    draw.text(
+        ((_HEADER_NAME[0] + 1), (_HEADER_NAME[1] + 1)),
+        data.get("room_name", "Room"),
+        font=font_hdr,
+        fill=0,
+    )
     # Header rules
     # Column separator
     draw.line((125, 18, 125, 121), fill=0, width=1)
@@ -183,12 +188,14 @@ def draw_layout(draw: ImageDraw.ImageDraw, data: dict):
 
     # Section labels centered above temp rects
     font_lbl = load_font(10)
+
     def center_label(rect, text):
         x0, y0, x1, y1 = rect
         w = x1 - x0
         tl = int(ImageDraw.Draw(Image.new("1", (1, 1))).textlength(text, font=font_lbl))
         lx = x0 + max(0, (w - tl) // 2)
         draw.text((lx, 22), text, font=font_lbl, fill=0)
+
     center_label(INSIDE_TEMP, "INSIDE")
     center_label(OUT_TEMP, "OUTSIDE")
 
@@ -251,24 +258,26 @@ def draw_layout(draw: ImageDraw.ImageDraw, data: dict):
     cond_lower = str(data.get("weather", "")).lower()
     left_box_w = 16
     if "moon" in cond_lower:
-      left_box_w = 20
+        left_box_w = 20
     elif any(k in cond_lower for k in ["rain"]):
-      left_box_w = 22
+        left_box_w = 22
     elif any(k in cond_lower for k in ["snow"]):
-      left_box_w = 18
-    elif any(k in cond_lower for k in ["storm","thunder","lightning"]):
-      left_box_w = 24
+        left_box_w = 18
+    elif any(k in cond_lower for k in ["storm", "thunder", "lightning"]):
+        left_box_w = 24
     # Draw filled rect inside icon box to guarantee black pixels
-    draw.rectangle([
-        (bar_x + 2, bar_y + 2),
-        (bar_x + 2 + max(8, min(left_box_w, icon_w - 4)), bar_y + 2 + max(8, icon_h - 6))
-    ], fill=0)
+    draw.rectangle(
+        [
+            (bar_x + 2, bar_y + 2),
+            (bar_x + 2 + max(8, min(left_box_w, icon_w - 4)), bar_y + 2 + max(8, icon_h - 6)),
+        ],
+        fill=0,
+    )
     # Simplified icon strokes
     # Use stroke-only rectangle as in sim before specific details
-    draw.rectangle([
-        (start_x + 2, bar_y + 6),
-        (start_x + icon_w - 2, bar_y + icon_h - 2)
-    ], outline=0, width=1)
+    draw.rectangle(
+        [(start_x + 2, bar_y + 6), (start_x + icon_w - 2, bar_y + icon_h - 2)], outline=0, width=1
+    )
     if any(k in cond_lower for k in ["rain"]):
         # diagonal raindrops
         for i in range(3):
@@ -277,11 +286,11 @@ def draw_layout(draw: ImageDraw.ImageDraw, data: dict):
     elif any(k in cond_lower for k in ["snow"]):
         for i in range(2):
             draw.text((start_x + 6 + i * 8, icon_cy + 2), "*", font=load_font(10), fill=0)
-    elif any(k in cond_lower for k in ["storm","thunder","lightning"]):
+    elif any(k in cond_lower for k in ["storm", "thunder", "lightning"]):
         draw.line((icon_cx - 6, icon_cy + 2, icon_cx, icon_cy - 2), fill=0, width=1)
         draw.line((icon_cx, icon_cy - 2, icon_cx - 2, icon_cy + 6), fill=0, width=1)
         draw.line((icon_cx - 2, icon_cy + 6, icon_cx + 6, icon_cy + 2), fill=0, width=1)
-    elif any(k in cond_lower for k in ["fog","mist","haze"]):
+    elif any(k in cond_lower for k in ["fog", "mist", "haze"]):
         for i in range(3):
             y0 = bar_y + 6 + i * 6
             draw.line((start_x + 2, y0, start_x + icon_w - 2, y0), fill=0, width=1)

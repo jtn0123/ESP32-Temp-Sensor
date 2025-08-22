@@ -169,10 +169,11 @@ static void draw_from_spec_full_impl(uint8_t variantId) {
         case ui::OP_LINE: {
           int16_t x0 = op.p0, y0 = op.p1, x1 = op.p2, y1 = op.p3;
           if (y0 == y1) {
-            for (int16_t x = x0; x <= x1; ++x) display.drawPixel(x, y0, GxEPD_BLACK);
-          }
-          else if (x0 == x1) {
-            for (int16_t y = y0; y <= y1; ++y) display.drawPixel(x0, y, GxEPD_BLACK);
+            for (int16_t x = x0; x <= x1; ++x)
+              display.drawPixel(x, y0, GxEPD_BLACK);
+          } else if (x0 == x1) {
+            for (int16_t y = y0; y <= y1; ++y)
+              display.drawPixel(x0, y, GxEPD_BLACK);
           }
           break; }
         case ui::OP_TEXT: {
@@ -181,7 +182,10 @@ static void draw_from_spec_full_impl(uint8_t variantId) {
           int16_t ty = op.p1 + TOP_Y_OFFSET;
           auto fmt_field = [&](const String& key)->String{
             if (key == "room_name") return String(ROOM_NAME);
-            if (key == "ip") { char ip_c[32]; net_ip_cstr(ip_c, sizeof(ip_c)); return String("IP ") + ip_c; }
+            if (key == "ip") {
+              char ip_c[32]; net_ip_cstr(ip_c, sizeof(ip_c));
+              return String("IP ") + ip_c;
+            }
             if (key == "fw_version") return String(FW_VERSION);
             return String("");
           };
