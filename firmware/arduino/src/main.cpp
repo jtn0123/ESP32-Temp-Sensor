@@ -455,7 +455,11 @@ static void emit_metrics_json(float tempC, float rhPct, float pressHPa) {
   Serial.print(LAYOUT_VERSION);
   Serial.print(',');
   Serial.print("\"layout_crc\":\"");
-  Serial.print("" LAYOUT_CRC);
+  {
+    char crcbuf[12];
+    snprintf(crcbuf, sizeof(crcbuf), "0x%08X", static_cast<unsigned>(LAYOUT_CRC));
+    Serial.print(crcbuf);
+  }
   Serial.print("\"");
   Serial.print(',');
   Serial.print("\"event\":\"metrics\",");

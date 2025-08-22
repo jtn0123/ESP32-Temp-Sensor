@@ -30,6 +30,8 @@
 #endif
 #include "power.h"
 #include "sensors.h"
+// Layout identity (version, CRC, md5)
+#include "display_layout.h"
 
 // All configuration should come from generated_config.h
 
@@ -1006,8 +1008,8 @@ inline void net_publish_layout_identity() {
   char topic[128];
   snprintf(topic, sizeof(topic), "%s/layout", MQTT_PUB_BASE);
   char payload[96];
-  snprintf(payload, sizeof(payload), "{\"layout_version\":%u,\"layout_crc\":\"%s\"}",
-           static_cast<unsigned>(LAYOUT_VERSION), LAYOUT_CRC);
+  snprintf(payload, sizeof(payload), "{\"layout_version\":%u,\"layout_crc\":\"0x%08X\"}",
+           static_cast<unsigned>(LAYOUT_VERSION), static_cast<unsigned>(LAYOUT_CRC));
   g_mqtt.publish(topic, payload, true);
 }
 

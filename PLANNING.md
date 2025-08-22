@@ -110,3 +110,13 @@ Open follow‑ups:
   - Add firmware integration points: `ui_draw_variant()` and `ui_redraw_region()` that interpret generated ops using the existing drawing helpers.
   - Replace sim’s hardcoded draw logic with an interpreter that consumes `UI_SPEC` ops while preserving exported test metrics.
 
+### Analysis — Power estimator tests and device YAML schema
+
+- Power estimator: add tests to cover 1h/2h/4h schedules using README currents (sleep ~0.09 mA, active 60/80/100 mA) and verify monotonicity and proportional scaling with capacity. Implemented in `tests/test_power_estimator.py`.
+- Device YAML schema: lightweight validator to enforce required keys and ranges: `room_name` non‑empty, `wake_interval` in {1h,2h,4h} or positive seconds, `full_refresh_every>=1`, `outside_source in {ha,mqtt}`, Wi‑Fi creds non‑empty, MQTT `host` required if outside_source=mqtt, thresholds non‑negative, battery currents ≥0 and capacity>0. Implemented in `tests/test_device_yaml_schema.py` against `config/device.sample.yaml` and optional `config/device.yaml`.
+
+### Verification Plan
+
+- Run `pytest` locally and in CI. Pixel/web‑sim tests may be skipped if Playwright/numpy are missing.
+- Fail CI on invalid `device.yaml` combinations or schema violations.
+
