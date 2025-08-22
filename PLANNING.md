@@ -42,6 +42,22 @@
 ‑ Tests: UI snapshot — golden PNG compare for typical values.
 ‑ Docs: `hardware/pinmap.md` exact pins; `hardware/bom.md` purchase links.
 
+### CI/Tests Additions Plan
+
+1. Add pixel/snapshot checks and wire them to CI with small tolerance (≤5 pixels).
+2. Add config/codegen determinism tests for layout header and flash modes (env overrides).
+3. Add headless soak budget test using sample serial/debug lines with P95 thresholds.
+4. Add icon CRC/length coverage test to catch missing icons fast.
+5. Add HA automation alignment test (YAML lint + retained topics present) and run against broker in CI.
+
+#### Acceptance Criteria
+
+- Pixel tests fail if more than the allowed tolerance differ.
+- Codegen outputs are byte-for-byte stable across runs and respect env flags.
+- Soak budget P95 latencies under thresholds; availability flips offline per cycle.
+- Icon header contains expected icons and packed lengths exactly 72 bytes.
+- HA YAML parses and retained topics exist with expected payloads.
+
 ### Change Log — Headless mode parity
 
 - Goal: Make `env:feather_esp32s2_headless` behave like the e‑ink build for MQTT publish thresholds and availability sequencing, so soak tests are representative.

@@ -48,7 +48,9 @@ def test_mock_png_matches_golden_with_small_tolerance():
     golden_dir = os.path.join(ROOT, "tests")
     golden_png = os.path.join(golden_dir, "golden_default.png")
     if not os.path.exists(golden_png):
-        # First run bootstraps the golden for stability across environments
+        # In CI, goldens must be committed. Locally we bootstrap.
+        if os.environ.get("CI"):
+            raise AssertionError("golden_default.png missing; commit golden or update baseline")
         os.makedirs(golden_dir, exist_ok=True)
         img.save(golden_png)
         assert True

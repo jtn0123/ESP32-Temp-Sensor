@@ -3,11 +3,14 @@ import io
 import os
 import re
 from typing import Dict, List, Tuple
+import subprocess
+import zlib
 
 
 ROOT = os.path.dirname(os.path.dirname(__file__))
 HEADER = os.path.join(ROOT, "firmware", "arduino", "src", "icons_generated.h")
 SRC_DIR = os.path.join(ROOT, "web", "icons", "mdi")
+GOLDEN = os.path.join(ROOT, "tests", "icon_crc_golden.txt")
 
 
 def _extract_icons_and_arrays(text: str) -> Tuple[List[str], Dict[str, bytes]]:
@@ -38,6 +41,9 @@ def _extract_icons_and_arrays(text: str) -> Tuple[List[str], Dict[str, bytes]]:
 
 
 def test_icon_header_contains_required_icons_and_lengths():
+    # Ensure header is up to date with the current SVGs
+    r = subprocess.run(["python3", os.path.join(ROOT, "scripts", "convert_icons.py")], capture_output=True, text=True)
+    assert r.returncode == 0, r.stdout + r.stderr
     with open(HEADER, "r") as f:
         content = f.read()
     enum_names, arrays = _extract_icons_and_arrays(content)
@@ -94,5 +100,25 @@ def test_icon_svgs_exist_for_declared_names():
     core = {"weather-sunny.svg", "weather-partly-cloudy.svg", "weather-cloudy.svg", "weather-fog.svg", "weather-pouring.svg", "weather-snowy.svg", "weather-lightning.svg"}
     missing_core = [m for m in missing if m in core]
     assert not missing_core, f"Missing core icon SVGs: {missing_core}"
+
+
+def test_icon_crc_matches_golden():
+    # Compute CRC32 for each icon byte array and compare to a committed golden list
+    with open(HEADER, "r") as f:
+        content = f.read()
+    _names, arrays = _extract_icons_and_arrays(content)
+    crc_map = {k: zlib.crc32(v) & 0xFFFFFFFF for k, v in arrays.items()}
+    lines = [f"{k} {crc_map[k]:08X} {len(arrays[k])}\n" for k in sorted(arrays.keys())]
+    if not os.path.exists(GOLDEN):
+        if os.environ.get("CI"):
+            raise AssertionError("Missing icon CRC golden; commit tests/icon_crc_golden.txt")
+        with open(GOLDEN, "w") as f:
+            f.writelines(lines)
+        assert True
+        return
+    with open(GOLDEN, "r") as f:
+        golden_lines = [ln.strip() for ln in f if ln.strip()]
+    actual_lines = [ln.strip() for ln in lines]
+    assert actual_lines == golden_lines, "Icon CRC/lengths differ from golden; re-generate if intentional"
 
 

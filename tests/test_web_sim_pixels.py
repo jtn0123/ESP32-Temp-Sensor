@@ -84,6 +84,8 @@ def test_web_sim_screenshot_matches_golden_with_tolerance(tmp_path):
             golden_dir = os.path.join(ROOT, "tests")
             golden_png = os.path.join(golden_dir, "golden_web_sim.png")
             if not os.path.exists(golden_png):
+                if os.environ.get("CI"):
+                    raise AssertionError("golden_web_sim.png missing; commit golden or update baseline")
                 os.makedirs(golden_dir, exist_ok=True)
                 with open(golden_png, "wb") as f:
                     f.write(bytes_png)

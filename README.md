@@ -44,6 +44,11 @@ python3 scripts/convert_icons.py
 
 - Tests validate that the mock and sim are in sync (snapshot + pixel checks).
 
+Pixel/snapshot checks (CI, blocking):
+
+- Python mock PNG golden and Playwright screenshot are compared with a small tolerance (≤5 pixels) to absorb minor font raster differences across environments.
+- Goldens are bootstrapped on first run; subsequent diffs beyond tolerance will fail CI.
+
 ### Power & Duty Cycle (example)
 
 - Deep sleep: ~**0.09 mA** (board LEDs/rails off).
