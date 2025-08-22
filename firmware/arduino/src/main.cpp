@@ -205,7 +205,8 @@ static void draw_from_spec_full_impl(uint8_t variantId) {
           }
           display.setTextColor(GxEPD_BLACK);
           display.setTextSize(1);
-          if (r && tx == 0 && (op.align == ALIGN_RIGHT || op.align == ALIGN_CENTER)) {
+          if (r && tx == 0 && (op.align == ALIGN_RIGHT ||
+                                op.align == ALIGN_CENTER)) {
             int16_t tw = text_width_default_font(out.c_str(), 1);
             tx = r[0] + 1;
             if (op.align == ALIGN_RIGHT)
