@@ -1126,18 +1126,18 @@ static IconId map_weather_to_icon(const char* w) {
   // https://developers.home-assistant.io/docs/core/entity/weather/#recommended-values-for-state-and-condition
   if (s == "clear-night") return ICON_WEATHER_NIGHT;
   if (s == "cloudy") return ICON_WEATHER_CLOUDY;
-  if (s == "exceptional") return ICON_WEATHER_CLOUDY; // generic fallback
+  if (s == "exceptional") return ICON_WEATHER_CLOUDY;  // generic fallback
   if (s == "fog") return ICON_WEATHER_FOG;
-  if (s == "hail") return ICON_WEATHER_SNOWY; // approximate
+  if (s == "hail") return ICON_WEATHER_SNOWY;  // approximate
   if (s == "lightning") return ICON_WEATHER_LIGHTNING;
-  if (s == "lightning-rainy") return ICON_WEATHER_LIGHTNING; // prefer lightning cue
+  if (s == "lightning-rainy") return ICON_WEATHER_LIGHTNING;  // prefer lightning cue
   if (s == "partlycloudy") return ICON_WEATHER_PARTLY_CLOUDY;
   if (s == "pouring") return ICON_WEATHER_POURING;
   if (s == "rainy") return ICON_WEATHER_POURING;
   if (s == "snowy") return ICON_WEATHER_SNOWY;
-  if (s == "snowy-rainy") return ICON_WEATHER_SNOWY; // approximate
+  if (s == "snowy-rainy") return ICON_WEATHER_SNOWY;  // approximate
   if (s == "sunny") return ICON_WEATHER_SUNNY;
-  if (s == "windy" || s == "windy-variant") return ICON_WEATHER_CLOUDY; // approximate
+  if (s == "windy" || s == "windy-variant") return ICON_WEATHER_CLOUDY;  // approximate
   // Also accept explicit MDI icon names if passed through
   if (s == "weather-sunny") return ICON_WEATHER_SUNNY;
   if (s == "weather-partly-cloudy") return ICON_WEATHER_PARTLY_CLOUDY;
@@ -1187,19 +1187,19 @@ static IconId map_openweather_to_icon(const OutsideReadings& o) {
   if (o.validWeatherId) {
     int gid = o.weatherId / 100;
     switch (gid) {
-      case 2: return ICON_WEATHER_LIGHTNING; // Thunderstorm
-      case 3: return ICON_WEATHER_POURING;   // Drizzle
+      case 2: return ICON_WEATHER_LIGHTNING;  // Thunderstorm
+      case 3: return ICON_WEATHER_POURING;    // Drizzle
       case 5: {
-        if (o.weatherId == 511) return ICON_WEATHER_SNOWY; // Freezing rain
-        return ICON_WEATHER_POURING;                        // Rain
+        if (o.weatherId == 511) return ICON_WEATHER_SNOWY;  // Freezing rain
+        return ICON_WEATHER_POURING;                         // Rain
       }
-      case 6: return ICON_WEATHER_SNOWY;    // Snow
-      case 7: return ICON_WEATHER_FOG;      // Atmosphere
+      case 6: return ICON_WEATHER_SNOWY;     // Snow
+      case 7: return ICON_WEATHER_FOG;       // Atmosphere
       case 8: {
-        if (o.weatherId == 800) return ICON_WEATHER_SUNNY; // Clear
-        if (o.weatherId == 801) return ICON_WEATHER_PARTLY_CLOUDY; // Few clouds
+        if (o.weatherId == 800) return ICON_WEATHER_SUNNY;  // Clear
+        if (o.weatherId == 801) return ICON_WEATHER_PARTLY_CLOUDY;  // Few clouds
         // 802..804
-        return ICON_WEATHER_CLOUDY; // Scattered/Broken/Overcast
+        return ICON_WEATHER_CLOUDY;  // Scattered/Broken/Overcast
       }
       default: break;
     }
@@ -1506,7 +1506,7 @@ static void partial_update_footer_weather_from_outside(const OutsideReadings& o)
     }
   });
 }
-#endif // USE_DISPLAY
+#endif  // USE_DISPLAY
 
 #if USE_DISPLAY && DEV_NO_SLEEP
 // Periodic UI updater for always-on display build. Applies partial redraws when
@@ -1544,7 +1544,7 @@ static void dev_display_tick() {
     }
   }
 }
-#endif // USE_DISPLAY && DEV_NO_SLEEP
+#endif  // USE_DISPLAY && DEV_NO_SLEEP
 
 void setup() {
   int64_t t0_us = esp_timer_get_time();
@@ -1575,11 +1575,11 @@ void setup() {
 #if USE_DISPLAY
 #ifdef EINK_EN_PIN
   pinMode(EINK_EN_PIN, OUTPUT);
-  digitalWrite(EINK_EN_PIN, HIGH); // enable panel power if gated
+  digitalWrite(EINK_EN_PIN, HIGH);  // enable panel power if gated
   delay(10);
 #endif
   display.init(0);
-  display.setRotation(1); // landscape 250x122 coordinate system
+  display.setRotation(1);  // landscape 250x122 coordinate system
   Serial.printf("EINK %dx%d (rotation=%d)\n", display.width(), display.height(), 1);
 #endif
   nvs_begin_cache();
@@ -1612,7 +1612,7 @@ void setup() {
     if (reset_reason_is_crash(rr)) {
       net_publish_last_crash(reset_reason_str(rr));
     } else {
-      net_publish_last_crash(nullptr); // clear retained key
+      net_publish_last_crash(nullptr);  // clear retained key
     }
   }
 
@@ -1697,7 +1697,7 @@ void setup() {
   if (ms_fetch >= static_cast<uint32_t>(FETCH_RETAINED_TIMEOUT_MS) && !outside_after &&
       !outside_before && !g_outside_warned) {
     s_timeouts_mask |= TIMEOUT_BIT_FETCH;
-    g_outside_warned = true; // only warn once until outside data later appears
+    g_outside_warned = true;  // only warn once until outside data later appears
     Serial.printf("Note: no outside retained data yet (waited %u ms). Continuing...\n", ms_fetch);
   }
 
@@ -1723,7 +1723,7 @@ void setup() {
     }
     uint32_t stored = g_prefs.getUInt("fw_crc", 0);
     if (stored != g_fw_crc) {
-      do_full = true; // force at least one full render after new firmware
+      do_full = true;  // force at least one full render after new firmware
       g_prefs.putUInt("fw_crc", g_fw_crc);
       partial_counter = 0;
     }
@@ -1740,7 +1740,7 @@ void setup() {
     Serial.println("DBG: full_refresh start");
     full_refresh();
     Serial.println("DBG: full_refresh done");
-    needs_full_on_boot = false; // one clean full render completed
+    needs_full_on_boot = false;  // one clean full render completed
   } else {
     // For simplicity and stability, prefer full refreshes over partials
     Serial.println("DBG: full_only branch (no partial draw)");
@@ -2050,7 +2050,7 @@ void setup() {
     // Adjust last_full_ms if the time since last refresh is very small
     if (last_full_ms == 0) last_full_ms = millis();
 #endif
-    if (millis() - last_full_ms > 60000u) { // every 60 seconds
+    if (millis() - last_full_ms > 60000u) {  // every 60 seconds
       Serial.println("DBG: periodic full_refresh (DEV_NO_SLEEP, full-only)");
       full_refresh();
       last_full_ms = millis();
