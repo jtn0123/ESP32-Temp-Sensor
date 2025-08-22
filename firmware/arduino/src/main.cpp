@@ -908,7 +908,8 @@ static inline void draw_in_region(const int rect[4],
   const int16_t y = rect[1];
   const int16_t w = rect[2];
   const int16_t h = rect[3];
-  // Align partial window to 8-pixel byte boundaries on X for SSD1680-class panels
+  // Align partial window to 8-pixel byte boundaries on X for SSD1680-class
+  // panels
   // to avoid controller rejects or missing updates on unaligned windows.
   int16_t ax = x & ~0x07;
   int16_t ar = x + w;  // right edge (exclusive)
@@ -925,8 +926,10 @@ static inline void draw_in_region(const int rect[4],
   } while (display.nextPage());
 }
 
-static inline void draw_right_aligned_text_in_rect(const int rect[4], const char* text,
-                                                   uint8_t textSize, int16_t paddingRight,
+static inline void draw_right_aligned_text_in_rect(const int rect[4],
+                                                   const char* text,
+                                                   uint8_t textSize,
+                                                   int16_t paddingRight,
                                                    int16_t baselineOffset) {
   draw_in_region(rect, [&](int16_t x, int16_t y, int16_t w, int16_t h) {
     display.setTextColor(GxEPD_BLACK);
@@ -939,7 +942,8 @@ static inline void draw_right_aligned_text_in_rect(const int rect[4], const char
   });
 }
 
-static inline void draw_temp_number_and_units(const int rect[4], const char* temp_f) {
+static inline void draw_temp_number_and_units(const int rect[4],
+                                              const char* temp_f) {
   // Reserve a small units strip on the right so units do not shift as number
   // width changes
   const int16_t units_w = 14;  // pixels
@@ -970,7 +974,8 @@ static inline void draw_temp_number_and_units(const int rect[4], const char* tem
 }
 
 // Direct draw variant for full-window paged renders (no nested partial pages)
-static inline void draw_temp_number_and_units_direct(int16_t x, int16_t y, int16_t w, int16_t h,
+static inline void draw_temp_number_and_units_direct(int16_t x, int16_t y,
+                                                     int16_t w, int16_t h,
                                                      const char* temp_f) {
   const int16_t units_w = 14;
   display.setTextColor(GxEPD_BLACK);
