@@ -16,6 +16,7 @@
 - Regions & partial windows: see `firmware/arduino/src/display_layout.h`.
 - Refresh: **partial** each wake; **full** every N cycles to clear ghosting.
  - Panel driver (GxEPD2): start with `GxEPD2_213_B74` (SSD1680 122×250). If your Wing revision differs, try `GxEPD2_213_DEPG0213BN` and other 122×250 classes listed in `GxEPD2_display_selection.h`.
+- Layout parity: the geometry JSON is versioned and hashed. The generator emits `LAYOUT_VERSION`, `LAYOUT_CRC`, and `LAYOUT_MD5` in `display_layout.h`. Firmware prints these in the USB metrics line and publishes `sensors/<room>/layout` (retained) so you can verify the web sim and device are on the same layout at a glance.
 
 ### Shared Display Geometry (single source of truth)
 

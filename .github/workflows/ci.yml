@@ -85,6 +85,7 @@ jobs:
             firmware/arduino/src/icons_generated.h
             web/sim/ui_generated.js
             out/display_mock.png
+            out/expected.png
   tests-python:
     name: Python tests (Pillow-only)
     runs-on: ubuntu-latest
