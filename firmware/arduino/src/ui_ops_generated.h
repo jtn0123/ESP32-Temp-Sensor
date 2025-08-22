@@ -33,7 +33,7 @@ enum FontId {
     FONT__COUNT,
 };
 
-enum Align { ALIGN_LEFT=0, ALIGN_RIGHT=1, ALIGN_CENTER=2 };
+enum Align { ALIGN_LEFT = 0, ALIGN_RIGHT = 1, ALIGN_CENTER = 2 };
 
 enum UiOpKind {
     OP_BATTERYGLYPH,

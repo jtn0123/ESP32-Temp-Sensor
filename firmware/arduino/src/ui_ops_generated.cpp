@@ -66,9 +66,13 @@ const ComponentOps kVariant_v1_ops[] = {
 };
 const int kVariant_v1_ops_count = sizeof(kVariant_v1_ops)/sizeof(kVariant_v1_ops[0]);
 
-const ComponentOps* get_variant_ops(uint8_t variantId, int* outCount){
-  if (variantId == 0) { if(outCount) *outCount = kVariant_v1_ops_count; return kVariant_v1_ops; }
-  if(outCount) *outCount = 0; return nullptr;
+const ComponentOps* get_variant_ops(uint8_t variantId, int* outCount) {
+  if (variantId == 0) {
+    if (outCount) *outCount = kVariant_v1_ops_count;
+    return kVariant_v1_ops;
+  }
+  if (outCount) *outCount = 0;
+  return nullptr;
 }
 
-} // namespace ui
+}  // namespace ui

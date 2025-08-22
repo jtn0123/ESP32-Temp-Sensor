@@ -1113,9 +1113,9 @@ inline void net_publish_ha_discovery() {
     if (strcmp(unit, "°F") == 0)
       suggestedPrecision = 1;  // Fahrenheit: one decimal
     else if (strcmp(unit, "V") == 0)
-      suggestedPrecision = 2; // Volts: two decimals
+      suggestedPrecision = 2;  // Volts: two decimals
     else if (strcmp(unit, "hPa") == 0)
-      suggestedPrecision = 1; // Pressure: one decimal
+      suggestedPrecision = 1;  // Pressure: one decimal
                               //     else
     suggestedPrecision = 0;   // Percent and others: integer
     // Full HA discovery keys for maximum compatibility; retained

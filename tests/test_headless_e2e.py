@@ -113,6 +113,28 @@ def test_device_publishes_ui_debug_from_outdoor_aliases():
     if outside.get("weatherId") is not None:
         assert int(outside["weatherId"]) == expected["weatherId"]
 
+    # Also verify the device publishes a layout identity retained
+    msgs_layout = sub.subscribe_and_wait(f"{pub_base}/layout", expected_count=1, timeout_s=5.0)
+    assert msgs_layout and msgs_layout[0][1] is True
+    layout_payload = msgs_layout[0][0]
+    assert "layout_version" in layout_payload
+    assert "layout_crc" in layout_payload
+
+    # And verify inside readings are being published (retained) in the same wake
+    msgs_temp = sub.subscribe_and_wait(f"{pub_base}/inside/temp", expected_count=1, timeout_s=5.0)
+    msgs_hum = sub.subscribe_and_wait(f"{pub_base}/inside/hum", expected_count=1, timeout_s=5.0)
+    assert msgs_temp and msgs_temp[0][1] is True
+    assert msgs_hum and msgs_hum[0][1] is True
+    # Sanity: temp payload parses as float; humidity as int
+    try:
+        float(msgs_temp[0][0])
+    except Exception as e:
+        raise AssertionError(f"inside/temp not a float: {msgs_temp[0][0]}") from e
+    try:
+        int(float(msgs_hum[0][0]))
+    except Exception as e:
+        raise AssertionError(f"inside/hum not an int: {msgs_hum[0][0]}") from e
+
     sub.disconnect()
     ctl.disconnect()
 
