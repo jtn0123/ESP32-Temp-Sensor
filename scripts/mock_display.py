@@ -5,6 +5,9 @@ import os
 from PIL import Image, ImageDraw, ImageFont
 
 WIDTH, HEIGHT = 250, 122
+# Optional layout identity exported from geometry JSON if present
+LAYOUT_VERSION = 1
+LAYOUT_CRC = ""
 
 
 def load_font(_size: int):
@@ -25,7 +28,15 @@ def load_geometry() -> dict:
             with open(p, "r") as f:
                 data = json.load(f)
                 # support both {rects:{...}} and flat {...}
-                return data.get("rects", data)
+                rects = data.get("rects", data)
+                # Export layout identity if present for tests/tools
+                try:
+                    global LAYOUT_VERSION, LAYOUT_CRC
+                    LAYOUT_VERSION = int(data.get("layout_version") or data.get("version") or 1)
+                    LAYOUT_CRC = str(data.get("layout_crc") or "")
+                except Exception:
+                    pass
+                return rects
         except Exception:
             continue
     return {}
@@ -269,6 +280,13 @@ def main():
     out_path = os.path.join(out_dir, "display_mock.png")
     img.save(out_path)
     print(f"Wrote {out_path}")
+    # Also save a canonical expected image name for CI artifact collection
+    out_expected = os.path.join(out_dir, "expected.png")
+    try:
+        img.save(out_expected)
+        print(f"Wrote {out_expected}")
+    except Exception:
+        pass
 
 
 if __name__ == "__main__":

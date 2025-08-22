@@ -35,6 +35,21 @@ def main() -> int:
 
     proj = os.path.abspath(args.project_dir)
     rc_all = 0
+    # Gate: ensure generated display_layout.h is up-to-date with spec
+    try:
+        repo = os.path.abspath(os.path.join(proj, "..", ".."))
+        # Run UI generator (which also regenerates layout header) and fail if it changed files
+        # First, capture a pre-diff snapshot
+        pre = subprocess.check_output(["git", "status", "--porcelain"], cwd=repo).decode()
+        subprocess.check_call([sys.executable, os.path.join(repo, "scripts", "gen_ui.py")])
+        post = subprocess.check_output(["git", "status", "--porcelain"], cwd=repo).decode()
+        # If running in CI with a clean tree, any change indicates out-of-date generated files
+        if pre.strip() == "" and post.strip() != "":
+            print("ERROR: Generated headers are out-of-date. Run scripts/gen_ui.py and commit.", file=sys.stderr)
+            return 2
+    except Exception as e:
+        # Non-fatal locally; still proceed with builds
+        print(f"WARN: header up-to-date check skipped: {e}", file=sys.stderr)
     for env in args.environments:
         rc = run(["pio", "run", "-e", env], cwd=proj)
         if rc != 0:

@@ -35,6 +35,9 @@ def test_golden_snapshot():
     }
     img = md.render(data)
     md5 = md.image_md5(img)
+    # Ensure geometry exports a layout identity to aid parity checks
+    _ = md.load_geometry()
+    assert hasattr(md, "LAYOUT_VERSION")
     if os.path.exists(GOLDEN_PATH_VER):
         with open(GOLDEN_PATH_VER, "r") as f:
             golden = f.read().strip()

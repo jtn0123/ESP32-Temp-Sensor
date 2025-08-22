@@ -11,9 +11,84 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  validate-json:
+    name: Validate UI/geometry JSON
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: requirements.txt
+
+      - name: Install test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+
+      - name: Run schema/bounds tests
+        run: |
+          pytest -q tests/test_ui_spec_schema.py tests/test_geometry_schema.py 2>&1 | tee json-validate.txt
+
+      - name: Upload validation logs
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: json-validation-logs
+          path: json-validate.txt
+          if-no-files-found: warn
+
+  generate:
+    name: Generate headers/icons and mock snapshot
+    runs-on: ubuntu-latest
+    needs: [validate-json]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: requirements.txt
+
+      - name: Install generation deps
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install pillow pyyaml cairosvg
+
+      - name: Generate UI headers and JS
+        run: python scripts/gen_ui.py
+
+      - name: Generate icons header
+        run: python scripts/convert_icons.py
+
+      - name: Produce mock display snapshot
+        run: python scripts/mock_display.py
+
+      - name: Upload generated artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: generated-assets
+          if-no-files-found: warn
+          path: |
+            firmware/arduino/src/display_layout.h
+            firmware/arduino/src/ui_generated.h
+            firmware/arduino/src/ui_generated.cpp
+            firmware/arduino/src/ui_ops_generated.h
+            firmware/arduino/src/ui_ops_generated.cpp
+            firmware/arduino/src/icons_generated.h
+            web/sim/ui_generated.js
+            out/display_mock.png
   tests-python:
     name: Python tests (Pillow-only)
     runs-on: ubuntu-latest
+    needs: [generate]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -31,11 +106,23 @@ jobs:
           python -m pip install -r requirements.txt
 
       - name: Run unit tests (skip web-sim)
-        run: pytest -q -k "not web_sim"
+        run: pytest -q -k "not web_sim" 2>&1 | tee pytest-python.txt
+
+      - name: Upload test artifacts
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-tests-artifacts
+          if-no-files-found: ignore
+          path: |
+            out/*.png
+            out/*.json
+            pytest-python.txt
 
   tests-web:
     name: Web simulator tests (Playwright/Chromium)
     runs-on: ubuntu-latest
+    needs: [generate]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -58,12 +145,25 @@ jobs:
       - name: Run web simulator tests
         env:
           # Set to 1 to always save screenshots/artifacts from layout tests
-          SAVE_SHOT: "0"
-        run: pytest -q -k web_sim
+          SAVE_SHOT: "1"
+        run: pytest -q -k web_sim 2>&1 | tee pytest-web.txt
+
+      - name: Upload web-sim artifacts
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-sim-artifacts
+          if-no-files-found: ignore
+          path: |
+            out/*_page.png
+            out/*_canvas.png
+            out/*_metrics.json
+            pytest-web.txt
 
   firmware-build:
     name: Firmware build (PlatformIO)
     runs-on: ubuntu-latest
+    needs: [generate]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -93,6 +193,74 @@ jobs:
       - name: Build Arduino firmware
         working-directory: firmware/arduino
         run: pio run
+
+      - name: Upload build artifacts
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: pio-build
+          if-no-files-found: warn
+          path: |
+            firmware/arduino/.pio/build/**/firmware*.bin
+            firmware/arduino/.pio/build/**/project.check.json
+            firmware/arduino/.pio/build/**/*.elf
+            firmware/arduino/.pio/build/**/build.log
+
+  mqtt-itest:
+    name: MQTT integration tests (Mosquitto)
+    runs-on: ubuntu-latest
+    needs: [generate]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Install mosquitto and clients
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y mosquitto mosquitto-clients
+
+      - name: Start Mosquitto broker
+        shell: bash
+        run: |
+          mosquitto -c "$GITHUB_WORKSPACE/.github/mosquitto/mosquitto.conf" -v > mosquitto.log 2>&1 &
+          # Wait for port
+          timeout 20 bash -c 'until echo > /dev/tcp/127.0.0.1/1883; do sleep 0.2; done'
+
+      - name: Simulate HA birth
+        run: mosquitto_pub -h 127.0.0.1 -t homeassistant/status -m online
+
+      - name: Run MQTT integration script
+        env:
+          MQTT_HOST: 127.0.0.1
+          MQTT_PORT: 1883
+        run: python3 scripts/test_mqtt_integration.py 2>&1 | tee mqtt_itest.log
+
+      - name: Run pytest birth/rediscovery test against broker
+        env:
+          MQTT_HOST: 127.0.0.1
+          MQTT_PORT: 1883
+        run: pytest -q tests/test_mqtt_birth.py 2>&1 | tee mqtt_birth.log
+
+      - name: Upload MQTT logs
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: mqtt-logs
+          if-no-files-found: warn
+          path: |
+            mosquitto.log
+            mqtt_itest.log
+            mqtt_birth.log
 
   lint:
     name: Lint (${{ matrix.tool }})
@@ -152,7 +320,8 @@ jobs:
             cpplint)
               FILES=$(find firmware/arduino/src -type f \( -name "*.cpp" -o -name "*.h" \))
               if [ -n "$FILES" ]; then
-                python -m cpplint --filter=-build,-legal,-readability,-runtime,-whitespace,+build/include_order,+whitespace/braces $FILES 2>&1 | tee cpplint.txt
+                # Use CPPLINT.cfg for filters by default
+                python -m cpplint $FILES 2>&1 | tee cpplint.txt
               fi
               ;;
           esac

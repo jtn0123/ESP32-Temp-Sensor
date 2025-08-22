@@ -451,6 +451,13 @@ static void emit_metrics_json(float tempC, float rhPct, float pressHPa) {
   char ip_c[32];
   net_ip_cstr(ip_c, sizeof(ip_c));
   Serial.print('{');
+  Serial.print("\"layout_version\":");
+  Serial.print(LAYOUT_VERSION);
+  Serial.print(',');
+  Serial.print("\"layout_crc\":\"");
+  Serial.print("" LAYOUT_CRC);
+  Serial.print("\"");
+  Serial.print(',');
   Serial.print("\"event\":\"metrics\",");
   Serial.print("\"ip\":\"");
   Serial.print(ip_c);
@@ -1920,6 +1927,8 @@ void setup() {
              sleep_scheduled_ms, deep_sleep_us, reset_reason_str(esp_reset_reason()),
              wakeup_cause_str(esp_sleep_get_wakeup_cause()), static_cast<unsigned>(rtc_wake_count));
     net_publish_debug_json(dbg, false);
+    // Publish layout identity for quick visual parity checks in dashboards
+    net_publish_layout_identity();
   }
 
   // Allow retained MQTT to arrive quickly for outside readings (bounded)

@@ -49,7 +49,7 @@ _TIME_METRICS_JS = (
     reason="playwright not installed",
 )
 def test_canvas_is_binary_after_draw():
-    from playwright.sync_api import sync_playwright  # type: ignore
+    from playwright.sync_api import sync_playwright
 
     web_root = os.path.join(os.path.dirname(os.path.dirname(__file__)), "web", "sim")
     port = _find_free_port()
@@ -79,7 +79,7 @@ def test_canvas_is_binary_after_draw():
     reason="playwright not installed",
 )
 def test_stress_mode_renders_without_overlap():
-    from playwright.sync_api import sync_playwright  # type: ignore
+    from playwright.sync_api import sync_playwright
 
     web_root = os.path.join(os.path.dirname(os.path.dirname(__file__)), "web", "sim")
     port = _find_free_port()
@@ -111,7 +111,7 @@ def test_stress_mode_renders_without_overlap():
     reason="playwright not installed",
 )
 def test_icons_available_or_fallback():
-    from playwright.sync_api import sync_playwright  # type: ignore
+    from playwright.sync_api import sync_playwright
 
     web_root = os.path.join(os.path.dirname(os.path.dirname(__file__)), "web", "sim")
     port = _find_free_port()
@@ -149,7 +149,7 @@ def test_icons_available_or_fallback():
     reason="playwright not installed",
 )
 def test_header_time_right_aligned_and_name_truncated():
-    from playwright.sync_api import sync_playwright  # type: ignore
+    from playwright.sync_api import sync_playwright
 
     web_root = os.path.join(os.path.dirname(os.path.dirname(__file__)), "web", "sim")
     port = _find_free_port()
@@ -205,3 +205,90 @@ def test_header_time_right_aligned_and_name_truncated():
     finally:
         server.terminate()
         server.wait(timeout=2)
+
+
+@pytest.mark.skipif(
+    not bool(__import__("importlib").util.find_spec("playwright")),
+    reason="playwright not installed",
+)
+def test_mock_vs_web_sim_pixel_diff(tmp_path):
+    from playwright.sync_api import sync_playwright
+    # Optional numpy for pixel diff math
+    try:
+        import numpy as np  # type: ignore
+    except Exception:
+        pytest.skip("numpy not installed")
+    # Render mock PNG to a buffer
+    import importlib.util as _ilu
+    import os as _os
+    ROOT = _os.path.dirname(_os.path.dirname(__file__))
+    _scripts = _os.path.join(ROOT, "scripts")
+    _module_path = _os.path.join(_scripts, "mock_display.py")
+    _spec = _ilu.spec_from_file_location("mock_display", _module_path)
+    md = _ilu.module_from_spec(_spec)
+    _spec.loader.exec_module(md)
+
+    data = {
+        "room_name": "Office",
+        "inside_temp": "72.5",
+        "inside_hum": "47",
+        "outside_temp": "68.4",
+        "outside_hum": "53",
+        "weather": "Cloudy",
+        "time": "10:32",
+        "ip": "192.168.1.42",
+        "voltage": "4.01",
+        "percent": 76,
+        "days": "128",
+        "wind": "4.2",
+    }
+    mock_img = md.render(data)
+
+    # Capture web sim canvas pixels
+    web_root = os.path.join(os.path.dirname(os.path.dirname(__file__)), "web", "sim")
+    port = _find_free_port()
+    server = _start_http_server(web_root, port)
+    try:
+        time.sleep(0.4)
+        with sync_playwright() as p:
+            browser = p.chromium.launch()
+            page = browser.new_page(viewport={"width": 250, "height": 122})
+            page.goto(f"http://127.0.0.1:{port}/index.html", wait_until="load")
+            page.wait_for_timeout(300)
+            # Feed data via fetch override route
+            def handle_route(route):
+                route.fulfill(status=200, content_type="application/json", body=json.dumps(data))
+            page.route("**/sample_data.json", handle_route)
+            page.reload(wait_until="load")
+            page.wait_for_timeout(300)
+            # Read pixels
+            js_read = (
+                "()=>{const c=document.getElementById('epd');const ctx=c.getContext('2d');"
+                "return Array.from(ctx.getImageData(0,0,c.width,c.height).data);}"
+            )
+            pix = page.evaluate(js_read)
+            browser.close()
+    finally:
+        server.terminate()
+        server.wait(timeout=2)
+
+    # Convert RGBA array to 1-bit similar to sim threshold
+    W, H = mock_img.size
+    arr = np.array(pix, dtype=np.uint8).reshape(H, W, 4)
+    y = (0.2126*arr[:,:,0] + 0.7152*arr[:,:,1] + 0.0722*arr[:,:,2])
+    sim_bin = (y < 176).astype(np.uint8)
+
+    mock_bin = np.array(mock_img, dtype=np.uint8)
+    # Compute absolute difference and allow small tolerance window
+    diff = np.abs(sim_bin - mock_bin)
+    num_diff = int(diff.sum())
+    # Save artifacts
+    out_dir = _ensure_out_dir()
+    mock_path = os.path.join(out_dir, "expected.png")
+    mock_img.save(mock_path)
+    # Save a visualization of differences
+    from PIL import Image
+    vis = Image.fromarray((diff*255).astype(np.uint8), mode='L')
+    vis.save(os.path.join(out_dir, "pixel_diff.png"))
+    # Allow a small number of differing pixels due to font/antialiasing/thresholds
+    assert num_diff < 2000

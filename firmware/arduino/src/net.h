@@ -999,6 +999,18 @@ inline void net_publish_debug_json(const char* payload, bool retain = false) {
   g_mqtt.publish(topic, payload, retain);
 }
 
+// Publish layout identity for sim↔device parity checks
+inline void net_publish_layout_identity() {
+  if (!g_mqtt.connected())
+    return;
+  char topic[128];
+  snprintf(topic, sizeof(topic), "%s/layout", MQTT_PUB_BASE);
+  char payload[96];
+  snprintf(payload, sizeof(payload), "{\"layout_version\":%u,\"layout_crc\":\"%s\"}",
+           static_cast<unsigned>(LAYOUT_VERSION), LAYOUT_CRC);
+  g_mqtt.publish(topic, payload, true);
+}
+
 inline void net_publish_last_crash(const char* reason_or_null) {
   if (!g_mqtt.connected())
     return;
