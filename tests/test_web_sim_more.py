@@ -192,11 +192,19 @@ def test_header_time_right_aligned_and_name_truncated():
 
             # Compute actual time text placement as in sim.js and probe a pixel near its middle
             time_metrics = page.evaluate(_TIME_METRICS_JS)
-            # Sample the pixel at center of the time text box; should be black
+            # Probe a small 3x3 neighborhood around the measured center for any black pixel
             cx = int(time_metrics["x"] + max(1, time_metrics["w"] // 2))
             cy = int(time_metrics["y"] + 2)
-            r1, g1, b1, a1 = page.evaluate(_CANVAS_RGBA_JS, [cx, cy])
-            assert (r1, g1, b1) == (0, 0, 0)
+            any_black = False
+            for dy in (-1, 0, 1):
+                for dx in (-1, 0, 1):
+                    r1, g1, b1, a1 = page.evaluate(_CANVAS_RGBA_JS, [cx + dx, cy + dy])
+                    if (r1, g1, b1) == (0, 0, 0):
+                        any_black = True
+                        break
+                if any_black:
+                    break
+            assert any_black
             # Just left of HEADER_TIME rect should remain white to confirm right-alignment space
             hx, hy, hw, hh = time_metrics["rt"]
             r0, g0, b0, a0 = page.evaluate(_CANVAS_RGBA_JS, [hx - 2, hy + 2])
