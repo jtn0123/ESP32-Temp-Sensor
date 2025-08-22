@@ -23,6 +23,13 @@ def _start_http_server(root: str, port: int) -> subprocess.Popen:
     )
 
 
+def _ensure_out_dir() -> str:
+    root = os.path.dirname(os.path.dirname(__file__))
+    out_dir = os.path.join(root, "out")
+    os.makedirs(out_dir, exist_ok=True)
+    return out_dir
+
+
 _CANVAS_RGBA_JS = (
     "([x,y])=>{"
     "const c=document.getElementById('epd');const ctx=c.getContext('2d');"
@@ -223,7 +230,7 @@ def test_mock_vs_web_sim_pixel_diff(tmp_path):
     from playwright.sync_api import sync_playwright
     # Optional numpy for pixel diff math
     try:
-        import numpy as np  # type: ignore
+        import numpy as np
     except Exception:
         pytest.skip("numpy not installed")
     # Render mock PNG to a buffer
