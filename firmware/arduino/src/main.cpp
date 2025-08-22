@@ -168,8 +168,12 @@ static void draw_from_spec_full_impl(uint8_t variantId) {
       switch (op.kind) {
         case ui::OP_LINE: {
           int16_t x0 = op.p0, y0 = op.p1, x1 = op.p2, y1 = op.p3;
-          if (y0 == y1) { for (int16_t x = x0; x <= x1; ++x) display.drawPixel(x, y0, GxEPD_BLACK); }
-          else if (x0 == x1) { for (int16_t y = y0; y <= y1; ++y) display.drawPixel(x0, y, GxEPD_BLACK); }
+          if (y0 == y1) {
+            for (int16_t x = x0; x <= x1; ++x) display.drawPixel(x, y0, GxEPD_BLACK);
+          }
+          else if (x0 == x1) {
+            for (int16_t y = y0; y <= y1; ++y) display.drawPixel(x0, y, GxEPD_BLACK);
+          }
           break; }
         case ui::OP_TEXT: {
           const int* r = rect_ptr_by_id(op.rect);
@@ -1397,17 +1401,17 @@ static void partial_update_inside_temp(const char* in_temp_f, char trend) {
     display.setTextSize(2);
     int16_t x1, y1; uint16_t bw, bh;
     display.getTextBounds(buf, 0, 0, &x1, &y1, &bw, &bh);
-    int16_t targetX = x + (w - (int16_t)bw) / 2;
-    int16_t targetY = y + (h - (int16_t)bh) / 2;
+    int16_t targetX = x + (w - static_cast<int16_t>(bw)) / 2;
+    int16_t targetY = y + (h - static_cast<int16_t>(bh)) / 2;
     int16_t baseX = targetX - x1;
     int16_t baseY = targetY - y1 + TEMP_DOWN_ADJ;
     display.setCursor(baseX, baseY);
     display.print(buf);
     // Degree F units to the right (small font), align near numeric baseline
     display.setTextSize(1);
-    display.setCursor(baseX + (int16_t)bw + 2, baseY - 8);
+    display.setCursor(baseX + static_cast<int16_t>(bw) + 2, baseY - 8);
     display.print("\xF8");
-    display.setCursor(baseX + (int16_t)bw + 8, baseY - 8);
+    display.setCursor(baseX + static_cast<int16_t>(bw) + 8, baseY - 8);
     display.print("F");
   });
 }
@@ -1421,16 +1425,16 @@ static void partial_update_outside_temp(const char* out_temp_f, char trend) {
     display.setTextSize(2);
     int16_t x1, y1; uint16_t bw, bh;
     display.getTextBounds(buf, 0, 0, &x1, &y1, &bw, &bh);
-    int16_t targetX = x + (w - (int16_t)bw) / 2;
-    int16_t targetY = y + (h - (int16_t)bh) / 2;
+    int16_t targetX = x + (w - static_cast<int16_t>(bw)) / 2;
+    int16_t targetY = y + (h - static_cast<int16_t>(bh)) / 2;
     int16_t baseX = targetX - x1;
     int16_t baseY = targetY - y1 + TEMP_DOWN_ADJ;
     display.setCursor(baseX, baseY);
     display.print(buf);
     display.setTextSize(1);
-    display.setCursor(baseX + (int16_t)bw + 2, baseY - 8);
+    display.setCursor(baseX + static_cast<int16_t>(bw) + 2, baseY - 8);
     display.print("\xF8");
-    display.setCursor(baseX + (int16_t)bw + 8, baseY - 8);
+    display.setCursor(baseX + static_cast<int16_t>(bw) + 8, baseY - 8);
     display.print("F");
   });
 }
