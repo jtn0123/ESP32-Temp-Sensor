@@ -59,6 +59,33 @@ def test_flash_modes_drive_wake_interval_define():
     assert _extract_define(h2, "WAKE_INTERVAL_SEC") == "7200"
 
 
+def test_mqtt_subscribe_base_matches_device_yaml():
+    # Ensure config/device.yaml.subscribe base matches generated_config.h MQTT_SUB_BASE
+    # This prevents topic drift that would blank the Outside/weather blocks
+    # Generate header fresh
+    r = _run(["python3", os.path.join(ROOT, "scripts", "gen_device_header.py")])
+    assert r.returncode == 0, r.stdout + r.stderr
+    hdr = _read(os.path.join(ROOT, "firmware", "arduino", "src", "generated_config.h"))
+    sub_base_define = _extract_define(hdr, "MQTT_SUB_BASE")
+    assert sub_base_define is not None
+
+    # Load device.yaml when present; otherwise use sample.yaml
+    import yaml  # type: ignore
+    dev_path = os.path.join(ROOT, "config", "device.yaml")
+    if not os.path.exists(dev_path):
+        dev_path = os.path.join(ROOT, "config", "device.sample.yaml")
+    with open(dev_path, "r") as f:
+        data = yaml.safe_load(f) or {}
+    mqtt = (data.get("mqtt") or {})
+    base_topics = (mqtt.get("base_topics") or {})
+    sub_base_yaml = str(base_topics.get("subscribe", "")).strip()
+    assert sub_base_yaml, "mqtt.base_topics.subscribe missing in device yaml"
+
+    # The C header value is a quoted string; strip quotes for comparison
+    sub_base_c = sub_base_define.strip().strip('"')
+    assert sub_base_c == sub_base_yaml
+
+
 def test_flash_mode_always_sets_no_sleep_flag(tmp_path):
     # Create a small harness that patches flash.run() to print env and exit without running pio
     harness = tmp_path / "capture_env.py"

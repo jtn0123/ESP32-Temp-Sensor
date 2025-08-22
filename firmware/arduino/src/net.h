@@ -410,12 +410,30 @@ inline void mqtt_callback(char* topic, uint8_t* payload, unsigned int length) {
     g_outside.humidityPct = atof(val);
     g_outside.validHum = true;
     g_outside_dirty = true;
+  } else if (ends_with(topic, "/temp_f")) {
+    // Fahrenheit alias: convert to Celsius for internal representation
+    float f = atof(val);
+    float c = (f - 32.0f) * (5.0f / 9.0f);
+    g_outside.temperatureC = c;
+    g_outside.validTemp = isfinite(c);
+    g_outside_dirty = true;
   } else if (ends_with(topic, "/weather")) {
     strncpy(g_outside.weather, val, sizeof(g_outside.weather) - 1);
     g_outside.weather[sizeof(g_outside.weather) - 1] = '\0';
     g_outside.validWeather = g_outside.weather[0] != '\0';
     g_outside_dirty = true;
+  } else if (ends_with(topic, "/condition")) {
+    // Alias for textual condition
+    strncpy(g_outside.weather, val, sizeof(g_outside.weather) - 1);
+    g_outside.weather[sizeof(g_outside.weather) - 1] = '\0';
+    g_outside.validWeather = g_outside.weather[0] != '\0';
+    g_outside_dirty = true;
   } else if (ends_with(topic, "/weather_id")) {
+    g_outside.weatherId = atoi(val);
+    g_outside.validWeatherId = (g_outside.weatherId != 0) || (strcmp(val, "0") == 0);
+    g_outside_dirty = true;
+  } else if (ends_with(topic, "/condition_code")) {
+    // Alias for numeric condition code
     g_outside.weatherId = atoi(val);
     g_outside.validWeatherId = (g_outside.weatherId != 0) || (strcmp(val, "0") == 0);
     g_outside_dirty = true;
@@ -836,10 +854,16 @@ inline void ensure_mqtt_connected() {
       Serial.printf("MQTT: subscribed %s\n", topic);
     };
     sub("/temp");
+    // Accept Fahrenheit alias for temperature
+    sub("/temp_f");
     sub("/hum");
     sub("/rh");
+    // Textual condition (alias for weather description)
     sub("/weather");
+    sub("/condition");
     sub("/weather_id");
+    // Numeric condition code alias
+    sub("/condition_code");
     sub("/weather_desc");
     sub("/weather_icon");
     sub("/wind");

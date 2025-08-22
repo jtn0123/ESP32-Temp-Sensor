@@ -72,7 +72,6 @@ static void draw_from_spec_full(uint8_t variantId);
 
 // Utility to map RectId->rect pointer
 static inline const int* rect_ptr_by_id(uint8_t rid) {
-  using namespace ui;
   switch (rid) {
   case ui::RECT_HEADER_NAME: return HEADER_NAME;
   case ui::RECT_HEADER_TIME: return HEADER_TIME;
@@ -136,7 +135,16 @@ static void draw_from_spec_full_impl(uint8_t variantId) {
 #ifndef TOP_Y_OFFSET
 #define TOP_Y_OFFSET 4
 #endif
-  using namespace ui;
+  using ui::ComponentOps;
+  using ui::UiOpHeader;
+  using ui::OP_LINE;
+  using ui::OP_TEXT;
+  using ui::OP_TIMERIGHT;
+  using ui::OP_LABELCENTERED;
+  using ui::OP_TEMPGROUPCENTERED;
+  using ui::ALIGN_LEFT;
+  using ui::ALIGN_RIGHT;
+  using ui::ALIGN_CENTER;
   int comp_count = 0;
   const ComponentOps* comps = get_variant_ops(variantId, &comp_count);
   display.drawRect(0, 0, EINK_WIDTH, EINK_HEIGHT, GxEPD_BLACK);
@@ -147,12 +155,12 @@ static void draw_from_spec_full_impl(uint8_t variantId) {
     for (int i = 0; i < co.count; ++i) {
       const UiOpHeader& op = co.ops[i];
       switch (op.kind) {
-        case OP_LINE: {
+        case ui::OP_LINE: {
           int16_t x0 = op.p0, y0 = op.p1, x1 = op.p2, y1 = op.p3;
           if (y0 == y1) { for (int16_t x = x0; x <= x1; ++x) display.drawPixel(x, y0, GxEPD_BLACK); }
           else if (x0 == x1) { for (int16_t y = y0; y <= y1; ++y) display.drawPixel(x0, y, GxEPD_BLACK); }
           break; }
-        case OP_TEXT: {
+        case ui::OP_TEXT: {
           const int* r = rect_ptr_by_id(op.rect);
           int16_t tx = op.p0;
           int16_t ty = op.p1 + TOP_Y_OFFSET;
