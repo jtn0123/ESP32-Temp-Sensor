@@ -400,6 +400,33 @@ inline void mqtt_callback(char* topic, uint8_t* payload, unsigned int length) {
     }
     return;
   }
+  // Device command handler: sensors/<room>/cmd -> on-demand UI debug snapshot
+  {
+    char cmdTopic[128];
+    snprintf(cmdTopic, sizeof(cmdTopic), "%s/cmd", MQTT_PUB_BASE);
+    if (strcmp(topic, cmdTopic) == 0) {
+      String s = String(val);
+      s.trim(); s.toLowerCase();
+      if (s == "ui_debug" || s == "ui") {
+        float tempF = (g_outside.validTemp && isfinite(g_outside.temperatureC)) ? (g_outside.temperatureC * 9.0f / 5.0f + 32.0f) : NAN;
+        const char* w = (g_outside.validWeather && g_outside.weather[0]) ? g_outside.weather : NULL;
+        const char* wd = (g_outside.validWeatherDesc && g_outside.weatherDesc[0]) ? g_outside.weatherDesc : NULL;
+        const char* wi = (g_outside.validWeatherIcon && g_outside.weatherIcon[0]) ? g_outside.weatherIcon : NULL;
+        char buf[256];
+        snprintf(buf, sizeof(buf),
+                 "{\"event\":\"ui_debug\",\"outside\":{\"tempF\":%s,\"rhPct\":%s,\"windMps\":%s,\"weather\":%s,\"weatherId\":%d,\"weatherDesc\":%s,\"weatherIcon\":%s}}",
+                 (isfinite(tempF) ? String(tempF, 1).c_str() : "null"),
+                 (g_outside.validHum && isfinite(g_outside.humidityPct) ? String(g_outside.humidityPct, 0).c_str() : "null"),
+                 (g_outside.validWind && isfinite(g_outside.windMps) ? String(g_outside.windMps, 1).c_str() : "null"),
+                 (w ? (String("\"") + w + "\"").c_str() : "null"),
+                 (g_outside.validWeatherId ? g_outside.weatherId : 0),
+                 (wd ? (String("\"") + wd + "\"").c_str() : "null"),
+                 (wi ? (String("\"") + wi + "\"").c_str() : "null"));
+        net_publish_debug_ui(buf, true);
+      }
+      return;
+    }
+  }
   if (ends_with(topic, "/temp")) {
     g_outside.temperatureC = atof(val);
     g_outside.validTemp = true;
@@ -874,6 +901,11 @@ inline void ensure_mqtt_connected() {
     // Subscribe to Home Assistant birth topic for rediscovery on HA restarts
     g_mqtt.subscribe("homeassistant/status");
     Serial.printf("MQTT: subscribed %s\n", "homeassistant/status");
+    // Subscribe to device command topic for on-demand UI debug snapshots
+    char cmdTopic[128];
+    snprintf(cmdTopic, sizeof(cmdTopic), "%s/cmd", MQTT_PUB_BASE);
+    g_mqtt.subscribe(cmdTopic);
+    Serial.printf("MQTT: subscribed %s\n", cmdTopic);
     // On successful MQTT connection, try to drain any offline backlog
     offline_drain_if_any();
   } else {

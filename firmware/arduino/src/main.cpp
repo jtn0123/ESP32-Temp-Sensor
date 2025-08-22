@@ -394,9 +394,15 @@ static inline void nvs_load_cache_if_unset() {
   g_full_only_mode = g_prefs.getUChar("full_only", 0) != 0;
   // Remove legacy ui_variant preference; single UI variant remains
 }
-static inline void nvs_store_float(const char* key, float v) { g_prefs.putFloat(key, v); }
-static inline void nvs_store_int(const char* key, int32_t v) { g_prefs.putInt(key, v); }
-static inline void nvs_store_uint(const char* key, uint32_t v) { g_prefs.putUInt(key, v); }
+static inline void nvs_store_float(const char* key, float v) {
+  g_prefs.putFloat(key, v);
+}
+static inline void nvs_store_int(const char* key, int32_t v) {
+  g_prefs.putInt(key, v);
+}
+static inline void nvs_store_uint(const char* key, uint32_t v) {
+  g_prefs.putUInt(key, v);
+}
 
 static constexpr float THRESH_TEMP_F = 0.2f;  //
   //     redraw/publish threshold in F
@@ -469,7 +475,8 @@ static void pump_network_ms(uint32_t duration_ms) {
 #endif
 #endif
 
-static Adafruit_NeoPixel s_statusPixel(1, STATUS_PIXEL_PIN, NEO_GRB + NEO_KHZ800);
+static Adafruit_NeoPixel s_statusPixel(1, STATUS_PIXEL_PIN,
+                                       NEO_GRB + NEO_KHZ800);
 static uint32_t s_lastPixelMs = 0;
 static uint8_t s_hue = 0;
 static uint8_t s_breath = 0;  // brightness phase for subtle breathing

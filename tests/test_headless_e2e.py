@@ -89,6 +89,9 @@ def test_device_publishes_ui_debug_from_outdoor_aliases():
     for t, v in seeds.items():
         ctl.publish(t, v, retain=True, qos=1)
 
+    # Ask device to emit a ui_debug snapshot now (in case it's already awake)
+    ctl.publish(f"{pub_base}/cmd", "ui_debug", retain=False, qos=0)
+
     # Subscribe for the device's retained debug_ui snapshot. Allow a short window
     # for the device to reconnect, fetch retained, and publish the snapshot.
     sub = MqttTestClient(mqtt_host, mqtt_port, client_id=f"e2e-sub-{_now_ms()}")
