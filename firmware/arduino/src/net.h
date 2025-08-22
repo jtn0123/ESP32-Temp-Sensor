@@ -1041,6 +1041,15 @@ inline void net_publish_debug_json(const char* payload, bool retain = false) {
   g_mqtt.publish(topic, payload, retain);
 }
 
+// Publish a UI debug snapshot (outside readings + values used in UI), retained
+inline void net_publish_debug_ui(const char* payload, bool retain = true) {
+  if (!g_mqtt.connected() || !payload)
+    return;
+  char topic[128];
+  snprintf(topic, sizeof(topic), "%s/debug_ui", MQTT_PUB_BASE);
+  g_mqtt.publish(topic, payload, retain);
+}
+
 // Publish layout identity for sim↔device parity checks
 inline void net_publish_layout_identity() {
   if (!g_mqtt.connected())

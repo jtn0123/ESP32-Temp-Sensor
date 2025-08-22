@@ -1441,7 +1441,7 @@ static void smoke_full_window_test() {
     display.print("x");
     display.print(display.height());
   } while (display.nextPage());
-  Serial.printf("Pages drawn: %lu\n", (unsigned long)page_count);
+  Serial.printf("Pages drawn: %u\n", static_cast<uint32_t>(page_count));
 }
 
 // Removed minimal debug full_refresh
