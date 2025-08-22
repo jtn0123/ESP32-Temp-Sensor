@@ -68,6 +68,13 @@ struct OutsideReadings {
 static WiFiClient g_wifi_client;
 static PubSubClient g_mqtt(g_wifi_client);
 static OutsideReadings g_outside;
+// Flag set when any outside MQTT field changes; consumed by UI to trigger full refresh
+static volatile bool g_outside_dirty = false;
+inline bool net_consume_outside_dirty() {
+  bool was = g_outside_dirty;
+  g_outside_dirty = false;
+  return was;
+}
 // Optional time (HH:MM) from MQTT; fallback to SNTP/RTC
 static char g_time_hhmm[8] = {0};
 static bool g_have_time_from_mqtt = false;
@@ -398,24 +405,30 @@ inline void mqtt_callback(char* topic, uint8_t* payload, unsigned int length) {
   if (ends_with(topic, "/temp")) {
     g_outside.temperatureC = atof(val);
     g_outside.validTemp = true;
+    g_outside_dirty = true;
   } else if (ends_with(topic, "/hum") || ends_with(topic, "/rh")) {
     g_outside.humidityPct = atof(val);
     g_outside.validHum = true;
+    g_outside_dirty = true;
   } else if (ends_with(topic, "/weather")) {
     strncpy(g_outside.weather, val, sizeof(g_outside.weather) - 1);
     g_outside.weather[sizeof(g_outside.weather) - 1] = '\0';
     g_outside.validWeather = g_outside.weather[0] != '\0';
+    g_outside_dirty = true;
   } else if (ends_with(topic, "/weather_id")) {
     g_outside.weatherId = atoi(val);
     g_outside.validWeatherId = (g_outside.weatherId != 0) || (strcmp(val, "0") == 0);
+    g_outside_dirty = true;
   } else if (ends_with(topic, "/weather_desc")) {
     strncpy(g_outside.weatherDesc, val, sizeof(g_outside.weatherDesc) - 1);
     g_outside.weatherDesc[sizeof(g_outside.weatherDesc) - 1] = '\0';
     g_outside.validWeatherDesc = g_outside.weatherDesc[0] != '\0';
+    g_outside_dirty = true;
   } else if (ends_with(topic, "/weather_icon")) {
     strncpy(g_outside.weatherIcon, val, sizeof(g_outside.weatherIcon) - 1);
     g_outside.weatherIcon[sizeof(g_outside.weatherIcon) - 1] = '\0';
     g_outside.validWeatherIcon = g_outside.weatherIcon[0] != '\0';
+    g_outside_dirty = true;
   } else if (ends_with(topic, "/wind") || ends_with(topic, "/wind_mps") ||
              ends_with(topic, "/wind_mph")) {
     float w = atof(val);
@@ -423,12 +436,15 @@ inline void mqtt_callback(char* topic, uint8_t* payload, unsigned int length) {
       w = w / 2.237f;
     g_outside.windMps = w;
     g_outside.validWind = isfinite(w);
+    g_outside_dirty = true;
   } else if (ends_with(topic, "/hi") || ends_with(topic, "/high")) {
     g_outside.highTempC = atof(val);
     g_outside.validHigh = isfinite(g_outside.highTempC);
+    g_outside_dirty = true;
   } else if (ends_with(topic, "/lo") || ends_with(topic, "/low")) {
     g_outside.lowTempC = atof(val);
     g_outside.validLow = isfinite(g_outside.lowTempC);
+    g_outside_dirty = true;
   } else if (ends_with(topic, "/time") || ends_with(topic, "/clock")) {
     // Accept sanitized HH:MM text for header time
     char buf[8] = {0};

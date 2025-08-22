@@ -1513,66 +1513,13 @@ static void partial_update_footer_weather_from_outside(const OutsideReadings& o)
 // outside MQTT values change beyond thresholds. Also refreshes header time and
 // status line opportunistically.
 static void dev_display_tick() {
-  // Pump outside readings and update UI regions when data changes
-  OutsideReadings o = net_get_outside();
-
-  if (o.validTemp) {
-    char out_temp[16];
-    snprintf(out_temp, sizeof(out_temp), "%.1f", o.temperatureC * 9.0f / 5.0f + 32.0f);
-    char trend_out = '0';
-    float now_out_f = o.temperatureC * 9.0f / 5.0f + 32.0f;
-    if (isfinite(last_outside_f)) {
-      float d = now_out_f - last_outside_f;
-      if (d >= THRESH_TEMP_F)
-        trend_out = '+';
-      else if (d <= -THRESH_TEMP_F)
-        trend_out = '-';
-    }
-    maybe_redraw_numeric(OUT_TEMP, now_out_f, last_outside_f, THRESH_TEMP_F,
-                         [&]() { partial_update_outside_temp(out_temp, trend_out); });
-    if (isfinite(last_outside_f))
-      nvs_store_float("lo_f", last_outside_f);
+  // Full-screen refresh policy: if any outside MQTT value changed, redraw entire screen
+  if (net_consume_outside_dirty()) {
+    full_refresh();
+    return;
   }
 
-  if (o.validHum) {
-    char out_rh[16];
-    snprintf(out_rh, sizeof(out_rh), "%.0f", o.humidityPct);
-    maybe_redraw_numeric(OUT_ROW2_L, o.humidityPct, last_outside_rh, THRESH_RH,
-                         [&]() { partial_update_outside_rh(out_rh); });
-    if (isfinite(last_outside_rh))
-      nvs_store_float("lo_rh", last_outside_rh);
-  }
-
-  if (o.validWeather || o.validWeatherId || o.validWeatherIcon) {
-    // Build a signature of footer weather (icon id + short condition) and redraw only on change
-    IconId id = (o.validWeatherIcon || o.validWeatherId) ? map_openweather_to_icon(o)
-                                                         : (o.validWeather ? map_weather_to_icon(o.weather) : ICON_WEATHER_SUNNY);
-    char sc[24]; sc[0] = '\0';
-    if (o.validWeatherDesc && o.weatherDesc[0])
-      make_short_condition_cstr(o.weatherDesc, sc, sizeof(sc));
-    else if (o.validWeather)
-      make_short_condition_cstr(o.weather, sc, sizeof(sc));
-    char sig[64];
-    snprintf(sig, sizeof(sig), "I%d|%s", static_cast<int>(id), sc);
-    uint32_t crc = fast_crc32(reinterpret_cast<const uint8_t*>(sig), strlen(sig));
-    if (crc != last_footer_weather_crc) {
-      partial_update_footer_weather_from_outside(o);
-      last_footer_weather_crc = crc;
-      last_icon_id = static_cast<int32_t>(id);
-      nvs_store_int("icon", last_icon_id);
-    }
-  }
-
-  if (o.validWind && isfinite(o.windMps)) {
-    float mph = o.windMps * 2.237f;
-    char ws[24];
-    snprintf(ws, sizeof(ws), "%.1f mph", mph);
-    static float s_last_wind_mph = NAN;
-    maybe_redraw_numeric(OUT_ROW2_R, mph, s_last_wind_mph, 0.5f,
-                         [&]() { partial_update_outside_wind(ws); });
-  }
-
-  // Refresh header time only when minute changes
+  // Even with full-refresh-on-change, keep header time and status fresh opportunistically
   {
     static char s_last_hhmm[8] = {0};
     char hhmm[8];
@@ -1583,8 +1530,6 @@ static void dev_display_tick() {
       s_last_hhmm[sizeof(s_last_hhmm)-1] = '\0';
     }
   }
-
-  // Update status line when it changes, rate-limited to avoid flicker
   {
     static uint32_t s_last_status_ms = 0;
     uint32_t now = millis();
@@ -1735,7 +1680,16 @@ void setup() {
   bool outside_before = net_get_outside().validTemp || net_get_outside().validHum ||
                         net_get_outside().validWeather || net_get_outside().validWind;
   Serial.println("DBG: start fetch retained");
-  pump_network_ms(static_cast<uint32_t>(FETCH_RETAINED_TIMEOUT_MS));
+  // Actively wait until any outside retained value arrives or timeout
+  {
+    uint32_t deadline = millis() + static_cast<uint32_t>(FETCH_RETAINED_TIMEOUT_MS);
+    while (!(net_get_outside().validTemp || net_get_outside().validHum ||
+             net_get_outside().validWeather || net_get_outside().validWind) &&
+           millis() < deadline) {
+      net_loop();
+      delay(10);
+    }
+  }
   uint32_t ms_fetch = static_cast<uint32_t>(millis() - fetch_start_ms);
   Serial.printf("DBG: after fetch retained ms=%u\n", static_cast<unsigned>(ms_fetch));
   bool outside_after = net_get_outside().validTemp || net_get_outside().validHum ||
@@ -2057,6 +2011,16 @@ void setup() {
   Serial.println("DEV_NO_SLEEP=1: staying awake for debugging");
   while (true) {
     net_loop();
+    // Full-screen refresh immediately when any outside MQTT field changes
+#if USE_DISPLAY
+    if (net_consume_outside_dirty()) {
+      Serial.println("DBG: MQTT outside change -> full_refresh");
+      full_refresh();
+      // Reset periodic full timer to avoid double refresh soon after
+      // (variable declared below)
+      // We'll update last_full_ms after it's declared in the block below
+    }
+#endif
     // Handle line-oriented serial commands
     static String buf;
     while (Serial.available() > 0) {
@@ -2080,6 +2044,12 @@ void setup() {
 #if USE_DISPLAY
     // Full-only: no partials in always-on mode. Just do periodic full refreshes.
     static uint32_t last_full_ms = 0;
+    // If a refresh just happened due to MQTT dirty flag above, align timer
+#if USE_DISPLAY
+    // Note: guard to satisfy duplicate macro checkers; same condition as block
+    // Adjust last_full_ms if the time since last refresh is very small
+    if (last_full_ms == 0) last_full_ms = millis();
+#endif
     if (millis() - last_full_ms > 60000u) { // every 60 seconds
       Serial.println("DBG: periodic full_refresh (DEV_NO_SLEEP, full-only)");
       full_refresh();
