@@ -1317,9 +1317,19 @@ static void full_refresh() {
     snprintf(out_temp, sizeof(out_temp), "--");
   }
   char out_rh[16]; bool have_out_rh = false;
-  if (o.validHum && isfinite(o.humidityPct)) { snprintf(out_rh, sizeof(out_rh), "%.0f", o.humidityPct); have_out_rh = true; }
-  else if (isfinite(last_outside_rh)) { snprintf(out_rh, sizeof(out_rh), "%.0f", last_outside_rh); have_out_rh = true; }
-  char ws[24]; bool have_ws = false; if (o.validWind && isfinite(o.windMps)) { float mph = o.windMps * 2.237f; snprintf(ws, sizeof(ws), "%.1f mph", mph); have_ws = true; }
+  if (o.validHum && isfinite(o.humidityPct)) {
+    snprintf(out_rh, sizeof(out_rh), "%.0f", o.humidityPct);
+    have_out_rh = true;
+  } else if (isfinite(last_outside_rh)) {
+    snprintf(out_rh, sizeof(out_rh), "%.0f", last_outside_rh);
+    have_out_rh = true;
+  }
+  char ws[24]; bool have_ws = false;
+  if (o.validWind && isfinite(o.windMps)) {
+    float mph = o.windMps * 2.237f;
+    snprintf(ws, sizeof(ws), "%.1f mph", mph);
+    have_ws = true;
+  }
 
   display.setFullWindow();
   display.firstPage();
@@ -1346,8 +1356,16 @@ static void full_refresh() {
     // Outside temp
     draw_temp_number_and_units_direct(OUT_TEMP[0], static_cast<int16_t>(OUT_TEMP[1] + TOP_Y_OFFSET), OUT_TEMP[2], OUT_TEMP[3], out_temp);
     // Outside RH and wind
-    if (have_out_rh) { display.setTextSize(1); display.setTextColor(GxEPD_BLACK); display.setCursor(OUT_ROW2_L[0], OUT_ROW2_L[1] + TOP_Y_OFFSET); display.print(out_rh); display.print("% RH"); }
-    if (have_ws) { display.setTextSize(1); display.setTextColor(GxEPD_BLACK); display.setCursor(OUT_ROW2_R[0], OUT_ROW2_R[1] + TOP_Y_OFFSET); display.print(ws); }
+    if (have_out_rh) {
+      display.setTextSize(1); display.setTextColor(GxEPD_BLACK);
+      display.setCursor(OUT_ROW2_L[0], OUT_ROW2_L[1] + TOP_Y_OFFSET);
+      display.print(out_rh); display.print("% RH");
+    }
+    if (have_ws) {
+      display.setTextSize(1); display.setTextColor(GxEPD_BLACK);
+      display.setCursor(OUT_ROW2_R[0], OUT_ROW2_R[1] + TOP_Y_OFFSET);
+      display.print(ws);
+    }
 
     // Inside pressure (barometer) in the spare INSIDE_TIME line
     if (isfinite(r.pressureHPa)) {
@@ -1400,7 +1418,7 @@ static void full_refresh() {
         if (o.validWeather || o.validWeatherDesc) display.print(sc);
         // Update footer weather CRC cache for always-on parity immediately after a full render
         char sig[64];
-        snprintf(sig, sizeof(sig), "I%d|%s", static_cast<int>(icon_id), (o.validWeather||o.validWeatherDesc)?sc:"");
+        snprintf(sig, sizeof(sig), "I%d|%s", static_cast<int>(icon_id), (o.validWeather || o.validWeatherDesc) ? sc : "");
         last_footer_weather_crc = fast_crc32(reinterpret_cast<const uint8_t*>(sig), strlen(sig));
       }
     }
