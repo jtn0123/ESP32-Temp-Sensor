@@ -640,7 +640,7 @@ static void ensure_wifi_connected_provisioned_impl() {
   // Attempt connection using creds in NVS
   start_wifi_station_connect_from_nvs(WIFI_CONNECT_TIMEOUT_MS);
 }
-#endif // USE_WIFI_PROVISIONING
+#endif  // USE_WIFI_PROVISIONING
 
 inline bool net_wifi_clear_provisioning() {
 #if USE_WIFI_PROVISIONING
