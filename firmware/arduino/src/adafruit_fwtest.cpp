@@ -1,3 +1,5 @@
+// Copyright 2024 Justin
+
 #include <Arduino.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_EPD.h>

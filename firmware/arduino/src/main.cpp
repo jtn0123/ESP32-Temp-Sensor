@@ -56,7 +56,8 @@ static void draw_weather_icon_region_at_from_outside(int16_t x, int16_t y,
                                                       int16_t w, int16_t h,
                                                       const OutsideReadings& o);
 // Footer-only weather updater to keep geometry consistent with full renders
-static void partial_update_footer_weather_from_outside(const OutsideReadings& o);
+static void partial_update_footer_weather_from_outside(
+    const OutsideReadings& o);
 static void draw_header_time(const char* time_str);
 // Accessor to avoid forward reference ordering issues
 static inline float get_last_outside_f();
@@ -99,7 +100,9 @@ static inline const int* rect_ptr_by_id(uint8_t rid) {
 
 // Forward to implementation placed after display declaration
 static void draw_from_spec_full_impl(uint8_t variantId);
-static void draw_from_spec_full(uint8_t variantId) { draw_from_spec_full_impl(variantId); }
+static void draw_from_spec_full(uint8_t variantId) {
+  draw_from_spec_full_impl(variantId);
+}
 #endif
 #endif
 
@@ -120,7 +123,8 @@ static void draw_from_spec_full(uint8_t variantId) { draw_from_spec_full_impl(va
 
 // 2.13" b/w class; choose the one matching your panel
 // B74 works for SSD1680/UC8151 variants used by many 2.13" panels
-// Alternative: DEPG0213BN (also SSD1680 family). Select via -DEINK_PANEL_DEPG0213BN=1
+// Alternative: DEPG0213BN (also SSD1680 family). Select via
+// -DEINK_PANEL_DEPG0213BN=1
 #if USE_DISPLAY
 #ifndef EINK_PANEL_DEPG0213BN
 #define EINK_PANEL_DEPG0213BN 0
