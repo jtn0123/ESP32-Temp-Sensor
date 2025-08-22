@@ -1,4 +1,5 @@
 import contextlib
+import io
 import json
 import os
 import socket
@@ -28,9 +29,9 @@ def _start_http_server(root: str, port: int) -> subprocess.Popen:
     reason="playwright not installed",
 )
 def test_web_sim_screenshot_matches_golden_with_tolerance(tmp_path):
-    from playwright.sync_api import sync_playwright  # type: ignore
+    from playwright.sync_api import sync_playwright
     try:
-        import numpy as np  # type: ignore
+        import numpy as np
     except Exception:
         pytest.skip("numpy not installed")
 
