@@ -1779,6 +1779,28 @@ void setup() {
     Serial.printf("Note: no outside retained data yet (waited %u ms). Continuing...\n", ms_fetch);
   }
 
+  // Publish a retained UI-debug snapshot so tests/diagnostics can assert what the device believes
+  // is displayed for the OUTSIDE and footer weather blocks.
+  if (net_mqtt_is_connected()) {
+    OutsideReadings o = net_get_outside();
+    char buf[256];
+    float tempF = (o.validTemp && isfinite(o.temperatureC)) ? (o.temperatureC * 9.0f / 5.0f + 32.0f) : NAN;
+    const char* w = (o.validWeather && o.weather[0]) ? o.weather : NULL;
+    const char* wd = (o.validWeatherDesc && o.weatherDesc[0]) ? o.weatherDesc : NULL;
+    const char* wi = (o.validWeatherIcon && o.weatherIcon[0]) ? o.weatherIcon : NULL;
+    // Use simple JSON composition to avoid heavy deps
+    snprintf(buf, sizeof(buf),
+             "{\"event\":\"ui_debug\",\"outside\":{\"tempF\":%s,\"rhPct\":%s,\"windMps\":%s,\"weather\":%s,\"weatherId\":%d,\"weatherDesc\":%s,\"weatherIcon\":%s}}",
+             (isfinite(tempF) ? String(tempF, 1).c_str() : "null"),
+             (o.validHum && isfinite(o.humidityPct) ? String(o.humidityPct, 0).c_str() : "null"),
+             (o.validWind && isfinite(o.windMps) ? String(o.windMps, 1).c_str() : "null"),
+             (w ? (String("\"") + w + "\"").c_str() : "null"),
+             (o.validWeatherId ? o.weatherId : 0),
+             (wd ? (String("\"") + wd + "\"").c_str() : "null"),
+             (wi ? (String("\"") + wi + "\"").c_str() : "null"));
+    net_publish_debug_ui(buf, true);
+  }
+
   // Publish HA discovery once we have MQTT so entities auto-register in Home
   // Assistant
   if (net_mqtt_is_connected()) {
