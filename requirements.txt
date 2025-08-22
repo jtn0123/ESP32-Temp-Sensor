@@ -3,5 +3,6 @@ pillow>=10,<11
 pyyaml>=6.0
 pyserial>=3.5
 paho-mqtt>=1.6,<2.1
+cairosvg>=2.6,<3
 numpy>=1.24
 

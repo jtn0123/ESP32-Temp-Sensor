@@ -294,6 +294,8 @@ def test_mock_vs_web_sim_pixel_diff(tmp_path):
     sim_bin = (y < 176).astype(np.uint8)
 
     mock_bin = np.array(mock_img, dtype=np.uint8)
+    # Normalize to 0/1 to match sim_bin
+    mock_bin = (mock_bin > 0).astype(np.uint8)
     # Compute absolute difference and allow small tolerance window
     diff = np.abs(sim_bin - mock_bin)
     num_diff = int(diff.sum())

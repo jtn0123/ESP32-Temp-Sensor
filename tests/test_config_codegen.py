@@ -67,7 +67,8 @@ def test_flash_mode_always_sets_no_sleep_flag(tmp_path):
     harness.write_text(
         (
             "import os, sys\n"
-            "sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))\n"
+            "ROOT=os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))\n"
+            "sys.path.insert(0, ROOT)\n"
             "from scripts import flash\n"
             "def fake_run(cmd):\n"
             "    print('EXTRA_FLAGS=' + os.environ.get('EXTRA_FLAGS',''))\n"
