@@ -310,10 +310,12 @@ static void draw_from_spec_full_impl(uint8_t variantId) {
           break;
         OutsideReadings o = net_get_outside();
         if (o.validWeatherIcon || o.validWeatherId) {
-          draw_weather_icon_region_at_from_outside(r[0], r[1] + TOP_Y_OFFSET, r[2], r[3], o);
+          draw_weather_icon_region_at_from_outside(r[0], r[1] + TOP_Y_OFFSET,
+                                                   r[2], r[3], o);
         } else {
           const char* weather = o.validWeather ? o.weather : "";
-          draw_weather_icon_region_at(r[0], r[1] + TOP_Y_OFFSET, r[2], r[3], weather);
+          draw_weather_icon_region_at(r[0], r[1] + TOP_Y_OFFSET,
+                                       r[2], r[3], weather);
         }
         break;
       }
@@ -357,11 +359,14 @@ static void draw_from_spec_full_impl(uint8_t variantId) {
         BatteryStatus bs = read_battery_status();
         int16_t bx = op.p0, by = op.p1, bw = op.p2, bh = op.p3;
         display.drawRect(bx, by, bw, bh, GxEPD_BLACK);
-        display.fillRect(static_cast<int16_t>(bx + bw), static_cast<int16_t>(by + 2), 2, 3,
+        display.fillRect(static_cast<int16_t>(bx + bw),
+                         static_cast<int16_t>(by + 2), 2, 3,
                          GxEPD_BLACK);
-        int16_t fillw = static_cast<int16_t>(((bw - 2) * (bs.percent / 100.0f) + 0.5f));
+        int16_t fillw =
+            static_cast<int16_t>(((bw - 2) * (bs.percent / 100.0f) + 0.5f));
         if (fillw > 0)
-          display.fillRect(static_cast<int16_t>(bx + 1), static_cast<int16_t>(by + 1), fillw,
+          display.fillRect(static_cast<int16_t>(bx + 1),
+                           static_cast<int16_t>(by + 1), fillw,
                            static_cast<int16_t>(bh - 2), GxEPD_BLACK);
         break;
       }
@@ -369,10 +374,10 @@ static void draw_from_spec_full_impl(uint8_t variantId) {
         break;
       }
     }
-  }
+  }  // USE_UI_SPEC
 }
-#endif // USE_UI_SPEC
-#endif // USE_DISPLAY
+#endif  // USE_UI_SPEC
+#endif  // USE_DISPLAY
 
 RTC_DATA_ATTR static uint16_t partial_counter = 0;
 // Track number of wakes from deep sleep (monotonic until power loss)
@@ -395,9 +400,9 @@ RTC_DATA_ATTR static float last_inside_rh = NAN;
 RTC_DATA_ATTR static bool needs_full_on_boot = true;
 #endif
 #ifdef FORCE_FULL_ONLY
-static bool g_full_only_mode = true; // compile-time force full refresh only
+static bool g_full_only_mode = true;  // compile-time force full refresh only
 #else
-static bool g_full_only_mode = false; // when true, always do full refresh
+static bool g_full_only_mode = false;  // when true, always do full refresh
                                       // (debug)
 #endif
 
