@@ -56,6 +56,26 @@ const UiOpHeader kOps_footer_split[] = {
 };
 const int kOps_footer_split_count = sizeof(kOps_footer_split)/sizeof(kOps_footer_split[0]);
 
+const UiOpHeader kOps_inside_missing[] = {
+    { OP_LABELCENTERED, 6, 1, 2, 22, 0, 0, 0, "INSIDE", NULL },
+    { OP_TEXTCENTEREDIN, 6, 1, 2, 0, 0, 0, 0, "—", NULL },
+    { OP_TEXT, 5, 2, 0, 0, 0, 0, 0, "—", NULL },
+};
+const int kOps_inside_missing_count = sizeof(kOps_inside_missing)/sizeof(kOps_inside_missing[0]);
+
+const UiOpHeader kOps_outside_missing[] = {
+    { OP_LABELCENTERED, 13, 1, 2, 22, 0, 0, 0, "OUTSIDE", NULL },
+    { OP_TEXTCENTEREDIN, 13, 1, 2, 0, 0, 0, 0, "—", NULL },
+    { OP_TEXT, 11, 2, 0, 0, 0, 0, 0, "—", NULL },
+    { OP_TEXT, 12, 2, 0, 0, 0, 0, 0, "—", NULL },
+};
+const int kOps_outside_missing_count = sizeof(kOps_outside_missing)/sizeof(kOps_outside_missing[0]);
+
+const UiOpHeader kOps_footer_weather_missing[] = {
+    { OP_TEXTCENTEREDIN, 1, 2, 2, 6, 0, 0, 0, "NO DATA", NULL },
+};
+const int kOps_footer_weather_missing_count = sizeof(kOps_footer_weather_missing)/sizeof(kOps_footer_weather_missing[0]);
+
 const ComponentOps kVariant_v1_ops[] = {
     { kOps_chrome, kOps_chrome_count, "chrome" },
     { kOps_header, kOps_header_count, "header" },
@@ -65,8 +85,38 @@ const ComponentOps kVariant_v1_ops[] = {
 };
 const int kVariant_v1_ops_count = sizeof(kVariant_v1_ops)/sizeof(kVariant_v1_ops[0]);
 
+const ComponentOps kVariant_v1_missing_outside_ops[] = {
+    { kOps_chrome, kOps_chrome_count, "chrome" },
+    { kOps_header, kOps_header_count, "header" },
+    { kOps_inside, kOps_inside_count, "inside" },
+    { kOps_outside_missing, kOps_outside_missing_count, "outside_missing" },
+    { kOps_footer_weather_missing, kOps_footer_weather_missing_count, "footer_weather_missing" },
+};
+const int kVariant_v1_missing_outside_ops_count = sizeof(kVariant_v1_missing_outside_ops)/sizeof(kVariant_v1_missing_outside_ops[0]);
+
+const ComponentOps kVariant_v1_missing_inside_ops[] = {
+    { kOps_chrome, kOps_chrome_count, "chrome" },
+    { kOps_header, kOps_header_count, "header" },
+    { kOps_inside_missing, kOps_inside_missing_count, "inside_missing" },
+    { kOps_outside, kOps_outside_count, "outside" },
+    { kOps_footer_split, kOps_footer_split_count, "footer_split" },
+};
+const int kVariant_v1_missing_inside_ops_count = sizeof(kVariant_v1_missing_inside_ops)/sizeof(kVariant_v1_missing_inside_ops[0]);
+
+const ComponentOps kVariant_v1_missing_all_ops[] = {
+    { kOps_chrome, kOps_chrome_count, "chrome" },
+    { kOps_header, kOps_header_count, "header" },
+    { kOps_inside_missing, kOps_inside_missing_count, "inside_missing" },
+    { kOps_outside_missing, kOps_outside_missing_count, "outside_missing" },
+    { kOps_footer_weather_missing, kOps_footer_weather_missing_count, "footer_weather_missing" },
+};
+const int kVariant_v1_missing_all_ops_count = sizeof(kVariant_v1_missing_all_ops)/sizeof(kVariant_v1_missing_all_ops[0]);
+
 const ComponentOps* get_variant_ops(uint8_t variantId, int* outCount){
   if (variantId == 0) { if(outCount) *outCount = kVariant_v1_ops_count; return kVariant_v1_ops; }
+  else if (variantId == 1) { if(outCount) *outCount = kVariant_v1_missing_all_ops_count; return kVariant_v1_missing_all_ops; }
+  else if (variantId == 2) { if(outCount) *outCount = kVariant_v1_missing_inside_ops_count; return kVariant_v1_missing_inside_ops; }
+  else if (variantId == 3) { if(outCount) *outCount = kVariant_v1_missing_outside_ops_count; return kVariant_v1_missing_outside_ops; }
   if(outCount) *outCount = 0; return nullptr;
 }
 

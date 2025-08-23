@@ -1122,7 +1122,8 @@ static void make_short_condition_cstr(const char* weather, char* out,
 }
 
 static void draw_header_time(const char* time_str) {
-  // Draw centered time within HEADER_CENTER box to avoid overlapping the version
+  // Draw centered time within HEADER_CENTER box to avoid overlapping the
+  // version
   int rect2[4] = {HEADER_CENTER[0],
                   static_cast<int16_t>(HEADER_CENTER[1] + TOP_Y_OFFSET),
                   HEADER_CENTER[2], HEADER_CENTER[3]};
@@ -1139,8 +1140,10 @@ static void draw_header_time(const char* time_str) {
 
 static inline void draw_header_time_direct(const char* time_str) {
   int16_t tw = text_width_default_font(time_str, 1);
-  int16_t rx = static_cast<int16_t>(HEADER_CENTER[0] + (HEADER_CENTER[2] - tw) / 2);
-  int16_t by = static_cast<int16_t>(HEADER_CENTER[1] + TOP_Y_OFFSET + HEADER_CENTER[3] - 6);
+  int16_t rx = static_cast<int16_t>(HEADER_CENTER[0] +
+                                    (HEADER_CENTER[2] - tw) / 2);
+  int16_t by = static_cast<int16_t>(HEADER_CENTER[1] + TOP_Y_OFFSET +
+                                    HEADER_CENTER[3] - 6);
   display.setTextColor(GxEPD_BLACK);
   display.setTextSize(1);
   display.setCursor(rx, by);
@@ -1161,9 +1164,11 @@ static void draw_status_line(const BatteryStatus& bs, const char* ip_cstr) {
       int16_t bw = 13;
       int16_t bh = 7;
       display.drawRect(bx, by, bw, bh, GxEPD_BLACK);
-      display.fillRect(static_cast<int16_t>(bx + bw), static_cast<int16_t>(by + 2), 2, 3,
+      display.fillRect(static_cast<int16_t>(bx + bw),
+                       static_cast<int16_t>(by + 2), 2, 3,
                        GxEPD_BLACK);
-      int16_t fillw = static_cast<int16_t>(((bw - 2) * (bs.percent / 100.0f) + 0.5f));
+      int16_t fillw = static_cast<int16_t>(
+          ((bw - 2) * (bs.percent / 100.0f) + 0.5f));
       if (fillw > 0)
         display.fillRect(static_cast<int16_t>(bx + 1), static_cast<int16_t>(by + 1), fillw,
                          static_cast<int16_t>(bh - 2), GxEPD_BLACK);

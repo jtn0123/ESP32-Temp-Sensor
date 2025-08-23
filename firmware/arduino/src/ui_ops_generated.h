@@ -50,6 +50,9 @@ struct UiOpHeader { uint8_t kind; uint8_t rect; uint8_t font; uint8_t align; int
 
 static constexpr const char* kVariantNames[] = {
     "v1",
+    "v1_missing_all",
+    "v1_missing_inside",
+    "v1_missing_outside",
 };
 
 static constexpr const char* kVariant_v1_components[] = {
@@ -59,6 +62,27 @@ static constexpr const char* kVariant_v1_components[] = {
     "outside",
     "footer_split",
 };
+static constexpr const char* kVariant_v1_missing_all_components[] = {
+    "chrome",
+    "header",
+    "inside_missing",
+    "outside_missing",
+    "footer_weather_missing",
+};
+static constexpr const char* kVariant_v1_missing_inside_components[] = {
+    "chrome",
+    "header",
+    "inside_missing",
+    "outside",
+    "footer_split",
+};
+static constexpr const char* kVariant_v1_missing_outside_components[] = {
+    "chrome",
+    "header",
+    "inside",
+    "outside_missing",
+    "footer_weather_missing",
+};
 
 static constexpr int kComponent_chrome_opcount = 6;
 static constexpr int kComponent_header_centered_opcount = 4;
@@ -66,11 +90,20 @@ static constexpr int kComponent_header_opcount = 3;
 static constexpr int kComponent_inside_opcount = 4;
 static constexpr int kComponent_outside_opcount = 4;
 static constexpr int kComponent_footer_split_opcount = 6;
-static constexpr int kTotalOpCount = 27;
+static constexpr int kComponent_inside_missing_opcount = 3;
+static constexpr int kComponent_outside_missing_opcount = 4;
+static constexpr int kComponent_footer_weather_missing_opcount = 1;
+static constexpr int kTotalOpCount = 35;
 
 struct ComponentOps { const UiOpHeader* ops; int count; const char* name; };
 extern const ComponentOps kVariant_v1_ops[];
 extern const int kVariant_v1_ops_count;
+extern const ComponentOps kVariant_v1_missing_all_ops[];
+extern const int kVariant_v1_missing_all_ops_count;
+extern const ComponentOps kVariant_v1_missing_inside_ops[];
+extern const int kVariant_v1_missing_inside_ops_count;
+extern const ComponentOps kVariant_v1_missing_outside_ops[];
+extern const int kVariant_v1_missing_outside_ops_count;
 extern const ComponentOps* get_variant_ops(uint8_t variantId, int* outCount);
 
 } // namespace ui
