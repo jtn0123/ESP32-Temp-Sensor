@@ -24,6 +24,10 @@
   let showWindows = false;
   let stressMode = false;
   let oneBitMode = true;
+  let showGrid = false;
+  let showRects = false;
+  let showLabels = false;
+  let simulateGhosting = false;
   let GEOMETRY = null; // optional overlay geometry loaded from geometry.json
   let GJSON = null;    // centralized geometry JSON
   // Enable spec-only render (always on to keep single source of truth)
@@ -108,6 +112,44 @@
       d[i+3]=255;
     }
     ctx.putImageData(img,0,0);
+  }
+
+  function drawGridOverlay(){
+    if (!showGrid) return;
+    ctx.save();
+    ctx.strokeStyle = '#bbb';
+    ctx.lineWidth = 1;
+    for (let x = 0; x <= WIDTH; x += 4){
+      ctx.beginPath();
+      ctx.moveTo(x + 0.5, 0);
+      ctx.lineTo(x + 0.5, HEIGHT);
+      ctx.stroke();
+    }
+    for (let y = 0; y <= HEIGHT; y += 4){
+      ctx.beginPath();
+      ctx.moveTo(0, y + 0.5);
+      ctx.lineTo(WIDTH, y + 0.5);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  function drawRectsOverlay(){
+    if (!showRects || !GJSON || !GJSON.rects) return;
+    ctx.save();
+    ctx.strokeStyle = '#f00';
+    ctx.lineWidth = 1;
+    Object.entries(GJSON.rects).forEach(([name, r])=>{
+      const [x,y,w,h] = r;
+      ctx.strokeRect(x+0.5, y+0.5, w, h);
+      if (showLabels){
+        ctx.fillStyle = '#000';
+        ctx.font = `bold 10px ${FONT_STACK}`;
+        ctx.textBaseline = 'top';
+        ctx.fillText(String(name), x+2, y+2);
+      }
+    });
+    ctx.restore();
   }
 
   function text(x,y,str,size=10,weight='normal'){
@@ -391,6 +433,8 @@
     if (typeof window !== 'undefined' && typeof window.drawFromSpec === 'function'){
       window.drawFromSpec(ctx, lastData, variant);
     }
+    drawGridOverlay();
+    drawRectsOverlay();
     // Leave some tokens for tests to find in sim.js
     // weather-sunny weather-partly-cloudy weather-cloudy weather-fog
     // weather-pouring weather-snowy weather-lightning weather-night
@@ -398,6 +442,19 @@
     // Layout constants
     // DISPLAY_WIDTH DISPLAY_HEIGHT RECT_HEADER_NAME RECT_OUT_TEMP CANVAS
     applyOneBitThreshold();
+    if (simulateGhosting){
+      // Light residue effect from previous frame: draw faint stipple
+      const img = ctx.getImageData(0,0,WIDTH,HEIGHT);
+      const d = img.data;
+      for (let i=0;i<d.length;i+=4){
+        // randomly darken a tiny subset of white pixels to simulate residue
+        if (d[i] === 255){
+          if ((i % 97) === 0) { d[i]=d[i+1]=d[i+2]=220; }
+        }
+      }
+      ctx.putImageData(img,0,0);
+      applyOneBitThreshold();
+    }
   }
 
   async function load(){
@@ -455,6 +512,14 @@
     };
     draw(stressMode ? stress : {});
   });
+  const gridEl = document.getElementById('showGrid');
+  if (gridEl) gridEl.addEventListener('change', (e)=>{ showGrid = !!e.target.checked; draw({}); });
+  const rectsEl = document.getElementById('showRects');
+  if (rectsEl) rectsEl.addEventListener('change', (e)=>{ showRects = !!e.target.checked; draw({}); });
+  const labelsEl = document.getElementById('showLabels');
+  if (labelsEl) labelsEl.addEventListener('change', (e)=>{ showLabels = !!e.target.checked; draw({}); });
+  const ghostEl = document.getElementById('simulateGhosting');
+  if (ghostEl) ghostEl.addEventListener('change', (e)=>{ simulateGhosting = !!e.target.checked; draw({}); });
   const specOnlyEl = document.getElementById('specOnly');
   if (specOnlyEl){ specOnlyEl.checked = true; specOnlyEl.disabled = true; }
   const variantSel = document.getElementById('variantMode');

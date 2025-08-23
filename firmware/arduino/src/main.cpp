@@ -1054,8 +1054,9 @@ static inline uint32_t fast_crc32(const uint8_t* data, size_t len) {
 }
 
 template <typename DrawFn>
-static inline bool maybe_redraw_numeric(const int rect[4], float currentValue, float& lastValue,
-                                        float threshold, DrawFn drawFn) {
+static inline bool maybe_redraw_numeric(const int rect[4], float currentValue,
+                                        float& lastValue, float threshold,
+                                        DrawFn drawFn) {
   bool should = false;
   if (!isnan(currentValue) &&
       (!isfinite(lastValue) || fabsf(currentValue - lastValue) >= threshold))
@@ -1069,8 +1070,8 @@ static inline bool maybe_redraw_numeric(const int rect[4], float currentValue, f
 }
 
 template <typename T, typename DrawFn>
-static inline bool maybe_redraw_value(const int rect[4], const T& currentValue, T& lastValue,
-                                      DrawFn drawFn) {
+static inline bool maybe_redraw_value(const int rect[4], const T& currentValue,
+                                      T& lastValue, DrawFn drawFn) {
   if (currentValue != lastValue) {
     drawFn();
     lastValue = currentValue;
@@ -1079,12 +1080,12 @@ static inline bool maybe_redraw_value(const int rect[4], const T& currentValue, 
   return false;
 }
 
-static inline bool maybe_redraw_status(const BatteryStatus& bs, const char* ip_cstr,
-                                       const int rect[4]) {
+static inline bool maybe_redraw_status(const BatteryStatus& bs,
+                                       const char* ip_cstr, const int rect[4]) {
   char buf[96];
   // Stacked footer signature (3-row status)
-  snprintf(buf, sizeof(buf), "B%.2f|%d|D%d|IP%s", bs.voltage, bs.percent, bs.estimatedDays,
-           ip_cstr);
+  snprintf(buf, sizeof(buf), "B%.2f|%d|D%d|IP%s", bs.voltage, bs.percent,
+           bs.estimatedDays, ip_cstr);
   uint32_t crc = fast_crc32((const uint8_t*)buf, strlen(buf));
   if (crc != last_status_crc) {
     draw_status_line(bs, ip_cstr);
@@ -1094,7 +1095,8 @@ static inline bool maybe_redraw_status(const BatteryStatus& bs, const char* ip_c
   return false;
 }
 
-static void make_short_condition_cstr(const char* weather, char* out, size_t out_size) {
+static void make_short_condition_cstr(const char* weather, char* out,
+                                      size_t out_size) {
   if (!out || out_size == 0)
     return;
   out[0] = '\0';
@@ -1110,7 +1112,8 @@ static void make_short_condition_cstr(const char* weather, char* out, size_t out
     char c = *p;
     // Treat common separators and hyphen as delimiters so HA values like
     // "clear-night" or "snowy-rainy" shorten to a single word.
-    if (c == ' ' || c == '\t' || c == ',' || c == ';' || c == ':' || c == '/' || c == '-')
+    if (c == ' ' || c == '\t' || c == ',' || c == ';' || c == ':' || c == '/' ||
+        c == '-')
       break;
     out[i++] = c;
     p++;
@@ -1120,14 +1123,15 @@ static void make_short_condition_cstr(const char* weather, char* out, size_t out
 
 static void draw_header_time(const char* time_str) {
   // Draw centered time within HEADER_CENTER box to avoid overlapping the version
-  int rect2[4] = {HEADER_CENTER[0], static_cast<int16_t>(HEADER_CENTER[1] + TOP_Y_OFFSET),
+  int rect2[4] = {HEADER_CENTER[0],
+                  static_cast<int16_t>(HEADER_CENTER[1] + TOP_Y_OFFSET),
                   HEADER_CENTER[2], HEADER_CENTER[3]};
   draw_in_region(rect2, [&](int16_t xx, int16_t yy, int16_t ww, int16_t hh) {
-    display.setTextColor(GxEPD_BLACK);
+    display.setTextColor(GxEPD_BLACK);  // comment spacing fix
     display.setTextSize(1);
     int16_t tw = text_width_default_font(time_str, 1);
     int16_t rx = static_cast<int16_t>(xx + (ww - tw) / 2);
-    int16_t by = yy + hh - 3; // baseline nudge up to align with room name
+    int16_t by = yy + hh - 3;  // baseline nudge up to align with room name
     display.setCursor(rx, by);
     display.print(time_str);
   });
