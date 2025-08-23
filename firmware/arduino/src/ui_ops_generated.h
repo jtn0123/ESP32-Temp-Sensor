@@ -6,58 +6,47 @@
 
 namespace ui {
 enum RectId {
-  RECT_FOOTER_L,
-  RECT_FOOTER_R,
-  RECT_HEADER_CENTER,
-  RECT_HEADER_NAME,
-  RECT_HEADER_TIME,
-  RECT_INSIDE_RH,
-  RECT_INSIDE_TEMP,
-  RECT_INSIDE_TIME,
-  RECT_OUT_ICON,
-  RECT_OUT_ROW1_L,
-  RECT_OUT_ROW1_R,
-  RECT_OUT_ROW2_L,
-  RECT_OUT_ROW2_R,
-  RECT_OUT_TEMP,
-  RECT_STATUS,
-  RECT__COUNT,
+    RECT_FOOTER_L,
+    RECT_FOOTER_R,
+    RECT_HEADER_CENTER,
+    RECT_HEADER_NAME,
+    RECT_HEADER_TIME,
+    RECT_INSIDE_RH,
+    RECT_INSIDE_TEMP,
+    RECT_INSIDE_TIME,
+    RECT_OUT_ICON,
+    RECT_OUT_ROW1_L,
+    RECT_OUT_ROW1_R,
+    RECT_OUT_ROW2_L,
+    RECT_OUT_ROW2_R,
+    RECT_OUT_TEMP,
+    RECT_STATUS,
+    RECT__COUNT,
 };
 
 enum FontId {
-  FONT_BIG,
-  FONT_LABEL,
-  FONT_SMALL,
-  FONT_TIME,
-  FONT__COUNT,
+    FONT_BIG,
+    FONT_LABEL,
+    FONT_SMALL,
+    FONT_TIME,
+    FONT__COUNT,
 };
 
-enum Align { ALIGN_LEFT = 0, ALIGN_RIGHT = 1, ALIGN_CENTER = 2 };
+enum Align { ALIGN_LEFT=0, ALIGN_RIGHT=1, ALIGN_CENTER=2 };
 
 enum UiOpKind {
-  OP_BATTERYGLYPH,
-  OP_ICONIN,
-  OP_LABELCENTERED,
-  OP_LINE,
-  OP_SHORTCONDITION,
-  OP_TEMPGROUPCENTERED,
-  OP_TEXT,
-  OP_TEXTCENTEREDIN,
-  OP_TIMERIGHT,
+    OP_BATTERYGLYPH,
+    OP_ICONIN,
+    OP_LABELCENTERED,
+    OP_LINE,
+    OP_SHORTCONDITION,
+    OP_TEMPGROUPCENTERED,
+    OP_TEXT,
+    OP_TEXTCENTEREDIN,
+    OP_TIMERIGHT,
 };
 
-struct UiOpHeader {
-  uint8_t kind;
-  uint8_t rect;
-  uint8_t font;
-  uint8_t align;
-  int16_t p0;
-  int16_t p1;
-  int16_t p2;
-  int16_t p3;
-  const char* s0;
-  const char* s1;
-};
+struct UiOpHeader { uint8_t kind; uint8_t rect; uint8_t font; uint8_t align; int16_t p0; int16_t p1; int16_t p2; int16_t p3; const char* s0; const char* s1; };
 
 static constexpr const char* kVariantNames[] = {
     "v1",
@@ -67,16 +56,32 @@ static constexpr const char* kVariantNames[] = {
 };
 
 static constexpr const char* kVariant_v1_components[] = {
-    "chrome", "header", "inside", "outside", "footer_split",
+    "chrome",
+    "header",
+    "inside",
+    "outside",
+    "footer_split",
 };
 static constexpr const char* kVariant_v1_missing_all_components[] = {
-    "chrome", "header", "inside_missing", "outside_missing", "footer_weather_missing",
+    "chrome",
+    "header",
+    "inside_missing",
+    "outside_missing",
+    "footer_weather_missing",
 };
 static constexpr const char* kVariant_v1_missing_inside_components[] = {
-    "chrome", "header", "inside_missing", "outside", "footer_split",
+    "chrome",
+    "header",
+    "inside_missing",
+    "outside",
+    "footer_split",
 };
 static constexpr const char* kVariant_v1_missing_outside_components[] = {
-    "chrome", "header", "inside", "outside_missing", "footer_weather_missing",
+    "chrome",
+    "header",
+    "inside",
+    "outside_missing",
+    "footer_weather_missing",
 };
 
 static constexpr int kComponent_chrome_opcount = 6;
@@ -90,11 +95,7 @@ static constexpr int kComponent_outside_missing_opcount = 4;
 static constexpr int kComponent_footer_weather_missing_opcount = 1;
 static constexpr int kTotalOpCount = 35;
 
-struct ComponentOps {
-  const UiOpHeader* ops;
-  int count;
-  const char* name;
-};
+struct ComponentOps { const UiOpHeader* ops; int count; const char* name; };
 extern const ComponentOps kVariant_v1_ops[];
 extern const int kVariant_v1_ops_count;
 extern const ComponentOps kVariant_v1_missing_all_ops[];

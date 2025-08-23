@@ -50,8 +50,8 @@ struct OutsideReadings {
   float humidityPct = NAN;
   char weather[64];
   // OpenWeatherMap single primary item support
-  int weatherId = 0;    // OWM weather[0].id
-  char weatherDesc[64]; // OWM weather[0].description
+  int weatherId = 0;     // OWM weather[0].id
+  char weatherDesc[64];  // OWM weather[0].description
   char weatherIcon[8];  // OWM weather[0].icon (e.g., "10n")
   float windMps = NAN;
   float highTempC = NAN;
@@ -70,7 +70,7 @@ struct OutsideReadings {
 static WiFiClient g_wifi_client;
 static PubSubClient g_mqtt(g_wifi_client);
 static OutsideReadings g_outside;
-// Flag set when any outside MQTT field changes; consumed by UI to trigger full refresh
+// Flag set when any outside MQTT field changes; consumed by UI to trigger
 static volatile bool g_outside_dirty = false;
 inline bool net_consume_outside_dirty() {
   bool was = g_outside_dirty;
@@ -95,8 +95,8 @@ inline bool parse_bssid(const char* str, uint8_t out[6]) {
   if (!str)
     return false;
   int vals[6];
-  int n =
-      sscanf(str, "%x:%x:%x:%x:%x:%x", &vals[0], &vals[1], &vals[2], &vals[3], &vals[4], &vals[5]);
+  int n = sscanf(str, "%x:%x:%x:%x:%x:%x", &vals[0], &vals[1], &vals[2],
+                  &vals[3], &vals[4], &vals[5]);
   if (n != 6)
     return false;
   for (int i = 0; i < 6; ++i)
@@ -187,11 +187,11 @@ inline bool ends_with(const char* s, const char* suffix) {
 
 // -------------------- Time sync (SNTP) --------------------
 #ifndef TIME_FRESH_EPOCH_MIN
-#define TIME_FRESH_EPOCH_MIN 1609459200UL // 2021-01-01,
+#define TIME_FRESH_EPOCH_MIN 1609459200UL  // 2021-01-01,
 //     anything earlier considered stale
 #endif
 #ifndef TIME_RESYNC_INTERVAL_SEC
-#define TIME_RESYNC_INTERVAL_SEC (24UL * 60UL * 60UL) // once per day
+#define TIME_RESYNC_INTERVAL_SEC (24UL * 60UL * 60UL)  // once per day
 #endif
 
 inline bool time_is_stale() {
@@ -234,7 +234,7 @@ inline void ensure_time_synced_if_stale() {
 
 // -------------------- Offline buffer (NVS ring) --------------------
 #ifndef OFFLINE_CAPACITY
-#define OFFLINE_CAPACITY 96U // number of samples to retain when offline
+#define OFFLINE_CAPACITY 96U  // number of samples to retain when offline
 #endif
 #ifndef OFFLINE_DRAIN_MAX_PER_WAKE
 #define OFFLINE_DRAIN_MAX_PER_WAKE 64U

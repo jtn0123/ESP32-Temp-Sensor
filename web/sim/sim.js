@@ -666,10 +666,13 @@
           base.rects.OUT_ROW1_R  = [RIGHT_X + 52, ROW1_Y, 52, ROW_H];
           base.rects.OUT_ROW2_L  = [RIGHT_X, ROW2_Y, 48, ROW_H];
           base.rects.OUT_ROW2_R  = [RIGHT_X + 52, ROW2_Y, 48, ROW_H];
-          base.rects.OUT_ICON    = [RIGHT_X + RIGHT_W - 28, TEMP_Y - 4, 28, 28];
+          // Weather icon and bar live in the footer in v2; keep an explicit rect for overlays
+          base.rects.WEATHER_BAR = [RIGHT_X, FOOTER_Y, RIGHT_W, FOOTER_H];
+          base.rects.OUT_ICON    = [RIGHT_X + 8, FOOTER_Y + Math.max(0, Math.floor((FOOTER_H - 22)/2)), 22, 22];
 
-          base.rects.FOOTER_L    = [LEFT_X, FOOTER_Y, 160, FOOTER_H];
-          base.rects.FOOTER_R    = [RIGHT_X + (RIGHT_W - 72), FOOTER_Y, 72, FOOTER_H];
+          // Footer columns align exactly to the column widths
+          base.rects.FOOTER_L    = [LEFT_X, FOOTER_Y, LEFT_W, FOOTER_H];
+          base.rects.FOOTER_R    = [RIGHT_X, FOOTER_Y, RIGHT_W, FOOTER_H];
           base.rects.STATUS      = [LEFT_X, FOOTER_Y + FOOTER_H - 12, 238, 12];
 
           // Adjust chrome lines to match grid
@@ -684,6 +687,9 @@
               { op: 'line', from: [1, FOOTER_Y], to: [249, FOOTER_Y] }
             ];
           }
+          // Add explicit label boxes for overlay clarity
+          base.rects.INSIDE_LABEL_BOX = [LEFT_X, TEMP_Y - 12, LEFT_W, 12];
+          base.rects.OUT_LABEL_BOX = [RIGHT_X, TEMP_Y - 12, RIGHT_W, 12];
           // Adjust fonts: big:26, label:12, small:10, time:10
           if (!base.fonts) base.fonts = {};
           if (!base.fonts.tokens) base.fonts.tokens = {};
