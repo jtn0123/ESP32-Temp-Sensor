@@ -524,12 +524,63 @@
   if (specOnlyEl){ specOnlyEl.checked = true; specOnlyEl.disabled = true; }
   const variantSel = document.getElementById('variantMode');
   if (variantSel){
+    // Populate variants from UI_SPEC if available
+    try {
+      const spec = (typeof window !== 'undefined') ? window.UI_SPEC : null;
+      if (spec && spec.variants){
+        const known = new Set([...variantSel.options].map(o=>o.value));
+        Object.keys(spec.variants).forEach(name=>{
+          if (!known.has(name)){
+            const opt = document.createElement('option');
+            opt.value = name; opt.textContent = name; variantSel.appendChild(opt);
+          }
+        });
+      }
+    } catch(e) {}
     const currentVar = QS.get('variant') || (window.UI_SPEC && window.UI_SPEC.defaultVariant) || 'v1';
     try { if ([...variantSel.options].some(o=>o.value===currentVar)) variantSel.value = currentVar; } catch(e) {}
     variantSel.addEventListener('change', ()=>{
       const url = new URL(window.location.href);
       if (variantSel.value) url.searchParams.set('variant', variantSel.value); else url.searchParams.delete('variant');
       window.location.replace(url.toString());
+    });
+  }
+  // Presets
+  const presetSel = document.getElementById('presetMode');
+  if (presetSel){
+    presetSel.addEventListener('change', ()=>{
+      const preset = presetSel.value || 'normal';
+      const base = { ...DEFAULTS };
+      switch(preset){
+        case 'low_batt':
+          base.battery_percent = 12;
+          base.battery_voltage = 3.42;
+          break;
+        case 'no_mqtt':
+          // simulate missing outside: use variant if present
+          if (window.UI_SPEC && window.UI_SPEC.variants && window.UI_SPEC.variants['v1_missing_outside']){
+            const url = new URL(window.location.href);
+            url.searchParams.set('variant','v1_missing_outside');
+            history.replaceState({},'',url.toString());
+          }
+          base.weather = '';
+          base.outside_temp_f = '';
+          base.outside_hum_pct = '';
+          break;
+        case 'extreme':
+          base.inside_temp_f = -10.2;
+          base.outside_temp_f = 109.9;
+          base.outside_hum_pct = 5;
+          base.wind_mph = 99.9;
+          break;
+        case 'long_city':
+          base.room_name = 'Extremely Long Room Name Example That Wraps';
+          break;
+        default:
+          // normal
+          break;
+      }
+      draw(base);
     });
   }
   load();

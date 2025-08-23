@@ -1170,7 +1170,8 @@ static void draw_status_line(const BatteryStatus& bs, const char* ip_cstr) {
       int16_t fillw = static_cast<int16_t>(
           ((bw - 2) * (bs.percent / 100.0f) + 0.5f));
       if (fillw > 0)
-        display.fillRect(static_cast<int16_t>(bx + 1), static_cast<int16_t>(by + 1), fillw,
+        display.fillRect(static_cast<int16_t>(bx + 1),
+                         static_cast<int16_t>(by + 1), fillw,
                          static_cast<int16_t>(bh - 2), GxEPD_BLACK);
       cx = static_cast<int16_t>(cx + bw + 6);
     }
@@ -1196,7 +1197,8 @@ static void draw_status_line(const BatteryStatus& bs, const char* ip_cstr) {
   });
 }
 
-static inline void draw_status_line_direct(const BatteryStatus& bs, const char* ip_cstr) {
+static inline void draw_status_line_direct(const BatteryStatus& bs,
+                                           const char* ip_cstr) {
   int16_t xx = STATUS_[0];
   int16_t yy = static_cast<int16_t>(STATUS_[1] + STATUS_Y_ADJ);
   int16_t ww = STATUS_[2];
@@ -1211,11 +1213,14 @@ static inline void draw_status_line_direct(const BatteryStatus& bs, const char* 
     int16_t bw2 = 13;
     int16_t bh2 = 7;
     display.drawRect(bx, by, bw2, bh2, GxEPD_BLACK);
-    display.fillRect(static_cast<int16_t>(bx + bw2), static_cast<int16_t>(by + 2), 2, 3,
+    display.fillRect(static_cast<int16_t>(bx + bw2),
+                     static_cast<int16_t>(by + 2), 2, 3,
                      GxEPD_BLACK);
-    int16_t fillw = static_cast<int16_t>(((bw2 - 2) * (bs.percent / 100.0f) + 0.5f));
+    int16_t fillw = static_cast<int16_t>(
+        ((bw2 - 2) * (bs.percent / 100.0f) + 0.5f));
     if (fillw > 0)
-      display.fillRect(static_cast<int16_t>(bx + 1), static_cast<int16_t>(by + 1), fillw,
+      display.fillRect(static_cast<int16_t>(bx + 1),
+                       static_cast<int16_t>(by + 1), fillw,
                        static_cast<int16_t>(bh2 - 2), GxEPD_BLACK);
     cx = static_cast<int16_t>(cx + bw2 + 6);
   }
@@ -1228,10 +1233,10 @@ static inline void draw_status_line_direct(const BatteryStatus& bs, const char* 
   char left_full[64];
   char left_nobatt[64];
   char left_tail[32];
-  snprintf(left_full, sizeof(left_full), "Batt %.2fV %d%% | ~%dd", bs.voltage, bs.percent,
-           bs.estimatedDays);
-  snprintf(left_nobatt, sizeof(left_nobatt), "%.2fV %d%% | ~%dd", bs.voltage, bs.percent,
-           bs.estimatedDays);
+  snprintf(left_full, sizeof(left_full), "Batt %.2fV %d%% | ~%dd", bs.voltage,
+           bs.percent, bs.estimatedDays);
+  snprintf(left_nobatt, sizeof(left_nobatt), "%.2fV %d%% | ~%dd", bs.voltage,
+           bs.percent, bs.estimatedDays);
   snprintf(left_tail, sizeof(left_tail), "%d%% | ~%dd", bs.percent, bs.estimatedDays);
   int16_t available = static_cast<int16_t>(rx - cx - 2);
   const char* to_print = left_full;
