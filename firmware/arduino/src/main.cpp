@@ -56,17 +56,22 @@ static void draw_weather_icon_region_at_from_outside(int16_t x, int16_t y,
                                                      int16_t w, int16_t h,
                                                      const OutsideReadings& o);
 // Footer-only weather updater to keep geometry consistent with full renders
-static void partial_update_footer_weather_from_outside(const OutsideReadings& o);
+static void partial_update_footer_weather_from_outside(
+    const OutsideReadings& o);
 static void draw_header_time(const char* time_str);
 // Accessor to avoid forward reference ordering issues
 static inline float get_last_outside_f();
-static bool maybe_redraw_status(const BatteryStatus& bs, const char* ip_cstr, const int rect[4]);
+static bool maybe_redraw_status(const BatteryStatus& bs, const char* ip_cstr,
+                                const int rect[4]);
 template <typename DrawFnFwd>
 static inline void draw_in_region(const int rect[4], DrawFnFwd drawFn);
-static inline int16_t text_width_default_font(const char* s, uint8_t size);
+static inline int16_t text_width_default_font(const char* s,
+                                              uint8_t size);
 // Forward decls used by spec renderer implemented earlier in the file
-static inline void draw_temp_number_and_units(const int rect[4], const char* temp_f);
-static void make_short_condition_cstr(const char* weather, char* out, size_t out_size);
+static inline void draw_temp_number_and_units(const int rect[4],
+                                              const char* temp_f);
+static void make_short_condition_cstr(const char* weather, char* out,
+                                      size_t out_size);
 // Remove duplicate non-inline declaration to avoid separate symbol
 #if USE_UI_SPEC
 // Minimal spec interpreter (full-window only) for variant rendering
@@ -129,8 +134,8 @@ static void draw_from_spec_full(uint8_t variantId) {
 #define EINK_RST -1  // FeatherWing ties panel reset to Feather RESET
 #endif
 #ifndef EINK_BUSY
-#define EINK_BUSY                                                                                  \
-  -1 // FeatherWing BUSY not connected; use -1 so library times
+#define EINK_BUSY                                                           \
+  -1  // FeatherWing BUSY not connected; use -1 so library times
      // waits
 #endif
 
@@ -170,8 +175,10 @@ static void draw_from_spec_full_impl(uint8_t variantId) {
   using ui::UiOpHeader;
   int comp_count = 0;
   const ComponentOps* comps = get_variant_ops(variantId, &comp_count);
-  display.drawRect(0, 0, EINK_WIDTH, EINK_HEIGHT, GxEPD_BLACK);
-  display.drawLine(1, 16 + TOP_Y_OFFSET, EINK_WIDTH - 2, 16 + TOP_Y_OFFSET, GxEPD_BLACK);
+  display.drawRect(0, 0, EINK_WIDTH, EINK_HEIGHT,
+                   GxEPD_BLACK);
+  display.drawLine(1, 16 + TOP_Y_OFFSET, EINK_WIDTH - 2, 16 + TOP_Y_OFFSET,
+                   GxEPD_BLACK);
   display.drawLine(125, 18 + TOP_Y_OFFSET, 125, EINK_HEIGHT - 2, GxEPD_BLACK);
   for (int ci = 0; ci < comp_count; ++ci) {
     const ComponentOps& co = comps[ci];
