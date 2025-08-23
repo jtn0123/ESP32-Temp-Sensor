@@ -150,7 +150,7 @@ static void draw_from_spec_full(uint8_t variantId) {
 #define EINK_RST -1  // FeatherWing ties panel reset to Feather RESET
 #endif
 #ifndef EINK_BUSY
-#define EINK_BUSY                                                                                  \
+#define EINK_BUSY                                                            \
   -1  // FeatherWing BUSY not connected; use -1 so library times
      // waits
 #endif
