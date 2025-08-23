@@ -436,16 +436,20 @@ static inline void nvs_load_cache_if_unset() {
   g_full_only_mode = g_prefs.getUChar("full_only", 0) != 0;
   // Remove legacy ui_variant preference; single UI variant remains
 }
-static inline void nvs_store_float(const char* key, float v) { g_prefs.putFloat(key, v); }
-static inline void nvs_store_int(const char* key, int32_t v) { g_prefs.putInt(key, v); }
-static inline void nvs_store_uint(const char* key, uint32_t v) { g_prefs.putUInt(key, v); }
+static inline void nvs_store_float(const char* key, float v) {
+  g_prefs.putFloat(key, v);
+}
+static inline void nvs_store_int(const char* key, int32_t v) {
+  g_prefs.putInt(key, v);
+}
+static inline void nvs_store_uint(const char* key, uint32_t v) {
+  g_prefs.putUInt(key, v);
+}
 
-static constexpr float THRESH_TEMP_F = 0.2f; //
-                                             //     redraw/publish threshold in F
-static constexpr float THRESH_TEMP_C_FROM_F = THRESH_TEMP_F / 1.8f; //
-                                                                    //     ~0.111C
+static constexpr float THRESH_TEMP_F = 0.2f;  // redraw/publish threshold in F
+static constexpr float THRESH_TEMP_C_FROM_F = THRESH_TEMP_F / 1.8f;  // ~0.111C
 static constexpr float THRESH_RH = 1.0f;        // percent
-static constexpr float THRESH_PRESS_HPA = 0.5f; // hPa
+static constexpr float THRESH_PRESS_HPA = 0.5f;  // hPa
 
 // Timeout tracking for wake phases
 static uint32_t s_timeouts_mask = 0;
@@ -462,7 +466,8 @@ static const char* wakeup_cause_str(esp_sleep_wakeup_cause_t c);
 static inline void print_boot_diagnostics() {
   Serial.printf("Reset: %s, Wake: %s\n", reset_reason_str(esp_reset_reason()),
                 wakeup_cause_str(esp_sleep_get_wakeup_cause()));
-  Serial.printf("Heap: free=%u min=%u\n", static_cast<unsigned>(esp_get_free_heap_size()),
+  Serial.printf("Heap: free=%u min=%u\n",
+                static_cast<unsigned>(esp_get_free_heap_size()),
                 static_cast<unsigned>(esp_get_minimum_free_heap_size()));
 }
 
@@ -510,10 +515,11 @@ static void pump_network_ms(uint32_t duration_ms) {
 #endif
 #endif
 
-static Adafruit_NeoPixel s_statusPixel(1, STATUS_PIXEL_PIN, NEO_GRB + NEO_KHZ800);
+static Adafruit_NeoPixel s_statusPixel(1, STATUS_PIXEL_PIN,
+                                       NEO_GRB + NEO_KHZ800);
 static uint32_t s_lastPixelMs = 0;
 static uint8_t s_hue = 0;
-static uint8_t s_breath = 0; // brightness phase for subtle breathing
+static uint8_t s_breath = 0;  // brightness phase for subtle breathing
 
 static uint32_t color_wheel(uint8_t pos) {
   pos = 255 - pos;
@@ -542,15 +548,17 @@ static inline void status_pixel_off() {
 static inline void status_pixel_tick() {
   uint32_t now = millis();
   if (now - s_lastPixelMs < 40)
-    return; // slower update for smooth, slow cycle
+    return;  // slower update for smooth, slow cycle
   s_lastPixelMs = now;
   s_hue++;
   s_breath++;
   // Triangle wave 0..127..0 mapped to brightness range
-  uint8_t amp = (s_breath < 128) ? s_breath : static_cast<uint8_t>(255 - s_breath);
+  uint8_t amp = (s_breath < 128) ? s_breath
+                                 : static_cast<uint8_t>(255 - s_breath);
   const uint8_t minB = 8;
   const uint8_t maxB = 64;
-  uint8_t level = static_cast<uint8_t>(minB + (static_cast<uint16_t>(amp) * (maxB - minB) / 127));
+  uint8_t level = static_cast<uint8_t>(minB +
+                                       (static_cast<uint16_t>(amp) * (maxB - minB) / 127));
   // Occasional brief flash for a bit of flair
   if ((s_hue & 0x3F) == 0)
     level = maxB;
