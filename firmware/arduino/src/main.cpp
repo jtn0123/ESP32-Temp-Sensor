@@ -754,7 +754,8 @@ static void handle_serial_command_line(const String& line) {
       Serial.println(F("ptest: status done"));
     } else if (which == "header_time") {
       // Draw a test time string in header time region
-      draw_in_region(HEADER_TIME, [&](int16_t xx, int16_t yy, int16_t ww, int16_t hh) {
+      draw_in_region(HEADER_TIME,
+                     [&](int16_t xx, int16_t yy, int16_t ww, int16_t hh) {
         display.setTextColor(GxEPD_BLACK);
         display.setTextSize(1);
         int16_t rx = xx + ww - 2 - text_width_default_font("10:32", 1);
@@ -891,13 +892,17 @@ static void draw_static_chrome() {
   // Frame and header linework
   display.fillScreen(GxEPD_WHITE);
   // Draw outer border flush to panel extents
-  display.drawRect(0, 0, EINK_WIDTH, EINK_HEIGHT, GxEPD_BLACK);
+  display.drawRect(0, 0, EINK_WIDTH, EINK_HEIGHT,
+                   GxEPD_BLACK);
   // Header underline aligned with simulator and other draw paths
-  display.drawLine(1, 22 + TOP_Y_OFFSET, EINK_WIDTH - 2, 22 + TOP_Y_OFFSET, GxEPD_BLACK);
+  display.drawLine(1, 22 + TOP_Y_OFFSET, EINK_WIDTH - 2, 22 + TOP_Y_OFFSET,
+                   GxEPD_BLACK);
   // Extend the center divider to the bottom frame to match the simulator
-  display.drawLine(125, 18 + TOP_Y_OFFSET, 125, EINK_HEIGHT - 2, GxEPD_BLACK);
+  display.drawLine(125, 18 + TOP_Y_OFFSET, 125, EINK_HEIGHT - 2,
+                   GxEPD_BLACK);
   // Single header underline between header and content
-  display.drawLine(1, 16 + TOP_Y_OFFSET, EINK_WIDTH - 2, 16 + TOP_Y_OFFSET, GxEPD_BLACK);
+  display.drawLine(1, 16 + TOP_Y_OFFSET, EINK_WIDTH - 2, 16 + TOP_Y_OFFSET,
+                   GxEPD_BLACK);
   // Horizontal rule for footer region (drawn at top edge of footer)
   display.drawLine(1, FOOTER_L[1], EINK_WIDTH - 2, FOOTER_L[1], GxEPD_BLACK);
 
@@ -914,8 +919,9 @@ static void draw_static_chrome() {
   display.setCursor(131, 22 + TOP_Y_OFFSET);
   display.print(F("OUTSIDE"));
   // Top-right version string within HEADER_TIME box
-  display.setCursor(HEADER_TIME[0] + HEADER_TIME[2] - 2 - text_width_default_font("v", 1) -
-                        text_width_default_font(FW_VERSION, 1),
+  display.setCursor(HEADER_TIME[0] + HEADER_TIME[2] - 2 -
+                    text_width_default_font("v", 1) -
+                    text_width_default_font(FW_VERSION, 1),
                     HEADER_TIME[1] + TOP_Y_OFFSET + HEADER_TIME[3] - 8);
   display.print(F("v"));
   display.print(FW_VERSION);
@@ -945,7 +951,7 @@ static inline void draw_in_region(const int rect[4],
   // panels
   // to avoid controller rejects or missing updates on unaligned windows.
   int16_t ax = x & ~0x07;
-  int16_t ar = x + w; // right edge (exclusive)
+  int16_t ar = x + w;  // right edge (exclusive)
   int16_t aw = static_cast<int16_t>(((ar - ax) + 7) & ~0x07);
   display.setPartialWindow(ax, y, aw, h);
   display.firstPage();
@@ -959,8 +965,10 @@ static inline void draw_in_region(const int rect[4],
   } while (display.nextPage());
 }
 
-static inline void draw_right_aligned_text_in_rect(const int rect[4], const char* text,
-                                                   uint8_t textSize, int16_t paddingRight,
+static inline void draw_right_aligned_text_in_rect(const int rect[4],
+                                                   const char* text,
+                                                   uint8_t textSize,
+                                                   int16_t paddingRight,
                                                    int16_t baselineOffset) {
   draw_in_region(rect, [&](int16_t x, int16_t y, int16_t w, int16_t h) {
     display.setTextColor(GxEPD_BLACK);
@@ -973,10 +981,11 @@ static inline void draw_right_aligned_text_in_rect(const int rect[4], const char
   });
 }
 
-static inline void draw_temp_number_and_units(const int rect[4], const char* temp_f) {
+static inline void draw_temp_number_and_units(const int rect[4],
+                                              const char* temp_f) {
   // Reserve a small units strip on the right so units do not shift as number
   // width changes
-  const int16_t units_w = 14; // pixels
+  const int16_t units_w = 14;  // pixels
   int num_rect[4] = {rect[0], rect[1], rect[2] - units_w, rect[3]};
   int units_rect[4] = {rect[0] + rect[2] - units_w, rect[1], units_w, rect[3]};
 
@@ -1004,7 +1013,8 @@ static inline void draw_temp_number_and_units(const int rect[4], const char* tem
 }
 
 // Direct draw variant for full-window paged renders (no nested partial pages)
-static inline void draw_temp_number_and_units_direct(int16_t x, int16_t y, int16_t w, int16_t h,
+static inline void draw_temp_number_and_units_direct(int16_t x, int16_t y,
+                                                     int16_t w, int16_t h,
                                                      const char* temp_f) {
   const int16_t units_w = 14;
   display.setTextColor(GxEPD_BLACK);
@@ -1012,8 +1022,10 @@ static inline void draw_temp_number_and_units_direct(int16_t x, int16_t y, int16
   int16_t x1, y1;
   uint16_t bw, bh;
   display.getTextBounds(temp_f, 0, 0, &x1, &y1, &bw, &bh);
-  int16_t targetX = static_cast<int16_t>(x + (w - units_w - static_cast<int16_t>(bw)) / 2);
-  int16_t targetY = static_cast<int16_t>(y + (h - static_cast<int16_t>(bh)) / 2);
+  int16_t targetX = static_cast<int16_t>(x + (w - units_w -
+                                             static_cast<int16_t>(bw)) / 2);
+  int16_t targetY = static_cast<int16_t>(y + (h -
+                                             static_cast<int16_t>(bh)) / 2);
   int16_t baseX = static_cast<int16_t>(targetX - x1);
   int16_t baseY = static_cast<int16_t>(targetY - y1);
   display.setCursor(baseX, baseY);
