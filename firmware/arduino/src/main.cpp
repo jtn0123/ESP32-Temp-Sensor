@@ -27,6 +27,22 @@
 #include "power.h"
 #include "sensors.h"
 
+// Constant aliases for backward compatibility
+#define HEADER_TIME RECT_HEADER_TIME
+#define HEADER_CENTER RECT_HEADER_CENTER
+#define INSIDE_TEMP RECT_INSIDE_TEMP
+#define INSIDE_RH RECT_INSIDE_RH
+#define INSIDE_TIME RECT_INSIDE_TIME
+#define OUT_TEMP RECT_OUT_TEMP
+#define OUT_ICON RECT_OUT_ICON
+#define OUT_ROW1_L RECT_OUT_ROW1_L
+#define OUT_ROW1_R RECT_OUT_ROW1_R
+#define OUT_ROW2_L RECT_OUT_ROW2_L
+#define OUT_ROW2_R RECT_OUT_ROW2_R
+#define FOOTER_L RECT_FOOTER_L
+#define FOOTER_R RECT_FOOTER_R
+#define STATUS_ RECT_STATUS_
+
 // Forward declaration for status pixel tick used in pump_network_ms
 #if USE_STATUS_PIXEL
 static inline void status_pixel_tick();
@@ -117,23 +133,25 @@ static inline const int* rect_ptr_by_id(uint8_t rid) {
 
 // Forward to implementation placed after display declaration
 static void draw_from_spec_full_impl(uint8_t variantId);
-static void draw_from_spec_full(uint8_t variantId) { draw_from_spec_full_impl(variantId); }
+static void draw_from_spec_full(uint8_t variantId) {
+  draw_from_spec_full_impl(variantId);
+}
 #endif
 #endif
 
 // Feather ESP32-S2 + 2.13" FeatherWing (adjust if needed)
 #ifndef EINK_CS
-#define EINK_CS 9 // D9
+#define EINK_CS 9  // D9
 #endif
 #ifndef EINK_DC
-#define EINK_DC 10 // D10
+#define EINK_DC 10  // D10
 #endif
 #ifndef EINK_RST
-#define EINK_RST -1 // FeatherWing ties panel reset to Feather RESET
+#define EINK_RST -1  // FeatherWing ties panel reset to Feather RESET
 #endif
 #ifndef EINK_BUSY
 #define EINK_BUSY                                                                                  \
-  -1 // FeatherWing BUSY not connected; use -1 so library times
+  -1  // FeatherWing BUSY not connected; use -1 so library times
      // waits
 #endif
 
