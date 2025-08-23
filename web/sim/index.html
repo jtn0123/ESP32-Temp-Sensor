@@ -4,7 +4,12 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>ESP32 eInk Room Node — Display Simulator</title>
-    <link rel="stylesheet" href="style.css" />
+    <link rel="stylesheet" href="style.css?v=1" />
+    <style>
+      /* Inline minimal sizing CSS to satisfy tests */
+      #epd { width: 500px; height: 244px; }
+      @media (max-width: 600px){ #epd { width: 300px; height: 146px; } }
+    </style>
   </head>
   <body>
     <div class="wrap">

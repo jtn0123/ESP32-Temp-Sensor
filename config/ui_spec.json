@@ -31,12 +31,13 @@
     { "match": ["pour", "rain", "shower"],        "icon": "weather-pouring" },
     { "match": ["snow"],                            "icon": "weather-snowy" },
     { "match": ["fog", "mist", "haze"],           "icon": "weather-fog" },
-    { "match": ["part"],                            "icon": "weather-partly-cloudy" },
+    { "match": ["part", "partly", "partly-cloudy"],                            "icon": "weather-partly-cloudy" },
     { "match": ["cloud", "overcast"],              "icon": "weather-cloudy" },
     { "match": ["night", "clear-night"],           "icon": "weather-night" },
     { "match": ["wind"],                            "icon": "weather-windy-variant" },
     { "match": ["hail"],                            "icon": "weather-snowy" },
     { "match": ["exceptional"],                     "icon": "weather-cloudy" },
+    { "match": ["sunny", "clear"],                "icon": "weather-sunny" },
     { "default": true,                               "icon": "weather-sunny" }
   ],
   "components": {

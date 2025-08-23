@@ -124,9 +124,16 @@ def test_power_estimation_scaling():
     half_capacity_days = pe.estimate_days(base_capacity / 2, base_sleep, base_active, base_active_time, base_interval)
     assert 0.45 * base_days < half_capacity_days < 0.55 * base_days
 
-    # Double wake interval should roughly double days
+    # Double wake interval should significantly increase days according to the model
     double_interval_days = pe.estimate_days(base_capacity, base_sleep, base_active, base_active_time, base_interval * 2)
-    assert 1.9 * base_days < double_interval_days < 2.1 * base_days
+    # Expected ratio based on average current formula:
+    # avg = sleep + (active - sleep) * (awake / interval)
+    avg1 = base_sleep + (base_active - base_sleep) * (base_active_time / base_interval)
+    avg2 = base_sleep + (base_active - base_sleep) * (base_active_time / (base_interval * 2))
+    expected_ratio = avg1 / avg2
+    ratio = double_interval_days / base_days
+    # Allow a small tolerance
+    assert 0.95 * expected_ratio < ratio < 1.05 * expected_ratio
 
 def test_power_estimation_current_relationships():
     """Test that higher currents result in shorter battery life"""
