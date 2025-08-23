@@ -3,28 +3,28 @@
   "canvas": { "w": 250, "h": 122 },
   "fonts": {
     "tokens": {
-      "big":   { "px": 26, "weight": "bold" },
-      "label": { "px": 12, "weight": "bold" },
+      "big":   { "px": 22, "weight": "bold" },
+      "label": { "px": 11, "weight": "bold" },
       "small": { "px": 10 },
-      "time":  { "px": 10 }
+      "time":  { "px": 11 }
     }
   },
   "rects": {
-    "HEADER_NAME": [12, 4, 160, 12],
-    "HEADER_TIME": [168, 4, 72, 12],
-    "HEADER_CENTER": [100, 4, 48, 12],
-    "INSIDE_TEMP": [12, 20, 116, 28],
-    "INSIDE_RH":   [12, 52, 116, 12],
-    "INSIDE_TIME": [12, 68, 116, 12],
-    "OUT_TEMP":    [132, 20, 106, 28],
-    "OUT_ICON":    [210, 16, 28, 28],
-    "OUT_ROW1_L":  [132, 52, 48, 12],
-    "OUT_ROW1_R":  [184, 52, 52, 12],
-    "OUT_ROW2_L":  [132, 68, 48, 12],
-    "OUT_ROW2_R":  [184, 68, 48, 12],
-    "FOOTER_L":    [12, 88, 116, 28],
-    "FOOTER_R":    [132, 88, 106, 28],
-    "STATUS":      [12, 104, 238, 12]
+    "HEADER_NAME": [6, 2, 160, 14],
+    "HEADER_TIME": [172, 2, 72, 14],
+    "HEADER_CENTER": [100, 2, 50, 14],
+    "INSIDE_TEMP": [6, 36, 118, 28],
+    "INSIDE_RH":   [6, 66, 118, 14],
+    "INSIDE_TIME": [6, 78, 118, 12],
+    "OUT_TEMP":    [129, 36, 94, 28],
+    "OUT_ICON":    [210, 22, 28, 28],
+    "OUT_ROW1_L":  [131, 68, 44, 12],
+    "OUT_ROW1_R":  [177, 68, 64, 12],
+    "OUT_ROW2_L":  [131, 78, 44, 12],
+    "OUT_ROW2_R":  [177, 78, 44, 12],
+    "FOOTER_L":    [6, 90, 160, 32],
+    "FOOTER_R":    [170, 90, 74, 32],
+    "STATUS":      [6, 112, 238, 10]
   },
   "iconMap": [
     { "match": ["storm", "thunder", "lightning"], "icon": "weather-lightning" },
@@ -46,17 +46,17 @@
       { "op": "line", "from": [0, 121], "to": [249, 121] },
       { "op": "line", "from": [0, 0],   "to": [0, 121] },
       { "op": "line", "from": [249, 0], "to": [249, 121] },
-      { "op": "line", "from": [128, 16], "to": [128, 121] },
-      { "op": "line", "from": [1, 88], "to": [249, 88] }
+      { "op": "line", "from": [125, 18], "to": [125, 121] },
+      { "op": "line", "from": [1, 92], "to": [249, 92] }
     ],
     "header_centered": [
-      { "op": "line", "from": [1, 16], "to": [249, 16] },
+      { "op": "line", "from": [1, 18], "to": [249, 18] },
       { "op": "text", "rect": "HEADER_NAME", "font": "label", "align": "left", "text": "{room_name}", "truncate": "ellipsis" },
       { "op": "textCenteredIn", "rect": "HEADER_CENTER", "yOffset": 1, "font": "time", "text": "{time_hhmm}" },
       { "op": "text", "rect": "HEADER_TIME", "font": "time", "align": "right", "text": "v{fw_version}" }
     ],
     "header": [
-      { "op": "line", "from": [1, 16], "to": [249, 16] },
+      { "op": "line", "from": [1, 18], "to": [249, 18] },
       { "op": "text", "rect": "HEADER_NAME", "font": "label", "align": "left", "text": "{room_name}", "truncate": "ellipsis" },
       { "op": "timeRight", "rect": "HEADER_TIME", "font": "time", "source": "{time_hhmm}" }
     ],

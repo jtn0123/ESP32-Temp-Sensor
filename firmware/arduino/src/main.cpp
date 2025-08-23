@@ -66,12 +66,14 @@ static void partial_update_outside_condition(const char* short_condition);
 static void partial_update_weather_icon(const char* weather);
 // New helpers: prefer OpenWeather fields (id/icon/desc) when available
 static void partial_update_weather_icon_from_outside(const OutsideReadings& o);
-static void draw_weather_icon_region_at(int16_t x, int16_t y, int16_t w, int16_t h,
-                                        const char* weather);
-static void draw_weather_icon_region_at_from_outside(int16_t x, int16_t y, int16_t w, int16_t h,
+static void draw_weather_icon_region_at(int16_t x, int16_t y, int16_t w,
+                                        int16_t h, const char* weather);
+static void draw_weather_icon_region_at_from_outside(int16_t x, int16_t y,
+                                                     int16_t w, int16_t h,
                                                      const OutsideReadings& o);
 // Footer-only weather updater to keep geometry consistent with full renders
-static void partial_update_footer_weather_from_outside(const OutsideReadings& o);
+static void partial_update_footer_weather_from_outside(
+    const OutsideReadings& o);
 static void draw_header_time(const char* time_str);
 // Accessor to avoid forward reference ordering issues
 static inline float get_last_outside_f();

@@ -653,10 +653,15 @@
           base.rects.HEADER_CENTER = [100, HEADER_Y, 48, HEADER_H];
 
           base.rects.INSIDE_TEMP = [LEFT_X, TEMP_Y, LEFT_W, TEMP_H];
+          // Inner content and badge areas to avoid overlap/stacking
+          base.rects.INSIDE_TEMP_INNER = [LEFT_X + 4, TEMP_Y + 2, LEFT_W - 28, TEMP_H - 4];
+          base.rects.INSIDE_TEMP_BADGE = [LEFT_X + LEFT_W - 20, TEMP_Y + 6, 16, 12];
           base.rects.INSIDE_RH   = [LEFT_X, ROW1_Y, LEFT_W, ROW_H];
           base.rects.INSIDE_TIME = [LEFT_X, ROW2_Y, LEFT_W, ROW_H];
 
           base.rects.OUT_TEMP    = [RIGHT_X, TEMP_Y, RIGHT_W, TEMP_H];
+          base.rects.OUT_TEMP_INNER = [RIGHT_X + 4, TEMP_Y + 2, RIGHT_W - 28, TEMP_H - 4];
+          base.rects.OUT_TEMP_BADGE = [RIGHT_X + RIGHT_W - 20, TEMP_Y + 6, 16, 12];
           base.rects.OUT_ROW1_L  = [RIGHT_X, ROW1_Y, 48, ROW_H];
           base.rects.OUT_ROW1_R  = [RIGHT_X + 52, ROW1_Y, 52, ROW_H];
           base.rects.OUT_ROW2_L  = [RIGHT_X, ROW2_Y, 48, ROW_H];
