@@ -9,9 +9,20 @@ def estimate_days(
     awake_seconds: float,
     interval_seconds: float,
 ) -> float:
+    # Guard against invalid inputs
+    if capacity_mAh <= 0:
+        return 0.0
+    if interval_seconds <= 0:
+        return 0.0
+    if active_current_mA < 0 or sleep_current_mA < 0:
+        return 0.0
+    if awake_seconds < 0:
+        return 0.0
+    # Clamp awake time to the interval bounds
+    clamped_awake = min(max(0.0, awake_seconds), interval_seconds)
     avg_mA = (
-        active_current_mA * awake_seconds
-        + sleep_current_mA * max(0.0, interval_seconds - awake_seconds)
+        active_current_mA * clamped_awake
+        + sleep_current_mA * max(0.0, interval_seconds - clamped_awake)
     ) / interval_seconds
     if avg_mA <= 0:
         return 0.0

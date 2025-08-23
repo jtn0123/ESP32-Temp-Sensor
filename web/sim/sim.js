@@ -368,17 +368,18 @@
 
   const DEFAULTS = {
     room_name: 'Office',
-    time: '10:32',
-    inside_temp: '72.5',
-    inside_hum: '47',
-    outside_temp: '68.4',
-    outside_hum: '53',
-    weather: 'Cloudy',
-    wind: '4.2',
-    percent: 76,
-    voltage: '4.01',
+    time_hhmm: '10:32',
+    inside_temp_f: 72.5,
+    inside_hum_pct: 47,
+    outside_temp_f: 68.4,
+    outside_hum_pct: 53,
+    weather: 'cloudy',
+    wind_mph: 4.2,
+    battery_percent: 76,
+    battery_voltage: 4.01,
     days: '128',
-    ip: '192.168.1.42'
+    ip: '192.168.1.42',
+    pressure_hpa: 1013.2
   };
   let lastData = { ...DEFAULTS };
 

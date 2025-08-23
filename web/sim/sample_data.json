@@ -1,17 +1,17 @@
 {
   "room_name": "Office",
-  "inside_temp": "72.5",
-  "inside_hum": "47",
-  "outside_temp": "68.4",
-  "outside_hum": "53",
-  "wind": "4.2",
+  "inside_temp_f": 72.5,
+  "inside_hum_pct": 47,
+  "outside_temp_f": 68.4,
+  "outside_hum_pct": 53,
+  "wind_mph": 4.2,
   "high": "75.0",
   "low": "60.0",
-  "weather": "Cloudy",
-  "time": "10:32",
+  "weather": "cloudy",
+  "time_hhmm": "10:32",
   "ip": "192.168.1.42",
-  "voltage": "4.01",
-  "percent": "76",
+  "battery_voltage": 4.01,
+  "battery_percent": 76,
   "days": "128"
   , "pressure_hpa": 1013.2
 }

@@ -3,7 +3,7 @@ wake_interval: "2h"           # 1h|2h|4h
 full_refresh_every: 12         # partials between full clears
 # Optional: firmware version string for HA device registry (sw_version). If not set,
 # it falls back to FW_VERSION env var, then `git describe` or short commit, else 'dev'.
-# fw_version: "1.0.0"
+fw_version: "1.0.0"
 outside_source: "mqtt"        # ha|mqtt (v1 defaults to MQTT)
 ha_entities:
   outdoor_temp: sensor.outdoor_temperature
@@ -33,6 +33,20 @@ wifi:
 thresholds:
   temp_degC: 0.1
   rh_pct: 1
+battery:
+  capacity_mAh: 3500
+  sleep_current_mA: 0.09
+  active_current_mA: 80
+  # If not using MAX17048, you can wire the battery to an ADC pin and set divider
+  # adc_pin: 5
+  # divider: 2.0
+  # adc_max: 4095
+  # adc_ref: 3.3
+  # Percentage threshold considered "low battery" for UI/alerts
+  low_pct: 20
+
+# Optional active duration for awake cycle in seconds (used by estimators/tests)
+active_seconds: 45
 battery:
   capacity_mAh: 3500
   sleep_current_mA: 0.09
