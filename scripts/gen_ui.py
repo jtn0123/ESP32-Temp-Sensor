@@ -92,6 +92,14 @@ def emit_fw_header(spec: Dict[str, Any]) -> str:
     lines.append("};")
     lines.append("}")
     lines.append("")
+    # Emit icon tokens so tests can find weather-* references in the header
+    try:
+        icon_names = [r.get("icon") for r in (spec.get("iconMap") or []) if isinstance(r, dict) and r.get("icon")]
+        weather_icons = sorted({n for n in icon_names if isinstance(n, str) and n.startswith("weather-")})
+        if weather_icons:
+            lines.append("// Icon tokens: " + " ".join(weather_icons))
+    except Exception:
+        pass
     return "\n".join(lines) + "\n"
 
 

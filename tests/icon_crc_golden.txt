@@ -15,4 +15,5 @@ weather_partly_cloudy_24x24_bits C1570E2C 72
 weather_pouring_24x24_bits 4F95CE8F 72
 weather_snowy_24x24_bits 6F8C551E 72
 weather_sunny_24x24_bits D6F65703 72
+weather_windy_variant_24x24_bits 06E30332 72
 
