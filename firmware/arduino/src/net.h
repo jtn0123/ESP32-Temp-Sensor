@@ -50,9 +50,9 @@ struct OutsideReadings {
   float humidityPct = NAN;
   char weather[64];
   // OpenWeatherMap single primary item support
-  int weatherId = 0;              // OWM weather[0].id
-  char weatherDesc[64];           // OWM weather[0].description
-  char weatherIcon[8];            // OWM weather[0].icon (e.g., "10n")
+  int weatherId = 0;    // OWM weather[0].id
+  char weatherDesc[64]; // OWM weather[0].description
+  char weatherIcon[8];  // OWM weather[0].icon (e.g., "10n")
   float windMps = NAN;
   float highTempC = NAN;
   float lowTempC = NAN;
@@ -187,11 +187,11 @@ inline bool ends_with(const char* s, const char* suffix) {
 
 // -------------------- Time sync (SNTP) --------------------
 #ifndef TIME_FRESH_EPOCH_MIN
-#define TIME_FRESH_EPOCH_MIN 1609459200UL  // 2021-01-01,
+#define TIME_FRESH_EPOCH_MIN 1609459200UL // 2021-01-01,
 //     anything earlier considered stale
 #endif
 #ifndef TIME_RESYNC_INTERVAL_SEC
-#define TIME_RESYNC_INTERVAL_SEC (24UL * 60UL * 60UL)  // once per day
+#define TIME_RESYNC_INTERVAL_SEC (24UL * 60UL * 60UL) // once per day
 #endif
 
 inline bool time_is_stale() {
@@ -234,7 +234,7 @@ inline void ensure_time_synced_if_stale() {
 
 // -------------------- Offline buffer (NVS ring) --------------------
 #ifndef OFFLINE_CAPACITY
-#define OFFLINE_CAPACITY 96U  // number of samples to retain when offline
+#define OFFLINE_CAPACITY 96U // number of samples to retain when offline
 #endif
 #ifndef OFFLINE_DRAIN_MAX_PER_WAKE
 #define OFFLINE_DRAIN_MAX_PER_WAKE 64U
@@ -408,18 +408,28 @@ inline void mqtt_callback(char* topic, uint8_t* payload, unsigned int length) {
     snprintf(cmdTopic, sizeof(cmdTopic), "%s/cmd", MQTT_PUB_BASE);
     if (strcmp(topic, cmdTopic) == 0) {
       String s = String(val);
-      s.trim(); s.toLowerCase();
+      s.trim();
+      s.toLowerCase();
       if (s == "ui_debug" || s == "ui") {
-        float tempF = (g_outside.validTemp && isfinite(g_outside.temperatureC)) ? (g_outside.temperatureC * 9.0f / 5.0f + 32.0f) : NAN;
+        float tempF = (g_outside.validTemp && isfinite(g_outside.temperatureC))
+                          ? (g_outside.temperatureC * 9.0f / 5.0f + 32.0f)
+                          : NAN;
         const char* w = (g_outside.validWeather && g_outside.weather[0]) ? g_outside.weather : NULL;
-        const char* wd = (g_outside.validWeatherDesc && g_outside.weatherDesc[0]) ? g_outside.weatherDesc : NULL;
-        const char* wi = (g_outside.validWeatherIcon && g_outside.weatherIcon[0]) ? g_outside.weatherIcon : NULL;
+        const char* wd =
+            (g_outside.validWeatherDesc && g_outside.weatherDesc[0]) ? g_outside.weatherDesc : NULL;
+        const char* wi =
+            (g_outside.validWeatherIcon && g_outside.weatherIcon[0]) ? g_outside.weatherIcon : NULL;
         char buf[256];
         snprintf(buf, sizeof(buf),
-                 "{\"event\":\"ui_debug\",\"outside\":{\"tempF\":%s,\"rhPct\":%s,\"windMps\":%s,\"weather\":%s,\"weatherId\":%d,\"weatherDesc\":%s,\"weatherIcon\":%s}}",
+                 "{\"event\":\"ui_debug\",\"outside\":{\"tempF\":%s,\"rhPct\":%s,\"windMps\":%s,"
+                 "\"weather\":%s,\"weatherId\":%d,\"weatherDesc\":%s,\"weatherIcon\":%s}}",
                  (isfinite(tempF) ? String(tempF, 1).c_str() : "null"),
-                 (g_outside.validHum && isfinite(g_outside.humidityPct) ? String(g_outside.humidityPct, 0).c_str() : "null"),
-                 (g_outside.validWind && isfinite(g_outside.windMps) ? String(g_outside.windMps, 1).c_str() : "null"),
+                 (g_outside.validHum && isfinite(g_outside.humidityPct)
+                      ? String(g_outside.humidityPct, 0).c_str()
+                      : "null"),
+                 (g_outside.validWind && isfinite(g_outside.windMps)
+                      ? String(g_outside.windMps, 1).c_str()
+                      : "null"),
                  (w ? (String("\"") + w + "\"").c_str() : "null"),
                  (g_outside.validWeatherId ? g_outside.weatherId : 0),
                  (wd ? (String("\"") + wd + "\"").c_str() : "null"),
@@ -496,10 +506,12 @@ inline void mqtt_callback(char* topic, uint8_t* payload, unsigned int length) {
     size_t j = 0;
     for (unsigned int i = 0; i < n && j < sizeof(buf) - 1; ++i) {
       char c = val[i];
-      if ((c >= '0' && c <= '9') || c == ':') buf[j++] = c;
+      if ((c >= '0' && c <= '9') || c == ':')
+        buf[j++] = c;
     }
     buf[j] = '\0';
-    if (strlen(buf) == 5 && buf[2] == ':' && isdigit(buf[0]) && isdigit(buf[1]) && isdigit(buf[3]) && isdigit(buf[4])) {
+    if (strlen(buf) == 5 && buf[2] == ':' && isdigit(buf[0]) && isdigit(buf[1]) &&
+        isdigit(buf[3]) && isdigit(buf[4])) {
       strncpy(g_time_hhmm, buf, sizeof(g_time_hhmm));
       g_time_hhmm[sizeof(g_time_hhmm) - 1] = '\0';
       g_have_time_from_mqtt = true;
@@ -633,10 +645,10 @@ static void ensure_wifi_connected_provisioned_impl() {
     char service_name[16];
     uint64_t mac = ESP.getEfuseMac();
     snprintf(service_name, sizeof(service_name), "PROV_%06X", (unsigned int)(mac & 0xFFFFFF));
-    const char* service_key = NULL;  // open softAP by default
+    const char* service_key = NULL; // open softAP by default
 #if WIFI_PROV_SECURITY == 1
     wifi_prov_security_t sec = WIFI_PROV_SECURITY_1;
-    const char* pop = "esp32-pop";  // customize via build flag if desired
+    const char* pop = "esp32-pop"; // customize via build flag if desired
 #else
     wifi_prov_security_t sec = WIFI_PROV_SECURITY_0;
     const char* pop = NULL;
@@ -669,7 +681,7 @@ static void ensure_wifi_connected_provisioned_impl() {
   // Attempt connection using creds in NVS
   start_wifi_station_connect_from_nvs(WIFI_CONNECT_TIMEOUT_MS);
 }
-#endif  // USE_WIFI_PROVISIONING
+#endif // USE_WIFI_PROVISIONING
 
 inline bool net_wifi_clear_provisioning() {
 #if USE_WIFI_PROVISIONING
@@ -762,7 +774,7 @@ inline void ensure_wifi_connected() {
   cfg.sta.scan_method = WIFI_FAST_SCAN;
   cfg.sta.threshold.rssi = WIFI_RSSI_THRESHOLD;
   cfg.sta.threshold.authmode = WIFI_AUTHMODE_THRESHOLD;
-  cfg.sta.channel = 0;  // do not hard-lock channel
+  cfg.sta.channel = 0; // do not hard-lock channel
   if (have_bssid) {
     memcpy(cfg.sta.bssid, prefer_bssid, 6);
     cfg.sta.bssid_set = 1;
@@ -923,7 +935,8 @@ inline void net_begin() {
 }
 
 inline void net_time_hhmm(char* out, size_t out_size) {
-  if (!out || out_size == 0) return;
+  if (!out || out_size == 0)
+    return;
   if (g_have_time_from_mqtt && g_time_hhmm[0] != '\0') {
     strncpy(out, g_time_hhmm, out_size);
     out[out_size - 1] = '\0';
@@ -1145,11 +1158,11 @@ inline void net_publish_ha_discovery() {
     // HA
     int suggestedPrecision = 0;
     if (strcmp(unit, "°F") == 0)
-      suggestedPrecision = 1;  // Fahrenheit: one decimal
+      suggestedPrecision = 1; // Fahrenheit: one decimal
     else if (strcmp(unit, "V") == 0)
-      suggestedPrecision = 2;  // Volts: two decimals
+      suggestedPrecision = 2; // Volts: two decimals
     else if (strcmp(unit, "hPa") == 0)
-      suggestedPrecision = 1;  // Pressure: one decimal
+      suggestedPrecision = 1; // Pressure: one decimal
                               //     else
     suggestedPrecision = 0;   // Percent and others: integer
     // Full HA discovery keys for maximum compatibility; retained

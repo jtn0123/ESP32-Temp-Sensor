@@ -71,31 +71,31 @@ inline BatteryStatus read_battery_status() {
 #if USE_MAX17048
   static bool s_maxfg_attempted = false;
   if (!g_maxfg_initialized && !s_maxfg_attempted) {
-    // Ensure I2C is initialized on the configured pins and clock before talking to MAX17048
-    // Some ESP32-S2 Feather variants gate I2C power; turn it on if available
-    #ifdef PIN_I2C_POWER
+// Ensure I2C is initialized on the configured pins and clock before talking to MAX17048
+// Some ESP32-S2 Feather variants gate I2C power; turn it on if available
+#ifdef PIN_I2C_POWER
     pinMode(PIN_I2C_POWER, OUTPUT);
     digitalWrite(PIN_I2C_POWER, HIGH);
-    #endif
-    #ifdef I2C_POWER
+#endif
+#ifdef I2C_POWER
     pinMode(I2C_POWER, OUTPUT);
     digitalWrite(I2C_POWER, HIGH);
-    #endif
-    #ifdef TFT_I2C_POWER
+#endif
+#ifdef TFT_I2C_POWER
     pinMode(TFT_I2C_POWER, OUTPUT);
     digitalWrite(TFT_I2C_POWER, HIGH);
-    #endif
-    #if defined(SDA) && defined(SCL)
+#endif
+#if defined(SDA) && defined(SCL)
     Wire.begin(SDA, SCL);
-    #else
+#else
     Wire.begin();
-    #endif
-    #ifdef I2C_TIMEOUT_MS
+#endif
+#ifdef I2C_TIMEOUT_MS
     Wire.setTimeOut(I2C_TIMEOUT_MS);
-    #endif
-    #ifdef I2C_CLOCK_HZ
+#endif
+#ifdef I2C_CLOCK_HZ
     Wire.setClock(I2C_CLOCK_HZ);
-    #endif
+#endif
     s_maxfg_attempted = true;
     g_maxfg_initialized = g_maxfg.begin(&Wire);
     if (g_maxfg_initialized) {
@@ -112,42 +112,42 @@ inline BatteryStatus read_battery_status() {
 #if USE_LC709203F
   static bool s_lcfg_attempted = false;
   if (!g_lcfg_initialized && !s_lcfg_attempted && !g_maxfg_initialized) {
-    #ifdef PIN_I2C_POWER
+#ifdef PIN_I2C_POWER
     pinMode(PIN_I2C_POWER, OUTPUT);
     digitalWrite(PIN_I2C_POWER, HIGH);
-    #endif
-    #ifdef I2C_POWER
+#endif
+#ifdef I2C_POWER
     pinMode(I2C_POWER, OUTPUT);
     digitalWrite(I2C_POWER, HIGH);
-    #endif
-    #ifdef TFT_I2C_POWER
+#endif
+#ifdef TFT_I2C_POWER
     pinMode(TFT_I2C_POWER, OUTPUT);
     digitalWrite(TFT_I2C_POWER, HIGH);
-    #endif
-    #if defined(SDA) && defined(SCL)
+#endif
+#if defined(SDA) && defined(SCL)
     Wire.begin(SDA, SCL);
-    #else
+#else
     Wire.begin();
-    #endif
-    #ifdef I2C_TIMEOUT_MS
+#endif
+#ifdef I2C_TIMEOUT_MS
     Wire.setTimeOut(I2C_TIMEOUT_MS);
-    #endif
-    #ifdef I2C_CLOCK_HZ
+#endif
+#ifdef I2C_CLOCK_HZ
     Wire.setClock(I2C_CLOCK_HZ);
-    #endif
+#endif
     s_lcfg_attempted = true;
     g_lcfg_initialized = g_lcfg.begin();
     if (g_lcfg_initialized) {
-      // Choose closest supported pack size near BATTERY_CAPACITY_MAH (3300 mAh)
-      #if defined(LC709203F_APA_3300MAH)
+// Choose closest supported pack size near BATTERY_CAPACITY_MAH (3300 mAh)
+#if defined(LC709203F_APA_3300MAH)
       g_lcfg.setPackSize(LC709203F_APA_3300MAH);
-      #elif defined(LC709203F_APA_3200MAH)
+#elif defined(LC709203F_APA_3200MAH)
       g_lcfg.setPackSize(LC709203F_APA_3200MAH);
-      #elif defined(LC709203F_APA_3000MAH)
+#elif defined(LC709203F_APA_3000MAH)
       g_lcfg.setPackSize(LC709203F_APA_3000MAH);
-      #else
+#else
       g_lcfg.setPackSize(LC709203F_APA_1000MAH);
-      #endif
+#endif
       g_lcfg.setThermistorB(3950);
       lc_wake_if_asleep();
       lc_quickstart_if_cold_boot(esp_reset_reason());
@@ -218,7 +218,8 @@ inline BatteryStatus read_battery_status() {
 #if USE_MAX17048
   if (g_maxfg_initialized) {
     float crate_pct_per_hr = g_maxfg.chargeRate();
-    if (isfinite(crate_pct_per_hr) && crate_pct_per_hr < -0.01f && b.percent >= 0 && b.percent <= 100) {
+    if (isfinite(crate_pct_per_hr) && crate_pct_per_hr < -0.01f && b.percent >= 0 &&
+        b.percent <= 100) {
       float hours = static_cast<float>(b.percent) / (-crate_pct_per_hr);
       if (isfinite(hours) && hours > 0) {
         b.estimatedDays = static_cast<int>(hours / 24.0f + 0.5f);

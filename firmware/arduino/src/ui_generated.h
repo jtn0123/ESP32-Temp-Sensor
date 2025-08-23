@@ -5,10 +5,12 @@
 
 // Basic UI spec info
 namespace ui {
-struct SpecInfo { int canvas_w; int canvas_h; };
-static constexpr SpecInfo SPEC{ 250, 122 };
-enum VariantId {
-    UIVAR_V1 = 0,
+struct SpecInfo {
+  int canvas_w;
+  int canvas_h;
 };
-}
-
+static constexpr SpecInfo SPEC{250, 122};
+enum VariantId {
+  UIVAR_V1 = 0,
+};
+} // namespace ui
