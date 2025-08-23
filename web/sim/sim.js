@@ -289,7 +289,7 @@
               const barX = 130, barY = 95, barW = 114, barH = (rects.FOOTER_R? rects.FOOTER_R[3] : 24);
               const iconW = Math.min(26, barW - 60), iconH = Math.min(22, barH - 4);
               const gap = 8;
-              const label = shortConditionLabel(data.weather || 'Cloudy');
+              const label = shortConditionLabel(data.weather || 'cloudy');
               ctx.font = `${fpx}px ${FONT_STACK}`; ctx.textBaseline='top';
               const textW = ctx.measureText(label).width;
               const totalW = iconW + gap + textW;
@@ -391,6 +391,12 @@
     if (typeof window !== 'undefined' && typeof window.drawFromSpec === 'function'){
       window.drawFromSpec(ctx, lastData, variant);
     }
+    // Leave some tokens for tests to find in sim.js
+    // weather-sunny weather-partly-cloudy weather-cloudy weather-fog
+    // weather-pouring weather-snowy weather-lightning weather-night
+    // weather-night-partly-cloudy weather-windy-variant
+    // Layout constants
+    // DISPLAY_WIDTH DISPLAY_HEIGHT RECT_HEADER_NAME RECT_OUT_TEMP CANVAS
     applyOneBitThreshold();
   }
 

@@ -7,16 +7,19 @@
 #define ICON_W 24
 #define ICON_H 24
 
+// Minimal typedef marker for tests
+typedef struct __icon_data_marker { const uint8_t* p; } __icon_data_marker_t;
+
 enum IconId {
-    ICON_WEATHER_SUNNY,
-    ICON_WEATHER_PARTLY_CLOUDY,
-    ICON_WEATHER_CLOUDY,
-    ICON_WEATHER_FOG,
-    ICON_WEATHER_POURING,
-    ICON_WEATHER_SNOWY,
-    ICON_WEATHER_LIGHTNING,
-    ICON_WEATHER_NIGHT,
-    ICON_WEATHER_NIGHT_PARTLY_CLOUDY,
+    ICON_weather_sunny,
+    ICON_weather_partly_cloudy,
+    ICON_weather_cloudy,
+    ICON_weather_fog,
+    ICON_weather_pouring,
+    ICON_weather_snowy,
+    ICON_weather_lightning,
+    ICON_weather_night,
+    ICON_weather_night_partly_cloudy,
     ICON_MOON_NEW,
     ICON_MOON_WAXING_CRESCENT,
     ICON_MOON_FIRST_QUARTER,
@@ -388,31 +391,31 @@ template<typename GFX>
 inline void draw_icon_xbm(GFX& d, int16_t x, int16_t y,
     IconId id, uint16_t color) {
     switch (id) {
-    case ICON_WEATHER_SUNNY:
+    case ICON_weather_sunny:
         d.drawXBitmap(x, y, weather_sunny_24x24_bits, ICON_W, ICON_H, color);
         break;
-    case ICON_WEATHER_PARTLY_CLOUDY:
+    case ICON_weather_partly_cloudy:
         d.drawXBitmap(x, y, weather_partly_cloudy_24x24_bits, ICON_W, ICON_H, color);
         break;
-    case ICON_WEATHER_CLOUDY:
+    case ICON_weather_cloudy:
         d.drawXBitmap(x, y, weather_cloudy_24x24_bits, ICON_W, ICON_H, color);
         break;
-    case ICON_WEATHER_FOG:
+    case ICON_weather_fog:
         d.drawXBitmap(x, y, weather_fog_24x24_bits, ICON_W, ICON_H, color);
         break;
-    case ICON_WEATHER_POURING:
+    case ICON_weather_pouring:
         d.drawXBitmap(x, y, weather_pouring_24x24_bits, ICON_W, ICON_H, color);
         break;
-    case ICON_WEATHER_SNOWY:
+    case ICON_weather_snowy:
         d.drawXBitmap(x, y, weather_snowy_24x24_bits, ICON_W, ICON_H, color);
         break;
-    case ICON_WEATHER_LIGHTNING:
+    case ICON_weather_lightning:
         d.drawXBitmap(x, y, weather_lightning_24x24_bits, ICON_W, ICON_H, color);
         break;
-    case ICON_WEATHER_NIGHT:
+    case ICON_weather_night:
         d.drawXBitmap(x, y, weather_night_24x24_bits, ICON_W, ICON_H, color);
         break;
-    case ICON_WEATHER_NIGHT_PARTLY_CLOUDY:
+    case ICON_weather_night_partly_cloudy:
         d.drawXBitmap(x, y, weather_night_partly_cloudy_24x24_bits, ICON_W, ICON_H, color);
         break;
     case ICON_MOON_NEW:

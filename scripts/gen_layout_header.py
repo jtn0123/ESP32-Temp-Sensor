@@ -50,12 +50,16 @@ def generate_header(data: Dict[str, Any]) -> str:
     lines.append(f'#define LAYOUT_MD5 "{digest}"')
     lines.append("")
     lines.append("// Display dimensions")
+    # Keep legacy macros for compatibility
     lines.append("#ifndef EINK_WIDTH")
     lines.append(f"#define EINK_WIDTH {w}")
     lines.append("#endif")
     lines.append("#ifndef EINK_HEIGHT")
     lines.append(f"#define EINK_HEIGHT {h}")
     lines.append("#endif")
+    # Also emit new display macros used by newer tests
+    lines.append(f"#define DISPLAY_WIDTH {w}")
+    lines.append(f"#define DISPLAY_HEIGHT {h}")
     lines.append("")
     lines.append("// Partial update windows (x, y, w, h) — generated from display_geometry.json")
 
