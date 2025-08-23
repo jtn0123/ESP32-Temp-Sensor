@@ -133,26 +133,23 @@ static inline const int* rect_ptr_by_id(uint8_t rid) {
 
 // Forward to implementation placed after display declaration
 static void draw_from_spec_full_impl(uint8_t variantId);
-static void draw_from_spec_full(uint8_t variantId) {
-  draw_from_spec_full_impl(variantId);
-}
+static void draw_from_spec_full(uint8_t variantId) { draw_from_spec_full_impl(variantId); }
 #endif
 #endif
 
 // Feather ESP32-S2 + 2.13" FeatherWing (adjust if needed)
 #ifndef EINK_CS
-#define EINK_CS 9  // D9
+#define EINK_CS 9 // D9
 #endif
 #ifndef EINK_DC
-#define EINK_DC 10  // D10
+#define EINK_DC 10 // D10
 #endif
 #ifndef EINK_RST
-#define EINK_RST -1  // FeatherWing ties panel reset to Feather RESET
+#define EINK_RST -1 // FeatherWing ties panel reset to Feather RESET
 #endif
 #ifndef EINK_BUSY
-#define EINK_BUSY                                                            \
-  -1  // FeatherWing BUSY not connected; use -1 so library times
-     // waits
+#define EINK_BUSY -1 // FeatherWing BUSY not connected; use -1 so library times
+                     // waits
 #endif
 
 // 2.13" b/w class; choose the one matching your panel

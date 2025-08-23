@@ -326,9 +326,17 @@
             }
             case 'iconIn': {
               const r = rects[op.rect]; if (!r) break;
-              // Render weather bar: icon + label centered; tests expect bar at (130,95,w=114,h~24)
+              // Render weather bar: for default spec keep legacy constants to preserve goldens.
+              // In v2 grid mode, derive from FOOTER_R to ensure alignment with geometry.
               const fpx = ((fonts['small']||{}).px) || pxSmall;
-              const barX = 130, barY = 95, barW = 114, barH = (rects.FOOTER_R? rects.FOOTER_R[3] : 24);
+              let barX = 130, barY = 95, barW = 114, barH = (rects.FOOTER_R? rects.FOOTER_R[3] : 24);
+              if (typeof window !== 'undefined' && window.__specMode === 'v2_grid' && rects.FOOTER_R){
+                const fr = rects.FOOTER_R;
+                barW = fr[2];
+                barH = Math.min(22, Math.max(12, fr[3] - 4));
+                barX = fr[0];
+                barY = fr[1] + Math.max(0, Math.floor((fr[3] - barH)/2));
+              }
               const iconW = Math.min(26, barW - 60), iconH = Math.min(22, barH - 4);
               const gap = 8;
               const label = shortConditionLabel(data.weather || 'cloudy');
@@ -593,18 +601,47 @@
           // Construct a v2 spec by cloning UI_SPEC and snapping rects + fonts
           const base = JSON.parse(JSON.stringify(window.UI_SPEC || {}));
           if (!base.rects) base.rects = {};
-          const snap = (n)=> Math.round(n/4)*4;
-          Object.keys(base.rects).forEach((k)=>{
-            const r = base.rects[k];
-            if (Array.isArray(r) && r.length === 4){
-              // enforce 12px outer padding and 4px grid by snapping x,y and widths
-              r[0] = Math.max(0, snap(r[0] < 12 ? 12 : r[0]));
-              r[1] = Math.max(0, snap(r[1] < 4 ? 4 : r[1]));
-              r[2] = snap(r[2]);
-              r[3] = snap(r[3]);
-              base.rects[k] = r;
-            }
-          });
+          // Define a clean 4px-grid layout with 12px outer padding and 4px gutters
+          const OUTER = 12;
+          const DIV_X = 128; // vertical divider aligned to grid
+          const HEADER_Y = 4, HEADER_H = 12; // top rule at y=16
+          const TEMP_Y = 20, TEMP_H = 28;
+          const ROW1_Y = 52, ROW2_Y = 68, ROW_H = 12;
+          const FOOTER_Y = 88, FOOTER_H = 28;
+          const LEFT_X = OUTER; const LEFT_W = DIV_X - OUTER; // 12..128 -> 116
+          const RIGHT_X = DIV_X + 4; const RIGHT_W = 250 - OUTER - RIGHT_X; // from 132 -> 106
+
+          base.rects.HEADER_NAME = [LEFT_X, HEADER_Y, 160, HEADER_H];
+          base.rects.HEADER_TIME = [168, HEADER_Y, 72, HEADER_H];
+          base.rects.HEADER_CENTER = [100, HEADER_Y, 48, HEADER_H];
+
+          base.rects.INSIDE_TEMP = [LEFT_X, TEMP_Y, LEFT_W, TEMP_H];
+          base.rects.INSIDE_RH   = [LEFT_X, ROW1_Y, LEFT_W, ROW_H];
+          base.rects.INSIDE_TIME = [LEFT_X, ROW2_Y, LEFT_W, ROW_H];
+
+          base.rects.OUT_TEMP    = [RIGHT_X, TEMP_Y, RIGHT_W, TEMP_H];
+          base.rects.OUT_ROW1_L  = [RIGHT_X, ROW1_Y, 48, ROW_H];
+          base.rects.OUT_ROW1_R  = [RIGHT_X + 52, ROW1_Y, 52, ROW_H];
+          base.rects.OUT_ROW2_L  = [RIGHT_X, ROW2_Y, 48, ROW_H];
+          base.rects.OUT_ROW2_R  = [RIGHT_X + 52, ROW2_Y, 48, ROW_H];
+          base.rects.OUT_ICON    = [RIGHT_X + RIGHT_W - 28, TEMP_Y - 4, 28, 28];
+
+          base.rects.FOOTER_L    = [LEFT_X, FOOTER_Y, 160, FOOTER_H];
+          base.rects.FOOTER_R    = [RIGHT_X + (RIGHT_W - 72), FOOTER_Y, 72, FOOTER_H];
+          base.rects.STATUS      = [LEFT_X, FOOTER_Y + FOOTER_H - 12, 238, 12];
+
+          // Adjust chrome lines to match grid
+          if (base.components && Array.isArray(base.components.chrome)){
+            base.components.chrome = [
+              { op: 'line', from: [0, 0],   to: [249, 0] },
+              { op: 'line', from: [0, 121], to: [249, 121] },
+              { op: 'line', from: [0, 0],   to: [0, 121] },
+              { op: 'line', from: [249, 0], to: [249, 121] },
+              { op: 'line', from: [DIV_X, 16], to: [DIV_X, 121] },
+              { op: 'line', from: [1, 16], to: [249, 16] },
+              { op: 'line', from: [1, FOOTER_Y], to: [249, FOOTER_Y] }
+            ];
+          }
           // Adjust fonts: big:26, label:12, small:10, time:10
           if (!base.fonts) base.fonts = {};
           if (!base.fonts.tokens) base.fonts.tokens = {};
@@ -616,6 +653,7 @@
           window.UI_SPEC = base;
           // Re-apply central geometry
           GJSON = base;
+          window.__specMode = 'v2_grid';
         } else {
           // Reload original generated UI_SPEC by reloading page without param
           // More stable than trying to restore deep-cloned structure across toggles
