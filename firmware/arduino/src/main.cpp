@@ -50,28 +50,22 @@ static void partial_update_outside_condition(const char* short_condition);
 static void partial_update_weather_icon(const char* weather);
 // New helpers: prefer OpenWeather fields (id/icon/desc) when available
 static void partial_update_weather_icon_from_outside(const OutsideReadings& o);
-static void draw_weather_icon_region_at(int16_t x, int16_t y, int16_t w,
-                                        int16_t h, const char* weather);
-static void draw_weather_icon_region_at_from_outside(int16_t x, int16_t y,
-                                                     int16_t w, int16_t h,
+static void draw_weather_icon_region_at(int16_t x, int16_t y, int16_t w, int16_t h,
+                                        const char* weather);
+static void draw_weather_icon_region_at_from_outside(int16_t x, int16_t y, int16_t w, int16_t h,
                                                      const OutsideReadings& o);
 // Footer-only weather updater to keep geometry consistent with full renders
-static void partial_update_footer_weather_from_outside(
-    const OutsideReadings& o);
+static void partial_update_footer_weather_from_outside(const OutsideReadings& o);
 static void draw_header_time(const char* time_str);
 // Accessor to avoid forward reference ordering issues
 static inline float get_last_outside_f();
-static bool maybe_redraw_status(const BatteryStatus& bs, const char* ip_cstr,
-                                const int rect[4]);
+static bool maybe_redraw_status(const BatteryStatus& bs, const char* ip_cstr, const int rect[4]);
 template <typename DrawFnFwd>
 static inline void draw_in_region(const int rect[4], DrawFnFwd drawFn);
-static inline int16_t text_width_default_font(const char* s,
-                                              uint8_t size);
+static inline int16_t text_width_default_font(const char* s, uint8_t size);
 // Forward decls used by spec renderer implemented earlier in the file
-static inline void draw_temp_number_and_units(const int rect[4],
-                                              const char* temp_f);
-static void make_short_condition_cstr(const char* weather, char* out,
-                                      size_t out_size);
+static inline void draw_temp_number_and_units(const int rect[4], const char* temp_f);
+static void make_short_condition_cstr(const char* weather, char* out, size_t out_size);
 // Remove duplicate non-inline declaration to avoid separate symbol
 #if USE_UI_SPEC
 // Minimal spec interpreter (full-window only) for variant rendering
@@ -117,26 +111,23 @@ static inline const int* rect_ptr_by_id(uint8_t rid) {
 
 // Forward to implementation placed after display declaration
 static void draw_from_spec_full_impl(uint8_t variantId);
-static void draw_from_spec_full(uint8_t variantId) {
-  draw_from_spec_full_impl(variantId);
-}
+static void draw_from_spec_full(uint8_t variantId) { draw_from_spec_full_impl(variantId); }
 #endif
 #endif
 
 // Feather ESP32-S2 + 2.13" FeatherWing (adjust if needed)
 #ifndef EINK_CS
-#define EINK_CS 9  // D9
+#define EINK_CS 9 // D9
 #endif
 #ifndef EINK_DC
-#define EINK_DC 10  // D10
+#define EINK_DC 10 // D10
 #endif
 #ifndef EINK_RST
-#define EINK_RST -1  // FeatherWing ties panel reset to Feather RESET
+#define EINK_RST -1 // FeatherWing ties panel reset to Feather RESET
 #endif
 #ifndef EINK_BUSY
-#define EINK_BUSY                                                           \
-  -1  // FeatherWing BUSY not connected; use -1 so library times
-     // waits
+#define EINK_BUSY -1 // FeatherWing BUSY not connected; use -1 so library times
+                     // waits
 #endif
 
 // 2.13" b/w class; choose the one matching your panel
@@ -175,10 +166,8 @@ static void draw_from_spec_full_impl(uint8_t variantId) {
   using ui::UiOpHeader;
   int comp_count = 0;
   const ComponentOps* comps = get_variant_ops(variantId, &comp_count);
-  display.drawRect(0, 0, EINK_WIDTH, EINK_HEIGHT,
-                   GxEPD_BLACK);
-  display.drawLine(1, 16 + TOP_Y_OFFSET, EINK_WIDTH - 2, 16 + TOP_Y_OFFSET,
-                   GxEPD_BLACK);
+  display.drawRect(0, 0, EINK_WIDTH, EINK_HEIGHT, GxEPD_BLACK);
+  display.drawLine(1, 16 + TOP_Y_OFFSET, EINK_WIDTH - 2, 16 + TOP_Y_OFFSET, GxEPD_BLACK);
   display.drawLine(125, 18 + TOP_Y_OFFSET, 125, EINK_HEIGHT - 2, GxEPD_BLACK);
   for (int ci = 0; ci < comp_count; ++ci) {
     const ComponentOps& co = comps[ci];
@@ -234,8 +223,7 @@ static void draw_from_spec_full_impl(uint8_t variantId) {
         }
         display.setTextColor(GxEPD_BLACK);
         display.setTextSize(1);
-        if (r && tx == 0 &&
-            (op.align == ALIGN_RIGHT || op.align == ALIGN_CENTER)) {
+        if (r && tx == 0 && (op.align == ALIGN_RIGHT || op.align == ALIGN_CENTER)) {
           int16_t tw = text_width_default_font(out.c_str(), 1);
           tx = r[0] + 1;
           if (op.align == ALIGN_RIGHT)
@@ -252,10 +240,8 @@ static void draw_from_spec_full_impl(uint8_t variantId) {
         char hhmm[8];
         net_time_hhmm(hhmm, sizeof(hhmm));
         int16_t tw = text_width_default_font(hhmm, 1);
-        int16_t rx = static_cast<int16_t>(HEADER_TIME[0] + HEADER_TIME[2] - 2 -
-                                          tw);
-        int16_t by = static_cast<int16_t>(HEADER_TIME[1] + TOP_Y_OFFSET +
-                                          HEADER_TIME[3] - 2);
+        int16_t rx = static_cast<int16_t>(HEADER_TIME[0] + HEADER_TIME[2] - 2 - tw);
+        int16_t by = static_cast<int16_t>(HEADER_TIME[1] + TOP_Y_OFFSET + HEADER_TIME[3] - 2);
         display.setTextColor(GxEPD_BLACK);
         display.setTextSize(1);
         display.setCursor(rx, by);
@@ -284,19 +270,16 @@ static void draw_from_spec_full_impl(uint8_t variantId) {
         if (r == INSIDE_TEMP) {
           InsideReadings ir = read_inside_sensors();
           if (isfinite(ir.temperatureC)) {
-            snprintf(temp_buf, sizeof(temp_buf), "%.1f",
-                      ir.temperatureC * 9.0 / 5.0 + 32.0);
+            snprintf(temp_buf, sizeof(temp_buf), "%.1f", ir.temperatureC * 9.0 / 5.0 + 32.0);
           } else {
             snprintf(temp_buf, sizeof(temp_buf), "--");
           }
         } else if (r == OUT_TEMP) {
           OutsideReadings orr = net_get_outside();
           if (orr.validTemp && isfinite(orr.temperatureC)) {
-            snprintf(temp_buf, sizeof(temp_buf), "%.1f",
-                      orr.temperatureC * 9.0 / 5.0 + 32.0);
+            snprintf(temp_buf, sizeof(temp_buf), "%.1f", orr.temperatureC * 9.0 / 5.0 + 32.0);
           } else if (isfinite(get_last_outside_f())) {
-            snprintf(temp_buf, sizeof(temp_buf), "%.1f",
-                      get_last_outside_f());
+            snprintf(temp_buf, sizeof(temp_buf), "%.1f", get_last_outside_f());
           } else {
             snprintf(temp_buf, sizeof(temp_buf), "--");
           }
@@ -310,12 +293,10 @@ static void draw_from_spec_full_impl(uint8_t variantId) {
           break;
         OutsideReadings o = net_get_outside();
         if (o.validWeatherIcon || o.validWeatherId) {
-          draw_weather_icon_region_at_from_outside(r[0], r[1] + TOP_Y_OFFSET,
-                                                   r[2], r[3], o);
+          draw_weather_icon_region_at_from_outside(r[0], r[1] + TOP_Y_OFFSET, r[2], r[3], o);
         } else {
           const char* weather = o.validWeather ? o.weather : "";
-          draw_weather_icon_region_at(r[0], r[1] + TOP_Y_OFFSET,
-                                       r[2], r[3], weather);
+          draw_weather_icon_region_at(r[0], r[1] + TOP_Y_OFFSET, r[2], r[3], weather);
         }
         break;
       }
@@ -359,14 +340,11 @@ static void draw_from_spec_full_impl(uint8_t variantId) {
         BatteryStatus bs = read_battery_status();
         int16_t bx = op.p0, by = op.p1, bw = op.p2, bh = op.p3;
         display.drawRect(bx, by, bw, bh, GxEPD_BLACK);
-        display.fillRect(static_cast<int16_t>(bx + bw),
-                         static_cast<int16_t>(by + 2), 2, 3,
+        display.fillRect(static_cast<int16_t>(bx + bw), static_cast<int16_t>(by + 2), 2, 3,
                          GxEPD_BLACK);
-        int16_t fillw =
-            static_cast<int16_t>(((bw - 2) * (bs.percent / 100.0f) + 0.5f));
+        int16_t fillw = static_cast<int16_t>(((bw - 2) * (bs.percent / 100.0f) + 0.5f));
         if (fillw > 0)
-          display.fillRect(static_cast<int16_t>(bx + 1),
-                           static_cast<int16_t>(by + 1), fillw,
+          display.fillRect(static_cast<int16_t>(bx + 1), static_cast<int16_t>(by + 1), fillw,
                            static_cast<int16_t>(bh - 2), GxEPD_BLACK);
         break;
       }
@@ -374,10 +352,10 @@ static void draw_from_spec_full_impl(uint8_t variantId) {
         break;
       }
     }
-  }  // USE_UI_SPEC
+  } // USE_UI_SPEC
 }
-#endif  // USE_UI_SPEC
-#endif  // USE_DISPLAY
+#endif // USE_UI_SPEC
+#endif // USE_DISPLAY
 
 RTC_DATA_ATTR static uint16_t partial_counter = 0;
 // Track number of wakes from deep sleep (monotonic until power loss)
@@ -400,9 +378,9 @@ RTC_DATA_ATTR static float last_inside_rh = NAN;
 RTC_DATA_ATTR static bool needs_full_on_boot = true;
 #endif
 #ifdef FORCE_FULL_ONLY
-static bool g_full_only_mode = true;  // compile-time force full refresh only
+static bool g_full_only_mode = true; // compile-time force full refresh only
 #else
-static bool g_full_only_mode = false;  // when true, always do full refresh
+static bool g_full_only_mode = false; // when true, always do full refresh
                                       // (debug)
 #endif
 
@@ -436,20 +414,14 @@ static inline void nvs_load_cache_if_unset() {
   g_full_only_mode = g_prefs.getUChar("full_only", 0) != 0;
   // Remove legacy ui_variant preference; single UI variant remains
 }
-static inline void nvs_store_float(const char* key, float v) {
-  g_prefs.putFloat(key, v);
-}
-static inline void nvs_store_int(const char* key, int32_t v) {
-  g_prefs.putInt(key, v);
-}
-static inline void nvs_store_uint(const char* key, uint32_t v) {
-  g_prefs.putUInt(key, v);
-}
+static inline void nvs_store_float(const char* key, float v) { g_prefs.putFloat(key, v); }
+static inline void nvs_store_int(const char* key, int32_t v) { g_prefs.putInt(key, v); }
+static inline void nvs_store_uint(const char* key, uint32_t v) { g_prefs.putUInt(key, v); }
 
-static constexpr float THRESH_TEMP_F = 0.2f;  // redraw/publish threshold in F
-static constexpr float THRESH_TEMP_C_FROM_F = THRESH_TEMP_F / 1.8f;  // ~0.111C
-static constexpr float THRESH_RH = 1.0f;        // percent
-static constexpr float THRESH_PRESS_HPA = 0.5f;  // hPa
+static constexpr float THRESH_TEMP_F = 0.2f;                        // redraw/publish threshold in F
+static constexpr float THRESH_TEMP_C_FROM_F = THRESH_TEMP_F / 1.8f; // ~0.111C
+static constexpr float THRESH_RH = 1.0f;                            // percent
+static constexpr float THRESH_PRESS_HPA = 0.5f;                     // hPa
 
 // Timeout tracking for wake phases
 static uint32_t s_timeouts_mask = 0;
@@ -466,8 +438,7 @@ static const char* wakeup_cause_str(esp_sleep_wakeup_cause_t c);
 static inline void print_boot_diagnostics() {
   Serial.printf("Reset: %s, Wake: %s\n", reset_reason_str(esp_reset_reason()),
                 wakeup_cause_str(esp_sleep_get_wakeup_cause()));
-  Serial.printf("Heap: free=%u min=%u\n",
-                static_cast<unsigned>(esp_get_free_heap_size()),
+  Serial.printf("Heap: free=%u min=%u\n", static_cast<unsigned>(esp_get_free_heap_size()),
                 static_cast<unsigned>(esp_get_minimum_free_heap_size()));
 }
 
@@ -515,11 +486,10 @@ static void pump_network_ms(uint32_t duration_ms) {
 #endif
 #endif
 
-static Adafruit_NeoPixel s_statusPixel(1, STATUS_PIXEL_PIN,
-                                       NEO_GRB + NEO_KHZ800);
+static Adafruit_NeoPixel s_statusPixel(1, STATUS_PIXEL_PIN, NEO_GRB + NEO_KHZ800);
 static uint32_t s_lastPixelMs = 0;
 static uint8_t s_hue = 0;
-static uint8_t s_breath = 0;  // brightness phase for subtle breathing
+static uint8_t s_breath = 0; // brightness phase for subtle breathing
 
 static uint32_t color_wheel(uint8_t pos) {
   pos = 255 - pos;
@@ -548,17 +518,15 @@ static inline void status_pixel_off() {
 static inline void status_pixel_tick() {
   uint32_t now = millis();
   if (now - s_lastPixelMs < 40)
-    return;  // slower update for smooth, slow cycle
+    return; // slower update for smooth, slow cycle
   s_lastPixelMs = now;
   s_hue++;
   s_breath++;
   // Triangle wave 0..127..0 mapped to brightness range
-  uint8_t amp = (s_breath < 128) ? s_breath
-                                 : static_cast<uint8_t>(255 - s_breath);
+  uint8_t amp = (s_breath < 128) ? s_breath : static_cast<uint8_t>(255 - s_breath);
   const uint8_t minB = 8;
   const uint8_t maxB = 64;
-  uint8_t level = static_cast<uint8_t>(
-      minB + (static_cast<uint16_t>(amp) * (maxB - minB) / 127));
+  uint8_t level = static_cast<uint8_t>(minB + (static_cast<uint16_t>(amp) * (maxB - minB) / 127));
   // Occasional brief flash for a bit of flair
   if ((s_hue & 0x3F) == 0)
     level = maxB;
@@ -579,8 +547,7 @@ static void emit_metrics_json(float tempC, float rhPct, float pressHPa) {
   Serial.print("\"layout_crc\":\"");
   {
     char crcbuf[12];
-    snprintf(crcbuf, sizeof(crcbuf), "0x%08X",
-             static_cast<unsigned>(LAYOUT_CRC));
+    snprintf(crcbuf, sizeof(crcbuf), "0x%08X", static_cast<unsigned>(LAYOUT_CRC));
     Serial.print(crcbuf);
   }
   Serial.print("\"");
@@ -702,17 +669,15 @@ static void handle_serial_command_line(const String& line) {
     char ip_c[32];
     net_ip_cstr(ip_c, sizeof(ip_c));
     BatteryStatus bs = read_battery_status();
-    Serial.printf("status ip=%s wifi=%s mqtt=%s v=%.2f pct=%d partial=%u\n",
-                  ip_c, net_wifi_is_connected() ? "up" : "down",
-                  net_mqtt_is_connected() ? "up" : "down",
+    Serial.printf("status ip=%s wifi=%s mqtt=%s v=%.2f pct=%d partial=%u\n", ip_c,
+                  net_wifi_is_connected() ? "up" : "down", net_mqtt_is_connected() ? "up" : "down",
                   static_cast<double>(bs.voltage), bs.percent,
                   static_cast<unsigned>(partial_counter));
     return;
   }
   if (op == "metrics") {
     InsideReadings latest = read_inside_sensors();
-    emit_metrics_json(latest.temperatureC, latest.humidityPct,
-                      latest.pressureHPa);
+    emit_metrics_json(latest.temperatureC, latest.humidityPct, latest.pressureHPa);
     return;
   }
   if (op == "ptest") {
@@ -754,8 +719,7 @@ static void handle_serial_command_line(const String& line) {
       Serial.println(F("ptest: status done"));
     } else if (which == "header_time") {
       // Draw a test time string in header time region
-      draw_in_region(HEADER_TIME,
-                     [&](int16_t xx, int16_t yy, int16_t ww, int16_t hh) {
+      draw_in_region(HEADER_TIME, [&](int16_t xx, int16_t yy, int16_t ww, int16_t hh) {
         display.setTextColor(GxEPD_BLACK);
         display.setTextSize(1);
         int16_t rx = xx + ww - 2 - text_width_default_font("10:32", 1);
@@ -892,17 +856,13 @@ static void draw_static_chrome() {
   // Frame and header linework
   display.fillScreen(GxEPD_WHITE);
   // Draw outer border flush to panel extents
-  display.drawRect(0, 0, EINK_WIDTH, EINK_HEIGHT,
-                   GxEPD_BLACK);
+  display.drawRect(0, 0, EINK_WIDTH, EINK_HEIGHT, GxEPD_BLACK);
   // Header underline aligned with simulator and other draw paths
-  display.drawLine(1, 22 + TOP_Y_OFFSET, EINK_WIDTH - 2, 22 + TOP_Y_OFFSET,
-                   GxEPD_BLACK);
+  display.drawLine(1, 22 + TOP_Y_OFFSET, EINK_WIDTH - 2, 22 + TOP_Y_OFFSET, GxEPD_BLACK);
   // Extend the center divider to the bottom frame to match the simulator
-  display.drawLine(125, 18 + TOP_Y_OFFSET, 125, EINK_HEIGHT - 2,
-                   GxEPD_BLACK);
+  display.drawLine(125, 18 + TOP_Y_OFFSET, 125, EINK_HEIGHT - 2, GxEPD_BLACK);
   // Single header underline between header and content
-  display.drawLine(1, 16 + TOP_Y_OFFSET, EINK_WIDTH - 2, 16 + TOP_Y_OFFSET,
-                   GxEPD_BLACK);
+  display.drawLine(1, 16 + TOP_Y_OFFSET, EINK_WIDTH - 2, 16 + TOP_Y_OFFSET, GxEPD_BLACK);
   // Horizontal rule for footer region (drawn at top edge of footer)
   display.drawLine(1, FOOTER_L[1], EINK_WIDTH - 2, FOOTER_L[1], GxEPD_BLACK);
 
@@ -919,9 +879,8 @@ static void draw_static_chrome() {
   display.setCursor(131, 22 + TOP_Y_OFFSET);
   display.print(F("OUTSIDE"));
   // Top-right version string within HEADER_TIME box
-  display.setCursor(HEADER_TIME[0] + HEADER_TIME[2] - 2 -
-                    text_width_default_font("v", 1) -
-                    text_width_default_font(FW_VERSION, 1),
+  display.setCursor(HEADER_TIME[0] + HEADER_TIME[2] - 2 - text_width_default_font("v", 1) -
+                        text_width_default_font(FW_VERSION, 1),
                     HEADER_TIME[1] + TOP_Y_OFFSET + HEADER_TIME[3] - 8);
   display.print(F("v"));
   display.print(FW_VERSION);
@@ -951,7 +910,7 @@ static inline void draw_in_region(const int rect[4],
   // panels
   // to avoid controller rejects or missing updates on unaligned windows.
   int16_t ax = x & ~0x07;
-  int16_t ar = x + w;  // right edge (exclusive)
+  int16_t ar = x + w; // right edge (exclusive)
   int16_t aw = static_cast<int16_t>(((ar - ax) + 7) & ~0x07);
   display.setPartialWindow(ax, y, aw, h);
   display.firstPage();
@@ -965,10 +924,8 @@ static inline void draw_in_region(const int rect[4],
   } while (display.nextPage());
 }
 
-static inline void draw_right_aligned_text_in_rect(const int rect[4],
-                                                   const char* text,
-                                                   uint8_t textSize,
-                                                   int16_t paddingRight,
+static inline void draw_right_aligned_text_in_rect(const int rect[4], const char* text,
+                                                   uint8_t textSize, int16_t paddingRight,
                                                    int16_t baselineOffset) {
   draw_in_region(rect, [&](int16_t x, int16_t y, int16_t w, int16_t h) {
     display.setTextColor(GxEPD_BLACK);
@@ -981,11 +938,10 @@ static inline void draw_right_aligned_text_in_rect(const int rect[4],
   });
 }
 
-static inline void draw_temp_number_and_units(const int rect[4],
-                                              const char* temp_f) {
+static inline void draw_temp_number_and_units(const int rect[4], const char* temp_f) {
   // Reserve a small units strip on the right so units do not shift as number
   // width changes
-  const int16_t units_w = 14;  // pixels
+  const int16_t units_w = 14; // pixels
   int num_rect[4] = {rect[0], rect[1], rect[2] - units_w, rect[3]};
   int units_rect[4] = {rect[0] + rect[2] - units_w, rect[1], units_w, rect[3]};
 
@@ -1013,8 +969,7 @@ static inline void draw_temp_number_and_units(const int rect[4],
 }
 
 // Direct draw variant for full-window paged renders (no nested partial pages)
-static inline void draw_temp_number_and_units_direct(int16_t x, int16_t y,
-                                                     int16_t w, int16_t h,
+static inline void draw_temp_number_and_units_direct(int16_t x, int16_t y, int16_t w, int16_t h,
                                                      const char* temp_f) {
   const int16_t units_w = 14;
   display.setTextColor(GxEPD_BLACK);
@@ -1022,10 +977,8 @@ static inline void draw_temp_number_and_units_direct(int16_t x, int16_t y,
   int16_t x1, y1;
   uint16_t bw, bh;
   display.getTextBounds(temp_f, 0, 0, &x1, &y1, &bw, &bh);
-  int16_t targetX = static_cast<int16_t>(x + (w - units_w -
-                                             static_cast<int16_t>(bw)) / 2);
-  int16_t targetY = static_cast<int16_t>(y + (h -
-                                             static_cast<int16_t>(bh)) / 2);
+  int16_t targetX = static_cast<int16_t>(x + (w - units_w - static_cast<int16_t>(bw)) / 2);
+  int16_t targetY = static_cast<int16_t>(y + (h - static_cast<int16_t>(bh)) / 2);
   int16_t baseX = static_cast<int16_t>(targetX - x1);
   int16_t baseY = static_cast<int16_t>(targetY - y1);
   display.setCursor(baseX, baseY);
@@ -1054,9 +1007,8 @@ static inline uint32_t fast_crc32(const uint8_t* data, size_t len) {
 }
 
 template <typename DrawFn>
-static inline bool maybe_redraw_numeric(const int rect[4], float currentValue,
-                                        float& lastValue, float threshold,
-                                        DrawFn drawFn) {
+static inline bool maybe_redraw_numeric(const int rect[4], float currentValue, float& lastValue,
+                                        float threshold, DrawFn drawFn) {
   bool should = false;
   if (!isnan(currentValue) &&
       (!isfinite(lastValue) || fabsf(currentValue - lastValue) >= threshold))
@@ -1070,8 +1022,8 @@ static inline bool maybe_redraw_numeric(const int rect[4], float currentValue,
 }
 
 template <typename T, typename DrawFn>
-static inline bool maybe_redraw_value(const int rect[4], const T& currentValue,
-                                      T& lastValue, DrawFn drawFn) {
+static inline bool maybe_redraw_value(const int rect[4], const T& currentValue, T& lastValue,
+                                      DrawFn drawFn) {
   if (currentValue != lastValue) {
     drawFn();
     lastValue = currentValue;
@@ -1080,12 +1032,12 @@ static inline bool maybe_redraw_value(const int rect[4], const T& currentValue,
   return false;
 }
 
-static inline bool maybe_redraw_status(const BatteryStatus& bs,
-                                       const char* ip_cstr, const int rect[4]) {
+static inline bool maybe_redraw_status(const BatteryStatus& bs, const char* ip_cstr,
+                                       const int rect[4]) {
   char buf[96];
   // Stacked footer signature (3-row status)
-  snprintf(buf, sizeof(buf), "B%.2f|%d|D%d|IP%s", bs.voltage, bs.percent,
-           bs.estimatedDays, ip_cstr);
+  snprintf(buf, sizeof(buf), "B%.2f|%d|D%d|IP%s", bs.voltage, bs.percent, bs.estimatedDays,
+           ip_cstr);
   uint32_t crc = fast_crc32((const uint8_t*)buf, strlen(buf));
   if (crc != last_status_crc) {
     draw_status_line(bs, ip_cstr);
@@ -1095,8 +1047,7 @@ static inline bool maybe_redraw_status(const BatteryStatus& bs,
   return false;
 }
 
-static void make_short_condition_cstr(const char* weather, char* out,
-                                      size_t out_size) {
+static void make_short_condition_cstr(const char* weather, char* out, size_t out_size) {
   if (!out || out_size == 0)
     return;
   out[0] = '\0';
@@ -1112,8 +1063,7 @@ static void make_short_condition_cstr(const char* weather, char* out,
     char c = *p;
     // Treat common separators and hyphen as delimiters so HA values like
     // "clear-night" or "snowy-rainy" shorten to a single word.
-    if (c == ' ' || c == '\t' || c == ',' || c == ';' || c == ':' || c == '/' ||
-        c == '-')
+    if (c == ' ' || c == '\t' || c == ',' || c == ';' || c == ':' || c == '/' || c == '-')
       break;
     out[i++] = c;
     p++;
@@ -1124,15 +1074,14 @@ static void make_short_condition_cstr(const char* weather, char* out,
 static void draw_header_time(const char* time_str) {
   // Draw centered time within HEADER_CENTER box to avoid overlapping the
   // version
-  int rect2[4] = {HEADER_CENTER[0],
-                  static_cast<int16_t>(HEADER_CENTER[1] + TOP_Y_OFFSET),
+  int rect2[4] = {HEADER_CENTER[0], static_cast<int16_t>(HEADER_CENTER[1] + TOP_Y_OFFSET),
                   HEADER_CENTER[2], HEADER_CENTER[3]};
   draw_in_region(rect2, [&](int16_t xx, int16_t yy, int16_t ww, int16_t hh) {
-    display.setTextColor(GxEPD_BLACK);  // comment spacing fix
+    display.setTextColor(GxEPD_BLACK); // comment spacing fix
     display.setTextSize(1);
     int16_t tw = text_width_default_font(time_str, 1);
     int16_t rx = static_cast<int16_t>(xx + (ww - tw) / 2);
-    int16_t by = yy + hh - 3;  // baseline nudge up to align with room name
+    int16_t by = yy + hh - 3; // baseline nudge up to align with room name
     display.setCursor(rx, by);
     display.print(time_str);
   });
@@ -1140,10 +1089,8 @@ static void draw_header_time(const char* time_str) {
 
 static inline void draw_header_time_direct(const char* time_str) {
   int16_t tw = text_width_default_font(time_str, 1);
-  int16_t rx = static_cast<int16_t>(HEADER_CENTER[0] +
-                                    (HEADER_CENTER[2] - tw) / 2);
-  int16_t by = static_cast<int16_t>(HEADER_CENTER[1] + TOP_Y_OFFSET +
-                                    HEADER_CENTER[3] - 6);
+  int16_t rx = static_cast<int16_t>(HEADER_CENTER[0] + (HEADER_CENTER[2] - tw) / 2);
+  int16_t by = static_cast<int16_t>(HEADER_CENTER[1] + TOP_Y_OFFSET + HEADER_CENTER[3] - 6);
   display.setTextColor(GxEPD_BLACK);
   display.setTextSize(1);
   display.setCursor(rx, by);
@@ -1164,14 +1111,11 @@ static void draw_status_line(const BatteryStatus& bs, const char* ip_cstr) {
       int16_t bw = 13;
       int16_t bh = 7;
       display.drawRect(bx, by, bw, bh, GxEPD_BLACK);
-      display.fillRect(static_cast<int16_t>(bx + bw),
-                       static_cast<int16_t>(by + 2), 2, 3,
+      display.fillRect(static_cast<int16_t>(bx + bw), static_cast<int16_t>(by + 2), 2, 3,
                        GxEPD_BLACK);
-      int16_t fillw = static_cast<int16_t>(
-          ((bw - 2) * (bs.percent / 100.0f) + 0.5f));
+      int16_t fillw = static_cast<int16_t>(((bw - 2) * (bs.percent / 100.0f) + 0.5f));
       if (fillw > 0)
-        display.fillRect(static_cast<int16_t>(bx + 1),
-                         static_cast<int16_t>(by + 1), fillw,
+        display.fillRect(static_cast<int16_t>(bx + 1), static_cast<int16_t>(by + 1), fillw,
                          static_cast<int16_t>(bh - 2), GxEPD_BLACK);
       cx = static_cast<int16_t>(cx + bw + 6);
     }
@@ -1197,8 +1141,7 @@ static void draw_status_line(const BatteryStatus& bs, const char* ip_cstr) {
   });
 }
 
-static inline void draw_status_line_direct(const BatteryStatus& bs,
-                                           const char* ip_cstr) {
+static inline void draw_status_line_direct(const BatteryStatus& bs, const char* ip_cstr) {
   int16_t xx = STATUS_[0];
   int16_t yy = static_cast<int16_t>(STATUS_[1] + STATUS_Y_ADJ);
   int16_t ww = STATUS_[2];
@@ -1213,14 +1156,11 @@ static inline void draw_status_line_direct(const BatteryStatus& bs,
     int16_t bw2 = 13;
     int16_t bh2 = 7;
     display.drawRect(bx, by, bw2, bh2, GxEPD_BLACK);
-    display.fillRect(static_cast<int16_t>(bx + bw2),
-                     static_cast<int16_t>(by + 2), 2, 3,
+    display.fillRect(static_cast<int16_t>(bx + bw2), static_cast<int16_t>(by + 2), 2, 3,
                      GxEPD_BLACK);
-    int16_t fillw = static_cast<int16_t>(
-        ((bw2 - 2) * (bs.percent / 100.0f) + 0.5f));
+    int16_t fillw = static_cast<int16_t>(((bw2 - 2) * (bs.percent / 100.0f) + 0.5f));
     if (fillw > 0)
-      display.fillRect(static_cast<int16_t>(bx + 1),
-                       static_cast<int16_t>(by + 1), fillw,
+      display.fillRect(static_cast<int16_t>(bx + 1), static_cast<int16_t>(by + 1), fillw,
                        static_cast<int16_t>(bh2 - 2), GxEPD_BLACK);
     cx = static_cast<int16_t>(cx + bw2 + 6);
   }
@@ -1233,10 +1173,10 @@ static inline void draw_status_line_direct(const BatteryStatus& bs,
   char left_full[64];
   char left_nobatt[64];
   char left_tail[32];
-  snprintf(left_full, sizeof(left_full), "Batt %.2fV %d%% | ~%dd", bs.voltage,
-           bs.percent, bs.estimatedDays);
-  snprintf(left_nobatt, sizeof(left_nobatt), "%.2fV %d%% | ~%dd", bs.voltage,
-           bs.percent, bs.estimatedDays);
+  snprintf(left_full, sizeof(left_full), "Batt %.2fV %d%% | ~%dd", bs.voltage, bs.percent,
+           bs.estimatedDays);
+  snprintf(left_nobatt, sizeof(left_nobatt), "%.2fV %d%% | ~%dd", bs.voltage, bs.percent,
+           bs.estimatedDays);
   snprintf(left_tail, sizeof(left_tail), "%d%% | ~%dd", bs.percent, bs.estimatedDays);
   int16_t available = static_cast<int16_t>(rx - cx - 2);
   const char* to_print = left_full;

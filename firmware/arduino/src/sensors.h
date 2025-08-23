@@ -12,7 +12,7 @@
 #if I2C_DEBUG_SCAN
 // Attempt to recover a stuck I2C bus by pulsing SCL when SDA is held low
 static void i2c_bus_recover_if_stuck() {
-  #if defined(SDA) && defined(SCL)
+#if defined(SDA) && defined(SCL)
   pinMode(SDA, INPUT_PULLUP);
   pinMode(SCL, INPUT_PULLUP);
   if (digitalRead(SDA) == LOW) {
@@ -30,7 +30,7 @@ static void i2c_bus_recover_if_stuck() {
       Serial.println("I2C: bus recovered");
     }
   }
-  #endif
+#endif
 }
 #endif
 
@@ -39,21 +39,21 @@ static bool g_bme280_initialized = false;
 inline void sensors_begin() {
   if (g_bme280_initialized)
     return;
-  // Explicitly initialize I2C on known pins when available
-  #if defined(SDA) && defined(SCL)
+// Explicitly initialize I2C on known pins when available
+#if defined(SDA) && defined(SCL)
   Serial.printf("I2C: using pins SDA=%d SCL=%d\n", SDA, SCL);
-  #if I2C_DEBUG_SCAN
+#if I2C_DEBUG_SCAN
   i2c_bus_recover_if_stuck();
-  #endif
+#endif
   Wire.begin(SDA, SCL);
-  #else
+#else
   Wire.begin();
-  #endif
-  #ifdef I2C_TIMEOUT_MS
+#endif
+#ifdef I2C_TIMEOUT_MS
   Wire.setTimeOut(I2C_TIMEOUT_MS > 0 ? I2C_TIMEOUT_MS : 50);
-  #endif
+#endif
   Wire.setClock(I2C_CLOCK_HZ);
-  #if I2C_DEBUG_SCAN
+#if I2C_DEBUG_SCAN
   Serial.println("I2C: scanning...");
   const uint8_t candidates[] = {0x76, 0x77};
   for (uint8_t i = 0; i < sizeof(candidates); i++) {
@@ -66,7 +66,7 @@ inline void sensors_begin() {
       Serial.printf("I2C: no device at 0x%02X (err=%u)\n", addr, err);
     }
   }
-  #endif
+#endif
   // Try default I2C address 0x77 then 0x76
   if (!g_bme280.begin(0x77) && !g_bme280.begin(0x76)) {
     Serial.println("BME280 not found");
@@ -74,9 +74,9 @@ inline void sensors_begin() {
     return;
   }
   g_bme280.setSampling(Adafruit_BME280::MODE_FORCED,
-                       Adafruit_BME280::SAMPLING_X1,  // temp
-                       Adafruit_BME280::SAMPLING_X1,  // pressure
-                       Adafruit_BME280::SAMPLING_X1,  // humidity
+                       Adafruit_BME280::SAMPLING_X1, // temp
+                       Adafruit_BME280::SAMPLING_X1, // pressure
+                       Adafruit_BME280::SAMPLING_X1, // humidity
                        Adafruit_BME280::FILTER_OFF);
   g_bme280_initialized = true;
 }
@@ -92,7 +92,7 @@ struct InsideReadings {
 
 inline InsideReadings read_inside_sensors() {
   InsideReadings r;
-  #if USE_BME280
+#if USE_BME280
   sensors_begin();
   if (!g_bme280_initialized)
     return r;
@@ -102,6 +102,6 @@ inline InsideReadings read_inside_sensors() {
   r.humidityPct = g_bme280.readHumidity();
   // Adafruit_BME280::readPressure returns Pascals; convert to hPa for MQTT/HA
   r.pressureHPa = g_bme280.readPressure() / 100.0f;
-  #endif
+#endif
   return r;
 }
