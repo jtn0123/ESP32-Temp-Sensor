@@ -557,8 +557,8 @@ static inline void status_pixel_tick() {
                                  : static_cast<uint8_t>(255 - s_breath);
   const uint8_t minB = 8;
   const uint8_t maxB = 64;
-  uint8_t level = static_cast<uint8_t>(minB +
-                                       (static_cast<uint16_t>(amp) * (maxB - minB) / 127));
+  uint8_t level = static_cast<uint8_t>(
+      minB + (static_cast<uint16_t>(amp) * (maxB - minB) / 127));
   // Occasional brief flash for a bit of flair
   if ((s_hue & 0x3F) == 0)
     level = maxB;
@@ -579,7 +579,8 @@ static void emit_metrics_json(float tempC, float rhPct, float pressHPa) {
   Serial.print("\"layout_crc\":\"");
   {
     char crcbuf[12];
-    snprintf(crcbuf, sizeof(crcbuf), "0x%08X", static_cast<unsigned>(LAYOUT_CRC));
+    snprintf(crcbuf, sizeof(crcbuf), "0x%08X",
+             static_cast<unsigned>(LAYOUT_CRC));
     Serial.print(crcbuf);
   }
   Serial.print("\"");
@@ -693,23 +694,25 @@ static void handle_serial_command_line(const String& line) {
     Serial.print(F("Commands: help | status | metrics | sleep <sec> | "));
     Serial.print(F("reboot | wifi | mqtt | pub <tempF> <rh%> | "));
     Serial.print(F("mode <full|partial> | "));
-    Serial.println(F("ptest <inside_temp|inside_rh|outside_temp|outside_rh|wind|"));
-    Serial.println(F("condition|icon|status|header_time>"));
+    Serial.println(F("ptest <inside_temp|inside_rh|outside_temp|outside_rh|"
+                     "wind|condition|icon|status|header_time>"));
     return;
   }
   if (op == "status") {
     char ip_c[32];
     net_ip_cstr(ip_c, sizeof(ip_c));
     BatteryStatus bs = read_battery_status();
-    Serial.printf("status ip=%s wifi=%s mqtt=%s v=%.2f pct=%d partial=%u\n", ip_c,
-                  net_wifi_is_connected() ? "up" : "down", net_mqtt_is_connected() ? "up" : "down",
+    Serial.printf("status ip=%s wifi=%s mqtt=%s v=%.2f pct=%d partial=%u\n",
+                  ip_c, net_wifi_is_connected() ? "up" : "down",
+                  net_mqtt_is_connected() ? "up" : "down",
                   static_cast<double>(bs.voltage), bs.percent,
                   static_cast<unsigned>(partial_counter));
     return;
   }
   if (op == "metrics") {
     InsideReadings latest = read_inside_sensors();
-    emit_metrics_json(latest.temperatureC, latest.humidityPct, latest.pressureHPa);
+    emit_metrics_json(latest.temperatureC, latest.humidityPct,
+                      latest.pressureHPa);
     return;
   }
   if (op == "ptest") {
