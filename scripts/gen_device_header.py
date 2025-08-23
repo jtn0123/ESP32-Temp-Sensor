@@ -55,7 +55,8 @@ def main():
             data = yaml.safe_load(f) or {}
     # defaults
     room_name = data.get("room_name", "Room")
-    # Allow environment override for wake interval (e.g., WAKE_INTERVAL=3m or 180)
+    # Allow environment override for wake interval (e.g., WAKE_INTERVAL=3m or
+    # 180)
     env_wake_str = str(os.environ.get("WAKE_INTERVAL", "")).strip()
     env_wake_sec = str(os.environ.get("WAKE_INTERVAL_SEC", "")).strip()
     if env_wake_str:
@@ -70,7 +71,6 @@ def main():
     full_refresh_every = int(data.get("full_refresh_every", 12) or 12)
     outside_source = str(data.get("outside_source", "mqtt"))
     wifi = data.get("wifi", {})
-    _ha_entities = data.get("ha_entities", {})
     mqtt = data.get("mqtt", {})
     base_topics = mqtt.get("base_topics", {})
     wifi_ssid = wifi.get("ssid", "")
@@ -98,8 +98,11 @@ def main():
     low_pct = int(battery.get("low_pct", 20) or 20)
     # thresholds for redraw skipping
     thresholds = data.get("thresholds", {})
-    # Optional firmware version: allow explicit config/env, else fallback to git
-    fw_version = str(data.get("fw_version", "") or os.environ.get("FW_VERSION", "") or "")
+    # Optional firmware version: allow explicit config/env, else fallback to
+    # git
+    fw_version = str(
+        data.get("fw_version", "") or os.environ.get("FW_VERSION", "") or ""
+    )
     if not fw_version:
         try:
             fw_version = (

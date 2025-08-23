@@ -21,9 +21,7 @@ def read_until_connected_from_serial(port: str, baud: int, timeout_s: float) -> 
         raise RuntimeError("pyserial not installed. pip install pyserial")
     end_at = time.time() + timeout_s
     lines: List[str] = []
-    with serial.Serial(port, baud, timeout=1) as ser:  # type: ignore[
-        attr-defined
-    ]
+    with serial.Serial(port, baud, timeout=1) as ser:  # type: ignore[attr-defined]
         time.sleep(0.1)
         while time.time() < end_at:
             raw = ser.readline().decode(errors="ignore")

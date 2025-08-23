@@ -11,7 +11,9 @@ def run(cmd: list[str]) -> int:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Flash ESP32 firmware with common modes")
+    parser = argparse.ArgumentParser(
+        description="Flash ESP32 firmware with common modes"
+    )
     parser.add_argument(
         "--port",
         help=(
@@ -33,8 +35,8 @@ def main() -> int:
         choices=["display", "headless"],
         default="display",
         help=(
-            "Select PlatformIO environment: "
-            "display (display-only fast loop, default) or headless (no display)."
+            "Select PlatformIO environment: display (display-only fast loop, "
+            "default) or headless (no display)."
         ),
     )
     parser.add_argument(

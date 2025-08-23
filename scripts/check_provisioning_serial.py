@@ -20,9 +20,7 @@ def wait_for_lines(port: str, baud: int, timeout_s: float) -> tuple[
     saw_prov = False
     saw_connected = False
     lines: list[str] = []
-    with serial.Serial(port, baud, timeout=1) as ser:  # type: ignore[
-        attr-defined
-    ]
+    with serial.Serial(port, baud, timeout=1) as ser:  # type: ignore[attr-defined]
         time.sleep(0.1)
         # send wificlear to force provisioning mode
         ser.write(b"wificlear\n")

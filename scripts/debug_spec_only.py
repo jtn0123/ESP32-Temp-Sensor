@@ -8,18 +8,17 @@ import time
 
 
 def _find_free_port() -> int:
-    with contextlib.closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as s:
+    with contextlib.closing(
+        socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    ) as s:
         s.bind(("127.0.0.1", 0))
         return s.getsockname()[1]
 
 
 def _start_http_server(root: str, port: int) -> subprocess.Popen:
-    return subprocess.Popen(
-        [sys.executable, "-m", "http.server", str(port), "--bind", "127.0.0.1"],
-        cwd=root,
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-    )
+    return subprocess.Popen([
+        sys.executable, "-m", "http.server", str(port), "--bind", "127.0.0.1"
+    ], cwd=root, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
 
 def main() -> int:
@@ -29,7 +28,9 @@ def main() -> int:
         print("Playwright not installed:", exc)
         return 2
 
-    web_root = os.path.join(os.path.dirname(os.path.dirname(__file__)), "web", "sim")
+    web_root = os.path.join(
+        os.path.dirname(os.path.dirname(__file__)), "web", "sim"
+    )
     port = _find_free_port()
     server = _start_http_server(web_root, port)
     logs = []

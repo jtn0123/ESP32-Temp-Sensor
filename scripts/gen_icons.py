@@ -24,7 +24,9 @@ def sun():
     cx, cy = SIZE // 2, SIZE // 2
     r = 7
     d.ellipse((cx - r, cy - r, cx + r, cy + r), outline=0, width=1)
-    for dx, dy in [(0, -11), (0, 11), (-11, 0), (11, 0), (-8, -8), (8, 8), (-8, 8), (8, -8)]:
+    for dx, dy in [
+        (0, -11), (0, 11), (-11, 0), (11, 0), (-8, -8), (8, 8), (-8, 8), (8, -8)
+    ]:
         d.line((cx, cy, cx + dx, cy + dy), fill=0, width=1)
     return img
 
