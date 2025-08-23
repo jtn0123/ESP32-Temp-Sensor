@@ -66,14 +66,12 @@ static void partial_update_outside_condition(const char* short_condition);
 static void partial_update_weather_icon(const char* weather);
 // New helpers: prefer OpenWeather fields (id/icon/desc) when available
 static void partial_update_weather_icon_from_outside(const OutsideReadings& o);
-static void draw_weather_icon_region_at(int16_t x, int16_t y, int16_t w,
-                                        int16_t h, const char* weather);
-static void draw_weather_icon_region_at_from_outside(int16_t x, int16_t y,
-                                                     int16_t w, int16_t h,
+static void draw_weather_icon_region_at(int16_t x, int16_t y, int16_t w, int16_t h,
+                                        const char* weather);
+static void draw_weather_icon_region_at_from_outside(int16_t x, int16_t y, int16_t w, int16_t h,
                                                      const OutsideReadings& o);
 // Footer-only weather updater to keep geometry consistent with full renders
-static void partial_update_footer_weather_from_outside(
-    const OutsideReadings& o);
+static void partial_update_footer_weather_from_outside(const OutsideReadings& o);
 static void draw_header_time(const char* time_str);
 // Accessor to avoid forward reference ordering issues
 static inline float get_last_outside_f();
@@ -144,9 +142,8 @@ static void draw_from_spec_full(uint8_t variantId) { draw_from_spec_full_impl(va
 #define EINK_RST -1 // FeatherWing ties panel reset to Feather RESET
 #endif
 #ifndef EINK_BUSY
-#define EINK_BUSY                                                                                  \
-  -1 // FeatherWing BUSY not connected; use -1 so library times
-     // waits
+#define EINK_BUSY -1 // FeatherWing BUSY not connected; use -1 so library times
+                     // waits
 #endif
 
 // 2.13" b/w class; choose the one matching your panel
