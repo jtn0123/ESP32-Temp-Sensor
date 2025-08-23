@@ -234,7 +234,8 @@ static void draw_from_spec_full_impl(uint8_t variantId) {
         }
         display.setTextColor(GxEPD_BLACK);
         display.setTextSize(1);
-        if (r && tx == 0 && (op.align == ALIGN_RIGHT || op.align == ALIGN_CENTER)) {
+        if (r && tx == 0 &&
+            (op.align == ALIGN_RIGHT || op.align == ALIGN_CENTER)) {
           int16_t tw = text_width_default_font(out.c_str(), 1);
           tx = r[0] + 1;
           if (op.align == ALIGN_RIGHT)
@@ -251,8 +252,10 @@ static void draw_from_spec_full_impl(uint8_t variantId) {
         char hhmm[8];
         net_time_hhmm(hhmm, sizeof(hhmm));
         int16_t tw = text_width_default_font(hhmm, 1);
-        int16_t rx = static_cast<int16_t>(HEADER_TIME[0] + HEADER_TIME[2] - 2 - tw);
-        int16_t by = static_cast<int16_t>(HEADER_TIME[1] + TOP_Y_OFFSET + HEADER_TIME[3] - 2);
+        int16_t rx = static_cast<int16_t>(HEADER_TIME[0] + HEADER_TIME[2] - 2 -
+                                          tw);
+        int16_t by = static_cast<int16_t>(HEADER_TIME[1] + TOP_Y_OFFSET +
+                                          HEADER_TIME[3] - 2);
         display.setTextColor(GxEPD_BLACK);
         display.setTextSize(1);
         display.setCursor(rx, by);
@@ -281,16 +284,19 @@ static void draw_from_spec_full_impl(uint8_t variantId) {
         if (r == INSIDE_TEMP) {
           InsideReadings ir = read_inside_sensors();
           if (isfinite(ir.temperatureC)) {
-            snprintf(temp_buf, sizeof(temp_buf), "%.1f", ir.temperatureC * 9.0 / 5.0 + 32.0);
+            snprintf(temp_buf, sizeof(temp_buf), "%.1f",
+                      ir.temperatureC * 9.0 / 5.0 + 32.0);
           } else {
             snprintf(temp_buf, sizeof(temp_buf), "--");
           }
         } else if (r == OUT_TEMP) {
           OutsideReadings orr = net_get_outside();
           if (orr.validTemp && isfinite(orr.temperatureC)) {
-            snprintf(temp_buf, sizeof(temp_buf), "%.1f", orr.temperatureC * 9.0 / 5.0 + 32.0);
+            snprintf(temp_buf, sizeof(temp_buf), "%.1f",
+                      orr.temperatureC * 9.0 / 5.0 + 32.0);
           } else if (isfinite(get_last_outside_f())) {
-            snprintf(temp_buf, sizeof(temp_buf), "%.1f", get_last_outside_f());
+            snprintf(temp_buf, sizeof(temp_buf), "%.1f",
+                      get_last_outside_f());
           } else {
             snprintf(temp_buf, sizeof(temp_buf), "--");
           }
