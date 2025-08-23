@@ -583,6 +583,50 @@
       draw(base);
     });
   }
+  // Spec selector (runtime override for experimentation only)
+  const specSel = document.getElementById('specMode');
+  if (specSel){
+    specSel.addEventListener('change', ()=>{
+      const which = specSel.value || 'v1';
+      try{
+        if (which === 'v2_grid'){
+          // Construct a v2 spec by cloning UI_SPEC and snapping rects + fonts
+          const base = JSON.parse(JSON.stringify(window.UI_SPEC || {}));
+          if (!base.rects) base.rects = {};
+          const snap = (n)=> Math.round(n/4)*4;
+          Object.keys(base.rects).forEach((k)=>{
+            const r = base.rects[k];
+            if (Array.isArray(r) && r.length === 4){
+              // enforce 12px outer padding and 4px grid by snapping x,y and widths
+              r[0] = Math.max(0, snap(r[0] < 12 ? 12 : r[0]));
+              r[1] = Math.max(0, snap(r[1] < 4 ? 4 : r[1]));
+              r[2] = snap(r[2]);
+              r[3] = snap(r[3]);
+              base.rects[k] = r;
+            }
+          });
+          // Adjust fonts: big:26, label:12, small:10, time:10
+          if (!base.fonts) base.fonts = {};
+          if (!base.fonts.tokens) base.fonts.tokens = {};
+          base.fonts.tokens.big = { px: 26, weight: 'bold' };
+          base.fonts.tokens.label = { px: 12, weight: 'bold' };
+          base.fonts.tokens.small = { px: 10 };
+          base.fonts.tokens.time = { px: 10 };
+          // Replace global UI_SPEC at runtime for sim display only
+          window.UI_SPEC = base;
+          // Re-apply central geometry
+          GJSON = base;
+        } else {
+          // Reload original generated UI_SPEC by reloading page without param
+          // More stable than trying to restore deep-cloned structure across toggles
+          const url = new URL(window.location.href);
+          window.location.replace(url.toString());
+          return;
+        }
+      }catch(e){}
+      draw({});
+    });
+  }
   load();
 })();
 
