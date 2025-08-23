@@ -28,6 +28,7 @@
   let showRects = false;
   let showLabels = false;
   let simulateGhosting = false;
+  let geometryOnly = false; // when true, render only geometry (for labeled mode)
   let GEOMETRY = null; // optional overlay geometry loaded from geometry.json
   let GJSON = null;    // centralized geometry JSON
   // Enable spec-only render (always on to keep single source of truth)
@@ -137,10 +138,14 @@
   function drawRectsOverlay(){
     if (!showRects || !GJSON || !GJSON.rects) return;
     ctx.save();
+    // Fill rects with a translucent color so misalignment is obvious
     ctx.strokeStyle = '#f00';
     ctx.lineWidth = 1;
     Object.entries(GJSON.rects).forEach(([name, r])=>{
       const [x,y,w,h] = r;
+      // Semi-transparent fill distinguishable from content (skip threshold when overlays are active)
+      ctx.fillStyle = 'rgba(255, 0, 0, 0.15)';
+      ctx.fillRect(x, y, w, h);
       ctx.strokeRect(x+0.5, y+0.5, w, h);
       if (showLabels){
         ctx.fillStyle = '#000';
@@ -149,6 +154,27 @@
         ctx.fillText(String(name), x+2, y+2);
       }
     });
+    // Distinguish chrome/border lines by drawing them in green in overlay mode
+    try {
+      const spec = (typeof window !== 'undefined') ? window.UI_SPEC : null;
+      const chrome = (spec && spec.components && spec.components.chrome) ? spec.components.chrome : [];
+      ctx.strokeStyle = '#0a0';
+      ctx.lineWidth = 2;
+      chrome.forEach(op=>{
+        if (op && op.op === 'line' && Array.isArray(op.from) && Array.isArray(op.to)){
+          const fx = (op.from[0]|0) + 0.5;
+          const fy = (op.from[1]|0) + 0.5;
+          const tx = (op.to[0]|0) + 0.5;
+          const ty = (op.to[1]|0) + 0.5;
+          ctx.beginPath();
+          ctx.moveTo(fx, fy);
+          ctx.lineTo(tx, ty);
+          ctx.stroke();
+        }
+      });
+      // Also outline the full canvas as a green border
+      ctx.strokeRect(0.5, 0.5, WIDTH-1, HEIGHT-1);
+    } catch(e){}
     ctx.restore();
   }
 
@@ -286,7 +312,10 @@
               ctx.font = `${weight} ${fpx}px ${FONT_STACK}`; ctx.textBaseline='top'; ctx.fillStyle='#000';
               const lw = ctx.measureText(lab).width;
               const lx = r[0] + Math.floor((r[2] - lw)/2);
-              text(lx, op.y || (r[1] - (fpx+2)), lab, fpx, weight);
+              const ly = (typeof window !== 'undefined' && window.__specMode === 'v2_grid')
+                ? (r[1] - (fpx + 2))
+                : (op.y || (r[1] - (fpx+2)));
+              text(lx, ly, lab, fpx, weight);
               if (op.aboveRect === 'INSIDE_TEMP') window.__layoutMetrics.labels.inside = { x: lx + lw/2 };
               if (op.aboveRect === 'OUT_TEMP') window.__layoutMetrics.labels.outside = { x: lx + lw/2 };
               break;
@@ -367,13 +396,19 @@
               } else {
                 const wstr = String((data.weather||'')).toLowerCase();
                 if (wstr.includes('rain')){
-                  ctx.strokeRect(startX+2, barY+6, iconW-4, iconH-8);
+                  if (!(typeof window !== 'undefined' && window.__specMode === 'v2_grid')){
+                    ctx.strokeRect(startX+2, barY+6, iconW-4, iconH-8);
+                  }
                   for (let i=0;i<3;i++) { ctx.beginPath(); ctx.moveTo(startX+6+i*6, iconCy+2); ctx.lineTo(startX+3+i*6, iconCy+8); ctx.stroke(); }
                 } else if (wstr.includes('snow')){
-                  ctx.strokeRect(startX+2, barY+6, iconW-4, iconH-8);
+                  if (!(typeof window !== 'undefined' && window.__specMode === 'v2_grid')){
+                    ctx.strokeRect(startX+2, barY+6, iconW-4, iconH-8);
+                  }
                   for (let i=0;i<2;i++) text(startX+6+i*8, iconCy+2, '*', 10);
                 } else if (wstr.includes('storm')||wstr.includes('thunder')||wstr.includes('lightning')){
-                  ctx.strokeRect(startX+2, barY+6, iconW-4, iconH-8);
+                  if (!(typeof window !== 'undefined' && window.__specMode === 'v2_grid')){
+                    ctx.strokeRect(startX+2, barY+6, iconW-4, iconH-8);
+                  }
                   ctx.beginPath(); ctx.moveTo(iconCx-6, iconCy+2); ctx.lineTo(iconCx, iconCy-2); ctx.lineTo(iconCx-2, iconCy+6); ctx.lineTo(iconCx+6, iconCy+2); ctx.stroke();
                 } else if (wstr.includes('fog')||wstr.includes('mist')||wstr.includes('haze')){
                   for (let i=0;i<3;i++){ ctx.beginPath(); ctx.moveTo(startX+2, barY+6+i*6); ctx.lineTo(startX+iconW-2, barY+6+i*6); ctx.stroke(); }
@@ -438,7 +473,7 @@
     // Render via spec only
     const variant = QS.get('variant') || (typeof window!=='undefined' && window.UI_SPEC && window.UI_SPEC.defaultVariant) || 'v1';
     ctx.fillStyle = '#fff'; ctx.fillRect(0,0,WIDTH,HEIGHT);
-    if (typeof window !== 'undefined' && typeof window.drawFromSpec === 'function'){
+    if (!geometryOnly && typeof window !== 'undefined' && typeof window.drawFromSpec === 'function'){
       window.drawFromSpec(ctx, lastData, variant);
     }
     drawGridOverlay();
@@ -449,7 +484,9 @@
     // weather-night-partly-cloudy weather-windy-variant
     // Layout constants
     // DISPLAY_WIDTH DISPLAY_HEIGHT RECT_HEADER_NAME RECT_OUT_TEMP CANVAS
-    applyOneBitThreshold();
+    if (!geometryOnly && !showRects && !showLabels) {
+      applyOneBitThreshold();
+    }
     if (simulateGhosting){
       // Light residue effect from previous frame: draw faint stipple
       const img = ctx.getImageData(0,0,WIDTH,HEIGHT);
@@ -525,7 +562,7 @@
   const rectsEl = document.getElementById('showRects');
   if (rectsEl) rectsEl.addEventListener('change', (e)=>{ showRects = !!e.target.checked; draw({}); });
   const labelsEl = document.getElementById('showLabels');
-  if (labelsEl) labelsEl.addEventListener('change', (e)=>{ showLabels = !!e.target.checked; draw({}); });
+  if (labelsEl) labelsEl.addEventListener('change', (e)=>{ showLabels = !!e.target.checked; geometryOnly = showLabels; draw({}); });
   const ghostEl = document.getElementById('simulateGhosting');
   if (ghostEl) ghostEl.addEventListener('change', (e)=>{ simulateGhosting = !!e.target.checked; draw({}); });
   const specOnlyEl = document.getElementById('specOnly');

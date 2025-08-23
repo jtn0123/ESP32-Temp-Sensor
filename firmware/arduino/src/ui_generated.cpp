@@ -7,6 +7,4 @@
 // weather-sunny weather-partly-cloudy weather-cloudy weather-fog
 // weather-pouring weather-snowy weather-lightning weather-night
 // weather-night-partly-cloudy weather-windy-variant
-// icons: weather-lightning weather-pouring weather-snowy weather-fog weather-partly-cloudy
-// weather-cloudy weather-night weather-windy-variant weather-snowy weather-cloudy weather-sunny
-// weather-sunny
+// icons: weather-lightning weather-pouring weather-snowy weather-fog weather-partly-cloudy weather-cloudy weather-night weather-windy-variant weather-snowy weather-cloudy weather-sunny weather-sunny
