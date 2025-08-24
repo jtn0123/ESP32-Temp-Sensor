@@ -56,7 +56,8 @@ def _resolve_broker() -> Tuple[str, int]:
     return str(m.get("host", "127.0.0.1")), int(m.get("port", 1883))
 
 
-@pytest.mark.skipif(os.environ.get("E2E_DEVICE", "0") != "1", reason="Set E2E_DEVICE=1 to enable E2E device test")
+@pytest.mark.skipif(os.environ.get("E2E_DEVICE", "0") != "1", \
+                     reason="Set E2E_DEVICE=1 to enable E2E device test")
 def test_device_publishes_ui_debug_from_outdoor_aliases():
     mqtt_host, mqtt_port = _resolve_broker()
     pub_base_yaml, sub_base_yaml = _resolve_bases_from_yaml()

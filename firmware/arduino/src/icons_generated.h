@@ -8,7 +8,8 @@
 #define ICON_W 24
 #define ICON_H 24
 
-typedef struct __icon_data_marker { const uint8_t* p; } __icon_data_marker_t;
+typedef struct __icon_data_marker { const uint8_t* p; }
+                     __icon_data_marker_t;
 struct IconData { const uint8_t* data; uint16_t w; uint16_t h; };
 
 // ICON_weather-sunny ICON_weather-partly-cloudy ICON_weather-cloudy ICON_weather-fog ICON_weather-pouring ICON_weather-snowy ICON_weather-lightning ICON_weather-night ICON_weather-night-partly-cloudy ICON_weather-windy-variant ICON_moon-new ICON_moon-waxing-crescent ICON_moon-first-quarter ICON_moon-waxing-gibbous ICON_moon-full ICON_moon-waning-gibbous ICON_moon-last-quarter ICON_moon-waning-crescent

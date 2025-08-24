@@ -294,7 +294,8 @@ def test_message_retention_flags():
 
     for topic in discovery_topics:
         # Discovery payloads should always be retained
-        assert topic not in MQTT_MESSAGE_FIXTURES or MQTT_MESSAGE_FIXTURES.get(topic, {}).get("retained", True)
+        assert topic not in MQTT_MESSAGE_FIXTURES or \
+               MQTT_MESSAGE_FIXTURES.get(topic, {}).get("retained", True)
 
     for topic in non_retained_topics:
         fixture = next((f for f in MQTT_MESSAGE_FIXTURES.values() if f["topic"] == topic), None)
@@ -317,7 +318,8 @@ def test_extreme_value_handling():
             # Should parse without error, but UI should handle display appropriately
             assert isinstance(parsed, (int, float))
         except (ValueError, TypeError):
-            pytest.fail(f"Failed to parse extreme value {fixture['description']}: {fixture['payload']}")
+            pytest.fail(f"Failed to parse extreme value {fixture['description']}: "
+                        f"{fixture['payload']}")
 
 def test_unit_conversion_requirements():
     """Test that temperature values are properly handled for different units"""
@@ -368,7 +370,8 @@ def test_condition_code_mapping():
     for code, expected_condition in condition_code_tests:
         assert isinstance(code, int)
         assert isinstance(expected_condition, str)
-        assert expected_condition in ["clear", "part", "cloud", "fog", "rain", "snow", "shower", "thunder"]
+        assert expected_condition in ["clear", "part", "cloud", "fog", "rain", "snow",
+                                       "shower", "thunder"]
 
 def test_mqtt_qos_requirements():
     """Test MQTT QoS level requirements"""

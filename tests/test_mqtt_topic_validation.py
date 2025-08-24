@@ -51,9 +51,11 @@ MQTT_FIXTURES = {
 
 def _get_config_topics() -> Dict[str, str]:
     """Extract topic configuration from device.yaml for testing"""
-    config_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "config", "device.yaml")
+    config_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), \
+                                 "config", "device.yaml")
     if not os.path.exists(config_path):
-        config_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "config", "device.sample.yaml")
+        config_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), \
+                                   "config", "device.sample.yaml")
 
     try:
         import yaml
@@ -137,10 +139,12 @@ def test_mqtt_message_payload_validation():
             # Should be a reasonable string or integer
             if isinstance(fixture["expected_value"], str):
                 assert len(fixture["payload"]) > 0, f"Empty condition payload for {fixture_name}"
-                assert "-" in fixture["payload"] or "_" in fixture["payload"] or fixture["payload"].isalpha(), \
+                assert ("-" in fixture["payload"] or "_" in fixture["payload"] or
+                        fixture["payload"].isalpha()), \
                     f"Invalid condition format for {fixture_name}: {fixture['payload']}"
             elif isinstance(fixture["expected_value"], int):
-                assert 0 <= fixture["expected_value"] <= 50, f"Condition code out of range for {fixture_name}"
+                assert 0 <= fixture["expected_value"] <= 50, \
+                    f"Condition code out of range for {fixture_name}"
 
 def test_mqtt_payload_edge_cases():
     """Test MQTT payload handling for edge cases"""

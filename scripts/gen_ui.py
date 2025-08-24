@@ -94,8 +94,10 @@ def emit_fw_header(spec: Dict[str, Any]) -> str:
     lines.append("")
     # Emit icon tokens so tests can find weather-* references in the header
     try:
-        icon_names = [r.get("icon") for r in (spec.get("iconMap") or []) if isinstance(r, dict) and r.get("icon")]
-        weather_icons = sorted({n for n in icon_names if isinstance(n, str) and n.startswith("weather-")})
+        icon_names = [r.get("icon") for r in (spec.get("iconMap") or [])
+                       if isinstance(r, dict) and r.get("icon")]
+        weather_icons = sorted({n for n in icon_names if isinstance(n, str) and
+                                   n.startswith("weather-")})
         if weather_icons:
             lines.append("// Icon tokens: " + " ".join(weather_icons))
     except Exception:
@@ -184,7 +186,8 @@ def emit_fw_layout_header(spec: Dict[str, Any]) -> str:
         lines.append(f'static_assert({x} + {rw} <= DISPLAY_WIDTH,  "{name} width");')
         lines.append(f'static_assert({y} + {rh} <= DISPLAY_HEIGHT, "{name} height");')
     if "STATUS" in rects:
-        lines.append('static_assert(RECT_STATUS_[0] + RECT_STATUS_[2] <= DISPLAY_WIDTH,  "STATUS_ width");')
+        lines.append('static_assert(RECT_STATUS_[0] + RECT_STATUS_[2] <= DISPLAY_WIDTH, '
+                       '"STATUS_ width");')
     lines.append("")
     return "\n".join(lines) + "\n"
 

@@ -12,38 +12,98 @@ _spec.loader.exec_module(pe)  # type: ignore
 # Edge case test scenarios
 POWER_EDGE_CASES = [
     # Zero/invalid inputs
-    {"capacity_mAh": 0, "sleep_current_mA": 0.09, "active_current_mA": 80, "active_seconds": 45, "wake_interval_sec": 3600, "should_error": True},
-    {"capacity_mAh": 3500, "sleep_current_mA": 0, "active_current_mA": 80, "active_seconds": 45, "wake_interval_sec": 3600, "should_error": False},
-    {"capacity_mAh": 3500, "sleep_current_mA": 0.09, "active_current_mA": 0, "active_seconds": 45, "wake_interval_sec": 3600, "should_error": False},
-    {"capacity_mAh": 3500, "sleep_current_mA": 0.09, "active_current_mA": 80, "active_seconds": 0, "wake_interval_sec": 3600, "should_error": False},
+    {
+        "capacity_mAh": 0, "sleep_current_mA": 0.09, "active_current_mA": 80,
+        "active_seconds": 45, "wake_interval_sec": 3600, "should_error": True
+    },
+    {
+        "capacity_mAh": 3500, "sleep_current_mA": 0, "active_current_mA": 80,
+        "active_seconds": 45, "wake_interval_sec": 3600, "should_error": False
+    },
+    {
+        "capacity_mAh": 3500, "sleep_current_mA": 0.09, "active_current_mA": 0,
+        "active_seconds": 45, "wake_interval_sec": 3600, "should_error": False
+    },
+    {
+        "capacity_mAh": 3500, "sleep_current_mA": 0.09, "active_current_mA": 80,
+        "active_seconds": 0, "wake_interval_sec": 3600, "should_error": False
+    },
 
     # Extremely high values (unrealistic but should handle gracefully)
-    {"capacity_mAh": 999999, "sleep_current_mA": 0.09, "active_current_mA": 80, "active_seconds": 45, "wake_interval_sec": 3600, "should_error": False},
-    {"capacity_mAh": 3500, "sleep_current_mA": 999, "active_current_mA": 80, "active_seconds": 45, "wake_interval_sec": 3600, "should_error": False},
-    {"capacity_mAh": 3500, "sleep_current_mA": 0.09, "active_current_mA": 9999, "active_seconds": 45, "wake_interval_sec": 3600, "should_error": False},
-    {"capacity_mAh": 3500, "sleep_current_mA": 0.09, "active_current_mA": 80, "active_seconds": 99999, "wake_interval_sec": 3600, "should_error": False},
+    {
+        "capacity_mAh": 999999, "sleep_current_mA": 0.09, "active_current_mA": 80,
+        "active_seconds": 45, "wake_interval_sec": 3600, "should_error": False
+    },
+    {
+        "capacity_mAh": 3500, "sleep_current_mA": 999, "active_current_mA": 80,
+        "active_seconds": 45, "wake_interval_sec": 3600, "should_error": False
+    },
+    {
+        "capacity_mAh": 3500, "sleep_current_mA": 0.09, "active_current_mA": 9999,
+        "active_seconds": 45, "wake_interval_sec": 3600, "should_error": False
+    },
+    {
+        "capacity_mAh": 3500, "sleep_current_mA": 0.09, "active_current_mA": 80,
+        "active_seconds": 99999, "wake_interval_sec": 3600, "should_error": False
+    },
 
     # Very short wake intervals (stress test)
-    {"capacity_mAh": 3500, "sleep_current_mA": 0.09, "active_current_mA": 80, "active_seconds": 45, "wake_interval_sec": 60, "should_error": False},
-    {"capacity_mAh": 3500, "sleep_current_mA": 0.09, "active_current_mA": 80, "active_seconds": 45, "wake_interval_sec": 1, "should_error": False},
+    {
+        "capacity_mAh": 3500, "sleep_current_mA": 0.09, "active_current_mA": 80,
+        "active_seconds": 45, "wake_interval_sec": 60, "should_error": False
+    },
+    {
+        "capacity_mAh": 3500, "sleep_current_mA": 0.09, "active_current_mA": 80,
+        "active_seconds": 45, "wake_interval_sec": 1, "should_error": False
+    },
 
     # Negative values (should handle gracefully)
-    {"capacity_mAh": -1000, "sleep_current_mA": 0.09, "active_current_mA": 80, "active_seconds": 45, "wake_interval_sec": 3600, "should_error": True},
-    {"capacity_mAh": 3500, "sleep_current_mA": -0.1, "active_current_mA": 80, "active_seconds": 45, "wake_interval_sec": 3600, "should_error": True},
-    {"capacity_mAh": 3500, "sleep_current_mA": 0.09, "active_current_mA": -10, "active_seconds": 45, "wake_interval_sec": 3600, "should_error": True},
-    {"capacity_mAh": 3500, "sleep_current_mA": 0.09, "active_current_mA": 80, "active_seconds": -5, "wake_interval_sec": 3600, "should_error": True},
+    {
+        "capacity_mAh": -1000, "sleep_current_mA": 0.09, "active_current_mA": 80,
+        "active_seconds": 45, "wake_interval_sec": 3600, "should_error": True
+    },
+    {
+        "capacity_mAh": 3500, "sleep_current_mA": -0.1, "active_current_mA": 80,
+        "active_seconds": 45, "wake_interval_sec": 3600, "should_error": True
+    },
+    {
+        "capacity_mAh": 3500, "sleep_current_mA": 0.09, "active_current_mA": -10,
+        "active_seconds": 45, "wake_interval_sec": 3600, "should_error": True
+    },
+    {
+        "capacity_mAh": 3500, "sleep_current_mA": 0.09, "active_current_mA": 80,
+        "active_seconds": -5, "wake_interval_sec": 3600, "should_error": True
+    },
 
     # Very small values
-    {"capacity_mAh": 1, "sleep_current_mA": 0.001, "active_current_mA": 1, "active_seconds": 1, "wake_interval_sec": 3600, "should_error": False},
-    {"capacity_mAh": 3500, "sleep_current_mA": 0.0001, "active_current_mA": 80, "active_seconds": 45, "wake_interval_sec": 3600, "should_error": False},
+    {
+        "capacity_mAh": 1, "sleep_current_mA": 0.001, "active_current_mA": 1,
+        "active_seconds": 1, "wake_interval_sec": 3600, "should_error": False
+    },
+    {
+        "capacity_mAh": 3500, "sleep_current_mA": 0.0001, "active_current_mA": 80,
+        "active_seconds": 45, "wake_interval_sec": 3600, "should_error": False
+    },
 ]
 
 # Battery chemistry scenarios
 BATTERY_CHEMISTRY_SCENARIOS = [
-    {"name": "LiPo 3.7V", "capacity_mAh": 3500, "nominal_voltage": 3.7, "sleep_current_mA": 0.09, "active_current_mA": 80},
-    {"name": "Li-ion 18650", "capacity_mAh": 2500, "nominal_voltage": 3.6, "sleep_current_mA": 0.05, "active_current_mA": 120},
-    {"name": "Alkaline AA (2x)", "capacity_mAh": 2400, "nominal_voltage": 3.0, "sleep_current_mA": 0.15, "active_current_mA": 60},
-    {"name": "NiMH AA (4x)", "capacity_mAh": 2000, "nominal_voltage": 4.8, "sleep_current_mA": 0.8, "active_current_mA": 100},
+    {
+        "name": "LiPo 3.7V", "capacity_mAh": 3500, "nominal_voltage": 3.7,
+        "sleep_current_mA": 0.09, "active_current_mA": 80
+    },
+    {
+        "name": "Li-ion 18650", "capacity_mAh": 2500, "nominal_voltage": 3.6,
+        "sleep_current_mA": 0.05, "active_current_mA": 120
+    },
+    {
+        "name": "Alkaline AA (2x)", "capacity_mAh": 2400, "nominal_voltage": 3.0,
+        "sleep_current_mA": 0.15, "active_current_mA": 60
+    },
+    {
+        "name": "NiMH AA (4x)", "capacity_mAh": 2000, "nominal_voltage": 4.8,
+        "sleep_current_mA": 0.8, "active_current_mA": 100
+    },
 ]
 
 # Environmental temperature scenarios

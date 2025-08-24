@@ -85,5 +85,5 @@ static_assert(90 + 32 <= DISPLAY_HEIGHT, "FOOTER_R height");
 static_assert(RECT_STATUS_[0] >= 0 && RECT_STATUS_[1] >= 0, "STATUS origin");
 static_assert(6 + 238 <= DISPLAY_WIDTH,  "STATUS width");
 static_assert(112 + 10 <= DISPLAY_HEIGHT, "STATUS height");
-static_assert(RECT_STATUS_[0] + RECT_STATUS_[2] <= DISPLAY_WIDTH,  "STATUS_ width");
+static_assert(RECT_STATUS_[0] + RECT_STATUS_[2] <= DISPLAY_WIDTH, "STATUS_ width");
 

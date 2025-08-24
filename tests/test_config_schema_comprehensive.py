@@ -328,8 +328,10 @@ def test_wifi_config_validation():
                     required_static = ["ip", "gateway", "subnet"]
 
                     for field in required_static:
-                        assert field in static, f"Missing static IP field '{field}' in {config_path}"
-                        assert static[field].strip(), f"Empty static IP field '{field}' in {config_path}"
+                        assert field in static, \
+                            f"Missing static IP field '{field}' in {config_path}"
+                        assert static[field].strip(), \
+                            f"Empty static IP field '{field}' in {config_path}"
 
 def test_mqtt_config_validation():
     """Test MQTT configuration validation"""
@@ -352,7 +354,8 @@ def test_mqtt_config_validation():
                 outside_source = config.get("outside_source", "mqtt")
 
                 if outside_source == "mqtt":
-                    assert "host" in mqtt, f"Missing MQTT host when outside_source=mqtt in {config_path}"
+                    assert "host" in mqtt, \
+                        f"Missing MQTT host when outside_source=mqtt in {config_path}"
                     assert mqtt["host"].strip(), f"Empty MQTT host in {config_path}"
 
                 # Validate MQTT port if present
@@ -364,19 +367,24 @@ def test_mqtt_config_validation():
                 # Validate MQTT topic base formats
                 if "base_topics" in mqtt:
                     base_topics = mqtt["base_topics"]
-                    assert isinstance(base_topics, dict), f"base_topics should be dict in {config_path}"
+                    assert isinstance(base_topics, dict), \
+                        f"base_topics should be dict in {config_path}"
 
                     if "publish" in base_topics:
                         pub_topic = base_topics["publish"]
                         assert pub_topic.strip(), f"Empty publish base topic in {config_path}"
-                        assert not pub_topic.startswith("/"), f"Publish base topic should not start with / in {config_path}"
-                        assert not pub_topic.endswith("/"), f"Publish base topic should not end with / in {config_path}"
+                        assert not pub_topic.startswith("/"), \
+                            f"Publish base topic should not start with / in {config_path}"
+                        assert not pub_topic.endswith("/"), \
+                            f"Publish base topic should not end with / in {config_path}"
 
                     if "subscribe" in base_topics:
                         sub_topic = base_topics["subscribe"]
                         assert sub_topic.strip(), f"Empty subscribe base topic in {config_path}"
-                        assert not sub_topic.startswith("/"), f"Subscribe base topic should not start with / in {config_path}"
-                        assert not sub_topic.endswith("/"), f"Subscribe base topic should not end with / in {config_path}"
+                        assert not sub_topic.startswith("/"), \
+                            f"Subscribe base topic should not start with / in {config_path}"
+                        assert not sub_topic.endswith("/"), \
+                            f"Subscribe base topic should not end with / in {config_path}"
 
 def test_battery_config_validation():
     """Test battery configuration validation"""
@@ -402,17 +410,18 @@ def test_battery_config_validation():
                     assert field in battery, f"Missing battery field '{field}' in {config_path}"
 
                     value = battery[field]
-                    assert isinstance(value, (int, float)), f"Battery {field} should be number in {config_path}"
+                    assert isinstance(value, (int, float)), \
+                        f"Battery {field} should be number in {config_path}"
                     assert value > 0, f"Battery {field} should be positive in {config_path}"
 
                 # Validate realistic ranges
                 capacity = battery.get("capacity_mAh", 0)
                 sleep_current = battery.get("sleep_current_mA", 0)
-                active_current = battery.get("active_current_mA", 0)
 
                 assert capacity >= 100, f"Battery capacity {capacity} too small in {config_path}"
                 assert capacity <= 20000, f"Battery capacity {capacity} too large in {config_path}"
-                assert sleep_current <= 1.0, f"Sleep current {sleep_current} too high in {config_path}"
+                assert sleep_current <= 1.0, \
+                    f"Sleep current {sleep_current} too high in {config_path}"
 
                 # Optional battery fields
                 if "low_pct" in battery:
@@ -441,19 +450,24 @@ def test_ha_entities_config_validation():
 
                 # Each entity should follow HA entity ID format
                 for entity_name, entity_id in ha_entities.items():
-                    assert isinstance(entity_id, str), f"HA entity {entity_name} should be string in {config_path}"
-                    assert entity_id.strip(), f"HA entity {entity_name} should not be empty in {config_path}"
+                    assert isinstance(entity_id, str), \
+                        f"HA entity {entity_name} should be string in {config_path}"
+                    assert entity_id.strip(), \
+                        f"HA entity {entity_name} should not be empty in {config_path}"
 
                     # Should contain domain
-                    assert "." in entity_id, f"HA entity {entity_name} missing domain in {config_path}"
+                    assert "." in entity_id, \
+                        f"HA entity {entity_name} missing domain in {config_path}"
 
                     # Should not contain spaces
-                    assert " " not in entity_id, f"HA entity {entity_name} should not contain spaces in {config_path}"
+                    assert " " not in entity_id, \
+                        f"HA entity {entity_name} should not contain spaces in {config_path}"
 
                     # Domain should be valid
                     domain = entity_id.split(".")[0]
                     valid_domains = ["sensor", "weather", "binary_sensor", "switch"]
-                    assert domain in valid_domains, f"Invalid domain '{domain}' for HA entity {entity_name} in {config_path}"
+                    assert domain in valid_domains, \
+                        f"Invalid domain '{domain}' for HA entity {entity_name} in {config_path}"
 
 def test_config_value_ranges():
     """Test that configuration values are within reasonable ranges"""
@@ -474,22 +488,26 @@ def test_config_value_ranges():
             if thresholds:
                 if "temp_degC" in thresholds:
                     temp_thresh = thresholds["temp_degC"]
-                    assert 0.0 <= temp_thresh <= 5.0, f"Invalid temp threshold {temp_thresh} in {config_path}"
+                    assert 0.0 <= temp_thresh <= 5.0, \
+                        f"Invalid temp threshold {temp_thresh} in {config_path}"
 
                 if "rh_pct" in thresholds:
                     rh_thresh = thresholds["rh_pct"]
-                    assert 0.0 <= rh_thresh <= 10.0, f"Invalid RH threshold {rh_thresh} in {config_path}"
+                    assert 0.0 <= rh_thresh <= 10.0, \
+                        f"Invalid RH threshold {rh_thresh} in {config_path}"
 
             # Test battery values
             battery = config.get("battery", {})
             if battery:
                 if "capacity_mAh" in battery:
                     capacity = battery["capacity_mAh"]
-                    assert 500 <= capacity <= 10000, f"Unreasonable battery capacity {capacity} in {config_path}"
+                    assert 500 <= capacity <= 10000, \
+                        f"Unreasonable battery capacity {capacity} in {config_path}"
 
                 if "sleep_current_mA" in battery:
                     sleep_current = battery["sleep_current_mA"]
-                    assert 0.01 <= sleep_current <= 2.0, f"Unreasonable sleep current {sleep_current} in {config_path}"
+                    assert 0.01 <= sleep_current <= 2.0, \
+                        f"Unreasonable sleep current {sleep_current} in {config_path}"
 
 def test_config_file_consistency():
     """Test consistency between configuration files"""

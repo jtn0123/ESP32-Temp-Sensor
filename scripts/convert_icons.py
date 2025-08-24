@@ -118,7 +118,8 @@ def main() -> None:
     header_lines.append("#define ICON_H 24")
     header_lines.append("")
     # Provide simple typedef/struct markers for tests
-    header_lines.append("typedef struct __icon_data_marker { const uint8_t* p; } __icon_data_marker_t;")
+    header_lines.append("typedef struct __icon_data_marker { const uint8_t* p; }")
+    header_lines.append("                     __icon_data_marker_t;")
     header_lines.append("struct IconData { const uint8_t* data; uint16_t w; uint16_t h; };")
     header_lines.append("")
     # Provide ICON_ alias markers that include hyphenated names searched by tests

@@ -75,7 +75,8 @@ def process_file(filepath):
 def main():
     """Main function to process all C++ files"""
     cpp_files = []
-    for root, dirs, files in os.walk('/Users/justin/Documents/Github/ESP32-Temp-Sensor/firmware/arduino/src'):
+    firmware_src_path = '/Users/justin/Documents/Github/ESP32-Temp-Sensor/firmware/arduino/src'
+    for root, dirs, files in os.walk(firmware_src_path):
         for file in files:
             if file.endswith('.cpp') or file.endswith('.h'):
                 if file != 'icons_generated.h':  # Skip this file for now

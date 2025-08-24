@@ -79,7 +79,8 @@ MALFORMED_LOG_LINES = [
     "[ERROR] " + "B" * 1000,
 
     # Lines with special characters
-    "[METRICS] Inside: 72.5°F 45% RH, Outside: 68.2°F 52% RH, Wind: 5.2 mph, Pressure: 1013.2 hPa \x00\x01\x02",
+    "[METRICS] Inside: 72.5°F 45% RH, Outside: 68.2°F 52% RH, Wind: 5.2 mph, "
+    "Pressure: 1013.2 hPa \x00\x01\x02",
     "[STATUS] Battery: 3.85V (87%), Est. days: 145 \n\r\t",
 
     # Empty values

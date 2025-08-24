@@ -64,7 +64,8 @@ def test_icon_generation_pipeline():
             assert result.returncode == 0, f"Icon generation failed: {result.stderr}"
 
             # Should generate output
-            assert len(result.stdout) > 0 or len(result.stderr) == 0, "No output from icon generation"
+            assert len(result.stdout) > 0 or len(result.stderr) == 0, \
+                "No output from icon generation"
 
         except subprocess.TimeoutExpired:
             pytest.fail("Icon generation timed out")
@@ -74,7 +75,8 @@ def test_icon_generation_pipeline():
 def test_icon_header_generation():
     """Test that icon header files are properly generated"""
 
-    firmware_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "firmware", "arduino", "src")
+    firmware_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), \
+                                 "firmware", "arduino", "src")
     icon_header = os.path.join(firmware_dir, "icons_generated.h")
 
     if not os.path.exists(icon_header):
@@ -88,7 +90,8 @@ def test_icon_header_generation():
     assert "ICON_" in header_content, "No icon definitions found in header"
 
     # Should have proper include guards or pragma once
-    has_include_guards = "#ifndef ICONS_GENERATED_H" in header_content and "#define ICONS_GENERATED_H" in header_content
+    has_include_guards = "#ifndef ICONS_GENERATED_H" in header_content and \
+                          "#define ICONS_GENERATED_H" in header_content
     has_pragma_once = "#pragma once" in header_content
 
     assert has_include_guards or has_pragma_once, "Missing proper header guards"

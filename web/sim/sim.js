@@ -29,7 +29,7 @@
   let showLabels = false;
   let simulateGhosting = false;
   let geometryOnly = false; // when true, render only geometry (for labeled mode)
-  let highlightIssues = false;
+  // removed highlightIssues toggle per feedback
   let GEOMETRY = null; // optional overlay geometry loaded from geometry.json
   let GJSON = null;    // centralized geometry JSON
   // Enable spec-only render (always on to keep single source of truth)
@@ -176,25 +176,7 @@
       // Also outline the full canvas as a green border
       ctx.strokeRect(0.5, 0.5, WIDTH-1, HEIGHT-1);
 
-      // Issue highlighter: mark rects that cross the center divider or are off-grid
-      if (highlightIssues && window.__specMode === 'v2_grid'){
-        const GRID = 4, DIV_X = 128;
-        Object.entries(GJSON.rects).forEach(([name, r])=>{
-          if (!Array.isArray(r) || r.length !== 4) return;
-          const [x,y,w,h] = r;
-          const right = x + w;
-          const misGrid = (x % GRID) || (y % GRID) || (w % GRID) || (h % GRID);
-          const crossesDivider = (x < DIV_X && right > DIV_X);
-          if (misGrid || crossesDivider){
-            ctx.save();
-            ctx.strokeStyle = '#ff00ff';
-            ctx.setLineDash([3,2]);
-            ctx.lineWidth = 2;
-            ctx.strokeRect(x+0.5, y+0.5, w, h);
-            ctx.restore();
-          }
-        });
-      }
+      // no extra issue highlighter
     } catch(e){}
     ctx.restore();
   }
@@ -333,9 +315,11 @@
               ctx.font = `${weight} ${fpx}px ${FONT_STACK}`; ctx.textBaseline='top'; ctx.fillStyle='#000';
               const lw = ctx.measureText(lab).width;
               const lx = r[0] + Math.floor((r[2] - lw)/2);
-              const ly = (typeof window !== 'undefined' && window.__specMode === 'v2_grid')
-                ? (r[1] - (fpx + 2))
-                : (op.y || (r[1] - (fpx+2)));
+              let ly = op.y || (r[1] - (fpx+2));
+              if (typeof window !== 'undefined' && window.__specMode === 'v2_grid'){
+                const lb = (op.aboveRect === 'INSIDE_TEMP') ? rects.INSIDE_LABEL_BOX : (op.aboveRect === 'OUT_TEMP' ? rects.OUT_LABEL_BOX : null);
+                if (lb){ ly = lb[1] + Math.max(0, Math.floor((lb[3] - fpx)/2)); }
+              }
               text(lx, ly, lab, fpx, weight);
               if (op.aboveRect === 'INSIDE_TEMP') window.__layoutMetrics.labels.inside = { x: lx + lw/2 };
               if (op.aboveRect === 'OUT_TEMP') window.__layoutMetrics.labels.outside = { x: lx + lw/2 };
@@ -348,12 +332,28 @@
               ctx.font = `bold ${SIZE_BIG}px ${FONT_STACK}`; ctx.textBaseline='top';
               let s = String((op.value||'').toString().replace(/[{}]/g,''));
               s = String(data[s] ?? '');
-              const unitsW = 14; const tw = ctx.measureText(s).width;
+              const badge = (typeof window !== 'undefined' && window.__specMode === 'v2_grid') ?
+                (op.rect === 'INSIDE_TEMP' ? rects.INSIDE_TEMP_BADGE : (op.rect === 'OUT_TEMP' ? rects.OUT_TEMP_BADGE : null))
+                : null;
+              const unitsW = badge ? badge[2] : 14;
+              const tw = ctx.measureText(s).width;
               const totalW = Math.min(Math.max(0,w-2), tw + unitsW);
               const left = x + Math.max(0, Math.floor((w - totalW)/2));
-              text(left, y, s, SIZE_BIG, 'bold');
-              text(left + tw + 2, y + 4, '°', 12);
-              text(left + tw + 8, y + 4, 'F', 12);
+              // In v2, draw inside the INNER rect to avoid colliding with label band
+              let yTop = y;
+              if (typeof window !== 'undefined' && window.__specMode === 'v2_grid'){
+                const inner = op.rect === 'INSIDE_TEMP' ? rects.INSIDE_TEMP_INNER : (op.rect === 'OUT_TEMP' ? rects.OUT_TEMP_INNER : null);
+                if (inner){ yTop = inner[1]; }
+              }
+              text(left, yTop, s, SIZE_BIG, 'bold');
+              if (badge){
+                ctx.strokeStyle = '#000';
+                ctx.strokeRect(badge[0], badge[1], badge[2], badge[3]);
+                text(badge[0] + 2, badge[1] + Math.max(0, Math.floor((badge[3]-10)/2)), '°F', 10);
+              } else {
+                text(left + tw + 2, yTop + 4, '°', 12);
+                text(left + tw + 8, yTop + 4, 'F', 12);
+              }
               const key = (op.rect === 'INSIDE_TEMP') ? 'inside' : (op.rect === 'OUT_TEMP' ? 'outside' : null);
               if (key){ window.__tempMetrics[key] = { rect: { x, y, w, h }, contentLeft: left, totalW: (tw + unitsW) }; }
               break;
@@ -586,8 +586,7 @@
   if (labelsEl) labelsEl.addEventListener('change', (e)=>{ showLabels = !!e.target.checked; geometryOnly = showLabels; draw({}); });
   const ghostEl = document.getElementById('simulateGhosting');
   if (ghostEl) ghostEl.addEventListener('change', (e)=>{ simulateGhosting = !!e.target.checked; draw({}); });
-  const hiEl = document.getElementById('highlightIssues');
-  if (hiEl) hiEl.addEventListener('change', (e)=>{ highlightIssues = !!e.target.checked; draw({}); });
+  // removed highlightIssues wiring
   const specOnlyEl = document.getElementById('specOnly');
   if (specOnlyEl){ specOnlyEl.checked = true; specOnlyEl.disabled = true; }
   const variantSel = document.getElementById('variantMode');
@@ -676,15 +675,18 @@
           base.rects.HEADER_CENTER = [100, HEADER_Y, 48, HEADER_H];
 
           base.rects.INSIDE_TEMP = [LEFT_X, TEMP_Y, LEFT_W, TEMP_H];
-          // Inner content and badge areas to avoid overlap/stacking
-          base.rects.INSIDE_TEMP_INNER = [LEFT_X + 4, TEMP_Y + 2, LEFT_W - 28, TEMP_H - 4];
-          base.rects.INSIDE_TEMP_BADGE = [LEFT_X + LEFT_W - 20, TEMP_Y + 6, 16, 12];
+          // Label band sits inside the temp box at its top edge (12px tall)
+          base.rects.INSIDE_LABEL_BOX = [LEFT_X, TEMP_Y + 2, LEFT_W, 12];
+          // Inner number area leaves room for the label band and a small badge on the right
+          base.rects.INSIDE_TEMP_INNER = [LEFT_X + 4, TEMP_Y + 14, LEFT_W - 28, TEMP_H - 16];
+          base.rects.INSIDE_TEMP_BADGE = [LEFT_X + LEFT_W - 20, TEMP_Y + 14, 16, 12];
           base.rects.INSIDE_RH   = [LEFT_X, ROW1_Y, LEFT_W, ROW_H];
           base.rects.INSIDE_TIME = [LEFT_X, ROW2_Y, LEFT_W, ROW_H];
 
           base.rects.OUT_TEMP    = [RIGHT_X, TEMP_Y, RIGHT_W, TEMP_H];
-          base.rects.OUT_TEMP_INNER = [RIGHT_X + 4, TEMP_Y + 2, RIGHT_W - 28, TEMP_H - 4];
-          base.rects.OUT_TEMP_BADGE = [RIGHT_X + RIGHT_W - 20, TEMP_Y + 6, 16, 12];
+          base.rects.OUT_LABEL_BOX = [RIGHT_X, TEMP_Y + 2, RIGHT_W, 12];
+          base.rects.OUT_TEMP_INNER = [RIGHT_X + 4, TEMP_Y + 14, RIGHT_W - 28, TEMP_H - 16];
+          base.rects.OUT_TEMP_BADGE = [RIGHT_X + RIGHT_W - 20, TEMP_Y + 14, 16, 12];
           base.rects.OUT_ROW1_L  = [RIGHT_X, ROW1_Y, 48, ROW_H];
           base.rects.OUT_ROW1_R  = [RIGHT_X + 52, ROW1_Y, 52, ROW_H];
           base.rects.OUT_ROW2_L  = [RIGHT_X, ROW2_Y, 48, ROW_H];
@@ -711,8 +713,7 @@
             ];
           }
           // Add explicit label boxes for overlay clarity
-          base.rects.INSIDE_LABEL_BOX = [LEFT_X, TEMP_Y - 12, LEFT_W, 12];
-          base.rects.OUT_LABEL_BOX = [RIGHT_X, TEMP_Y - 12, RIGHT_W, 12];
+          // Label boxes defined above
           // Adjust fonts: big:26, label:12, small:10, time:10
           if (!base.fonts) base.fonts = {};
           if (!base.fonts.tokens) base.fonts.tokens = {};

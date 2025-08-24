@@ -81,7 +81,8 @@ CONDITION_SHORTENING_CASES = [
 
 def _load_ui_spec() -> Dict:
     """Load the UI specification from the config file"""
-    ui_spec_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "config", "ui_spec.json")
+    ui_spec_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), \
+                                 "config", "ui_spec.json")
 
     if not os.path.exists(ui_spec_path):
         pytest.skip("UI spec file not found")
@@ -109,7 +110,8 @@ def test_condition_string_to_icon_mapping():
         found_match = False
         for rule in icon_map:
             if "match" in rule and condition in rule["match"]:
-                assert rule["icon"] == expected_icon, f"Condition '{condition}' should map to {expected_icon}, got {rule['icon']}"
+                assert rule["icon"] == expected_icon, \
+                    f"Condition '{condition}' should map to {expected_icon}, got {rule['icon']}"
                 found_match = True
                 break
 
@@ -160,7 +162,8 @@ def test_condition_shortening_comprehensive():
     # Test all shortening cases
     for input_condition, expected_short in CONDITION_SHORTENING_CASES:
         assert isinstance(expected_short, str)
-        assert len(expected_short) <= 8, f"Shortened condition '{expected_short}' too long (max 8 chars)"
+        assert len(expected_short) <= 8, \
+            f"Shortened condition '{expected_short}' too long (max 8 chars)"
 
         # Should not contain lowercase letters (should be uppercase)
         assert expected_short == expected_short.upper()
