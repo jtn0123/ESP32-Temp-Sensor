@@ -133,10 +133,10 @@ static void draw_from_spec_full(uint8_t variantId) { draw_from_spec_full_impl(va
 
 // Feather ESP32-S2 + 2.13" FeatherWing (adjust if needed)
 #ifndef EINK_CS
-#define EINK_CS 9 // D9
+#define EINK_CS 9  // D9
 #endif
 #ifndef EINK_DC
-#define EINK_DC 10 // D10
+#define EINK_DC 10  // D10
 #endif
 #ifndef EINK_RST
 #define EINK_RST -1 // FeatherWing ties panel reset to Feather RESET

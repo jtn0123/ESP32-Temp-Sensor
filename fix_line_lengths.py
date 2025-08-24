@@ -4,7 +4,6 @@ Script to fix line length violations in icons_generated.h
 Breaks long array initialization lines to stay within 80 characters
 """
 
-import re
 
 def fix_line_lengths(file_path):
     with open(file_path, 'r') as f:

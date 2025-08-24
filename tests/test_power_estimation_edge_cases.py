@@ -1,8 +1,5 @@
 import importlib.util
 import os
-from typing import Tuple
-
-import pytest
 
 # Load power estimator module
 ROOT = os.path.dirname(os.path.dirname(__file__))

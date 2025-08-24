@@ -1,10 +1,10 @@
 import json
 import os
 import subprocess
-import tempfile
-from typing import Dict, Any
+from typing import Any, Dict
 
 import pytest
+
 
 def test_ui_spec_layout_drift():
     """Test that UI spec layout matches generated layout headers"""
@@ -56,7 +56,8 @@ def test_ui_spec_to_generated_parity():
             if os.path.exists(layout_path):
                 with open(layout_path, 'r') as f:
                     hdr = f.read()
-                assert f"RECT_{rect_name}" in hdr or rect_name in hdr, f"Rect {rect_name} not used in generated outputs"
+                assert f"RECT_{rect_name}" in hdr or rect_name in hdr, \
+                    f"Rect {rect_name} not used in generated outputs"
 
     # Check that icon map is properly embedded
     icon_map = ui_spec.get("iconMap", [])
@@ -74,7 +75,8 @@ def test_ui_spec_to_generated_parity():
                 if os.path.exists(js_path):
                     with open(js_path, 'r') as f:
                         in_js = icon_name in f.read()
-                assert icon_name in generated_cpp or in_js, f"Icon {icon_name} not in generated outputs"
+                assert icon_name in generated_cpp or in_js, \
+                    f"Icon {icon_name} not in generated outputs"
 
 def test_layout_geometry_validation():
     """Test that layout geometry is within display bounds"""
@@ -95,8 +97,10 @@ def test_layout_geometry_validation():
             assert y >= 0, f"Rect {rect_name} y coordinate negative: {y}"
             assert w > 0, f"Rect {rect_name} width non-positive: {w}"
             assert h > 0, f"Rect {rect_name} height non-positive: {h}"
-            assert x + w <= max_width, f"Rect {rect_name} exceeds canvas width: {x + w} > {max_width}"
-            assert y + h <= max_height, f"Rect {rect_name} exceeds canvas height: {y + h} > {max_height}"
+            assert x + w <= max_width, \
+                f"Rect {rect_name} exceeds canvas width: {x + w} > {max_width}"
+            assert y + h <= max_height, \
+                f"Rect {rect_name} exceeds canvas height: {y + h} > {max_height}"
 
 def test_layout_rect_overlap_detection():
     """Test that layout rectangles don't overlap inappropriately"""
@@ -132,14 +136,16 @@ def test_layout_rect_overlap_detection():
                 overlap_y = y1 < y2 + h2 and y2 < y1 + h1
 
                 if overlap_x and overlap_y:
-                    # Some overlap is expected for header/footer, but warn about significant overlaps
+                    # Some overlap is expected for header/footer, but warn
+                    # about significant overlaps
                     overlap_area = _calculate_overlap_area(rect1, rect2)
                     total_area = w1 * h1 + w2 * h2
                     overlap_ratio = overlap_area / total_area
 
                     # Allow small overlaps (e.g., borders) but not large ones
                     assert overlap_ratio < 0.5, \
-                        f"Significant overlap between {rect1_name} and {rect2_name}: {overlap_ratio:.2f}"
+                        f"Significant overlap between {rect1_name} and " \
+                            f"{rect2_name}: {overlap_ratio:.2f}"
 
 def _calculate_overlap_area(rect1, rect2):
     """Calculate overlap area between two rectangles"""
@@ -192,14 +198,14 @@ def test_icon_placement_constraints():
 
         # Should be square-ish (within 20% aspect ratio tolerance)
         aspect_ratio = w / h
-        assert 0.8 <= aspect_ratio <= 1.25, f"Weather icon aspect ratio {aspect_ratio} too distorted"
+        assert 0.8 <= aspect_ratio <= 1.25, \
+            f"Weather icon aspect ratio {aspect_ratio} too distorted"
 
 def test_text_rect_sizing():
     """Test that text rectangles are appropriately sized for their content"""
 
     ui_spec = _load_ui_spec()
     rects = ui_spec.get("rects", {})
-    fonts = ui_spec.get("fonts", {}).get("tokens", {})
 
     # Test key text rectangles
     text_rect_tests = {
@@ -248,7 +254,6 @@ def test_font_size_appropriateness():
     """Test that font sizes are appropriate for their rectangles"""
 
     ui_spec = _load_ui_spec()
-    fonts = ui_spec.get("fonts", {}).get("tokens", {})
     rects = ui_spec.get("rects", {})
 
     # Font size to minimum rect height mapping
@@ -273,7 +278,8 @@ def test_font_size_appropriateness():
                     rect_height = rects[rect_name][3]  # height is 4th element
 
                     assert rect_height >= min_height, \
-                        f"Rect {rect_name} height {rect_height} too small for {font_name} font (min {min_height})"
+                        f"Rect {rect_name} height {rect_height} too small for " \
+                            f"{font_name} font (min {min_height})"
 
 def test_ui_spec_schema_completeness():
     """Test that UI spec contains all required schema elements"""
@@ -308,7 +314,8 @@ def test_ui_spec_schema_completeness():
 
 def _load_ui_spec() -> Dict[str, Any]:
     """Load UI specification from config file"""
-    ui_spec_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "config", "ui_spec.json")
+    ui_spec_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), \
+                                 "config", "ui_spec.json")
 
     if not os.path.exists(ui_spec_path):
         pytest.skip("UI spec file not found")
@@ -332,7 +339,8 @@ def _generate_layout_header() -> str:
         if os.path.exists(gen_script):
             result = subprocess.run([
                 "python3", gen_script,
-                "--config", os.path.join(os.path.dirname(scripts_dir), "config", "display_geometry.json")
+                "--config", os.path.join(os.path.dirname(scripts_dir), \
+                                           "config", "display_geometry.json")
             ], capture_output=True, text=True, cwd=scripts_dir)
 
             if result.returncode == 0:

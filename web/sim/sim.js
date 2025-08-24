@@ -29,6 +29,7 @@
   let showLabels = false;
   let simulateGhosting = false;
   let geometryOnly = false; // when true, render only geometry (for labeled mode)
+  let highlightIssues = false;
   let GEOMETRY = null; // optional overlay geometry loaded from geometry.json
   let GJSON = null;    // centralized geometry JSON
   // Enable spec-only render (always on to keep single source of truth)
@@ -174,6 +175,26 @@
       });
       // Also outline the full canvas as a green border
       ctx.strokeRect(0.5, 0.5, WIDTH-1, HEIGHT-1);
+
+      // Issue highlighter: mark rects that cross the center divider or are off-grid
+      if (highlightIssues && window.__specMode === 'v2_grid'){
+        const GRID = 4, DIV_X = 128;
+        Object.entries(GJSON.rects).forEach(([name, r])=>{
+          if (!Array.isArray(r) || r.length !== 4) return;
+          const [x,y,w,h] = r;
+          const right = x + w;
+          const misGrid = (x % GRID) || (y % GRID) || (w % GRID) || (h % GRID);
+          const crossesDivider = (x < DIV_X && right > DIV_X);
+          if (misGrid || crossesDivider){
+            ctx.save();
+            ctx.strokeStyle = '#ff00ff';
+            ctx.setLineDash([3,2]);
+            ctx.lineWidth = 2;
+            ctx.strokeRect(x+0.5, y+0.5, w, h);
+            ctx.restore();
+          }
+        });
+      }
     } catch(e){}
     ctx.restore();
   }
@@ -565,6 +586,8 @@
   if (labelsEl) labelsEl.addEventListener('change', (e)=>{ showLabels = !!e.target.checked; geometryOnly = showLabels; draw({}); });
   const ghostEl = document.getElementById('simulateGhosting');
   if (ghostEl) ghostEl.addEventListener('change', (e)=>{ simulateGhosting = !!e.target.checked; draw({}); });
+  const hiEl = document.getElementById('highlightIssues');
+  if (hiEl) hiEl.addEventListener('change', (e)=>{ highlightIssues = !!e.target.checked; draw({}); });
   const specOnlyEl = document.getElementById('specOnly');
   if (specOnlyEl){ specOnlyEl.checked = true; specOnlyEl.disabled = true; }
   const variantSel = document.getElementById('variantMode');

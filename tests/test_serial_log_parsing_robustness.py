@@ -1,6 +1,5 @@
 import os
 import re
-from typing import Dict, List, Any
 
 import pytest
 
@@ -118,7 +117,7 @@ def test_parse_awake_log_robustness():
 
     try:
         parse_awake_log = _load_parsing_module("parse_awake_log")
-    except:
+    except Exception:
         pytest.skip("parse_awake_log.py not available")
 
     # Test with valid lines - try different function names that might exist
@@ -146,7 +145,7 @@ def test_parse_awake_log_robustness():
     # Test with malformed lines
     for line in MALFORMED_LOG_LINES:
         try:
-            result = parse_func(line)
+            parse_func(line)
             # Should not crash, but result can be None for invalid input
         except Exception as e:
             # Should handle exceptions gracefully for malformed input
@@ -157,7 +156,7 @@ def test_parse_debug_json_robustness():
 
     try:
         parse_debug_json = _load_parsing_module("parse_debug_json")
-    except:
+    except Exception:
         pytest.skip("parse_debug_json.py not available")
 
     # Test valid JSON
@@ -189,7 +188,7 @@ def test_parse_offline_log_robustness():
 
     try:
         parse_offline_log = _load_parsing_module("parse_offline_log")
-    except:
+    except Exception:
         pytest.skip("parse_offline_log.py not available")
 
     # Test with various log lines
@@ -197,7 +196,7 @@ def test_parse_offline_log_robustness():
 
     for line in all_lines:
         try:
-            result = parse_offline_log.parse_log_line(line)
+            parse_offline_log.parse_log_line(line)
             # Should handle all line types gracefully
         except Exception as e:
             assert False, f"Parser crashed on line: {line}, error: {e}"
@@ -207,7 +206,7 @@ def test_parse_wifi_log_robustness():
 
     try:
         parse_wifi_log = _load_parsing_module("parse_wifi_log")
-    except:
+    except Exception:
         pytest.skip("parse_wifi_log.py not available")
 
     wifi_lines = [
@@ -221,7 +220,7 @@ def test_parse_wifi_log_robustness():
 
     for line in wifi_lines:
         try:
-            result = parse_wifi_log.parse_wifi_line(line)
+            parse_wifi_log.parse_wifi_line(line)
             # Should handle gracefully
         except Exception as e:
             assert False, f"Parser crashed on WiFi line: {line}, error: {e}"
@@ -231,7 +230,7 @@ def test_parse_timeouts_log_robustness():
 
     try:
         parse_timeouts_log = _load_parsing_module("parse_timeouts_log")
-    except:
+    except Exception:
         pytest.skip("parse_timeouts_log.py not available")
 
     timeout_lines = [
@@ -245,7 +244,7 @@ def test_parse_timeouts_log_robustness():
 
     for line in timeout_lines:
         try:
-            result = parse_timeouts_log.parse_timeout_line(line)
+            parse_timeouts_log.parse_timeout_line(line)
             # Should handle gracefully
         except Exception as e:
             assert False, f"Parser crashed on timeout line: {line}, error: {e}"
@@ -390,7 +389,7 @@ def test_log_parsing_performance():
         parse_awake_log = _load_parsing_module("parse_awake_log")
 
         for line in many_lines:
-            result = parse_awake_log.parse_line(line)
+            parse_awake_log.parse_line(line)
 
         end_time = time.time()
         duration = end_time - start_time
@@ -398,7 +397,7 @@ def test_log_parsing_performance():
         # Should process 1000+ lines in under 1 second
         assert duration < 1.0, f"Parsing too slow: {duration}s for {len(many_lines)} lines"
 
-    except:
+    except Exception:
         pytest.skip("parse_awake_log.py not available for performance test")
 
 def test_malformed_input_graceful_handling():
@@ -420,7 +419,7 @@ def test_malformed_input_graceful_handling():
 
         for malformed in malformed_inputs:
             try:
-                result = parse_awake_log.parse_line(malformed)
+                parse_awake_log.parse_line(malformed)
                 # Should not crash
             except Exception as e:
                 # If it crashes, the error should be meaningful
@@ -428,5 +427,5 @@ def test_malformed_input_graceful_handling():
                 assert "string" in str(e).lower() or "parse" in str(e).lower(), \
                     f"Unexpected error type for malformed input: {e}"
 
-    except:
+    except Exception:
         pytest.skip("parse_awake_log.py not available for malformed input test")

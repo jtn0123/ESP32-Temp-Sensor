@@ -3,8 +3,9 @@
 Batch fix common linting issues in C++ files
 """
 
-import re
 import os
+import re
+
 
 def fix_comment_spacing(content):
     """Fix comment spacing issues - ensure at least 2 spaces before //"""

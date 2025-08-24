@@ -1,10 +1,9 @@
 import json
 import os
-import re
-import yaml
-from typing import Dict, List, Any
+from typing import Any, Dict
 
 import pytest
+import yaml
 
 # Configuration files to validate
 CONFIG_FILES = [

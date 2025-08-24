@@ -17,14 +17,12 @@ from __future__ import annotations
 
 import json
 import os
-import time
 from typing import Tuple
 
 import pytest
 import yaml  # type: ignore
 
 from scripts.test_mqtt_integration import MqttTestClient, _now_ms
-
 
 ROOT = os.path.dirname(os.path.dirname(__file__))
 
