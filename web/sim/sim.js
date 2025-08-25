@@ -35,6 +35,7 @@
   // Region inspector state
   let regionFilters = { all: true, header: true, temp: true, label: true, footer: true };
   let regionVisible = new Set();
+  let regionSelectionActive = false; // false means "all visible" until first explicit selection
   // Enable spec-only render (always on to keep single source of truth)
   const QS = (typeof window !== 'undefined') ? new URLSearchParams(window.location.search) : new URLSearchParams();
   const specOnly = true;
@@ -149,6 +150,20 @@
     }
   }
 
+  function hexToRgba(hex, alpha){
+    try{
+      const h = String(hex||'').trim();
+      if (!/^#?[0-9a-fA-F]{6}$/.test(h)) return `rgba(255,0,0,${alpha||0.15})`;
+      const s = h.startsWith('#') ? h.slice(1) : h;
+      const n = parseInt(s, 16);
+      const r = (n >> 16) & 255;
+      const g = (n >> 8) & 255;
+      const b = (n) & 255;
+      const a = (typeof alpha === 'number') ? alpha : 0.15;
+      return `rgba(${r}, ${g}, ${b}, ${a})`;
+    }catch(e){ return `rgba(255,0,0,${alpha||0.15})`; }
+  }
+
   function drawRectsOverlay(){
     if (!showRects || !GJSON || !GJSON.rects) return;
     ctx.save();
@@ -160,7 +175,7 @@
       const cat = getRectCategory(name);
       const col = categoryColor(cat);
       // Semi-transparent fill distinguishable from content (skip threshold when overlays are active)
-      ctx.fillStyle = col.replace('#','rgba(') + (col.length===7? (()=>{const n=parseInt(col.slice(1),16); return `${(n>>16)&255}, ${(n>>8)&255}, ${n&255}, 0.15)`;})() : '255,0,0,0.15') + ')';
+      ctx.fillStyle = hexToRgba(col, 0.15);
       ctx.strokeStyle = col;
       ctx.fillRect(x, y, w, h);
       ctx.strokeRect(x+0.5, y+0.5, w, h);
@@ -212,7 +227,7 @@
       const cat = getRectCategory(name);
       if (!regionFilters[cat]) return false;
     }
-    if (regionVisible.size > 0){
+    if (regionSelectionActive){
       return regionVisible.has(name);
     }
     return true;
@@ -222,6 +237,7 @@
     try{
       localStorage.setItem('sim_region_filters', JSON.stringify(regionFilters));
       localStorage.setItem('sim_region_visible', JSON.stringify(Array.from(regionVisible)));
+      localStorage.setItem('sim_region_selection_active', JSON.stringify(!!regionSelectionActive));
     }catch(e){}
   }
 
@@ -231,6 +247,8 @@
       if (f && typeof f === 'object') regionFilters = { ...regionFilters, ...f };
       const v = JSON.parse(localStorage.getItem('sim_region_visible')||'null');
       if (Array.isArray(v)) regionVisible = new Set(v);
+      const a = JSON.parse(localStorage.getItem('sim_region_selection_active')||'null');
+      if (typeof a === 'boolean') regionSelectionActive = a;
     }catch(e){}
   }
 
@@ -249,8 +267,12 @@
       cb.type = 'checkbox';
       cb.className = 'region-checkbox';
       cb.value = name;
-      cb.checked = regionVisible.size === 0 || regionVisible.has(name);
+      cb.checked = regionSelectionActive ? regionVisible.has(name) : true;
       cb.addEventListener('change', ()=>{
+        // Ensure overlays are visible when interacting with region list
+        showRects = true; const rectsEl = document.getElementById('showRects'); if (rectsEl) rectsEl.checked = true;
+        // Initialize selection with all names on first change so unchecking works immediately
+        if (!regionSelectionActive){ regionSelectionActive = true; regionVisible = new Set(names); }
         if (cb.checked){ regionVisible.add(name); } else { regionVisible.delete(name); }
         saveRegionPrefs(); draw({});
       });
@@ -626,15 +648,26 @@
       const fLabel = document.getElementById('filterLabel');
       const fFooter = document.getElementById('filterFooter');
       const resetBtn = document.getElementById('resetRegionFilters');
-      const apply = ()=>{ saveRegionPrefs(); refreshRegionList(); draw({}); };
+      const normalizeAll = ()=>{
+        // If All is turned on, force all categories on. If any category is off, All turns off.
+        if (fAll && fAll.checked){
+          regionFilters.all = true;
+          regionFilters.header = regionFilters.temp = regionFilters.label = regionFilters.footer = true;
+          if (fHeader) fHeader.checked = true; if (fTemp) fTemp.checked = true; if (fLabel) fLabel.checked = true; if (fFooter) fFooter.checked = true;
+        } else {
+          regionFilters.all = !!(regionFilters.header && regionFilters.temp && regionFilters.label && regionFilters.footer);
+          if (fAll) fAll.checked = regionFilters.all;
+        }
+      };
+      const apply = ()=>{ showRects = true; const rEl = document.getElementById('showRects'); if (rEl) rEl.checked = true; normalizeAll(); saveRegionPrefs(); refreshRegionList(); draw({}); };
       if (fAll){ fAll.checked = !!regionFilters.all; fAll.addEventListener('change', ()=>{ regionFilters.all = !!fAll.checked; apply(); }); }
-      if (fHeader){ fHeader.checked = !!regionFilters.header; fHeader.addEventListener('change', ()=>{ regionFilters.header = !!fHeader.checked; apply(); }); }
-      if (fTemp){ fTemp.checked = !!regionFilters.temp; fTemp.addEventListener('change', ()=>{ regionFilters.temp = !!fTemp.checked; apply(); }); }
-      if (fLabel){ fLabel.checked = !!regionFilters.label; fLabel.addEventListener('change', ()=>{ regionFilters.label = !!fLabel.checked; apply(); }); }
-      if (fFooter){ fFooter.checked = !!regionFilters.footer; fFooter.addEventListener('change', ()=>{ regionFilters.footer = !!fFooter.checked; apply(); }); }
+      if (fHeader){ fHeader.checked = !!regionFilters.header; fHeader.addEventListener('change', ()=>{ regionFilters.header = !!fHeader.checked; if (fAll && fAll.checked && !fHeader.checked) fAll.checked = false; apply(); }); }
+      if (fTemp){ fTemp.checked = !!regionFilters.temp; fTemp.addEventListener('change', ()=>{ regionFilters.temp = !!fTemp.checked; if (fAll && fAll.checked && !fTemp.checked) fAll.checked = false; apply(); }); }
+      if (fLabel){ fLabel.checked = !!regionFilters.label; fLabel.addEventListener('change', ()=>{ regionFilters.label = !!fLabel.checked; if (fAll && fAll.checked && !fLabel.checked) fAll.checked = false; apply(); }); }
+      if (fFooter){ fFooter.checked = !!regionFilters.footer; fFooter.addEventListener('change', ()=>{ regionFilters.footer = !!fFooter.checked; if (fAll && fAll.checked && !fFooter.checked) fAll.checked = false; apply(); }); }
       if (resetBtn){ resetBtn.addEventListener('click', ()=>{
         regionFilters = { all: true, header: true, temp: true, label: true, footer: true };
-        regionVisible = new Set();
+        regionVisible = new Set(); regionSelectionActive = false;
         apply();
       }); }
       refreshRegionList();
@@ -829,6 +862,16 @@
           // Re-apply central geometry
           GJSON = base;
           window.__specMode = which;
+          // Normalize region selection to current rect set
+          try{
+            const names = new Set(Object.keys(GJSON.rects||{}));
+            if (regionSelectionActive){
+              const newSel = new Set();
+              regionVisible.forEach(n=>{ if (names.has(n)) newSel.add(n); });
+              regionVisible = newSel;
+              if (regionVisible.size === 0) regionSelectionActive = false;
+            }
+          }catch(e){}
         } else {
           // Reload original generated UI_SPEC by reloading page without param
           // More stable than trying to restore deep-cloned structure across toggles
