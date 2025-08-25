@@ -450,6 +450,8 @@
             }
             case 'shortCondition': {
               const r = rects[op.rect]; if (!r) break;
+              // Skip duplicate label in v2/v2.1; v1 keeps the short condition
+              if (typeof window !== 'undefined' && window.__specMode && String(window.__specMode).startsWith('v2')){ break; }
               const fpx = ((fonts[op.font||'small']||{}).px) || pxSmall;
               const s = String((window.lastData && window.lastData.weather) || 'Cloudy').split(/[\s-]+/)[0];
               const ty = r[1] + Math.max(0, Math.floor((r[3] - fpx)/2));
