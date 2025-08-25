@@ -396,9 +396,35 @@
                 ctx.restore();
               } else {
                 const x = op.x||0; const y = op.y||0;
-                text(x, y, s, fpx, weight);
+                // Handle maxWidth and truncate for absolute positioned text
+                ctx.font = `${weight} ${fpx}px ${FONT_STACK}`;
+                ctx.textBaseline = 'top';
+                ctx.fillStyle = '#000';
+                
+                if (op.maxWidth && op.truncate === 'ellipsis') {
+                  const maxW = op.maxWidth;
+                  const textW = ctx.measureText(s).width;
+                  if (textW > maxW) {
+                    // Truncate with ellipsis
+                    let truncated = s;
+                    while (truncated.length > 0 && ctx.measureText(truncated + '...').width > maxW) {
+                      truncated = truncated.slice(0, -1);
+                    }
+                    s = truncated + '...';
+                  }
+                  // Clip to maxWidth to ensure nothing overflows
+                  ctx.save();
+                  ctx.beginPath();
+                  ctx.rect(x, y, maxW, fpx + 4);
+                  ctx.clip();
+                  ctx.fillText(s, x, y);
+                  ctx.restore();
+                } else {
+                  text(x, y, s, fpx, weight);
+                }
+                
                 // Export metrics even for absolute-positioned footer rows
-                if (s.startsWith('Batt ')){
+                if (s.startsWith('Batt ') || s.includes('%')){
                   window.__layoutMetrics.statusLeft.line1Y = y;
                   const leftCol = rects.FOOTER_L || [6,90,160,32];
                   window.__layoutMetrics.statusLeft.left = leftCol[0];
@@ -850,6 +876,22 @@
     specSel.addEventListener('change', ()=>{
       const which = specSel.value || 'v1';
       try{
+        if (which === 'v2_1_grid' && window.UI_SPEC && window.UI_SPEC.rects_v2_1){
+          // Use v2.1 rects and variants from ui_spec.json
+          const base = JSON.parse(JSON.stringify(window.UI_SPEC || {}));
+          base.rects = base.rects_v2_1;
+          base.variants = {
+            "v2_1_grid": base.variants["v2_1_grid"] || ["chrome_v2_1", "header_v2_1", "inside_v2_1", "outside_v2_1", "footer_v2_1"],
+            "v2_1_missing_outside": base.variants["v2_1_missing_outside"] || ["chrome_v2_1", "header_v2_1", "inside_v2_1", "outside_v2_1_missing", "footer_v2_1"],
+            "v2_1_missing_inside": base.variants["v2_1_missing_inside"] || ["chrome_v2_1", "header_v2_1", "inside_v2_1_missing", "outside_v2_1", "footer_v2_1"],
+            "v2_1_missing_all": base.variants["v2_1_missing_all"] || ["chrome_v2_1", "header_v2_1", "inside_v2_1_missing", "outside_v2_1_missing", "footer_v2_1"]
+          };
+          base.defaultVariant = 'v2_1_grid';
+          window.__currentSpec = base;
+          window.__specMode = which;
+          render();
+          return;
+        }
         if (which === 'v2_grid' || which === 'v2_1_grid'){
           // Construct a v2 spec by cloning UI_SPEC and snapping rects + fonts
           const base = JSON.parse(JSON.stringify(window.UI_SPEC || {}));
@@ -859,40 +901,51 @@
           const DIV_X = 128; // vertical divider aligned to grid
           const HEADER_Y = 4, HEADER_H = 12; // top rule at y=16
           const TEMP_Y = 20, TEMP_H = 28;
-          const ROW1_Y = 52, ROW2_Y = 68, ROW_H = 12;
-          const FOOTER_Y = 88, FOOTER_H = 28;
+          // Adjust rows and footer for v2.1 to avoid inner collisions
+          const ROW1_Y = (which === 'v2_1_grid') ? 68 : 52;
+          const ROW2_Y = (which === 'v2_1_grid') ? 80 : 68;
+          const ROW_H = 12;
+          const FOOTER_Y = (which === 'v2_1_grid') ? 96 : 88;
+          const FOOTER_H = (which === 'v2_1_grid') ? 20 : 28;
           const LEFT_X = OUTER; const LEFT_W = DIV_X - OUTER; // 12..128 -> 116
           const RIGHT_X = DIV_X + 4; const RIGHT_W = 250 - OUTER - RIGHT_X; // from 132 -> 106
 
-          base.rects.HEADER_NAME = [LEFT_X, HEADER_Y, 160, HEADER_H];
-          base.rects.HEADER_TIME = [168, HEADER_Y, 72, HEADER_H];
+          // Prevent header overlaps in v2 grid: narrow left/name and shift time
+          base.rects.HEADER_NAME = [LEFT_X, HEADER_Y, 84, HEADER_H];
           base.rects.HEADER_CENTER = [100, HEADER_Y, 48, HEADER_H];
+          base.rects.HEADER_TIME = [152, HEADER_Y, 88, HEADER_H];
 
           base.rects.INSIDE_TEMP = [LEFT_X, TEMP_Y, LEFT_W, TEMP_H];
           // Label band sits inside the temp box at its top edge (12px tall)
           base.rects.INSIDE_LABEL_BOX = [LEFT_X, (which === 'v2_1_grid' ? 24 : TEMP_Y + 2), LEFT_W, 12];
-          // Inner number area leaves room for the label band and a small badge on the right
-          base.rects.INSIDE_TEMP_INNER = [LEFT_X + 4, (which === 'v2_1_grid' ? 40 : TEMP_Y + 14), LEFT_W - 28, (which === 'v2_1_grid' ? 24 : TEMP_H - 16)];
-          base.rects.INSIDE_TEMP_BADGE = [LEFT_X + LEFT_W - 20, (which === 'v2_1_grid' ? 40 : TEMP_Y + 14), 16, 12];
+          // Inner number area leaves room for the label band and a small badge on the right; reduce height in v2.1
+          const innerY = (which === 'v2_1_grid' ? 36 : (TEMP_Y + 14));
+          const innerH = (which === 'v2_1_grid' ? 12 : (TEMP_H - 16));
+          base.rects.INSIDE_TEMP_INNER = [LEFT_X + 4, innerY, LEFT_W - 28, innerH];
+          base.rects.INSIDE_TEMP_BADGE = [LEFT_X + LEFT_W - 20, innerY, 16, 12];
           base.rects.INSIDE_RH   = [LEFT_X, ROW1_Y, LEFT_W, ROW_H];
           base.rects.INSIDE_TIME = [LEFT_X, ROW2_Y, LEFT_W, ROW_H];
 
           base.rects.OUT_TEMP    = [RIGHT_X, TEMP_Y, RIGHT_W, TEMP_H];
           base.rects.OUT_LABEL_BOX = [RIGHT_X, (which === 'v2_1_grid' ? 24 : TEMP_Y + 2), RIGHT_W, 12];
-          base.rects.OUT_TEMP_INNER = [RIGHT_X + 4, (which === 'v2_1_grid' ? 40 : TEMP_Y + 14), RIGHT_W - 28, (which === 'v2_1_grid' ? 24 : TEMP_H - 16)];
-          base.rects.OUT_TEMP_BADGE = [RIGHT_X + RIGHT_W - 20, (which === 'v2_1_grid' ? 40 : TEMP_Y + 14), 16, 12];
+          base.rects.OUT_TEMP_INNER = [RIGHT_X + 4, innerY, RIGHT_W - 28, innerH];
+          base.rects.OUT_TEMP_BADGE = [RIGHT_X + RIGHT_W - 20, innerY, 16, 12];
           base.rects.OUT_ROW1_L  = [RIGHT_X, ROW1_Y, 48, ROW_H];
           base.rects.OUT_ROW1_R  = [RIGHT_X + 52, ROW1_Y, 52, ROW_H];
           base.rects.OUT_ROW2_L  = [RIGHT_X, ROW2_Y, 48, ROW_H];
           base.rects.OUT_ROW2_R  = [RIGHT_X + 52, ROW2_Y, 48, ROW_H];
           // Weather icon and bar live in the footer in v2; keep an explicit rect for overlays
           base.rects.WEATHER_BAR = [RIGHT_X, FOOTER_Y, RIGHT_W, FOOTER_H];
-          base.rects.OUT_ICON    = [RIGHT_X + 8, FOOTER_Y + (which === 'v2_1_grid' ? 4 : Math.max(0, Math.floor((FOOTER_H - 22)/2))), 20, 20];
+          // Tuck icon fully within FOOTER_R/WEATHER_BAR box with margin; adapt height to footer
+          const iconH = Math.min(18, Math.max(12, FOOTER_H - 4));
+          const iconY = FOOTER_Y + Math.max(1, Math.floor((FOOTER_H - iconH)/2));
+          base.rects.OUT_ICON    = [RIGHT_X + 4, iconY, 20, iconH];
 
           // Footer columns align exactly to the column widths
           base.rects.FOOTER_L    = [LEFT_X, FOOTER_Y, LEFT_W, FOOTER_H];
           base.rects.FOOTER_R    = [RIGHT_X, FOOTER_Y, RIGHT_W, FOOTER_H];
-          base.rects.STATUS      = [LEFT_X, FOOTER_Y + FOOTER_H - 12, 238, 12];
+          // Status at the bottom, thinner to avoid overlaps
+          base.rects.STATUS      = [LEFT_X, 116, 226, 6];
 
           // Adjust chrome lines to match grid
           if (base.components && Array.isArray(base.components.chrome)){

@@ -53,6 +53,10 @@ static constexpr const char* kVariantNames[] = {
     "v1_missing_all",
     "v1_missing_inside",
     "v1_missing_outside",
+    "v2_1_grid",
+    "v2_1_missing_all",
+    "v2_1_missing_inside",
+    "v2_1_missing_outside",
 };
 
 static constexpr const char* kVariant_v1_components[] = {
@@ -83,6 +87,34 @@ static constexpr const char* kVariant_v1_missing_outside_components[] = {
     "outside_missing",
     "footer_weather_missing",
 };
+static constexpr const char* kVariant_v2_1_grid_components[] = {
+    "chrome_v2_1",
+    "header_v2_1",
+    "inside_v2_1",
+    "outside_v2_1",
+    "footer_v2_1",
+};
+static constexpr const char* kVariant_v2_1_missing_all_components[] = {
+    "chrome_v2_1",
+    "header_v2_1",
+    "inside_v2_1_missing",
+    "outside_v2_1_missing",
+    "footer_v2_1",
+};
+static constexpr const char* kVariant_v2_1_missing_inside_components[] = {
+    "chrome_v2_1",
+    "header_v2_1",
+    "inside_v2_1_missing",
+    "outside_v2_1",
+    "footer_v2_1",
+};
+static constexpr const char* kVariant_v2_1_missing_outside_components[] = {
+    "chrome_v2_1",
+    "header_v2_1",
+    "inside_v2_1",
+    "outside_v2_1_missing",
+    "footer_v2_1",
+};
 
 static constexpr int kComponent_chrome_opcount = 6;
 static constexpr int kComponent_header_centered_opcount = 4;
@@ -93,7 +125,14 @@ static constexpr int kComponent_footer_split_opcount = 6;
 static constexpr int kComponent_inside_missing_opcount = 3;
 static constexpr int kComponent_outside_missing_opcount = 4;
 static constexpr int kComponent_footer_weather_missing_opcount = 1;
-static constexpr int kTotalOpCount = 35;
+static constexpr int kComponent_chrome_v2_1_opcount = 7;
+static constexpr int kComponent_header_v2_1_opcount = 2;
+static constexpr int kComponent_inside_v2_1_opcount = 6;
+static constexpr int kComponent_outside_v2_1_opcount = 9;
+static constexpr int kComponent_footer_v2_1_opcount = 6;
+static constexpr int kComponent_inside_v2_1_missing_opcount = 3;
+static constexpr int kComponent_outside_v2_1_missing_opcount = 5;
+static constexpr int kTotalOpCount = 73;
 
 struct ComponentOps { const UiOpHeader* ops; int count; const char* name; };
 extern const ComponentOps kVariant_v1_ops[];
@@ -104,6 +143,14 @@ extern const ComponentOps kVariant_v1_missing_inside_ops[];
 extern const int kVariant_v1_missing_inside_ops_count;
 extern const ComponentOps kVariant_v1_missing_outside_ops[];
 extern const int kVariant_v1_missing_outside_ops_count;
+extern const ComponentOps kVariant_v2_1_grid_ops[];
+extern const int kVariant_v2_1_grid_ops_count;
+extern const ComponentOps kVariant_v2_1_missing_all_ops[];
+extern const int kVariant_v2_1_missing_all_ops_count;
+extern const ComponentOps kVariant_v2_1_missing_inside_ops[];
+extern const int kVariant_v2_1_missing_inside_ops_count;
+extern const ComponentOps kVariant_v2_1_missing_outside_ops[];
+extern const int kVariant_v2_1_missing_outside_ops_count;
 extern const ComponentOps* get_variant_ops(uint8_t variantId, int* outCount);
 
 } // namespace ui
