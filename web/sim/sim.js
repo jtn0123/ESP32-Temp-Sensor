@@ -36,6 +36,9 @@
   let regionFilters = { all: true, header: true, temp: true, label: true, footer: true };
   let regionVisible = new Set();
   let regionSelectionActive = false; // false means "all visible" until first explicit selection
+  let highlightRect = null; // hovered rect name
+  let searchQuery = '';
+  let pendingDraw = 0; // rAF id for coalesced redraws
   // Enable spec-only render (always on to keep single source of truth)
   const QS = (typeof window !== 'undefined') ? new URLSearchParams(window.location.search) : new URLSearchParams();
   const specOnly = true;
@@ -171,12 +174,17 @@
     ctx.lineWidth = 1;
     Object.entries(GJSON.rects).forEach(([name, r])=>{
       if (!shouldShowRect(name)) return;
+      if (searchQuery){
+        const q = searchQuery.toLowerCase();
+        if (!String(name).toLowerCase().includes(q)) return;
+      }
       const [x,y,w,h] = r;
       const cat = getRectCategory(name);
       const col = categoryColor(cat);
       // Semi-transparent fill distinguishable from content (skip threshold when overlays are active)
       ctx.fillStyle = hexToRgba(col, 0.15);
-      ctx.strokeStyle = col;
+      ctx.strokeStyle = (highlightRect === name) ? '#000' : col;
+      ctx.lineWidth = (highlightRect === name) ? 2 : 1;
       ctx.fillRect(x, y, w, h);
       ctx.strokeRect(x+0.5, y+0.5, w, h);
       if (showLabels){
@@ -235,21 +243,31 @@
 
   function saveRegionPrefs(){
     try{
-      localStorage.setItem('sim_region_filters', JSON.stringify(regionFilters));
-      localStorage.setItem('sim_region_visible', JSON.stringify(Array.from(regionVisible)));
-      localStorage.setItem('sim_region_selection_active', JSON.stringify(!!regionSelectionActive));
+      const suffix = storageSuffix();
+      localStorage.setItem(`sim_region_filters::${suffix}`, JSON.stringify(regionFilters));
+      localStorage.setItem(`sim_region_visible::${suffix}`, JSON.stringify(Array.from(regionVisible)));
+      localStorage.setItem(`sim_region_selection_active::${suffix}`, JSON.stringify(!!regionSelectionActive));
     }catch(e){}
   }
 
   function loadRegionPrefs(){
     try{
-      const f = JSON.parse(localStorage.getItem('sim_region_filters')||'null');
+      const suffix = storageSuffix();
+      const f = JSON.parse(localStorage.getItem(`sim_region_filters::${suffix}`)||'null');
       if (f && typeof f === 'object') regionFilters = { ...regionFilters, ...f };
-      const v = JSON.parse(localStorage.getItem('sim_region_visible')||'null');
+      const v = JSON.parse(localStorage.getItem(`sim_region_visible::${suffix}`)||'null');
       if (Array.isArray(v)) regionVisible = new Set(v);
-      const a = JSON.parse(localStorage.getItem('sim_region_selection_active')||'null');
+      const a = JSON.parse(localStorage.getItem(`sim_region_selection_active::${suffix}`)||'null');
       if (typeof a === 'boolean') regionSelectionActive = a;
     }catch(e){}
+  }
+
+  function storageSuffix(){
+    try{
+      const variant = (QS.get('variant') || (window.UI_SPEC && window.UI_SPEC.defaultVariant) || 'v1');
+      const specMode = (typeof window !== 'undefined' && window.__specMode) ? String(window.__specMode) : 'v1';
+      return `${variant}::${specMode}`;
+    }catch(e){ return 'v1::v1'; }
   }
 
   function refreshRegionList(){
@@ -263,6 +281,8 @@
       wrap.style.display = (regionFilters.all || regionFilters[cat]) ? 'block' : 'none';
       wrap.className = 'region-item';
       wrap.dataset.region = name;
+      wrap.addEventListener('mouseenter', ()=>{ highlightRect = name; scheduleDraw(); });
+      wrap.addEventListener('mouseleave', ()=>{ if (highlightRect === name) { highlightRect = null; scheduleDraw(); }});
       const cb = document.createElement('input');
       cb.type = 'checkbox';
       cb.className = 'region-checkbox';
@@ -274,13 +294,18 @@
         // Initialize selection with all names on first change so unchecking works immediately
         if (!regionSelectionActive){ regionSelectionActive = true; regionVisible = new Set(names); }
         if (cb.checked){ regionVisible.add(name); } else { regionVisible.delete(name); }
-        saveRegionPrefs(); draw({});
+        saveRegionPrefs(); scheduleDraw();
       });
       const txt = document.createElement('span');
       txt.textContent = `${name} (${cat})`;
       wrap.appendChild(cb); wrap.appendChild(txt);
       listEl.appendChild(wrap);
     });
+  }
+
+  function scheduleDraw(){
+    if (pendingDraw) return;
+    pendingDraw = requestAnimationFrame(()=>{ pendingDraw = 0; draw({}); });
   }
 
   function text(x,y,str,size=10,weight='normal'){
@@ -394,7 +419,12 @@
             case 'timeRight': {
               const r = rects[op.rect]; if (!r) break;
               const fpx = ((fonts[op.font||'time']||{}).px) || pxTime;
-              const s = String((data.time||''));
+              // Resolve op.source template like {time_hhmm}
+              let s = '';
+              try{
+                const src = String(op.source||'').replace(/[{}]/g,'');
+                s = String((data[src]!==undefined ? data[src] : data.time_hhmm) || '');
+              }catch(e){ s = String((data.time_hhmm||data.time||'')); }
               // Ensure measurement uses the same font we'll render with
               ctx.font = `${fpx}px ${FONT_STACK}`; ctx.textBaseline='top';
               const tw = ctx.measureText(s).width;
@@ -559,7 +589,13 @@
             }
             case 'batteryGlyph': {
               const x = op.x||0, y = (op.y||0) + 4, bw = op.w||13, bh = op.h||7;
-              const pct = parseInt(String((window.lastData && window.lastData.percent) || 0), 10);
+              // Prefer battery_percent; fall back to op.percent template or 0
+              let pct = 0;
+              try{
+                const tpl = String(op.percent||'').replace(/[{}]/g,'');
+                const val = (data[tpl]!==undefined) ? data[tpl] : data.battery_percent;
+                pct = parseInt(String(val||0), 10);
+              }catch(e){ pct = parseInt(String(data.battery_percent||0), 10); }
               ctx.strokeStyle = '#000'; ctx.strokeRect(x, y, bw, bh); ctx.fillStyle = '#000';
               ctx.fillRect(x + bw, y + 2, 2, 3);
               const fillw = Math.max(0, Math.min(bw-2, Math.round((bw-2) * (pct/100))));
@@ -591,9 +627,11 @@
     pressure_hpa: 1013.2
   };
   let lastData = { ...DEFAULTS };
+  try{ if (typeof window !== 'undefined') window.lastData = lastData; }catch(e){}
 
   function draw(data){
     if (data && typeof data === 'object' && Object.keys(data).length) lastData = data;
+    try{ if (typeof window !== 'undefined') window.lastData = lastData; }catch(e){}
     // Render via spec only
     const variant = QS.get('variant') || (typeof window!=='undefined' && window.UI_SPEC && window.UI_SPEC.defaultVariant) || 'v1';
     ctx.fillStyle = '#fff'; ctx.fillRect(0,0,WIDTH,HEIGHT);
@@ -638,7 +676,7 @@
       const res = await fetch('sample_data.json');
       if(!res.ok) throw new Error('fetch failed');
       const data = await res.json();
-      lastData = data; draw(lastData);
+      draw(data);
     } catch(e){ }
     // Wire region inspector controls
     try{
@@ -649,27 +687,37 @@
       const fFooter = document.getElementById('filterFooter');
       const resetBtn = document.getElementById('resetRegionFilters');
       const normalizeAll = ()=>{
-        // If All is turned on, force all categories on. If any category is off, All turns off.
-        if (fAll && fAll.checked){
-          regionFilters.all = true;
-          regionFilters.header = regionFilters.temp = regionFilters.label = regionFilters.footer = true;
-          if (fHeader) fHeader.checked = true; if (fTemp) fTemp.checked = true; if (fLabel) fLabel.checked = true; if (fFooter) fFooter.checked = true;
-        } else {
-          regionFilters.all = !!(regionFilters.header && regionFilters.temp && regionFilters.label && regionFilters.footer);
-          if (fAll) fAll.checked = regionFilters.all;
-        }
+        // Computed: checked when all categories are checked
+        regionFilters.all = !!(regionFilters.header && regionFilters.temp && regionFilters.label && regionFilters.footer);
+        if (fAll) fAll.checked = regionFilters.all;
       };
-      const apply = ()=>{ showRects = true; const rEl = document.getElementById('showRects'); if (rEl) rEl.checked = true; normalizeAll(); saveRegionPrefs(); refreshRegionList(); draw({}); };
-      if (fAll){ fAll.checked = !!regionFilters.all; fAll.addEventListener('change', ()=>{ regionFilters.all = !!fAll.checked; apply(); }); }
-      if (fHeader){ fHeader.checked = !!regionFilters.header; fHeader.addEventListener('change', ()=>{ regionFilters.header = !!fHeader.checked; if (fAll && fAll.checked && !fHeader.checked) fAll.checked = false; apply(); }); }
-      if (fTemp){ fTemp.checked = !!regionFilters.temp; fTemp.addEventListener('change', ()=>{ regionFilters.temp = !!fTemp.checked; if (fAll && fAll.checked && !fTemp.checked) fAll.checked = false; apply(); }); }
-      if (fLabel){ fLabel.checked = !!regionFilters.label; fLabel.addEventListener('change', ()=>{ regionFilters.label = !!fLabel.checked; if (fAll && fAll.checked && !fLabel.checked) fAll.checked = false; apply(); }); }
-      if (fFooter){ fFooter.checked = !!regionFilters.footer; fFooter.addEventListener('change', ()=>{ regionFilters.footer = !!fFooter.checked; if (fAll && fAll.checked && !fFooter.checked) fAll.checked = false; apply(); }); }
+      const apply = ()=>{ showRects = true; const rEl = document.getElementById('showRects'); if (rEl) rEl.checked = true; normalizeAll(); saveRegionPrefs(); refreshRegionList(); scheduleDraw(); };
+      if (fAll){ fAll.checked = !!regionFilters.all; /* disabled in HTML; readonly */ }
+      if (fHeader){ fHeader.checked = !!regionFilters.header; fHeader.addEventListener('change', ()=>{ regionFilters.header = !!fHeader.checked; apply(); }); }
+      if (fTemp){ fTemp.checked = !!regionFilters.temp; fTemp.addEventListener('change', ()=>{ regionFilters.temp = !!fTemp.checked; apply(); }); }
+      if (fLabel){ fLabel.checked = !!regionFilters.label; fLabel.addEventListener('change', ()=>{ regionFilters.label = !!fLabel.checked; apply(); }); }
+      if (fFooter){ fFooter.checked = !!regionFilters.footer; fFooter.addEventListener('change', ()=>{ regionFilters.footer = !!fFooter.checked; apply(); }); }
       if (resetBtn){ resetBtn.addEventListener('click', ()=>{
         regionFilters = { all: true, header: true, temp: true, label: true, footer: true };
         regionVisible = new Set(); regionSelectionActive = false;
         apply();
       }); }
+      // Bulk actions
+      const showAllBtn = document.getElementById('showAllRects');
+      const hideAllBtn = document.getElementById('hideAllRects');
+      if (showAllBtn){ showAllBtn.addEventListener('click', ()=>{
+        regionSelectionActive = true;
+        regionVisible = new Set(Object.keys(GJSON.rects||{}));
+        saveRegionPrefs(); refreshRegionList(); scheduleDraw();
+      }); }
+      if (hideAllBtn){ hideAllBtn.addEventListener('click', ()=>{
+        regionSelectionActive = true;
+        regionVisible = new Set();
+        saveRegionPrefs(); refreshRegionList(); scheduleDraw();
+      }); }
+      // Search
+      const searchEl = document.getElementById('regionSearch');
+      if (searchEl){ searchEl.addEventListener('input', ()=>{ searchQuery = String(searchEl.value||''); refreshRegionList(); scheduleDraw(); }); }
       refreshRegionList();
     }catch(e){}
   }

@@ -61,12 +61,21 @@
         <summary>Region inspector</summary>
         <div class="region-browser" style="margin-top:6px;">
           <div class="region-controls" style="margin-bottom:6px;">
-            <label style="margin-right:8px;"><input type="checkbox" id="filterAll" checked> All</label>
+            <label style="margin-right:8px;"><input type="checkbox" id="filterAll" checked disabled> All</label>
             <label style="margin-right:8px;"><input type="checkbox" id="filterHeader" checked> Header</label>
             <label style="margin-right:8px;"><input type="checkbox" id="filterTemp" checked> Temp</label>
             <label style="margin-right:8px;"><input type="checkbox" id="filterLabel" checked> Label</label>
             <label style="margin-right:8px;"><input type="checkbox" id="filterFooter" checked> Footer</label>
+            <input id="regionSearch" type="text" placeholder="Search regions…" style="margin-left:8px; padding:2px 4px; width:180px;">
             <button id="resetRegionFilters" style="margin-left:8px;">Reset</button>
+            <button id="showAllRects" style="margin-left:4px;">Show all</button>
+            <button id="hideAllRects" style="margin-left:4px;">Hide all</button>
+          </div>
+          <div class="legend" style="font-size:12px; margin-bottom:6px;">
+            <span style="display:inline-block;width:10px;height:10px;background:#ff6b6b;margin-right:4px;border:1px solid #333;vertical-align:middle;"></span> Header
+            <span style="display:inline-block;width:10px;height:10px;background:#4ecdc4;margin-left:10px;margin-right:4px;border:1px solid #333;vertical-align:middle;"></span> Temp
+            <span style="display:inline-block;width:10px;height:10px;background:#45b7d1;margin-left:10px;margin-right:4px;border:1px solid #333;vertical-align:middle;"></span> Label
+            <span style="display:inline-block;width:10px;height:10px;background:#96ceb4;margin-left:10px;margin-right:4px;border:1px solid #333;vertical-align:middle;"></span> Footer
           </div>
           <div id="regionList" class="region-list" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:4px;"></div>
         </div>
