@@ -56,6 +56,21 @@
           </select>
         </label>
       </div>
+
+      <details id="regionInspector" style="margin-top:8px;">
+        <summary>Region inspector</summary>
+        <div class="region-browser" style="margin-top:6px;">
+          <div class="region-controls" style="margin-bottom:6px;">
+            <label style="margin-right:8px;"><input type="checkbox" id="filterAll" checked> All</label>
+            <label style="margin-right:8px;"><input type="checkbox" id="filterHeader" checked> Header</label>
+            <label style="margin-right:8px;"><input type="checkbox" id="filterTemp" checked> Temp</label>
+            <label style="margin-right:8px;"><input type="checkbox" id="filterLabel" checked> Label</label>
+            <label style="margin-right:8px;"><input type="checkbox" id="filterFooter" checked> Footer</label>
+            <button id="resetRegionFilters" style="margin-left:8px;">Reset</button>
+          </div>
+          <div id="regionList" class="region-list" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:4px;"></div>
+        </div>
+      </details>
     </div>
     <script src="ui_generated.js?v=4"></script>
     <script src="sim.js?v=6"></script>

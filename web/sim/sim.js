@@ -32,6 +32,9 @@
   // removed highlightIssues toggle per feedback
   let GEOMETRY = null; // optional overlay geometry loaded from geometry.json
   let GJSON = null;    // centralized geometry JSON
+  // Region inspector state
+  let regionFilters = { all: true, header: true, temp: true, label: true, footer: true };
+  let regionVisible = new Set();
   // Enable spec-only render (always on to keep single source of truth)
   const QS = (typeof window !== 'undefined') ? new URLSearchParams(window.location.search) : new URLSearchParams();
   const specOnly = true;
@@ -136,16 +139,29 @@
     ctx.restore();
   }
 
+  function categoryColor(cat){
+    switch(String(cat||'')){
+      case 'header': return '#ff6b6b';
+      case 'temp':   return '#4ecdc4';
+      case 'label':  return '#45b7d1';
+      case 'footer': return '#96ceb4';
+      default:       return '#f00';
+    }
+  }
+
   function drawRectsOverlay(){
     if (!showRects || !GJSON || !GJSON.rects) return;
     ctx.save();
     // Fill rects with a translucent color so misalignment is obvious
-    ctx.strokeStyle = '#f00';
     ctx.lineWidth = 1;
     Object.entries(GJSON.rects).forEach(([name, r])=>{
+      if (!shouldShowRect(name)) return;
       const [x,y,w,h] = r;
+      const cat = getRectCategory(name);
+      const col = categoryColor(cat);
       // Semi-transparent fill distinguishable from content (skip threshold when overlays are active)
-      ctx.fillStyle = 'rgba(255, 0, 0, 0.15)';
+      ctx.fillStyle = col.replace('#','rgba(') + (col.length===7? (()=>{const n=parseInt(col.slice(1),16); return `${(n>>16)&255}, ${(n>>8)&255}, ${n&255}, 0.15)`;})() : '255,0,0,0.15') + ')';
+      ctx.strokeStyle = col;
       ctx.fillRect(x, y, w, h);
       ctx.strokeRect(x+0.5, y+0.5, w, h);
       if (showLabels){
@@ -179,6 +195,70 @@
       // no extra issue highlighter
     } catch(e){}
     ctx.restore();
+  }
+
+  function getRectCategory(name){
+    const n = String(name||'');
+    if (n.startsWith('HEADER_')) return 'header';
+    if (n.startsWith('FOOTER_') || n === 'STATUS' || n === 'WEATHER_BAR') return 'footer';
+    if (/_LABEL_BOX$/.test(n)) return 'label';
+    if (/_TEMP(|_INNER|_BADGE)?$/.test(n) || n.startsWith('OUT_ROW') || n === 'INSIDE_RH' || n === 'INSIDE_TIME') return 'temp';
+    if (n === 'OUT_ICON') return 'temp';
+    return 'temp';
+  }
+
+  function shouldShowRect(name){
+    if (!regionFilters.all){
+      const cat = getRectCategory(name);
+      if (!regionFilters[cat]) return false;
+    }
+    if (regionVisible.size > 0){
+      return regionVisible.has(name);
+    }
+    return true;
+  }
+
+  function saveRegionPrefs(){
+    try{
+      localStorage.setItem('sim_region_filters', JSON.stringify(regionFilters));
+      localStorage.setItem('sim_region_visible', JSON.stringify(Array.from(regionVisible)));
+    }catch(e){}
+  }
+
+  function loadRegionPrefs(){
+    try{
+      const f = JSON.parse(localStorage.getItem('sim_region_filters')||'null');
+      if (f && typeof f === 'object') regionFilters = { ...regionFilters, ...f };
+      const v = JSON.parse(localStorage.getItem('sim_region_visible')||'null');
+      if (Array.isArray(v)) regionVisible = new Set(v);
+    }catch(e){}
+  }
+
+  function refreshRegionList(){
+    const listEl = document.getElementById('regionList');
+    if (!listEl || !GJSON || !GJSON.rects) return;
+    listEl.innerHTML = '';
+    const names = Object.keys(GJSON.rects).sort();
+    names.forEach(name=>{
+      const cat = getRectCategory(name);
+      const wrap = document.createElement('label');
+      wrap.style.display = (regionFilters.all || regionFilters[cat]) ? 'block' : 'none';
+      wrap.className = 'region-item';
+      wrap.dataset.region = name;
+      const cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.className = 'region-checkbox';
+      cb.value = name;
+      cb.checked = regionVisible.size === 0 || regionVisible.has(name);
+      cb.addEventListener('change', ()=>{
+        if (cb.checked){ regionVisible.add(name); } else { regionVisible.delete(name); }
+        saveRegionPrefs(); draw({});
+      });
+      const txt = document.createElement('span');
+      txt.textContent = `${name} (${cat})`;
+      wrap.appendChild(cb); wrap.appendChild(txt);
+      listEl.appendChild(wrap);
+    });
   }
 
   function text(x,y,str,size=10,weight='normal'){
@@ -314,12 +394,13 @@
               const lab = String(op.text||'');
               ctx.font = `${weight} ${fpx}px ${FONT_STACK}`; ctx.textBaseline='top'; ctx.fillStyle='#000';
               const lw = ctx.measureText(lab).width;
-              const lx = r[0] + Math.floor((r[2] - lw)/2);
-              let ly = op.y || (r[1] - (fpx+2));
-              if (typeof window !== 'undefined' && window.__specMode === 'v2_grid'){
+              let targetBox = r;
+              if (typeof window !== 'undefined' && window.__specMode && String(window.__specMode).startsWith('v2')){
                 const lb = (op.aboveRect === 'INSIDE_TEMP') ? rects.INSIDE_LABEL_BOX : (op.aboveRect === 'OUT_TEMP' ? rects.OUT_LABEL_BOX : null);
-                if (lb){ ly = lb[1] + Math.max(0, Math.floor((lb[3] - fpx)/2)); }
+                if (lb) targetBox = lb;
               }
+              const lx = targetBox[0] + Math.floor((targetBox[2] - lw)/2);
+              const ly = targetBox[1] + Math.max(0, Math.floor(((targetBox[3]||fpx) - fpx)/2));
               text(lx, ly, lab, fpx, weight);
               if (op.aboveRect === 'INSIDE_TEMP') window.__layoutMetrics.labels.inside = { x: lx + lw/2 };
               if (op.aboveRect === 'OUT_TEMP') window.__layoutMetrics.labels.outside = { x: lx + lw/2 };
@@ -327,24 +408,20 @@
             }
             case 'tempGroupCentered': {
               const r = rects[op.rect]; if (!r) break;
-              // Render number + units centered; simplified fixed approach
-              const [x,y,w,h] = r;
+              // Render number + units centered, prefer INNER area for v2 variants
               ctx.font = `bold ${SIZE_BIG}px ${FONT_STACK}`; ctx.textBaseline='top';
               let s = String((op.value||'').toString().replace(/[{}]/g,''));
               s = String(data[s] ?? '');
-              const badge = (typeof window !== 'undefined' && window.__specMode === 'v2_grid') ?
-                (op.rect === 'INSIDE_TEMP' ? rects.INSIDE_TEMP_BADGE : (op.rect === 'OUT_TEMP' ? rects.OUT_TEMP_BADGE : null))
-                : null;
+              const isV2 = (typeof window !== 'undefined' && window.__specMode && String(window.__specMode).startsWith('v2'));
+              const inner = isV2 ? (op.rect === 'INSIDE_TEMP' ? rects.INSIDE_TEMP_INNER : (op.rect === 'OUT_TEMP' ? rects.OUT_TEMP_INNER : null)) : null;
+              const area = inner || r;
+              const areaX = area[0], areaY = area[1], areaW = area[2];
+              const badge = isV2 ? (op.rect === 'INSIDE_TEMP' ? rects.INSIDE_TEMP_BADGE : (op.rect === 'OUT_TEMP' ? rects.OUT_TEMP_BADGE : null)) : null;
               const unitsW = badge ? badge[2] : 14;
               const tw = ctx.measureText(s).width;
-              const totalW = Math.min(Math.max(0,w-2), tw + unitsW);
-              const left = x + Math.max(0, Math.floor((w - totalW)/2));
-              // In v2, draw inside the INNER rect to avoid colliding with label band
-              let yTop = y;
-              if (typeof window !== 'undefined' && window.__specMode === 'v2_grid'){
-                const inner = op.rect === 'INSIDE_TEMP' ? rects.INSIDE_TEMP_INNER : (op.rect === 'OUT_TEMP' ? rects.OUT_TEMP_INNER : null);
-                if (inner){ yTop = inner[1]; }
-              }
+              const totalW = Math.min(Math.max(0,areaW-2), tw + unitsW);
+              const left = areaX + Math.max(0, Math.floor((areaW - totalW)/2));
+              const yTop = areaY;
               text(left, yTop, s, SIZE_BIG, 'bold');
               if (badge){
                 ctx.strokeStyle = '#000';
@@ -355,7 +432,7 @@
                 text(left + tw + 8, yTop + 4, 'F', 12);
               }
               const key = (op.rect === 'INSIDE_TEMP') ? 'inside' : (op.rect === 'OUT_TEMP' ? 'outside' : null);
-              if (key){ window.__tempMetrics[key] = { rect: { x, y, w, h }, contentLeft: left, totalW: (tw + unitsW) }; }
+              if (key){ window.__tempMetrics[key] = { rect: { x: areaX, y: areaY, w: areaW, h: (area[3]||0) }, contentLeft: left, totalW: (tw + unitsW) }; }
               break;
             }
             case 'textCenteredIn': {
@@ -528,6 +605,7 @@
   }
 
   async function load(){
+    loadRegionPrefs();
     await loadCentralGeometry();
     draw(lastData);
     try{
@@ -540,6 +618,27 @@
       const data = await res.json();
       lastData = data; draw(lastData);
     } catch(e){ }
+    // Wire region inspector controls
+    try{
+      const fAll = document.getElementById('filterAll');
+      const fHeader = document.getElementById('filterHeader');
+      const fTemp = document.getElementById('filterTemp');
+      const fLabel = document.getElementById('filterLabel');
+      const fFooter = document.getElementById('filterFooter');
+      const resetBtn = document.getElementById('resetRegionFilters');
+      const apply = ()=>{ saveRegionPrefs(); refreshRegionList(); draw({}); };
+      if (fAll){ fAll.checked = !!regionFilters.all; fAll.addEventListener('change', ()=>{ regionFilters.all = !!fAll.checked; apply(); }); }
+      if (fHeader){ fHeader.checked = !!regionFilters.header; fHeader.addEventListener('change', ()=>{ regionFilters.header = !!fHeader.checked; apply(); }); }
+      if (fTemp){ fTemp.checked = !!regionFilters.temp; fTemp.addEventListener('change', ()=>{ regionFilters.temp = !!fTemp.checked; apply(); }); }
+      if (fLabel){ fLabel.checked = !!regionFilters.label; fLabel.addEventListener('change', ()=>{ regionFilters.label = !!fLabel.checked; apply(); }); }
+      if (fFooter){ fFooter.checked = !!regionFilters.footer; fFooter.addEventListener('change', ()=>{ regionFilters.footer = !!fFooter.checked; apply(); }); }
+      if (resetBtn){ resetBtn.addEventListener('click', ()=>{
+        regionFilters = { all: true, header: true, temp: true, label: true, footer: true };
+        regionVisible = new Set();
+        apply();
+      }); }
+      refreshRegionList();
+    }catch(e){}
   }
 
   document.getElementById('refresh').addEventListener('click', async ()=>{
@@ -738,6 +837,7 @@
           return;
         }
       }catch(e){}
+      refreshRegionList();
       draw({});
     });
   }
