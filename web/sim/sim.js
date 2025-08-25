@@ -47,6 +47,7 @@
   let validationIssues = [];
   let renderedContent = {}; // Track what was actually rendered
   let emptyRegions = new Set(); // Track regions with no content
+  let missingDataFields = new Set(); // Track data fields that were referenced but missing
 
   const FONT_STACK = 'Menlo, Consolas, "DM Mono", "Roboto Mono", monospace';
   const SIZE_SMALL = 10; // general small text - reduced from 11 to fit 12px rows
@@ -169,21 +170,58 @@
     // Check for collisions
     validationIssues.push(...validateCollisions(GJSON.rects));
     
-    // Check rendered content for overflow
+    // Check rendered content for overflow and incomplete data
     for (const [regionName, content] of Object.entries(renderedContent)) {
       if (GJSON.rects[regionName] && content.text) {
         const rect = GJSON.rects[regionName];
         rect.name = regionName;
         const issues = validateTextOverflow(content.text, rect, content.fontSize || SIZE_SMALL);
         validationIssues.push(...issues);
+        
+        // Check for incomplete data (e.g., "mph" without a number, "%" without a value)
+        const text = content.text.trim();
+        if (text === 'mph' || text === 'km/h' || text === '%' || 
+            text === '% RH' || text === 'hPa' || text === 'ppm' ||
+            text.match(/^\s*(mph|km\/h|%|hPa|ppm|mm)\s*$/)) {
+          validationIssues.push({
+            type: 'incomplete_data',
+            severity: 'warning',
+            region: regionName,
+            description: `Region shows units without value: "${text}"`,
+            rect: rect
+          });
+        }
       }
     }
     
-    // Check for empty regions that should have content
+    // Check for empty regions that should have content (varies by variant)
+    const variant = QS.get('variant') || (window.UI_SPEC && window.UI_SPEC.defaultVariant) || 'v1';
+    const isV2 = variant.includes('v2');
+    const usesCenteredHeader = variant.includes('centered'); // header_centered variant uses HEADER_CENTER
+    
     const expectedContent = new Set([
-      'HEADER_NAME', 'HEADER_TIME', 'INSIDE_TEMP', 'INSIDE_RH',
-      'OUT_TEMP', 'OUT_ROW1_L', 'OUT_ROW1_R', 'STATUS'
+      'HEADER_NAME', 'HEADER_TIME', 'INSIDE_TEMP', 'INSIDE_RH', 'OUT_TEMP'
     ]);
+    
+    // Add variant-specific expectations
+    if (usesCenteredHeader) {
+      expectedContent.add('HEADER_CENTER'); // Only in header_centered variant
+    }
+    
+    if (isV2) {
+      expectedContent.add('OUT_ROW1_L');
+      expectedContent.add('OUT_ROW1_R');
+      expectedContent.add('INSIDE_ROW2_L'); // v2 uses INSIDE_ROW2_L/R
+      expectedContent.add('INSIDE_ROW2_R');
+      expectedContent.add('WEATHER_BAR');
+      expectedContent.add('OUT_ICON'); // v2 has OUT_ICON in the main area
+    } else {
+      expectedContent.add('OUT_ROW2_L');
+      expectedContent.add('OUT_ROW2_R');
+      expectedContent.add('INSIDE_TIME'); // v1 uses INSIDE_TIME not INSIDE_ROW2
+      expectedContent.add('FOOTER_L'); // v1 uses FOOTER_L for IP and battery
+      expectedContent.add('FOOTER_R'); // v1 uses FOOTER_R for weather icon
+    }
     
     for (const regionName of expectedContent) {
       if (!renderedContent[regionName] && GJSON.rects[regionName]) {
@@ -194,11 +232,35 @@
           description: `Region has no rendered content`,
           rect: GJSON.rects[regionName]
         });
+      } else if (renderedContent[regionName] && GJSON.rects[regionName]) {
+        // Check if content is effectively empty (just whitespace or placeholder)
+        const text = (renderedContent[regionName].text || '').trim();
+        if (text === '' || text === '—' || text === '-' || text === 'N/A') {
+          validationIssues.push({
+            type: 'placeholder_content',
+            severity: 'info',
+            region: regionName,
+            description: `Region shows placeholder: "${text}"`,
+            rect: GJSON.rects[regionName]
+          });
+        }
       }
     }
     
     // Check for content outside defined regions
     for (const [regionName, content] of Object.entries(renderedContent)) {
+      // Special case for elements that know they're outside their region
+      if (content.outsideRegion) {
+        validationIssues.push({
+          type: 'element_outside_region',
+          severity: 'error',
+          region: regionName,
+          description: `${regionName} renders outside ${content.outsideRegion}`,
+          rect: content.actualBounds ? [content.actualBounds.x, content.actualBounds.y, content.actualBounds.width, content.actualBounds.height] : null
+        });
+        continue;
+      }
+      
       if (content.actualBounds && GJSON.rects[regionName]) {
         const rect = GJSON.rects[regionName];
         const [rx, ry, rw, rh] = rect;
@@ -226,6 +288,42 @@
           });
         }
       }
+    }
+    
+    // Check for regions defined but not used in current variant
+    const allDefinedRegions = Object.keys(GJSON.rects || {});
+    const unusedRegions = allDefinedRegions.filter(r => 
+      !expectedContent.has(r) && 
+      !['HEADER_CENTER', 'OUT_ROW1_L', 'OUT_ROW1_R', 'INSIDE_ROW2', 'STATUS'].includes(r) &&
+      !r.includes('LABEL_BOX') && !r.includes('_INNER') && !r.includes('_BADGE')
+    );
+    
+    // For v1, these regions exist but aren't used
+    const v1UnusedRegions = ['HEADER_CENTER', 'OUT_ROW1_L', 'OUT_ROW1_R', 'STATUS', 'OUT_ICON'];
+    if (!isV2) {
+      for (const region of v1UnusedRegions) {
+        if (GJSON.rects[region] && !renderedContent[region]) {
+          validationIssues.push({
+            type: 'unused_region',
+            severity: 'info',
+            region: region,
+            description: `Region defined but not used in v1 variant`,
+            rect: GJSON.rects[region]
+          });
+        }
+      }
+    }
+    
+    // Check for missing data fields
+    if (missingDataFields.size > 0) {
+      const fields = Array.from(missingDataFields).sort();
+      validationIssues.push({
+        type: 'missing_data',
+        severity: 'info',
+        region: 'data',
+        description: `Missing data fields: ${fields.join(', ')}`,
+        rect: null
+      });
     }
     
     // Update validation UI
@@ -656,7 +754,11 @@
                 if (k === 'fw_version' && typeof window !== 'undefined' && typeof window.UI_FW_VERSION === 'string') return window.UI_FW_VERSION;
                 const base = k.replace(/[:].*$/, '').replace(/->.*$/, '');
                 const v = (data[base] !== undefined) ? data[base] : data[base.replace(/_f$/, '')];
-                if (v === undefined || v === null) return '';
+                if (v === undefined || v === null) {
+                  // Track missing data field
+                  if (validationEnabled) missingDataFields.add(base);
+                  return '';
+                }
                 // conversions
                 let val = v;
                 const conv = k.match(/->([a-z]+)/);
@@ -814,13 +916,16 @@
               const tw = ctx.measureText(s).width;
               const totalW = Math.min(Math.max(0,areaW-2), tw + unitsW);
               const left = areaX + Math.max(0, Math.floor((areaW - totalW)/2));
-              const yTop = areaY;
+              // Center text vertically in the area
+              const areaH = area[3] || 28;
+              const yTop = areaY + Math.max(0, Math.floor((areaH - SIZE_BIG) / 2));
               text(left, yTop, s, SIZE_BIG, 'bold', op.rect);
               if (badge){
                 ctx.strokeStyle = '#000';
                 ctx.strokeRect(badge[0], badge[1], badge[2], badge[3]);
                 text(badge[0] + 2, badge[1] + Math.max(0, Math.floor((badge[3]-10)/2)), '°F', 10);
               } else {
+                // Adjust degree and F symbols to align with centered temperature
                 text(left + tw + 2, yTop + 4, '°', 12);
                 text(left + tw + 8, yTop + 4, 'F', 12);
               }
@@ -942,6 +1047,21 @@
               const fillw = Math.max(0, Math.min(bw-2, Math.round((bw-2) * (pct/100))));
               if (fillw > 0) ctx.fillRect(x+1, y+1, fillw, bh-2);
               window.__layoutMetrics.statusLeft.batteryIcon = { x, y, w: bw, h: bh };
+              
+              // Track battery icon for validation
+              if (validationEnabled && rects.FOOTER_L) {
+                const fl = rects.FOOTER_L;
+                const iconRight = x + bw + 2; // Including the terminal
+                if (x < fl[0] || y < fl[1] || iconRight > (fl[0] + fl[2]) || (y + bh) > (fl[1] + fl[3])) {
+                  // Battery icon is outside FOOTER_L bounds
+                  renderedContent['BATTERY_ICON'] = {
+                    text: 'battery',
+                    fontSize: 0,
+                    actualBounds: { x, y, width: bw + 2, height: bh },
+                    outsideRegion: 'FOOTER_L'
+                  };
+                }
+              }
               break;
             }
             default: break;
@@ -989,6 +1109,7 @@
     // Clear rendered content tracking for validation
     renderedContent = {};
     emptyRegions.clear();
+    missingDataFields.clear();
     
     // Merge with defaults and existing data
     if (data && typeof data === 'object' && Object.keys(data).length) {
