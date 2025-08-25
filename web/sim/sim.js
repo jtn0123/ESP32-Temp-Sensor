@@ -874,7 +874,7 @@
   const specSel = document.getElementById('specMode');
   if (specSel){
     specSel.addEventListener('change', ()=>{
-      const which = specSel.value || 'v1';
+      const which = specSel.value || 'v2_grid';
       try{
         if (which === 'v2_1_grid' && window.UI_SPEC && window.UI_SPEC.rects_v2_1){
           // Use v2.1 rects and variants from ui_spec.json

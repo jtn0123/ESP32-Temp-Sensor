@@ -27,28 +27,28 @@
     "STATUS":      [6, 112, 238, 10]
   },
   "rects_v2_1": {
-    "HEADER_NAME": [8, 4, 156, 12],
-    "HEADER_TIME": [168, 4, 72, 12],
-    "INSIDE_TEMP": [12, 20, 112, 28],
-    "INSIDE_LABEL_BOX": [12, 22, 112, 10],
-    "INSIDE_TEMP_INNER": [16, 36, 84, 12],
-    "INSIDE_TEMP_BADGE": [104, 36, 20, 12],
-    "INSIDE_RH": [12, 52, 112, 12],
-    "INSIDE_ROW2_L": [12, 68, 56, 12],
-    "INSIDE_ROW2_R": [72, 68, 52, 12],
-    "OUT_TEMP": [132, 20, 106, 28],
-    "OUT_LABEL_BOX": [132, 22, 106, 10],
-    "OUT_TEMP_INNER": [136, 36, 78, 12],
-    "OUT_TEMP_BADGE": [216, 36, 20, 12],
-    "OUT_ICON": [208, 52, 28, 28],
-    "OUT_ROW1_L": [132, 68, 44, 12],
-    "OUT_ROW1_R": [180, 68, 56, 12],
-    "OUT_ROW2_L": [132, 80, 44, 12],
-    "OUT_ROW2_R": [180, 80, 56, 12],
-    "WEATHER_BAR": [132, 52, 72, 12],
-    "FOOTER_L": [8, 96, 116, 20],
-    "FOOTER_R": [132, 96, 106, 20],
-    "STATUS": [8, 118, 232, 2]
+    "HEADER_NAME": [4, 4, 160, 12],
+    "HEADER_TIME": [168, 4, 76, 12],
+    "INSIDE_TEMP": [4, 32, 120, 32],
+    "INSIDE_LABEL_BOX": [4, 20, 120, 10],
+    "INSIDE_TEMP_INNER": [8, 40, 88, 20],
+    "INSIDE_TEMP_BADGE": [100, 40, 20, 20],
+    "INSIDE_RH": [4, 66, 120, 12],
+    "INSIDE_ROW2_L": [4, 80, 60, 12],
+    "INSIDE_ROW2_R": [68, 80, 56, 12],
+    "OUT_TEMP": [128, 32, 116, 32],
+    "OUT_LABEL_BOX": [128, 20, 116, 10],
+    "OUT_TEMP_INNER": [132, 40, 80, 20],
+    "OUT_TEMP_BADGE": [216, 40, 26, 20],
+    "OUT_ICON": [212, 64, 32, 28],
+    "OUT_ROW1_L": [128, 66, 48, 12],
+    "OUT_ROW1_R": [180, 66, 64, 12],
+    "OUT_ROW2_L": [128, 80, 48, 12],
+    "OUT_ROW2_R": [180, 80, 64, 12],
+    "WEATHER_BAR": [128, 64, 80, 12],
+    "FOOTER_L": [4, 96, 120, 20],
+    "FOOTER_R": [128, 96, 116, 20],
+    "STATUS": [4, 118, 240, 2]
   },
   "iconMap": [
     { "match": ["storm", "thunder", "lightning"], "icon": "weather-lightning" },
@@ -123,9 +123,10 @@
       { "op": "line", "from": [0, 121], "to": [249, 121] },
       { "op": "line", "from": [0, 0],   "to": [0, 121] },
       { "op": "line", "from": [249, 0], "to": [249, 121] },
-      { "op": "line", "from": [128, 16], "to": [128, 96] },
-      { "op": "line", "from": [0, 16], "to": [249, 16] },
-      { "op": "line", "from": [0, 96], "to": [249, 96] }
+      { "op": "line", "from": [125, 18], "to": [125, 96] },
+      { "op": "line", "from": [0, 18], "to": [249, 18] },
+      { "op": "line", "from": [0, 96], "to": [249, 96] },
+      { "op": "line", "from": [0, 117], "to": [249, 117] }
     ],
     "header_v2_1": [
       { "op": "text", "rect": "HEADER_NAME", "font": "label", "align": "left", "text": "{room_name}", "truncate": "ellipsis" },
@@ -151,12 +152,13 @@
       { "op": "text", "rect": "OUT_ROW2_R", "font": "small", "align": "left", "text": "{rain_mm:.1f}mm", "when": "has(rain_mm)" }
     ],
     "footer_v2_1": [
-      { "op": "batteryGlyph", "x": 12, "y": 98, "w": 12, "h": 6, "percent": "{battery_percent}" },
-      { "op": "text", "x": 28, "y": 98, "font": "small", "text": "{battery_percent}%" },
-      { "op": "text", "x": 28, "y": 106, "font": "small", "text": "~{days}d" },
-      { "op": "text", "x": 72, "y": 98, "font": "small", "text": "{ip}", "truncate": "ellipsis", "maxWidth": 48 },
-      { "op": "text", "x": 136, "y": 98, "font": "small", "text": "{time_hhmm}" },
-      { "op": "text", "x": 136, "y": 106, "font": "small", "text": "{weather}", "truncate": "ellipsis", "maxWidth": 96 }
+      { "op": "batteryGlyph", "x": 8, "y": 99, "w": 14, "h": 7, "percent": "{battery_percent}" },
+      { "op": "text", "x": 26, "y": 98, "font": "small", "text": "{battery_percent}% {battery_voltage:.2f}V" },
+      { "op": "text", "x": 8, "y": 107, "font": "small", "text": "IP: {ip}" },
+      { "op": "text", "x": 80, "y": 107, "font": "small", "text": "~{days}d" },
+      { "op": "text", "x": 132, "y": 98, "font": "small", "text": "{time_hhmm}" },
+      { "op": "text", "x": 132, "y": 107, "font": "small", "text": "{weather}", "truncate": "ellipsis", "maxWidth": 80 },
+      { "op": "iconIn", "rect": "FOOTER_R", "xOffset": 84, "iconFromWeather": "{weather}" }
     ],
     "inside_v2_1_missing": [
       { "op": "textCenteredIn", "rect": "INSIDE_LABEL_BOX", "font": "label", "text": "INSIDE" },
@@ -172,16 +174,16 @@
     ]
   },
   "variants": {
-    "v1": ["chrome", "header", "inside", "outside", "footer_split"],
-    "v1_missing_outside": ["chrome", "header", "inside", "outside_missing", "footer_weather_missing"],
-    "v1_missing_inside": ["chrome", "header", "inside_missing", "outside", "footer_split"],
-    "v1_missing_all": ["chrome", "header", "inside_missing", "outside_missing", "footer_weather_missing"],
+    "v2_grid": ["chrome", "header", "inside", "outside", "footer_split"],
+    "v2_missing_outside": ["chrome", "header", "inside", "outside_missing", "footer_weather_missing"],
+    "v2_missing_inside": ["chrome", "header", "inside_missing", "outside", "footer_split"],
+    "v2_missing_all": ["chrome", "header", "inside_missing", "outside_missing", "footer_weather_missing"],
     "v2_1_grid": ["chrome_v2_1", "header_v2_1", "inside_v2_1", "outside_v2_1", "footer_v2_1"],
     "v2_1_missing_outside": ["chrome_v2_1", "header_v2_1", "inside_v2_1", "outside_v2_1_missing", "footer_v2_1"],
     "v2_1_missing_inside": ["chrome_v2_1", "header_v2_1", "inside_v2_1_missing", "outside_v2_1", "footer_v2_1"],
     "v2_1_missing_all": ["chrome_v2_1", "header_v2_1", "inside_v2_1_missing", "outside_v2_1_missing", "footer_v2_1"]
   },
-  "defaultVariant": "v1",
+  "defaultVariant": "v2_grid",
   "regions": {
     "partial": {
       "INSIDE_TEMP": ["tempGroupCentered"],
