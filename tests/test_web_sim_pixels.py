@@ -107,7 +107,8 @@ def test_web_sim_screenshot_matches_golden_with_tolerance(tmp_path):
                 num_diff = int(diff.sum())
                 # Allow small tolerance for font raster differences
                 if num_diff > 5:
-                    # If not in CI, refresh golden to current rendering to keep tests green with spec-driven sim
+                    # If not in CI, refresh golden to current rendering to keep tests green
+                    # with spec-driven sim
                     if not os.environ.get("CI"):
                         with open(golden_png, "wb") as f:
                             f.write(bytes_png)

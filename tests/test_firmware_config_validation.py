@@ -118,13 +118,15 @@ def test_threshold_validation():
             try:
                 value = float(threshold_value)
                 assert range_info["min"] <= value <= range_info["max"], \
-                    f"Threshold {threshold_name}={value} out of range [{range_info['min']}, {range_info['max']}]"
+                    "Threshold {}={} out of range [{}, {}]".format(
+                        threshold_name, value, range_info['min'], range_info['max'])
                 assert value >= 0, f"Threshold {threshold_name}={value} must be non-negative"
             except (ValueError, TypeError):
                 pytest.fail(f"Invalid threshold value for {threshold_name}: {threshold_value}")
         else:
             # Should have default threshold
-            assert range_info["default"] > 0, f"Default threshold for {threshold_name} should be positive"
+            assert range_info["default"] > 0, \
+                f"Default threshold for {threshold_name} should be positive"
 
 def test_battery_config_validation():
     """Test battery configuration validation"""
@@ -173,7 +175,8 @@ def test_outside_source_validation():
     outside_source = str(config.get("outside_source", "mqtt")).lower()
 
     valid_sources = ["mqtt", "ha"]
-    assert outside_source in valid_sources, f"outside_source={outside_source} must be one of {valid_sources}"
+    assert outside_source in valid_sources, \
+        f"outside_source={outside_source} must be one of {valid_sources}"
 
     # If outside_source is mqtt, MQTT config is required
     if outside_source == "mqtt":
@@ -242,7 +245,8 @@ def test_firmware_version_handling():
 
         # Should follow semantic versioning pattern
         version_pattern = r'^v?\d+\.\d+(\.\d+)?(-[a-zA-Z0-9.-]+)?$'
-        assert re.match(version_pattern, fw_version), f"fw_version '{fw_version}' does not follow semantic versioning"
+        assert re.match(version_pattern, fw_version), \
+            f"fw_version '{fw_version}' does not follow semantic versioning"
 
 def test_wifi_config_validation():
     """Test Wi-Fi configuration validation"""
@@ -293,9 +297,11 @@ def test_ha_entities_validation():
 
         # Should follow HA entity ID format
         assert "." in entity_id, f"HA entity {entity_name} should contain domain: {entity_id}"
-        assert " " not in entity_id, f"HA entity {entity_name} should not contain spaces: {entity_id}"
+        assert " " not in entity_id, \
+            f"HA entity {entity_name} should not contain spaces: {entity_id}"
 
         # Common domains for weather/temperature sensors
         domain = entity_id.split(".")[0]
         valid_domains = ["sensor", "weather", "binary_sensor"]
-        assert domain in valid_domains, f"HA entity {entity_name} has invalid domain '{domain}': {entity_id}"
+        assert domain in valid_domains, \
+            f"HA entity {entity_name} has invalid domain '{domain}': {entity_id}"

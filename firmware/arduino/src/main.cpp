@@ -139,11 +139,11 @@ static void draw_from_spec_full(uint8_t variantId) { draw_from_spec_full_impl(va
 #define EINK_DC 10  // D10
 #endif
 #ifndef EINK_RST
-#define EINK_RST -1 // FeatherWing ties panel reset to Feather RESET
+#define EINK_RST -1  // FeatherWing ties panel reset to Feather RESET
 #endif
 #ifndef EINK_BUSY
 #define EINK_BUSY                                                                                  \
-  -1 // FeatherWing BUSY not connected; use -1 so library times
+  -1  // FeatherWing BUSY not connected; use -1 so library times
      // waits
 #endif
 
@@ -369,10 +369,10 @@ static void draw_from_spec_full_impl(uint8_t variantId) {
         break;
       }
     }
-  } // USE_UI_SPEC
+  }  // USE_UI_SPEC
 }
-#endif // USE_UI_SPEC
-#endif // USE_DISPLAY
+#endif  // USE_UI_SPEC
+#endif  // USE_DISPLAY
 
 RTC_DATA_ATTR static uint16_t partial_counter = 0;
 // Track number of wakes from deep sleep (monotonic until power loss)

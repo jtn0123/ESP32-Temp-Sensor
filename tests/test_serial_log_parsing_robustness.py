@@ -137,7 +137,7 @@ def test_parse_awake_log_robustness():
     for line in SAMPLE_LOG_LINES:
         try:
             # Should not crash on valid input
-            result = parse_func(line)
+            parse_func(line)
             # We don't care about the result, just that it doesn't crash
         except Exception as e:
             # Should handle exceptions gracefully
@@ -266,7 +266,8 @@ def test_metrics_extraction_comprehensive():
     }
 
     test_lines = [
-        "[METRICS] Inside: 72.5°F 45% RH, Outside: 68.2°F 52% RH, Wind: 5.2 mph, Pressure: 1013.2 hPa",
+        "[METRICS] Inside: 72.5°F 45% RH, Outside: 68.2°F 52% RH, Wind: 5.2 mph, "
+        "Pressure: 1013.2 hPa",
         "[STATUS] Battery: 3.85V (87%), Est. days: 145",
         "[STATUS] Wake count: 42, Next wake: 2h",
     ]
@@ -329,7 +330,8 @@ def test_log_line_classification():
             match = re.match(r"\[([A-Z]+)\]", line)
             if match:
                 actual_type = match.group(1)
-                assert actual_type == expected_type, f"Wrong classification for {line}: expected {expected_type}, got {actual_type}"
+                assert actual_type == expected_type, \
+                    f"Wrong classification for {line}: expected {expected_type}, got {actual_type}"
 
 def test_numeric_value_validation():
     """Test that numeric values in logs are within reasonable ranges"""
@@ -372,7 +374,8 @@ def test_numeric_value_validation():
                         value = int(match)
 
                     assert min_val <= value <= max_val, \
-                        f"Value {value} for {value_type} out of range [{min_val}, {max_val}] in line: {line}"
+                        "Value {} for {} out of range [{}, {}] in line: {}".format(
+                            value, value_type, min_val, max_val, line)
                 except ValueError:
                     assert False, f"Invalid numeric format: {match} in line: {line}"
 

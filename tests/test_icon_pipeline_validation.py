@@ -147,10 +147,12 @@ def test_icon_svg_source_validation():
                 svg_content = f.read()
 
             # Should be valid XML/SVG
-            assert '<?xml' in svg_content or '<svg' in svg_content, f"Invalid SVG content in {svg_path}"
+            assert '<?xml' in svg_content or '<svg' in svg_content, \
+                f"Invalid SVG content in {svg_path}"
 
             # Should have viewBox or width/height
-            assert 'viewBox' in svg_content or ('width' in svg_content and 'height' in svg_content), \
+            assert 'viewBox' in svg_content or \
+                ('width' in svg_content and 'height' in svg_content), \
                 f"SVG missing dimensions in {svg_path}"
 
             # Should not be empty
@@ -190,7 +192,8 @@ def test_icon_completeness_check():
     """Test that all required icons are present and accounted for"""
 
     # Get UI spec to check what icons are referenced
-    ui_spec_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "config", "ui_spec.json")
+    ui_spec_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), \
+                                 "config", "ui_spec.json")
 
     if not os.path.exists(ui_spec_path):
         pytest.skip("UI spec not found")
@@ -207,7 +210,8 @@ def test_icon_completeness_check():
             referenced_icons.add(rule["icon"])
 
     # Check firmware header for generated icons
-    firmware_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "firmware", "arduino", "src")
+    firmware_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), \
+                                 "firmware", "arduino", "src")
     icon_header = os.path.join(firmware_dir, "icons_generated.h")
 
     if os.path.exists(icon_header):
@@ -235,7 +239,8 @@ def test_icon_completeness_check():
 def test_icon_size_constraints():
     """Test that generated icons meet size constraints"""
 
-    firmware_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "firmware", "arduino", "src")
+    firmware_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), \
+                                 "firmware", "arduino", "src")
     icon_header = os.path.join(firmware_dir, "icons_generated.h")
 
     if not os.path.exists(icon_header):
@@ -265,7 +270,8 @@ def test_icon_naming_conventions():
     """Test that icons follow consistent naming conventions"""
 
     # Get all icon references from UI spec
-    ui_spec_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "config", "ui_spec.json")
+    ui_spec_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), \
+                                 "config", "ui_spec.json")
 
     if not os.path.exists(ui_spec_path):
         pytest.skip("UI spec not found")
@@ -299,7 +305,8 @@ def test_icon_naming_conventions():
 def test_weather_icon_mapping_completeness():
     """Test that all weather conditions have corresponding icons"""
 
-    ui_spec_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "config", "ui_spec.json")
+    ui_spec_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), \
+                                 "config", "ui_spec.json")
 
     if not os.path.exists(ui_spec_path):
         pytest.skip("UI spec not found")
@@ -372,7 +379,8 @@ def test_icon_generation_determinism():
 def test_icon_header_include_structure():
     """Test that icon header has proper include structure for firmware"""
 
-    firmware_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "firmware", "arduino", "src")
+    firmware_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), \
+                                 "firmware", "arduino", "src")
     icon_header = os.path.join(firmware_dir, "icons_generated.h")
 
     if not os.path.exists(icon_header):
@@ -397,7 +405,8 @@ def test_icon_header_include_structure():
 def test_icon_bitmap_validation():
     """Test that generated icon bitmaps are valid"""
 
-    firmware_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "firmware", "arduino", "src")
+    firmware_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), \
+                                 "firmware", "arduino", "src")
     icon_header = os.path.join(firmware_dir, "icons_generated.h")
 
     if not os.path.exists(icon_header):
@@ -409,7 +418,8 @@ def test_icon_bitmap_validation():
     import re
 
     # Find icon bitmap data
-    bitmap_arrays = re.findall(r'const\s+uint8_t\s+\w+\[\]\s*PROGMEM\s*=\s*\{([^}]*)\}', header_content)
+    bitmap_arrays = re.findall(
+        r'const\s+uint8_t\s+\w+\[\]\s*PROGMEM\s*=\s*\{([^}]*)\}', header_content)
 
     for bitmap_data in bitmap_arrays:
         # Each byte should be valid hex (0x00-0xFF)

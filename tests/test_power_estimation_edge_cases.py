@@ -128,7 +128,8 @@ def test_power_estimation_edge_cases():
         if case["should_error"]:
             # Should either raise an exception or return a sensible error value
             try:
-                days = pe.estimate_days(capacity, sleep_current, active_current, active_seconds, wake_interval)
+                days = pe.estimate_days(capacity, sleep_current, active_current,
+                                         active_seconds, wake_interval)
                 # If no exception, should return a reasonable value or 0 for invalid inputs
                 assert days >= 0, f"Case {i}: Negative days for invalid input"
             except (ValueError, ZeroDivisionError):
@@ -136,7 +137,8 @@ def test_power_estimation_edge_cases():
                 pass
         else:
             # Should complete without error
-            days = pe.estimate_days(capacity, sleep_current, active_current, active_seconds, wake_interval)
+            days = pe.estimate_days(capacity, sleep_current, active_current,
+                                     active_seconds, wake_interval)
             assert days >= 0, f"Case {i}: Negative days for valid input"
             assert not (days == float('inf')), f"Case {i}: Infinite days"
 
@@ -171,18 +173,22 @@ def test_power_estimation_scaling():
     base_active_time = 45
     base_interval = 3600
 
-    base_days = pe.estimate_days(base_capacity, base_sleep, base_active, base_active_time, base_interval)
+    base_days = pe.estimate_days(base_capacity, base_sleep, base_active,
+                                  base_active_time, base_interval)
 
     # Double capacity should roughly double days
-    double_capacity_days = pe.estimate_days(base_capacity * 2, base_sleep, base_active, base_active_time, base_interval)
+    double_capacity_days = pe.estimate_days(base_capacity * 2, base_sleep,
+                                             base_active, base_active_time, base_interval)
     assert 1.9 * base_days < double_capacity_days < 2.1 * base_days
 
     # Half capacity should roughly halve days
-    half_capacity_days = pe.estimate_days(base_capacity / 2, base_sleep, base_active, base_active_time, base_interval)
+    half_capacity_days = pe.estimate_days(base_capacity / 2, base_sleep,
+                                           base_active, base_active_time, base_interval)
     assert 0.45 * base_days < half_capacity_days < 0.55 * base_days
 
     # Double wake interval should significantly increase days according to the model
-    double_interval_days = pe.estimate_days(base_capacity, base_sleep, base_active, base_active_time, base_interval * 2)
+    double_interval_days = pe.estimate_days(base_capacity, base_sleep, base_active,
+                                             base_active_time, base_interval * 2)
     # Expected ratio based on average current formula:
     # avg = sleep + (active - sleep) * (awake / interval)
     avg1 = base_sleep + (base_active - base_sleep) * (base_active_time / base_interval)
@@ -279,7 +285,8 @@ def test_temperature_impact_estimation():
         # Simulate temperature impact by adjusting capacity
         adjusted_capacity = base_capacity * temp_scenario["capacity_multiplier"]
 
-        days = pe.estimate_days(adjusted_capacity, sleep_current, active_current, active_seconds, wake_interval)
+        days = pe.estimate_days(adjusted_capacity, sleep_current, active_current,
+                                  active_seconds, wake_interval)
 
         # Colder temperatures should reduce battery life
         assert days > 0, f"{temp_scenario['description']}: Invalid days estimate"
@@ -330,7 +337,8 @@ def test_power_estimation_bounds():
     ]
 
     for capacity, sleep_current, active_current, active_seconds, wake_interval in test_cases:
-        days = pe.estimate_days(capacity, sleep_current, active_current, active_seconds, wake_interval)
+        days = pe.estimate_days(capacity, sleep_current, active_current,
+                                  active_seconds, wake_interval)
 
         # Should be positive finite number
         assert days > 0, f"Negative days for inputs: {locals()}"

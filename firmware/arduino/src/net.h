@@ -645,10 +645,10 @@ static void ensure_wifi_connected_provisioned_impl() {
     char service_name[16];
     uint64_t mac = ESP.getEfuseMac();
     snprintf(service_name, sizeof(service_name), "PROV_%06X", (unsigned int)(mac & 0xFFFFFF));
-    const char* service_key = NULL; // open softAP by default
+    const char* service_key = NULL;  // open softAP by default
 #if WIFI_PROV_SECURITY == 1
     wifi_prov_security_t sec = WIFI_PROV_SECURITY_1;
-    const char* pop = "esp32-pop"; // customize via build flag if desired
+    const char* pop = "esp32-pop";  // customize via build flag if desired
 #else
     wifi_prov_security_t sec = WIFI_PROV_SECURITY_0;
     const char* pop = NULL;

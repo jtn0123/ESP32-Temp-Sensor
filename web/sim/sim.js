@@ -404,8 +404,10 @@
               const condLower = String((data.weather||'')).toLowerCase();
               let leftBoxW = 16;
               if (moon) leftBoxW = 20; else if (condLower.includes('rain')) leftBoxW = 22; else if (condLower.includes('snow')) leftBoxW = 18; else if (condLower.includes('storm')||condLower.includes('thunder')||condLower.includes('lightning')) leftBoxW = 24;
-              // Ensure left-side non-white area inside the sampled window
-              ctx.fillRect(barX + 2, barY + 2, Math.max(8, Math.min(leftBoxW, iconW - 4)), Math.max(8, iconH - 6));
+              // Ensure left-side non-white area inside the sampled window (v1 only)
+              if (!(typeof window !== 'undefined' && window.__specMode && window.__specMode.startsWith('v2'))){
+                ctx.fillRect(barX + 2, barY + 2, Math.max(8, Math.min(leftBoxW, iconW - 4)), Math.max(8, iconH - 6));
+              }
               if (moon){
                 const r0 = Math.min(iconW,iconH)/3;
                 ctx.beginPath(); ctx.arc(iconCx, iconCy, r0, 0, Math.PI*2); ctx.stroke();
@@ -656,7 +658,7 @@
     specSel.addEventListener('change', ()=>{
       const which = specSel.value || 'v1';
       try{
-        if (which === 'v2_grid'){
+        if (which === 'v2_grid' || which === 'v2_1_grid'){
           // Construct a v2 spec by cloning UI_SPEC and snapping rects + fonts
           const base = JSON.parse(JSON.stringify(window.UI_SPEC || {}));
           if (!base.rects) base.rects = {};
@@ -676,24 +678,24 @@
 
           base.rects.INSIDE_TEMP = [LEFT_X, TEMP_Y, LEFT_W, TEMP_H];
           // Label band sits inside the temp box at its top edge (12px tall)
-          base.rects.INSIDE_LABEL_BOX = [LEFT_X, TEMP_Y + 2, LEFT_W, 12];
+          base.rects.INSIDE_LABEL_BOX = [LEFT_X, (which === 'v2_1_grid' ? 24 : TEMP_Y + 2), LEFT_W, 12];
           // Inner number area leaves room for the label band and a small badge on the right
-          base.rects.INSIDE_TEMP_INNER = [LEFT_X + 4, TEMP_Y + 14, LEFT_W - 28, TEMP_H - 16];
-          base.rects.INSIDE_TEMP_BADGE = [LEFT_X + LEFT_W - 20, TEMP_Y + 14, 16, 12];
+          base.rects.INSIDE_TEMP_INNER = [LEFT_X + 4, (which === 'v2_1_grid' ? 40 : TEMP_Y + 14), LEFT_W - 28, (which === 'v2_1_grid' ? 24 : TEMP_H - 16)];
+          base.rects.INSIDE_TEMP_BADGE = [LEFT_X + LEFT_W - 20, (which === 'v2_1_grid' ? 40 : TEMP_Y + 14), 16, 12];
           base.rects.INSIDE_RH   = [LEFT_X, ROW1_Y, LEFT_W, ROW_H];
           base.rects.INSIDE_TIME = [LEFT_X, ROW2_Y, LEFT_W, ROW_H];
 
           base.rects.OUT_TEMP    = [RIGHT_X, TEMP_Y, RIGHT_W, TEMP_H];
-          base.rects.OUT_LABEL_BOX = [RIGHT_X, TEMP_Y + 2, RIGHT_W, 12];
-          base.rects.OUT_TEMP_INNER = [RIGHT_X + 4, TEMP_Y + 14, RIGHT_W - 28, TEMP_H - 16];
-          base.rects.OUT_TEMP_BADGE = [RIGHT_X + RIGHT_W - 20, TEMP_Y + 14, 16, 12];
+          base.rects.OUT_LABEL_BOX = [RIGHT_X, (which === 'v2_1_grid' ? 24 : TEMP_Y + 2), RIGHT_W, 12];
+          base.rects.OUT_TEMP_INNER = [RIGHT_X + 4, (which === 'v2_1_grid' ? 40 : TEMP_Y + 14), RIGHT_W - 28, (which === 'v2_1_grid' ? 24 : TEMP_H - 16)];
+          base.rects.OUT_TEMP_BADGE = [RIGHT_X + RIGHT_W - 20, (which === 'v2_1_grid' ? 40 : TEMP_Y + 14), 16, 12];
           base.rects.OUT_ROW1_L  = [RIGHT_X, ROW1_Y, 48, ROW_H];
           base.rects.OUT_ROW1_R  = [RIGHT_X + 52, ROW1_Y, 52, ROW_H];
           base.rects.OUT_ROW2_L  = [RIGHT_X, ROW2_Y, 48, ROW_H];
           base.rects.OUT_ROW2_R  = [RIGHT_X + 52, ROW2_Y, 48, ROW_H];
           // Weather icon and bar live in the footer in v2; keep an explicit rect for overlays
           base.rects.WEATHER_BAR = [RIGHT_X, FOOTER_Y, RIGHT_W, FOOTER_H];
-          base.rects.OUT_ICON    = [RIGHT_X + 8, FOOTER_Y + Math.max(0, Math.floor((FOOTER_H - 22)/2)), 22, 22];
+          base.rects.OUT_ICON    = [RIGHT_X + 8, FOOTER_Y + (which === 'v2_1_grid' ? 4 : Math.max(0, Math.floor((FOOTER_H - 22)/2))), 20, 20];
 
           // Footer columns align exactly to the column widths
           base.rects.FOOTER_L    = [LEFT_X, FOOTER_Y, LEFT_W, FOOTER_H];
@@ -725,7 +727,7 @@
           window.UI_SPEC = base;
           // Re-apply central geometry
           GJSON = base;
-          window.__specMode = 'v2_grid';
+          window.__specMode = which;
         } else {
           // Reload original generated UI_SPEC by reloading page without param
           // More stable than trying to restore deep-cloned structure across toggles
