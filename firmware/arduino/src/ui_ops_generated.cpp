@@ -17,15 +17,15 @@ const int kOps_chrome_count = sizeof(kOps_chrome)/sizeof(kOps_chrome[0]);
 
 const UiOpHeader kOps_header_centered[] = {
     { OP_LINE, 255, 0, 0, 1, 18, 249, 18, NULL, NULL },
-    { OP_TEXT, 3, 1, 0, 0, 0, 0, 0, "{room_name}", NULL },
-    { OP_TEXTCENTEREDIN, 2, 3, 2, 1, 0, 0, 0, "{time_hhmm}", NULL },
+    { OP_TEXT, 2, 1, 0, 0, 0, 0, 0, "{room_name}", NULL },
+    { OP_TEXTCENTEREDIN, 3, 3, 2, 1, 0, 0, 0, "{time_hhmm}", NULL },
     { OP_TEXT, 4, 3, 1, 0, 0, 0, 0, "v{fw_version}", NULL },
 };
 const int kOps_header_centered_count = sizeof(kOps_header_centered)/sizeof(kOps_header_centered[0]);
 
 const UiOpHeader kOps_header[] = {
     { OP_LINE, 255, 0, 0, 1, 18, 249, 18, NULL, NULL },
-    { OP_TEXT, 3, 1, 0, 0, 0, 0, 0, "{room_name}", NULL },
+    { OP_TEXT, 2, 1, 0, 0, 0, 0, 0, "{room_name}", NULL },
     { OP_TIMERIGHT, 4, 3, 1, 0, 0, 0, 0, "time_hhmm", NULL },
 };
 const int kOps_header_count = sizeof(kOps_header)/sizeof(kOps_header[0]);
@@ -58,7 +58,7 @@ const int kOps_footer_split_count = sizeof(kOps_footer_split)/sizeof(kOps_footer
 
 const ComponentOps kVariant_v2_ops[] = {
     { kOps_chrome, kOps_chrome_count, "chrome" },
-    { kOps_header, kOps_header_count, "header" },
+    { kOps_header_centered, kOps_header_centered_count, "header_centered" },
     { kOps_inside, kOps_inside_count, "inside" },
     { kOps_outside, kOps_outside_count, "outside" },
     { kOps_footer_split, kOps_footer_split_count, "footer_split" },

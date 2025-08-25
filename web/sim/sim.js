@@ -3,7 +3,8 @@
   let WIDTH = 250, HEIGHT = 122;
   // Rectangles use [x, y, w, h]
   let HEADER_NAME = [  6,  2, 160, 14];
-  let HEADER_TIME = [172,  2,  72, 14];
+  let HEADER_VERSION = [172,  2,  72, 14];
+  let HEADER_TIME_CENTER = [100,  2,  50, 14];
   let INSIDE_TEMP = [  6, 36, 118, 28];
   let INSIDE_RH   = [  6, 66, 118, 14];
   let INSIDE_ROW2 = [  6, 82, 118, 12];
@@ -267,15 +268,16 @@
     const variant = QS.get('variant') || (window.UI_SPEC && window.UI_SPEC.defaultVariant) || 'v2';
     // All variants are now v2
     const isV2 = true;
-    const usesCenteredHeader = variant.includes('centered'); // header_centered variant uses HEADER_CENTER
+    const usesCenteredHeader = variant.includes('centered'); // header_centered variant uses HEADER_TIME_CENTER
     
     const expectedContent = new Set([
-      'HEADER_NAME', 'HEADER_TIME', 'INSIDE_TEMP', 'INSIDE_RH', 'OUT_TEMP'
+      'HEADER_NAME', 'HEADER_VERSION', 'HEADER_TIME_CENTER', 'INSIDE_TEMP', 'INSIDE_RH', 'OUT_TEMP'
     ]);
     
     // Add v2 expected content
     expectedContent.add('HEADER_NAME');
-    expectedContent.add('HEADER_TIME');
+    expectedContent.add('HEADER_VERSION');
+    expectedContent.add('HEADER_TIME_CENTER');
     expectedContent.add('INSIDE_TEMP');
     expectedContent.add('INSIDE_RH');
     expectedContent.add('INSIDE_ROW2'); // Pressure in v2
@@ -353,7 +355,8 @@
     }
     
     // These regions exist in geometry but aren't used in v2
-    const v2SpecificUnused = ['HEADER_CENTER', 'OUT_ICON', 'OUT_ROW1_L', 'OUT_ROW1_R', 'STATUS'];
+    // Note: HEADER_TIME_CENTER is now used for time display when header_centered component is active
+    const v2SpecificUnused = ['OUT_ICON', 'OUT_ROW1_L', 'OUT_ROW1_R', 'STATUS', 'WEATHER_BAR'];
     
     // Check for regions defined but not used in current variant
     const allDefinedRegions = Object.keys(GJSON.rects || {});
@@ -456,7 +459,8 @@
           HEIGHT = (gj.canvas && gj.canvas.h) || HEIGHT;
           const R = gj.rects;
           HEADER_NAME = R.HEADER_NAME || HEADER_NAME;
-          HEADER_TIME = R.HEADER_TIME || HEADER_TIME;
+          HEADER_VERSION = R.HEADER_VERSION || HEADER_VERSION;
+          HEADER_TIME_CENTER = R.HEADER_TIME_CENTER || HEADER_TIME_CENTER;
           INSIDE_TEMP = R.INSIDE_TEMP || INSIDE_TEMP;
           INSIDE_RH   = R.INSIDE_RH   || INSIDE_RH;
           INSIDE_ROW2 = R.INSIDE_ROW2 || INSIDE_ROW2;
@@ -481,7 +485,8 @@
           HEIGHT = (gj.canvas && gj.canvas.h) || HEIGHT;
           const R = gj.rects;
           HEADER_NAME = R.HEADER_NAME || HEADER_NAME;
-          HEADER_TIME = R.HEADER_TIME || HEADER_TIME;
+          HEADER_VERSION = R.HEADER_VERSION || HEADER_VERSION;
+          HEADER_TIME_CENTER = R.HEADER_TIME_CENTER || HEADER_TIME_CENTER;
           INSIDE_TEMP = R.INSIDE_TEMP || INSIDE_TEMP;
           INSIDE_RH   = R.INSIDE_RH   || INSIDE_RH;
           INSIDE_ROW2 = R.INSIDE_ROW2 || INSIDE_ROW2;
@@ -1289,8 +1294,8 @@
         const data = await res.json();
         data.time = new Date().toTimeString().slice(0,5);
         lastData = data;
-        // Partial redraw demo: clear header time rect and re-render spec variant
-        const [hx,hy,hw,hh] = HEADER_TIME;
+        // Partial redraw demo: clear header version rect and re-render spec variant
+        const [hx,hy,hw,hh] = HEADER_VERSION;
         ctx.fillStyle = '#fff'; ctx.fillRect(hx,hy,hw,hh);
         const variant = QS.get('variant') || (window.UI_SPEC && window.UI_SPEC.defaultVariant) || 'v2';
         if (typeof window !== 'undefined' && typeof window.drawFromSpec === 'function'){
@@ -1436,8 +1441,8 @@
 
           // Prevent header overlaps in v2 grid: narrow left/name and shift time
           base.rects.HEADER_NAME = [LEFT_X, HEADER_Y, 84, HEADER_H];
-          base.rects.HEADER_CENTER = [100, HEADER_Y, 48, HEADER_H];
-          base.rects.HEADER_TIME = [152, HEADER_Y, 88, HEADER_H];
+          base.rects.HEADER_TIME_CENTER = [100, HEADER_Y, 48, HEADER_H];
+          base.rects.HEADER_VERSION = [152, HEADER_Y, 88, HEADER_H];
 
           base.rects.INSIDE_TEMP = [LEFT_X, TEMP_Y, LEFT_W, TEMP_H];
           // Label band sits inside the temp box at its top edge (12px tall)

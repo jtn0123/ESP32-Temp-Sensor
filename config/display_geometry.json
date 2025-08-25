@@ -1,6 +1,6 @@
 {
   "layout_version": 1,
-  "layout_crc": "0xCBEEDCEC",
+  "layout_crc": "0x378A778E",
   "canvas": {
     "w": 250,
     "h": 122
@@ -17,13 +17,13 @@
       160,
       14
     ],
-    "HEADER_TIME": [
+    "HEADER_VERSION": [
       172,
       2,
       72,
       14
     ],
-    "HEADER_CENTER": [
+    "HEADER_TIME_CENTER": [
       100,
       2,
       50,

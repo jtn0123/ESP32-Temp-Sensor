@@ -5,8 +5,8 @@
 
 // Layout identity for simulator ↔ firmware parity checks
 #define LAYOUT_VERSION 1
-#define LAYOUT_CRC 0xCBEEDCECu
-#define LAYOUT_MD5 "c9ccf7d7e00b38ef02b86579dbf7bd65"
+#define LAYOUT_CRC 0x378A778Eu
+#define LAYOUT_MD5 "b5c80d28911b1682519135c257d3a75c"
 
 // Display dimensions
 #define DISPLAY_WIDTH 250
@@ -14,8 +14,8 @@
 
 // Partial update windows (x, y, w, h) — generated from ui_spec.json
 static constexpr int RECT_HEADER_NAME[4] = {   6,   2, 160, 14};
-static constexpr int RECT_HEADER_TIME[4] = { 172,   2,  72, 14};
-static constexpr int RECT_HEADER_CENTER[4] = { 100,   2,  50, 14};
+static constexpr int RECT_HEADER_VERSION[4] = { 172,   2,  72, 14};
+static constexpr int RECT_HEADER_TIME_CENTER[4] = { 100,   2,  50, 14};
 static constexpr int RECT_INSIDE_TEMP[4] = {   6,  36, 118, 28};
 static constexpr int RECT_INSIDE_RH[4] = {   6,  66, 118, 14};
 static constexpr int RECT_INSIDE_ROW2[4] = {   6,  78, 118, 12};
@@ -43,12 +43,12 @@ enum WeatherIconId {
 static_assert(RECT_HEADER_NAME[0] >= 0 && RECT_HEADER_NAME[1] >= 0, "HEADER_NAME origin");
 static_assert(6 + 160 <= DISPLAY_WIDTH,  "HEADER_NAME width");
 static_assert(2 + 14 <= DISPLAY_HEIGHT, "HEADER_NAME height");
-static_assert(RECT_HEADER_TIME[0] >= 0 && RECT_HEADER_TIME[1] >= 0, "HEADER_TIME origin");
-static_assert(172 + 72 <= DISPLAY_WIDTH,  "HEADER_TIME width");
-static_assert(2 + 14 <= DISPLAY_HEIGHT, "HEADER_TIME height");
-static_assert(RECT_HEADER_CENTER[0] >= 0 && RECT_HEADER_CENTER[1] >= 0, "HEADER_CENTER origin");
-static_assert(100 + 50 <= DISPLAY_WIDTH,  "HEADER_CENTER width");
-static_assert(2 + 14 <= DISPLAY_HEIGHT, "HEADER_CENTER height");
+static_assert(RECT_HEADER_VERSION[0] >= 0 && RECT_HEADER_VERSION[1] >= 0, "HEADER_VERSION origin");
+static_assert(172 + 72 <= DISPLAY_WIDTH,  "HEADER_VERSION width");
+static_assert(2 + 14 <= DISPLAY_HEIGHT, "HEADER_VERSION height");
+static_assert(RECT_HEADER_TIME_CENTER[0] >= 0 && RECT_HEADER_TIME_CENTER[1] >= 0, "HEADER_TIME_CENTER origin");
+static_assert(100 + 50 <= DISPLAY_WIDTH,  "HEADER_TIME_CENTER width");
+static_assert(2 + 14 <= DISPLAY_HEIGHT, "HEADER_TIME_CENTER height");
 static_assert(RECT_INSIDE_TEMP[0] >= 0 && RECT_INSIDE_TEMP[1] >= 0, "INSIDE_TEMP origin");
 static_assert(6 + 118 <= DISPLAY_WIDTH,  "INSIDE_TEMP width");
 static_assert(36 + 28 <= DISPLAY_HEIGHT, "INSIDE_TEMP height");

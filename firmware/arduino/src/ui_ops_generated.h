@@ -8,9 +8,9 @@ namespace ui {
 enum RectId {
     RECT_FOOTER_L,
     RECT_FOOTER_R,
-    RECT_HEADER_CENTER,
     RECT_HEADER_NAME,
-    RECT_HEADER_TIME,
+    RECT_HEADER_TIME_CENTER,
+    RECT_HEADER_VERSION,
     RECT_INSIDE_RH,
     RECT_INSIDE_ROW2,
     RECT_INSIDE_TEMP,
@@ -54,7 +54,7 @@ static constexpr const char* kVariantNames[] = {
 
 static constexpr const char* kVariant_v2_components[] = {
     "chrome",
-    "header",
+    "header_centered",
     "inside",
     "outside",
     "footer_split",

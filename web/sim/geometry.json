@@ -3,21 +3,24 @@
   "canvas": { "w": 250, "h": 122 },
   "fonts": {
     "big_px": 22,
-    "mid_px": 14,
+    "mid_px": 11,
     "small_px": 10
   },
   "rects": {
     "HEADER_NAME": [6, 2, 160, 14],
-    "HEADER_TIME": [172, 2, 72, 14],
+    "HEADER_VERSION": [172, 2, 72, 14],
+    "HEADER_TIME_CENTER": [100, 2, 50, 14],
     "INSIDE_TEMP": [6, 36, 118, 28],
     "INSIDE_RH": [6, 66, 118, 14],
-    "INSIDE_TIME": [6, 82, 118, 12],
-    "OUT_TEMP": [131, 36, 90, 28],
+    "INSIDE_ROW2": [6, 78, 118, 12],
+    "OUT_TEMP": [129, 36, 94, 28],
     "OUT_ICON": [210, 22, 28, 28],
-    "OUT_ROW1_L": [131, 66, 44, 12],
-    "OUT_ROW1_R": [177, 66, 64, 12],
+    "OUT_ROW1_L": [131, 68, 44, 12],
+    "OUT_ROW1_R": [177, 68, 64, 12],
     "OUT_ROW2_L": [131, 78, 44, 12],
     "OUT_ROW2_R": [177, 78, 44, 12],
+    "FOOTER_L": [6, 90, 160, 32],
+    "FOOTER_R": [170, 90, 74, 32],
     "STATUS": [6, 112, 238, 10]
   }
 }
