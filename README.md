@@ -211,15 +211,38 @@ python scripts/mock_display.py
 open out/display_mock.png  # macOS
 ```
 
-- Web Canvas simulator: static page drawing the layout.
+- Web Canvas simulator: Interactive page with advanced debugging tools.
 
 ```bash
 cd web/sim
 python3 -m http.server 8080
-# open http://localhost:8080 in your browser
+# open http://localhost:8080/index.html in your browser
 ```
 
 Both simulators read the same `config/display_geometry.json`, so they match the firmware layout.
+
+#### Web Simulator Features
+
+The web simulator now includes comprehensive debugging and testing tools:
+
+**UI Validation Panel** - Real-time detection of:
+- Text overflow issues (e.g., "1013 hPa" exceeding bounds)
+- Region collisions and overlaps
+- Alignment problems
+- Font sizing issues
+
+**Advanced Debug Tools** - Interactive testing features:
+- **Performance Monitor**: FPS, render times, frame counting
+- **Test Scenarios**: 40+ pre-configured edge cases including:
+  - Text overflow tests
+  - Battery states (0-100%, charging)
+  - All weather icons
+  - Missing data scenarios
+  - Extreme sensor values
+- **Data Editor**: Live editing of all display fields
+- **Visual Testing**: Capture baselines, compare changes, show pixel diffs
+- **Icon Tester**: Quick buttons for all weather conditions
+- **State Inspector**: View internal data and metrics
 
 #### Weather Icons (24×24 PNG)
 
@@ -247,6 +270,41 @@ python -m pip install -U playwright pytest-playwright
 python -m playwright install --with-deps chromium
 pytest -q -k web_sim
 ```
+
+#### UI Validation and Testing
+
+Run comprehensive UI validation tests:
+
+```bash
+# Real-time UI validation with detailed report
+python3 scripts/ui_validation_engine.py --save
+
+# Visual regression testing for icons and UI elements
+pytest tests/test_visual_regression.py -v
+
+# Test debug panel integration
+pytest tests/test_debug_panel_integration.py -v
+
+# Run all UI validation tests
+pytest tests/test_ui_validation.py -v
+
+# Analyze layout for issues (overlaps, gaps, alignment)
+python3 scripts/visual_layout_analyzer.py
+```
+
+The validation engine detects:
+- Text overflow beyond region bounds
+- Unintended region collisions
+- Alignment inconsistencies
+- Font size issues
+- Content clipping at edges
+
+Visual regression tests verify:
+- All weather icons render correctly
+- Battery indicator states (0-100%)
+- Text handling for edge cases
+- Missing data display
+- UI element alignment
 
 ### ESPHome (optional path)
 

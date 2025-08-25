@@ -26,19 +26,6 @@
         <label><input type="checkbox" id="showLabels"> Label regions</label>
         <label><input type="checkbox" id="simulateGhosting"> Simulate ghosting</label>
         <label>
-          Variant
-          <select id="variantMode">
-            <option value="v1" selected>v1</option>
-          </select>
-        </label>
-        <label>
-          Spec
-          <select id="specMode">
-            <option value="v2_grid" selected>v2 (working layout)</option>
-            <option value="v2_1_grid">v2.1 (needs fixing)</option>
-          </select>
-        </label>
-        <label>
           Preset
           <select id="presetMode">
             <option value="normal" selected>Normal</option>
@@ -79,9 +66,22 @@
           <div id="regionList" class="region-list" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:4px;"></div>
         </div>
       </details>
+
+      <details id="validationPanel" style="margin-top:8px;">
+        <summary>UI Validation <span id="validationBadge" style="margin-left:8px;padding:2px 6px;border-radius:3px;font-size:11px;"></span></summary>
+        <div class="validation-controls" style="margin-top:6px;">
+          <label><input type="checkbox" id="enableValidation" checked> Enable real-time validation</label>
+          <button id="runValidation" style="margin-left:8px;">Run Full Validation</button>
+          <button id="clearValidation" style="margin-left:4px;">Clear</button>
+        </div>
+        <div id="validationResults" style="margin-top:8px;font-size:12px;max-height:200px;overflow-y:auto;">
+          <div style="color:#666;">No validation issues detected</div>
+        </div>
+      </details>
     </div>
     <script src="ui_generated.js?v=4"></script>
     <script src="sim.js?v=6"></script>
+    <script src="debug-panel.js"></script>
   </body>
   </html>
 

@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug Panel Test</title>
+</head>
+<body>
+    <h2>Testing Debug Panel Integration</h2>
+    
+    <button onclick="testDraw()">Test Draw Function</button>
+    <button onclick="testWeather()">Test Weather Icon</button>
+    <button onclick="testBattery()">Test Battery</button>
+    <button onclick="testOverflow()">Test Text Overflow</button>
+    
+    <pre id="output"></pre>
+    
+    <script>
+        function log(msg) {
+            document.getElementById('output').innerHTML += msg + '\n';
+        }
+        
+        function testDraw() {
+            log('Testing draw function...');
+            if (window.draw) {
+                window.draw({ room_name: 'Test Room', inside_temp_f: 75.5 });
+                log('✓ Draw function called with test data');
+            } else {
+                log('✗ Draw function not available');
+            }
+        }
+        
+        function testWeather() {
+            log('Testing weather icons...');
+            const weathers = ['sunny', 'rain', 'snow', 'fog', 'thunderstorm'];
+            let index = 0;
+            const interval = setInterval(() => {
+                if (window.draw) {
+                    window.draw({ weather: weathers[index] });
+                    log(`✓ Set weather to ${weathers[index]}`);
+                }
+                index++;
+                if (index >= weathers.length) clearInterval(interval);
+            }, 1000);
+        }
+        
+        function testBattery() {
+            log('Testing battery states...');
+            const states = [
+                { battery_percent: 5, battery_voltage: 3.3 },
+                { battery_percent: 50, battery_voltage: 3.7 },
+                { battery_percent: 100, battery_voltage: 4.2 }
+            ];
+            let index = 0;
+            const interval = setInterval(() => {
+                if (window.draw) {
+                    window.draw(states[index]);
+                    log(`✓ Set battery to ${states[index].battery_percent}%`);
+                }
+                index++;
+                if (index >= states.length) clearInterval(interval);
+            }, 1000);
+        }
+        
+        function testOverflow() {
+            log('Testing text overflow...');
+            if (window.draw) {
+                window.draw({
+                    room_name: 'Very Long Conference Room Name That Should Definitely Overflow',
+                    pressure_hpa: 9999.9,
+                    wind_mph: 999.9,
+                    inside_temp_f: 999.9
+                });
+                log('✓ Applied overflow test data');
+            }
+        }
+        
+        // Check if everything is loaded
+        window.addEventListener('load', () => {
+            log('\n=== Integration Check ===');
+            log(`window.draw: ${window.draw ? 'Available' : 'Not found'}`);
+            log(`window.DEFAULTS: ${window.DEFAULTS ? 'Available' : 'Not found'}`);
+            log(`window.lastData: ${window.lastData ? 'Available' : 'Not found'}`);
+            
+            if (window.draw) {
+                log('\n✓ All systems ready!');
+                log('Click buttons above to test functionality');
+            } else {
+                log('\n✗ Draw function not available - check sim.js');
+            }
+        });
+    </script>
+</body>
+</html>

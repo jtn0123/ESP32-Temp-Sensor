@@ -2,7 +2,7 @@
 """
 Automated Visual Layout Analyzer for ESP32 eInk Display
 
-Captures screenshots of the web simulator across variants, analyzes overlaps,
+Captures screenshots of the web simulator for v2 layout, analyzes overlaps,
 gaps, and alignment issues, and generates annotated reports.
 """
 
@@ -106,10 +106,6 @@ class VisualLayoutAnalyzer:
         return spec.get("rects", {})
 
     def capture_variant(self, page, variant: str) -> Tuple[np.ndarray, np.ndarray, Dict[str, List[int]]]:
-        # Switch spec
-        if variant != "v1":
-            page.select_option("#specMode", variant)
-            page.wait_for_function("(variant) => window.__specMode === variant", arg=variant)
         page.wait_for_timeout(100)
         rects = self._get_rects_from_page(page)
         # A: base capture without overlays (for coverage)
@@ -142,46 +138,9 @@ class VisualLayoutAnalyzer:
             out[name] = RegionAnalysis(name, (x,y,w,h), self._categorize(name), cov, bounds, [])
         return out
 
-    def validate_v2_1_bounds(self, analyses: Dict[str, RegionAnalysis], variant: str) -> List[LayoutIssue]:
-        issues: List[LayoutIssue] = []
-        if variant != 'v2_1_grid':
-            return issues
-        DISPLAY_W, DISPLAY_H = 250, 122
-        SAFE_MARGIN = 4
-        SAFE_LEFT, SAFE_TOP = SAFE_MARGIN, SAFE_MARGIN
-        SAFE_RIGHT, SAFE_BOTTOM = DISPLAY_W - SAFE_MARGIN, DISPLAY_H - SAFE_MARGIN
-        critical_regions = {'INSIDE_TEMP', 'OUT_TEMP', 'HEADER_NAME', 'STATUS'}
-        for name, a in analyses.items():
-            x, y, w, h = a.rect
-            right, bottom = x + w, y + h
-            if right > DISPLAY_W or bottom > DISPLAY_H:
-                issues.append(LayoutIssue('overflow', 'critical', [name], f"{name} exceeds display bounds: ({right},{bottom}) > ({DISPLAY_W},{DISPLAY_H})", (max(0, DISPLAY_W-1), max(0, DISPLAY_H-1), 1, 1)))
-            if name in critical_regions:
-                if x < SAFE_LEFT or y < SAFE_TOP or right > SAFE_RIGHT or bottom > SAFE_BOTTOM:
-                    issues.append(LayoutIssue('overflow', 'warning', [name], f"{name} too close to edges: needs {SAFE_MARGIN}px margin", (x, y, w, h)))
-            if x % 4 != 0 or y % 4 != 0:
-                issues.append(LayoutIssue('misalignment', 'warning', [name], f"{name} not aligned to 4px grid: pos({x},{y})"))
-            if ('INNER' in name) or ('BADGE' in name):
-                parent_name = name.replace('_INNER', '').replace('_BADGE', '')
-                if parent_name in analyses:
-                    px, py, pw, ph = analyses[parent_name].rect
-                    if not (px <= x and py <= y and (px + pw) >= (x + w) and (py + ph) >= (y + h)):
-                        issues.append(LayoutIssue('overflow', 'critical', [name, parent_name], f"{name} extends outside parent {parent_name}"))
-        return issues
-
     def detect_empty_blocks(self, analyses: Dict[str, RegionAnalysis], variant: str) -> List[LayoutIssue]:
         issues: List[LayoutIssue] = []
         expected_content_regions: Dict[str, Dict[str, str]] = {
-            'v1': {
-                'HEADER_NAME': 'Room name text',
-                'HEADER_TIME': 'Current time',
-                'INSIDE_TEMP': 'Inside temperature display',
-                'OUT_TEMP': 'Outside temperature display',
-                'INSIDE_RH': 'Inside humidity percentage',
-                'OUT_ROW2_L': 'Outside humidity',
-                'OUT_ROW2_R': 'Wind speed',
-                'STATUS': 'Battery and IP status',
-            },
             'v2_grid': {
                 'HEADER_NAME': 'Room name text',
                 'HEADER_TIME': 'Current time',
@@ -191,22 +150,6 @@ class VisualLayoutAnalyzer:
                 'OUT_ROW1_L': 'Outside humidity',
                 'OUT_ROW1_R': 'Wind speed',
                 'WEATHER_BAR': 'Weather icon and condition',
-                'STATUS': 'Battery and system status',
-            },
-            'v2_1_grid': {
-                'HEADER_NAME': 'Room name text',
-                'HEADER_TIME': 'Current time',
-                'INSIDE_LABEL_BOX': 'INSIDE label text',
-                'OUT_LABEL_BOX': 'OUTSIDE label text',
-                'INSIDE_TEMP_INNER': 'Temperature number',
-                'INSIDE_TEMP_BADGE': '°F units badge',
-                'OUT_TEMP_INNER': 'Outside temperature number',
-                'OUT_TEMP_BADGE': '°F units badge',
-                'INSIDE_RH': 'Inside humidity percentage',
-                'OUT_ROW1_L': 'Outside humidity',
-                'OUT_ROW1_R': 'Wind speed',
-                'OUT_ICON': 'Weather condition icon',
-                'WEATHER_BAR': 'Weather information',
                 'STATUS': 'Battery and system status',
             },
         }
@@ -226,109 +169,6 @@ class VisualLayoutAnalyzer:
                 else:
                     sev = 'info'
                 issues.append(LayoutIssue('empty_content', sev, [name], f"{name} appears empty: {a.pixel_coverage:.1f}% (< {thr}%) for {hint}", a.rect))
-        if variant == 'v2_1_grid':
-            for parent in ('INSIDE_TEMP', 'OUT_TEMP'):
-                if parent in analyses:
-                    inner = f"{parent}_INNER"; badge = f"{parent}_BADGE"
-                    p_cov = analyses[parent].pixel_coverage
-                    i_cov = analyses.get(inner, RegionAnalysis('', (0,0,0,0), '', 0.0, None, [])).pixel_coverage
-                    b_cov = analyses.get(badge, RegionAnalysis('', (0,0,0,0), '', 0.0, None, [])).pixel_coverage
-                    if i_cov < 10.0 and p_cov > 5.0:
-                        issues.append(LayoutIssue('content_distribution', 'warning', [parent, inner], f"{inner} low content {i_cov:.1f}% while {parent} has {p_cov:.1f}%"))
-                    if b_cov < 5.0:
-                        issues.append(LayoutIssue('empty_content', 'info', [badge], f"{badge} appears empty: {b_cov:.1f}% coverage"))
-        return issues
-
-    def detect_critical_spacing_issues(self, analyses: Dict[str, RegionAnalysis], variant: str) -> List[LayoutIssue]:
-        issues: List[LayoutIssue] = []
-        if variant != 'v2_1_grid':
-            return issues
-        rules = [
-            ('INSIDE_LABEL_BOX', 'INSIDE_TEMP_INNER', 0, 'vertical', 'Label to number separation'),
-            ('OUT_LABEL_BOX', 'OUT_TEMP_INNER', 0, 'vertical', 'Label to number separation'),
-            ('INSIDE_TEMP_INNER', 'INSIDE_RH', 4, 'vertical', 'Temperature to humidity gap'),
-            ('OUT_TEMP_INNER', 'OUT_ROW1_L', 20, 'vertical', 'Temperature to data rows gap'),
-            ('INSIDE_TEMP_INNER', 'INSIDE_TEMP_BADGE', 4, 'horizontal', 'Number to units spacing'),
-            ('OUT_TEMP_INNER', 'OUT_TEMP_BADGE', 4, 'horizontal', 'Number to units spacing'),
-            ('WEATHER_BAR', 'OUT_ICON', 0, 'horizontal_reverse', 'Weather bar to icon alignment'),
-        ]
-        for r1, r2, min_gap, direction, desc in rules:
-            if r1 not in analyses or r2 not in analyses:
-                continue
-            a = analyses[r1].rect; b = analyses[r2].rect
-            if direction == 'vertical':
-                gap = b[1] - (a[1] + a[3])
-                if gap < min_gap:
-                    issues.append(LayoutIssue('spacing', ('warning' if gap >= 0 else 'critical'), [r1, r2], f"{desc}: {gap}px (need ≥{min_gap}px)", (a[0], a[1]+a[3], a[2], max(1, gap)) if gap > 0 else None))
-            elif direction == 'horizontal':
-                gap = b[0] - (a[0] + a[2])
-                if gap < min_gap:
-                    issues.append(LayoutIssue('spacing', ('warning' if gap >= 0 else 'critical'), [r1, r2], f"{desc}: {gap}px (need ≥{min_gap}px)", (a[0]+a[2], a[1], max(1, gap), a[3]) if gap > 0 else None))
-            elif direction == 'horizontal_reverse':
-                gap = a[0] - (b[0] + b[2])
-                if gap < min_gap:
-                    issues.append(LayoutIssue('spacing', ('warning' if gap >= 0 else 'critical'), [r1, r2], f"{desc}: {gap}px (need ≥{min_gap}px)", (b[0]+b[2], b[1], max(1, gap), b[3]) if gap > 0 else None))
-        return issues
-
-    def validate_v2_1_hierarchy(self, analyses: Dict[str, RegionAnalysis], variant: str) -> List[LayoutIssue]:
-        """Validate v2.1's hierarchical structure and visual balance"""
-        issues: List[LayoutIssue] = []
-        if variant != 'v2_1_grid':
-            return issues
-        
-        # Check temperature display hierarchy
-        for side in ['INSIDE', 'OUT']:
-            parent = f"{side}_TEMP"
-            label_box = f"{side}_LABEL_BOX"
-            inner = f"{side}_TEMP_INNER"
-            badge = f"{side}_TEMP_BADGE"
-            
-            if all(k in analyses for k in [parent, label_box, inner, badge]):
-                # Verify label box is at top of parent
-                p_rect = analyses[parent].rect
-                l_rect = analyses[label_box].rect
-                if l_rect[1] < p_rect[1] or l_rect[1] > p_rect[1] + 8:
-                    issues.append(LayoutIssue(
-                        'hierarchy', 'warning', [label_box, parent],
-                        f"{label_box} not properly positioned at top of {parent}"
-                    ))
-                
-                # Check visual balance between inner and badge
-                i_rect = analyses[inner].rect
-                b_rect = analyses[badge].rect
-                if i_rect[1] != b_rect[1]:  # Should be horizontally aligned
-                    issues.append(LayoutIssue(
-                        'alignment', 'warning', [inner, badge],
-                        f"{inner} and {badge} not horizontally aligned"
-                    ))
-                
-                # Verify badge is to the right of inner
-                if b_rect[0] <= i_rect[0] + i_rect[2]:
-                    issues.append(LayoutIssue(
-                        'hierarchy', 'critical', [inner, badge],
-                        f"{badge} overlaps or precedes {inner}"
-                    ))
-        
-        # Check footer balance
-        if 'FOOTER_L' in analyses and 'FOOTER_R' in analyses:
-            fl = analyses['FOOTER_L'].rect
-            fr = analyses['FOOTER_R'].rect
-            if abs(fl[3] - fr[3]) > 4:  # Heights should match
-                issues.append(LayoutIssue(
-                    'balance', 'warning', ['FOOTER_L', 'FOOTER_R'],
-                    f"Footer sections unbalanced: left={fl[3]}px, right={fr[3]}px"
-                ))
-        
-        # Validate weather bar and icon relationship
-        if 'WEATHER_BAR' in analyses and 'OUT_ICON' in analyses:
-            wb = analyses['WEATHER_BAR'].rect
-            oi = analyses['OUT_ICON'].rect
-            if wb[1] > oi[1] + oi[3] or wb[1] + wb[3] < oi[1]:
-                issues.append(LayoutIssue(
-                    'alignment', 'info', ['WEATHER_BAR', 'OUT_ICON'],
-                    f"Weather bar and icon not vertically aligned"
-                ))
-        
         return issues
 
     def generate_enhanced_text_report(self, variant: str, analyses: Dict[str, RegionAnalysis], issues: List[LayoutIssue]) -> str:
@@ -347,17 +187,6 @@ class VisualLayoutAnalyzer:
                 for it in items:
                     lines.append(f"  • {it.description}")
                 lines.append("")
-        if variant == 'v2_1_grid':
-            lines.extend(["V2.1 Specific Analysis:", "-"*30])
-            temps = [(n,a) for n,a in analyses.items() if ('TEMP' in n and ('INNER' not in n and 'BADGE' not in n))]
-            for n,a in temps:
-                inner = f"{n}_INNER"; badge = f"{n}_BADGE"
-                i_cov = analyses.get(inner, RegionAnalysis('', (0,0,0,0), '', 0.0, None, [])).pixel_coverage
-                b_cov = analyses.get(badge, RegionAnalysis('', (0,0,0,0), '', 0.0, None, [])).pixel_coverage
-                lines.append(f"• {n}: Parent={a.pixel_coverage:.1f}%, Inner={i_cov:.1f}%, Badge={b_cov:.1f}%")
-            bounds_related = [i for i in issues if i.issue_type in ('overflow','misalignment')]
-            lines.append(f"• Bounds compliance: {len(analyses)-len(bounds_related)}/{len(analyses)} regions OK")
-            lines.append("")
         lines.extend(["Region Coverage Analysis:", "-"*30])
         cats: Dict[str, List[RegionAnalysis]] = {}
         for a in analyses.values():
@@ -497,7 +326,7 @@ class VisualLayoutAnalyzer:
         return Image.alpha_composite(img, ov).convert('RGB')
 
     def run(self, variants: Optional[List[str]] = None) -> Dict[str, Dict[str, object]]:
-        variants = variants or ['v1','v2_grid','v2_1_grid']
+        variants = variants or ['v2_grid']
         port = self._find_free_port()
         server = self._start_http_server(self.web_root, port)
         results: Dict[str, Dict[str, object]] = {}
@@ -515,10 +344,7 @@ class VisualLayoutAnalyzer:
                     issues += self.detect_overlaps(analyses)
                     issues += self.detect_alignment(analyses, grid4=(variant.startswith('v2')))
                     issues += self.detect_canvas_overflow(analyses)
-                    issues += self.validate_v2_1_bounds(analyses, variant)
                     issues += self.detect_empty_blocks(analyses, variant)
-                    issues += self.detect_critical_spacing_issues(analyses, variant)
-                    issues += self.validate_v2_1_hierarchy(analyses, variant)
                     issues += self.detect_gaps(analyses)
                     annotated = self.annotate(over_img, analyses, issues)
                     # Save artifacts
@@ -537,7 +363,7 @@ class VisualLayoutAnalyzer:
 def main() -> None:
     import argparse
     ap = argparse.ArgumentParser(description="Analyze ESP32 eInk display layout")
-    ap.add_argument("--variants", nargs="*", default=['v1','v2_grid','v2_1_grid'])
+    ap.add_argument("--variants", nargs="*", default=['v2_grid'])
     ap.add_argument("--web-root", default=str(ROOT / "web" / "sim"))
     args = ap.parse_args()
     analyzer = VisualLayoutAnalyzer(args.web_root)
@@ -559,5 +385,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
-

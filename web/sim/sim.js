@@ -5,7 +5,7 @@
   let HEADER_TIME = [172,  2,  72, 14];
   let INSIDE_TEMP = [  6, 36, 118, 28];
   let INSIDE_RH   = [  6, 66, 118, 14];
-  let INSIDE_TIME = [  6, 82, 118, 12];
+  let INSIDE_ROW2 = [  6, 82, 118, 12];
   let OUT_TEMP    = [131, 36,  90, 28];
   // Place icon higher so tests sampling around y=30 see non-white pixels
   let OUT_ICON    = [210, 22,  28, 28];
@@ -42,6 +42,9 @@
   // Enable spec-only render (always on to keep single source of truth)
   const QS = (typeof window !== 'undefined') ? new URLSearchParams(window.location.search) : new URLSearchParams();
   const specOnly = true;
+  // Validation state
+  let validationEnabled = true;
+  let validationIssues = [];
 
   const FONT_STACK = 'Menlo, Consolas, "DM Mono", "Roboto Mono", monospace';
   const SIZE_SMALL = 11; // general small text
@@ -58,6 +61,165 @@
       return parts[0] || str;
     }catch(e){ return String(s||''); }
   }
+  
+  // UI Validation Functions
+  function validateTextOverflow(text, rect, fontSize) {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    ctx.font = `${fontSize}px ${FONT_STACK}`;
+    const metrics = ctx.measureText(text);
+    const textWidth = metrics.width;
+    const textHeight = fontSize * 1.2; // Approximate line height
+    const [x, y, w, h] = rect;
+    
+    const issues = [];
+    if (textWidth > w) {
+      const overflow = textWidth - w;
+      const pct = (overflow / w) * 100;
+      issues.push({
+        type: 'text_overflow',
+        severity: pct > 50 ? 'critical' : pct > 20 ? 'error' : 'warning',
+        region: rect.name || 'unknown',
+        description: `Text overflows by ${overflow.toFixed(1)}px (${pct.toFixed(1)}%)`,
+        rect: rect
+      });
+    }
+    if (textHeight > h) {
+      const overflow = textHeight - h;
+      const pct = (overflow / h) * 100;
+      issues.push({
+        type: 'text_overflow',
+        severity: pct > 50 ? 'error' : 'warning',
+        region: rect.name || 'unknown',
+        description: `Text height exceeds bounds by ${overflow.toFixed(1)}px`,
+        rect: rect
+      });
+    }
+    return issues;
+  }
+  
+  function validateCollisions(rects) {
+    const issues = [];
+    const allowed = new Set([
+      'INSIDE_TEMP,INSIDE_LABEL_BOX',
+      'OUT_TEMP,OUT_LABEL_BOX',
+      'WEATHER_BAR,OUT_ICON',
+      'FOOTER_R,OUT_ICON'
+    ]);
+    
+    const names = Object.keys(rects);
+    for (let i = 0; i < names.length; i++) {
+      for (let j = i + 1; j < names.length; j++) {
+        const name1 = names[i], name2 = names[j];
+        const r1 = rects[name1], r2 = rects[name2];
+        const [x1, y1, w1, h1] = r1;
+        const [x2, y2, w2, h2] = r2;
+        
+        const overlapX = Math.max(0, Math.min(x1 + w1, x2 + w2) - Math.max(x1, x2));
+        const overlapY = Math.max(0, Math.min(y1 + h1, y2 + h2) - Math.max(y1, y2));
+        
+        if (overlapX > 0 && overlapY > 0) {
+          const pair = [name1, name2].sort().join(',');
+          if (!allowed.has(pair)) {
+            const area = overlapX * overlapY;
+            const smaller = Math.min(w1 * h1, w2 * h2);
+            const pct = (area / smaller) * 100;
+            
+            if (pct > 10) {
+              issues.push({
+                type: 'collision',
+                severity: pct > 50 ? 'error' : 'warning',
+                region: pair,
+                description: `${name1} and ${name2} overlap by ${pct.toFixed(1)}%`,
+                rect: [Math.max(x1, x2), Math.max(y1, y2), overlapX, overlapY]
+              });
+            }
+          }
+        }
+      }
+    }
+    return issues;
+  }
+  
+  function runValidation() {
+    if (!validationEnabled || !GJSON || !GJSON.rects) return;
+    
+    validationIssues = [];
+    
+    // Check for collisions
+    validationIssues.push(...validateCollisions(GJSON.rects));
+    
+    // Check specific text regions for overflow
+    const textChecks = [
+      { name: 'HEADER_NAME', text: 'Living Room', size: SIZE_TIME },
+      { name: 'HEADER_TIME', text: '10:15', size: SIZE_TIME },
+      { name: 'INSIDE_TEMP', text: '72.5°F', size: SIZE_BIG },
+      { name: 'OUT_TEMP', text: '68.4°F', size: SIZE_BIG },
+      { name: 'OUT_ROW1_L', text: '1013 hPa', size: SIZE_SMALL },
+      { name: 'OUT_ROW1_R', text: '12.5 mph', size: SIZE_SMALL },
+      { name: 'STATUS', text: '76% 192....', size: SIZE_STATUS }
+    ];
+    
+    for (const check of textChecks) {
+      if (GJSON.rects[check.name]) {
+        const rect = GJSON.rects[check.name];
+        rect.name = check.name; // Add name for reporting
+        const issues = validateTextOverflow(check.text, rect, check.size);
+        validationIssues.push(...issues);
+      }
+    }
+    
+    // Update validation UI
+    updateValidationDisplay();
+  }
+  
+  function updateValidationDisplay() {
+    const badge = document.getElementById('validationBadge');
+    const results = document.getElementById('validationResults');
+    
+    if (!badge || !results) return;
+    
+    const critical = validationIssues.filter(i => i.severity === 'critical').length;
+    const errors = validationIssues.filter(i => i.severity === 'error').length;
+    const warnings = validationIssues.filter(i => i.severity === 'warning').length;
+    
+    // Update badge
+    if (critical > 0) {
+      badge.textContent = `${critical} critical`;
+      badge.style.background = '#ff4444';
+      badge.style.color = 'white';
+    } else if (errors > 0) {
+      badge.textContent = `${errors} errors`;
+      badge.style.background = '#ff8800';
+      badge.style.color = 'white';
+    } else if (warnings > 0) {
+      badge.textContent = `${warnings} warnings`;
+      badge.style.background = '#ffbb00';
+      badge.style.color = 'black';
+    } else {
+      badge.textContent = 'OK';
+      badge.style.background = '#44ff44';
+      badge.style.color = 'black';
+    }
+    
+    // Update results list
+    if (validationIssues.length === 0) {
+      results.innerHTML = '<div style="color:#666;">No validation issues detected</div>';
+    } else {
+      const html = validationIssues.map(issue => {
+        const icon = {
+          critical: '🔴',
+          error: '🟠',
+          warning: '🟡'
+        }[issue.severity] || 'ℹ️';
+        
+        return `<div style="margin-bottom:4px;">
+          ${icon} <strong>[${issue.region}]</strong> ${issue.description}
+        </div>`;
+      }).join('');
+      results.innerHTML = html;
+    }
+  }
   async function loadCentralGeometry(){
     try{
       if (typeof window !== 'undefined' && window.UI_SPEC){
@@ -71,7 +233,7 @@
           HEADER_TIME = R.HEADER_TIME || HEADER_TIME;
           INSIDE_TEMP = R.INSIDE_TEMP || INSIDE_TEMP;
           INSIDE_RH   = R.INSIDE_RH   || INSIDE_RH;
-          INSIDE_TIME = R.INSIDE_TIME || INSIDE_TIME;
+          INSIDE_ROW2 = R.INSIDE_ROW2 || INSIDE_ROW2;
           OUT_TEMP    = R.OUT_TEMP    || OUT_TEMP;
           OUT_ICON    = R.OUT_ICON    || OUT_ICON;
           OUT_ROW1_L  = R.OUT_ROW1_L  || OUT_ROW1_L;
@@ -96,7 +258,7 @@
           HEADER_TIME = R.HEADER_TIME || HEADER_TIME;
           INSIDE_TEMP = R.INSIDE_TEMP || INSIDE_TEMP;
           INSIDE_RH   = R.INSIDE_RH   || INSIDE_RH;
-          INSIDE_TIME = R.INSIDE_TIME || INSIDE_TIME;
+          INSIDE_ROW2 = R.INSIDE_ROW2 || INSIDE_ROW2;
           OUT_TEMP    = R.OUT_TEMP    || OUT_TEMP;
           OUT_ICON    = R.OUT_ICON    || OUT_ICON;
           OUT_ROW1_L  = R.OUT_ROW1_L  || OUT_ROW1_L;
@@ -225,7 +387,7 @@
     if (n.startsWith('HEADER_')) return 'header';
     if (n.startsWith('FOOTER_') || n === 'STATUS' || n === 'WEATHER_BAR') return 'footer';
     if (/_LABEL_BOX$/.test(n)) return 'label';
-    if (/_TEMP(|_INNER|_BADGE)?$/.test(n) || n.startsWith('OUT_ROW') || n === 'INSIDE_RH' || n === 'INSIDE_TIME') return 'temp';
+    if (/_TEMP(|_INNER|_BADGE)?$/.test(n) || n.startsWith('OUT_ROW') || n === 'INSIDE_RH' || n === 'INSIDE_ROW2') return 'temp';
     if (n === 'OUT_ICON') return 'temp';
     return 'temp';
   }
@@ -346,6 +508,16 @@
               break;
             }
             case 'text': {
+              // Check "when" condition if present
+              if (op.when) {
+                const whenStr = String(op.when);
+                if (whenStr.startsWith('has(') && whenStr.endsWith(')')) {
+                  const field = whenStr.slice(4, -1);
+                  if (data[field] === undefined || data[field] === null) {
+                    break; // Skip this operation
+                  }
+                }
+              }
               const r = op.rect ? rects[op.rect] : null;
               const fpx = ((fonts[op.font||'small']||{}).px) || pxSmall;
               const weight = ((fonts[op.font||'small']||{}).weight) || 'normal';
@@ -663,10 +835,19 @@
     pressure_hpa: 1013.2
   };
   let lastData = { ...DEFAULTS };
-  try{ if (typeof window !== 'undefined') window.lastData = lastData; }catch(e){}
+  try{ 
+    if (typeof window !== 'undefined') {
+      window.lastData = lastData;
+      window.DEFAULTS = DEFAULTS;  // Expose defaults for debug panel
+    }
+  }catch(e){}
 
   function draw(data){
-    if (data && typeof data === 'object' && Object.keys(data).length) lastData = data;
+    // Merge with defaults and existing data
+    if (data && typeof data === 'object' && Object.keys(data).length) {
+      // Merge new data with existing lastData
+      lastData = { ...lastData, ...data };
+    }
     try{ if (typeof window !== 'undefined') window.lastData = lastData; }catch(e){}
     // Render via spec only
     const variant = QS.get('variant') || (typeof window!=='undefined' && window.UI_SPEC && window.UI_SPEC.defaultVariant) || 'v1';
@@ -676,6 +857,10 @@
     }
     drawGridOverlay();
     drawRectsOverlay();
+    
+    // Run validation after drawing
+    runValidation();
+    
     // Leave some tokens for tests to find in sim.js
     // weather-sunny weather-partly-cloudy weather-cloudy weather-fog
     // weather-pouring weather-snowy weather-lightning weather-night
@@ -698,6 +883,11 @@
       ctx.putImageData(img,0,0);
       applyOneBitThreshold();
     }
+  }
+  
+  // Expose draw function to window for debug panel
+  if (typeof window !== 'undefined') {
+    window.draw = draw;
   }
 
   async function load(){
@@ -811,26 +1001,36 @@
   if (specOnlyEl){ specOnlyEl.checked = true; specOnlyEl.disabled = true; }
   const variantSel = document.getElementById('variantMode');
   if (variantSel){
-    // Populate variants from UI_SPEC if available
-    try {
-      const spec = (typeof window !== 'undefined') ? window.UI_SPEC : null;
-      if (spec && spec.variants){
-        const known = new Set([...variantSel.options].map(o=>o.value));
-        Object.keys(spec.variants).forEach(name=>{
-          if (!known.has(name)){
-            const opt = document.createElement('option');
-            opt.value = name; opt.textContent = name; variantSel.appendChild(opt);
-          }
-        });
-      }
-    } catch(e) {}
-    const currentVar = QS.get('variant') || (window.UI_SPEC && window.UI_SPEC.defaultVariant) || 'v1';
-    try { if ([...variantSel.options].some(o=>o.value===currentVar)) variantSel.value = currentVar; } catch(e) {}
-    variantSel.addEventListener('change', ()=>{
-      const url = new URL(window.location.href);
-      if (variantSel.value) url.searchParams.set('variant', variantSel.value); else url.searchParams.delete('variant');
-      window.location.replace(url.toString());
-    });
+    // Hide the variant selector since it causes confusion - we only use the Layout Version selector
+    if (variantSel.parentElement && variantSel.parentElement.tagName === 'LABEL') {
+      variantSel.parentElement.style.display = 'none';
+    }
+    // Set to v2_grid as default (this is handled by the spec selector now)
+    variantSel.value = 'v2_grid';
+    
+    // Keep the original code in case we need it later, but skip execution
+    if (false) {
+      // Populate variants from UI_SPEC if available
+      try {
+        const spec = (typeof window !== 'undefined') ? window.UI_SPEC : null;
+        if (spec && spec.variants){
+          const known = new Set([...variantSel.options].map(o=>o.value));
+          Object.keys(spec.variants).forEach(name=>{
+            if (!known.has(name)){
+              const opt = document.createElement('option');
+              opt.value = name; opt.textContent = name; variantSel.appendChild(opt);
+            }
+          });
+        }
+      } catch(e) {}
+      const currentVar = QS.get('variant') || (window.UI_SPEC && window.UI_SPEC.defaultVariant) || 'v1';
+      try { if ([...variantSel.options].some(o=>o.value===currentVar)) variantSel.value = currentVar; } catch(e) {}
+      variantSel.addEventListener('change', ()=>{
+        const url = new URL(window.location.href);
+        if (variantSel.value) url.searchParams.set('variant', variantSel.value); else url.searchParams.delete('variant');
+        window.location.replace(url.toString());
+      });
+    }
   }
   // Presets
   const presetSel = document.getElementById('presetMode');
@@ -870,43 +1070,27 @@
       draw(base);
     });
   }
-  // Spec selector (runtime override for experimentation only)
-  const specSel = document.getElementById('specMode');
-  if (specSel){
-    specSel.addEventListener('change', ()=>{
-      const which = specSel.value || 'v2_grid';
-      try{
-        if (which === 'v2_1_grid' && window.UI_SPEC && window.UI_SPEC.rects_v2_1){
-          // Use v2.1 rects and variants from ui_spec.json
-          const base = JSON.parse(JSON.stringify(window.UI_SPEC || {}));
-          base.rects = base.rects_v2_1;
-          base.variants = {
-            "v2_1_grid": base.variants["v2_1_grid"] || ["chrome_v2_1", "header_v2_1", "inside_v2_1", "outside_v2_1", "footer_v2_1"],
-            "v2_1_missing_outside": base.variants["v2_1_missing_outside"] || ["chrome_v2_1", "header_v2_1", "inside_v2_1", "outside_v2_1_missing", "footer_v2_1"],
-            "v2_1_missing_inside": base.variants["v2_1_missing_inside"] || ["chrome_v2_1", "header_v2_1", "inside_v2_1_missing", "outside_v2_1", "footer_v2_1"],
-            "v2_1_missing_all": base.variants["v2_1_missing_all"] || ["chrome_v2_1", "header_v2_1", "inside_v2_1_missing", "outside_v2_1_missing", "footer_v2_1"]
-          };
-          base.defaultVariant = 'v2_1_grid';
-          window.__currentSpec = base;
-          window.__specMode = which;
-          render();
-          return;
-        }
-        if (which === 'v2_grid' || which === 'v2_1_grid'){
+  // Initialize v2 layout directly (only version now)
+  {
+    const which = 'v2_grid';
+    try{
+      if (which === 'v2_grid'){
           // Construct a v2 spec by cloning UI_SPEC and snapping rects + fonts
           const base = JSON.parse(JSON.stringify(window.UI_SPEC || {}));
           if (!base.rects) base.rects = {};
+          // Preserve INSIDE_ROW2 from original spec if it exists
+          const originalINSIDE_ROW2 = base.rects.INSIDE_ROW2;
           // Define a clean 4px-grid layout with 12px outer padding and 4px gutters
           const OUTER = 12;
           const DIV_X = 128; // vertical divider aligned to grid
           const HEADER_Y = 4, HEADER_H = 12; // top rule at y=16
           const TEMP_Y = 20, TEMP_H = 28;
-          // Adjust rows and footer for v2.1 to avoid inner collisions
-          const ROW1_Y = (which === 'v2_1_grid') ? 68 : 52;
-          const ROW2_Y = (which === 'v2_1_grid') ? 80 : 68;
+          // Adjust rows and footer
+          const ROW1_Y = 52;
+          const ROW2_Y = 68;
           const ROW_H = 12;
-          const FOOTER_Y = (which === 'v2_1_grid') ? 96 : 88;
-          const FOOTER_H = (which === 'v2_1_grid') ? 20 : 28;
+          const FOOTER_Y = 84;  // Moved up from 88 to give more room for bottom row
+          const FOOTER_H = 32;  // Increased from 28
           const LEFT_X = OUTER; const LEFT_W = DIV_X - OUTER; // 12..128 -> 116
           const RIGHT_X = DIV_X + 4; const RIGHT_W = 250 - OUTER - RIGHT_X; // from 132 -> 106
 
@@ -917,17 +1101,17 @@
 
           base.rects.INSIDE_TEMP = [LEFT_X, TEMP_Y, LEFT_W, TEMP_H];
           // Label band sits inside the temp box at its top edge (12px tall)
-          base.rects.INSIDE_LABEL_BOX = [LEFT_X, (which === 'v2_1_grid' ? 24 : TEMP_Y + 2), LEFT_W, 12];
-          // Inner number area leaves room for the label band and a small badge on the right; reduce height in v2.1
-          const innerY = (which === 'v2_1_grid' ? 36 : (TEMP_Y + 14));
-          const innerH = (which === 'v2_1_grid' ? 12 : (TEMP_H - 16));
+          base.rects.INSIDE_LABEL_BOX = [LEFT_X, TEMP_Y + 2, LEFT_W, 12];
+          // Inner number area leaves room for the label band and a small badge on the right
+          const innerY = TEMP_Y + 14;
+          const innerH = TEMP_H - 16;
           base.rects.INSIDE_TEMP_INNER = [LEFT_X + 4, innerY, LEFT_W - 28, innerH];
           base.rects.INSIDE_TEMP_BADGE = [LEFT_X + LEFT_W - 20, innerY, 16, 12];
           base.rects.INSIDE_RH   = [LEFT_X, ROW1_Y, LEFT_W, ROW_H];
-          base.rects.INSIDE_TIME = [LEFT_X, ROW2_Y, LEFT_W, ROW_H];
+          base.rects.INSIDE_ROW2 = [LEFT_X, ROW2_Y, LEFT_W, ROW_H];  // Renamed from INSIDE_TIME to avoid confusion
 
           base.rects.OUT_TEMP    = [RIGHT_X, TEMP_Y, RIGHT_W, TEMP_H];
-          base.rects.OUT_LABEL_BOX = [RIGHT_X, (which === 'v2_1_grid' ? 24 : TEMP_Y + 2), RIGHT_W, 12];
+          base.rects.OUT_LABEL_BOX = [RIGHT_X, TEMP_Y + 2, RIGHT_W, 12];
           base.rects.OUT_TEMP_INNER = [RIGHT_X + 4, innerY, RIGHT_W - 28, innerH];
           base.rects.OUT_TEMP_BADGE = [RIGHT_X + RIGHT_W - 20, innerY, 16, 12];
           base.rects.OUT_ROW1_L  = [RIGHT_X, ROW1_Y, 48, ROW_H];
@@ -989,12 +1173,42 @@
           const url = new URL(window.location.href);
           window.location.replace(url.toString());
           return;
-        }
-      }catch(e){}
-      refreshRegionList();
-      draw({});
+      }
+    }catch(e){}
+    refreshRegionList();
+    draw({});
+  }
+  // Validation panel controls
+  const enableValidationCheckbox = document.getElementById('enableValidation');
+  if (enableValidationCheckbox) {
+    enableValidationCheckbox.addEventListener('change', (e) => {
+      validationEnabled = e.target.checked;
+      if (validationEnabled) {
+        runValidation();
+      } else {
+        validationIssues = [];
+        updateValidationDisplay();
+      }
     });
   }
+  
+  const runValidationBtn = document.getElementById('runValidation');
+  if (runValidationBtn) {
+    runValidationBtn.addEventListener('click', () => {
+      validationEnabled = true;
+      if (enableValidationCheckbox) enableValidationCheckbox.checked = true;
+      runValidation();
+    });
+  }
+  
+  const clearValidationBtn = document.getElementById('clearValidation');
+  if (clearValidationBtn) {
+    clearValidationBtn.addEventListener('click', () => {
+      validationIssues = [];
+      updateValidationDisplay();
+    });
+  }
+  
   load();
 })();
 
