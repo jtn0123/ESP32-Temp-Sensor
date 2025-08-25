@@ -79,29 +79,12 @@
       { "op": "textCenteredIn", "rect": "FOOTER_L", "yOffset": 22, "font": "small", "text": "IP {ip}" },
       { "op": "iconIn", "rect": "FOOTER_R", "iconFromWeather": "{weather}" },
       { "op": "shortCondition", "rect": "FOOTER_R", "font": "small", "align": "left", "xOffset": 28 }
-    ],
-    "inside_missing": [
-      { "op": "labelCentered", "y": 22, "aboveRect": "INSIDE_TEMP", "text": "INSIDE", "font": "label" },
-      { "op": "textCenteredIn", "rect": "INSIDE_TEMP", "font": "label", "text": "—" },
-      { "op": "text", "rect": "INSIDE_RH", "font": "small", "align": "left", "text": "—" }
-    ],
-    "outside_missing": [
-      { "op": "labelCentered", "y": 22, "aboveRect": "OUT_TEMP", "text": "OUTSIDE", "font": "label" },
-      { "op": "textCenteredIn", "rect": "OUT_TEMP", "font": "label", "text": "—" },
-      { "op": "text", "rect": "OUT_ROW2_L", "font": "small", "align": "left", "text": "—" },
-      { "op": "text", "rect": "OUT_ROW2_R", "font": "small", "align": "left", "text": "—" }
-    ],
-    "footer_weather_missing": [
-      { "op": "textCenteredIn", "rect": "FOOTER_R", "yOffset": 6, "font": "small", "text": "NO DATA" }
-    ],
+    ]
   },
   "variants": {
-    "v2_grid": ["chrome", "header", "inside", "outside", "footer_split"],
-    "v2_missing_outside": ["chrome", "header", "inside", "outside_missing", "footer_weather_missing"],
-    "v2_missing_inside": ["chrome", "header", "inside_missing", "outside", "footer_split"],
-    "v2_missing_all": ["chrome", "header", "inside_missing", "outside_missing", "footer_weather_missing"]
+    "v2": ["chrome", "header", "inside", "outside", "footer_split"]
   },
-  "defaultVariant": "v2_grid",
+  "defaultVariant": "v2",
   "regions": {
     "partial": {
       "INSIDE_TEMP": ["tempGroupCentered"],

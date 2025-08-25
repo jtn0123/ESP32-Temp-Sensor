@@ -142,7 +142,7 @@ display:
       it.image(OUT_ICON_X, OUT_ICON_Y, *icon);
 
       // Status line (no IP here; optional)
-      it.printf(STATUS_X, STATUS_Y, id(font_small), COLOR_ON, "HA ✓    Sleep 2h");
+      it.printf(STATUS_X, STATUS_Y, id(font_small), COLOR_ON, "HA OK    Sleep 2h");
 
 deep_sleep:
   id: deep_sleep_control

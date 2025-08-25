@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Simple Simulator Test</title>
+    <style>
+        body { font-family: monospace; padding: 20px; }
+        canvas { border: 2px solid #333; background: white; }
+        button { padding: 10px; margin: 5px; }
+        #status { margin-top: 10px; padding: 10px; background: #f0f0f0; }
+    </style>
+</head>
+<body>
+    <h1>Simple Simulator Test</h1>
+    <canvas id="epd" width="250" height="122"></canvas>
+    
+    <div>
+        <button onclick="testDraw()">Test Draw</button>
+        <button onclick="checkConsole()">Check Console</button>
+    </div>
+    
+    <div id="status"></div>
+    
+    <script src="sim-simple.js"></script>
+    <script>
+        function updateStatus(msg) {
+            document.getElementById('status').innerHTML += msg + '<br>';
+        }
+        
+        function testDraw() {
+            updateStatus('Testing draw...');
+            if (window.SIM && window.SIM.draw) {
+                window.SIM.draw({
+                    room_name: 'TEST ROOM',
+                    inside_temp_f: 77.7,
+                    outside_temp_f: 55.5
+                });
+                updateStatus('[OK] Draw called');
+            } else {
+                updateStatus('[FAIL] SIM.draw not found');
+            }
+        }
+        
+        function checkConsole() {
+            updateStatus('SIM exists: ' + (window.SIM ? 'Yes' : 'No'));
+            updateStatus('SIM.draw exists: ' + (window.SIM && window.SIM.draw ? 'Yes' : 'No'));
+            updateStatus('window.draw exists: ' + (window.draw ? 'Yes' : 'No'));
+            console.log('window.SIM:', window.SIM);
+        }
+        
+        // Auto-check on load
+        window.addEventListener('load', function() {
+            updateStatus('Page loaded');
+            checkConsole();
+        });
+    </script>
+</body>
+</html>

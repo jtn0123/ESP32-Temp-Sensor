@@ -28,4 +28,4 @@ def test_ui_spec_basic_schema_and_bounds():
 
     # Minimal component presence
     assert "header" in data["components"]
-    assert "v1" in data["variants"]
+    assert "v2" in data["variants"]

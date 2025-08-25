@@ -22,9 +22,9 @@
             log('Testing draw function...');
             if (window.draw) {
                 window.draw({ room_name: 'Test Room', inside_temp_f: 75.5 });
-                log('✓ Draw function called with test data');
+                log('[OK] Draw function called with test data');
             } else {
-                log('✗ Draw function not available');
+                log('[FAIL] Draw function not available');
             }
         }
         
@@ -35,7 +35,7 @@
             const interval = setInterval(() => {
                 if (window.draw) {
                     window.draw({ weather: weathers[index] });
-                    log(`✓ Set weather to ${weathers[index]}`);
+                    log(`[OK] Set weather to ${weathers[index]}`);
                 }
                 index++;
                 if (index >= weathers.length) clearInterval(interval);
@@ -53,7 +53,7 @@
             const interval = setInterval(() => {
                 if (window.draw) {
                     window.draw(states[index]);
-                    log(`✓ Set battery to ${states[index].battery_percent}%`);
+                    log(`[OK] Set battery to ${states[index].battery_percent}%`);
                 }
                 index++;
                 if (index >= states.length) clearInterval(interval);
@@ -69,7 +69,7 @@
                     wind_mph: 999.9,
                     inside_temp_f: 999.9
                 });
-                log('✓ Applied overflow test data');
+                log('[OK] Applied overflow test data');
             }
         }
         
@@ -81,10 +81,10 @@
             log(`window.lastData: ${window.lastData ? 'Available' : 'Not found'}`);
             
             if (window.draw) {
-                log('\n✓ All systems ready!');
+                log('\n[OK] All systems ready!');
                 log('Click buttons above to test functionality');
             } else {
-                log('\n✗ Draw function not available - check sim.js');
+                log('\n[FAIL] Draw function not available - check sim.js');
             }
         });
     </script>

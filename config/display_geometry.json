@@ -1,6 +1,6 @@
 {
   "layout_version": 1,
-  "layout_crc": "0x8A4560A1",
+  "layout_crc": "0xCBEEDCEC",
   "canvas": {
     "w": 250,
     "h": 122
@@ -41,7 +41,7 @@
       118,
       14
     ],
-    "INSIDE_TIME": [
+    "INSIDE_ROW2": [
       6,
       78,
       118,

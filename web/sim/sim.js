@@ -1,4 +1,5 @@
 (function(){
+  console.log('IIFE starting...');
   let WIDTH = 250, HEIGHT = 122;
   // Rectangles use [x, y, w, h]
   let HEADER_NAME = [  6,  2, 160, 14];
@@ -17,10 +18,29 @@
   let OUT_ROW2_R  = [177, 78,  44, 12]; // bottom row: reserved (H/L)
   let STATUS      = [  6, 112, 238, 10];
 
-  const canvas = document.getElementById('epd');
-  const ctx = canvas.getContext('2d');
-  canvas.style.imageRendering = 'pixelated';
-  ctx.imageSmoothingEnabled = false;
+  let canvas = null;
+  let ctx = null;
+  
+  function initCanvas() {
+    canvas = document.getElementById('epd');
+    if (!canvas) {
+      console.error('Canvas element #epd not found');
+      return false;
+    }
+    ctx = canvas.getContext('2d');
+    if (!ctx) {
+      console.error('Could not get 2D context');
+      return false;
+    }
+    canvas.style.imageRendering = 'pixelated';
+    ctx.imageSmoothingEnabled = false;
+    
+    // Expose for debugging
+    window._canvas = canvas;
+    window._ctx = ctx;
+    
+    return true;
+  }
   let showWindows = false;
   let stressMode = false;
   let oneBitMode = true;
@@ -122,10 +142,8 @@
       'FOOTER_R,OUT_ICON',
       'FOOTER_R,WEATHER_BAR',
       'WEATHER_BAR,FOOTER_R',
-      'FOOTER_L,INSIDE_TIME',
-      'INSIDE_TIME,FOOTER_L',
-      'INSIDE_ROW2,INSIDE_TIME',
-      'INSIDE_TIME,INSIDE_ROW2'
+      'FOOTER_L,INSIDE_ROW2',
+      'INSIDE_ROW2,FOOTER_L'
     ]);
     
     const names = Object.keys(rects);
@@ -162,6 +180,54 @@
     return issues;
   }
   
+  function updateValidationDisplay() {
+    const badge = document.getElementById('validationBadge');
+    const results = document.getElementById('validationResults');
+    
+    if (!badge || !results) return;
+    
+    const critical = validationIssues.filter(i => i.severity === 'critical').length;
+    const errors = validationIssues.filter(i => i.severity === 'error').length;
+    const warnings = validationIssues.filter(i => i.severity === 'warning').length;
+    
+    // Update badge
+    if (critical > 0) {
+      badge.textContent = `${critical} critical`;
+      badge.style.background = '#ff4444';
+      badge.style.color = 'white';
+    } else if (errors > 0) {
+      badge.textContent = `${errors} errors`;
+      badge.style.background = '#ff8800';
+      badge.style.color = 'white';
+    } else if (warnings > 0) {
+      badge.textContent = `${warnings} warnings`;
+      badge.style.background = '#ffbb00';
+      badge.style.color = 'black';
+    } else {
+      badge.textContent = 'OK';
+      badge.style.background = '#44ff44';
+      badge.style.color = 'black';
+    }
+    
+    // Update results list
+    if (validationIssues.length === 0) {
+      results.innerHTML = '<div style="color:#666;">No validation issues detected</div>';
+    } else {
+      const html = validationIssues.map(issue => {
+        const icon = {
+          critical: '[CRITICAL]',
+          error: '[ERROR]',
+          warning: '[WARNING]'
+        }[issue.severity] || '[INFO]';
+        
+        return `<div style="margin-bottom:4px;">
+          ${icon} <strong>[${issue.region}]</strong> ${issue.description}
+        </div>`;
+      }).join('');
+      results.innerHTML = html;
+    }
+  }
+  
   function runValidation() {
     if (!validationEnabled || !GJSON || !GJSON.rects) return;
     
@@ -195,33 +261,26 @@
     }
     
     // Check for empty regions that should have content (varies by variant)
-    const variant = QS.get('variant') || (window.UI_SPEC && window.UI_SPEC.defaultVariant) || 'v1';
-    const isV2 = variant.includes('v2');
+    const variant = QS.get('variant') || (window.UI_SPEC && window.UI_SPEC.defaultVariant) || 'v2';
+    // All variants are now v2
+    const isV2 = true;
     const usesCenteredHeader = variant.includes('centered'); // header_centered variant uses HEADER_CENTER
     
     const expectedContent = new Set([
       'HEADER_NAME', 'HEADER_TIME', 'INSIDE_TEMP', 'INSIDE_RH', 'OUT_TEMP'
     ]);
     
-    // Add variant-specific expectations
-    if (usesCenteredHeader) {
-      expectedContent.add('HEADER_CENTER'); // Only in header_centered variant
-    }
-    
-    if (isV2) {
-      expectedContent.add('OUT_ROW1_L');
-      expectedContent.add('OUT_ROW1_R');
-      expectedContent.add('INSIDE_ROW2_L'); // v2 uses INSIDE_ROW2_L/R
-      expectedContent.add('INSIDE_ROW2_R');
-      expectedContent.add('WEATHER_BAR');
-      expectedContent.add('OUT_ICON'); // v2 has OUT_ICON in the main area
-    } else {
-      expectedContent.add('OUT_ROW2_L');
-      expectedContent.add('OUT_ROW2_R');
-      expectedContent.add('INSIDE_TIME'); // v1 uses INSIDE_TIME not INSIDE_ROW2
-      expectedContent.add('FOOTER_L'); // v1 uses FOOTER_L for IP and battery
-      expectedContent.add('FOOTER_R'); // v1 uses FOOTER_R for weather icon
-    }
+    // Add v2 expected content
+    expectedContent.add('HEADER_NAME');
+    expectedContent.add('HEADER_TIME');
+    expectedContent.add('INSIDE_TEMP');
+    expectedContent.add('INSIDE_RH');
+    expectedContent.add('INSIDE_ROW2'); // Pressure in v2
+    expectedContent.add('OUT_TEMP');
+    expectedContent.add('OUT_ROW2_L');
+    expectedContent.add('OUT_ROW2_R');
+    expectedContent.add('FOOTER_L'); // v2 uses FOOTER_L for battery/IP
+    expectedContent.add('FOOTER_R'); // v2 uses FOOTER_R for weather icon
     
     for (const regionName of expectedContent) {
       if (!renderedContent[regionName] && GJSON.rects[regionName]) {
@@ -290,27 +349,28 @@
       }
     }
     
+    // These regions exist in geometry but aren't used in v2
+    const v2SpecificUnused = ['HEADER_CENTER', 'OUT_ICON', 'OUT_ROW1_L', 'OUT_ROW1_R', 'STATUS'];
+    
     // Check for regions defined but not used in current variant
     const allDefinedRegions = Object.keys(GJSON.rects || {});
-    const unusedRegions = allDefinedRegions.filter(r => 
+    const additionalUnused = allDefinedRegions.filter(r => 
       !expectedContent.has(r) && 
-      !['HEADER_CENTER', 'OUT_ROW1_L', 'OUT_ROW1_R', 'INSIDE_ROW2', 'STATUS'].includes(r) &&
+      !v2SpecificUnused.includes(r) &&
       !r.includes('LABEL_BOX') && !r.includes('_INNER') && !r.includes('_BADGE')
     );
     
-    // For v1, these regions exist but aren't used
-    const v1UnusedRegions = ['HEADER_CENTER', 'OUT_ROW1_L', 'OUT_ROW1_R', 'STATUS', 'OUT_ICON'];
-    if (!isV2) {
-      for (const region of v1UnusedRegions) {
-        if (GJSON.rects[region] && !renderedContent[region]) {
-          validationIssues.push({
-            type: 'unused_region',
-            severity: 'info',
-            region: region,
-            description: `Region defined but not used in v1 variant`,
-            rect: GJSON.rects[region]
-          });
-        }
+    // Combine both lists
+    const unusedRegions = [...v2SpecificUnused, ...additionalUnused];
+    for (const region of unusedRegions) {
+      if (GJSON.rects[region] && !renderedContent[region]) {
+        validationIssues.push({
+          type: 'unused_region',
+          severity: 'info',
+          region: region,
+          description: `Region defined but not used in v2 layout`,
+          rect: GJSON.rects[region]
+        });
       }
     }
     
@@ -336,54 +396,6 @@
         window.renderedContent = renderedContent;
       }
     } catch(e) {}
-  }
-  
-  function updateValidationDisplay() {
-    const badge = document.getElementById('validationBadge');
-    const results = document.getElementById('validationResults');
-    
-    if (!badge || !results) return;
-    
-    const critical = validationIssues.filter(i => i.severity === 'critical').length;
-    const errors = validationIssues.filter(i => i.severity === 'error').length;
-    const warnings = validationIssues.filter(i => i.severity === 'warning').length;
-    
-    // Update badge
-    if (critical > 0) {
-      badge.textContent = `${critical} critical`;
-      badge.style.background = '#ff4444';
-      badge.style.color = 'white';
-    } else if (errors > 0) {
-      badge.textContent = `${errors} errors`;
-      badge.style.background = '#ff8800';
-      badge.style.color = 'white';
-    } else if (warnings > 0) {
-      badge.textContent = `${warnings} warnings`;
-      badge.style.background = '#ffbb00';
-      badge.style.color = 'black';
-    } else {
-      badge.textContent = 'OK';
-      badge.style.background = '#44ff44';
-      badge.style.color = 'black';
-    }
-    
-    // Update results list
-    if (validationIssues.length === 0) {
-      results.innerHTML = '<div style="color:#666;">No validation issues detected</div>';
-    } else {
-      const html = validationIssues.map(issue => {
-        const icon = {
-          critical: '🔴',
-          error: '🟠',
-          warning: '🟡'
-        }[issue.severity] || 'ℹ️';
-        
-        return `<div style="margin-bottom:4px;">
-          ${icon} <strong>[${issue.region}]</strong> ${issue.description}
-        </div>`;
-      }).join('');
-      results.innerHTML = html;
-    }
   }
   
   function drawValidationOverlay() {
@@ -437,8 +449,8 @@
         const gj = window.UI_SPEC;
         if (gj && gj.rects){
           GJSON = gj;
-          WIDTH = gj.canvas?.w || WIDTH;
-          HEIGHT = gj.canvas?.h || HEIGHT;
+          WIDTH = (gj.canvas && gj.canvas.w) || WIDTH;
+          HEIGHT = (gj.canvas && gj.canvas.h) || HEIGHT;
           const R = gj.rects;
           HEADER_NAME = R.HEADER_NAME || HEADER_NAME;
           HEADER_TIME = R.HEADER_TIME || HEADER_TIME;
@@ -462,8 +474,8 @@
         const gj = await res.json();
         if (gj && gj.rects){
           GJSON = gj;
-          WIDTH = gj.canvas?.w || WIDTH;
-          HEIGHT = gj.canvas?.h || HEIGHT;
+          WIDTH = (gj.canvas && gj.canvas.w) || WIDTH;
+          HEIGHT = (gj.canvas && gj.canvas.h) || HEIGHT;
           const R = gj.rects;
           HEADER_NAME = R.HEADER_NAME || HEADER_NAME;
           HEADER_TIME = R.HEADER_TIME || HEADER_TIME;
@@ -704,6 +716,7 @@
     }
   }
 
+  console.log('Defining drawFromSpec function...');
   function drawFromSpec(ctx, data, variantName){
     try{
       const spec = (typeof window !== 'undefined' && window.UI_SPEC) ? window.UI_SPEC : {};
@@ -890,7 +903,7 @@
               ctx.font = `${weight} ${fpx}px ${FONT_STACK}`; ctx.textBaseline='top'; ctx.fillStyle='#000';
               const lw = ctx.measureText(lab).width;
               let targetBox = r;
-              if (typeof window !== 'undefined' && window.__specMode && String(window.__specMode).startsWith('v2')){
+              if (typeof window !== 'undefined' && true /* always v2 */){
                 const lb = (op.aboveRect === 'INSIDE_TEMP') ? rects.INSIDE_LABEL_BOX : (op.aboveRect === 'OUT_TEMP' ? rects.OUT_LABEL_BOX : null);
                 if (lb) targetBox = lb;
               }
@@ -904,10 +917,12 @@
             case 'tempGroupCentered': {
               const r = rects[op.rect]; if (!r) break;
               // Render number + units centered, prefer INNER area for v2 variants
-              ctx.font = `bold ${SIZE_BIG}px ${FONT_STACK}`; ctx.textBaseline='top';
+              const isV2 = (typeof window !== 'undefined' && true /* always v2 */);
+              // Use standard font size for v2
+              const fontSize = SIZE_BIG;
+              ctx.font = `bold ${fontSize}px ${FONT_STACK}`; ctx.textBaseline='top';
               let s = String((op.value||'').toString().replace(/[{}]/g,''));
               s = String(data[s] ?? '');
-              const isV2 = (typeof window !== 'undefined' && window.__specMode && String(window.__specMode).startsWith('v2'));
               const inner = isV2 ? (op.rect === 'INSIDE_TEMP' ? rects.INSIDE_TEMP_INNER : (op.rect === 'OUT_TEMP' ? rects.OUT_TEMP_INNER : null)) : null;
               const area = inner || r;
               const areaX = area[0], areaY = area[1], areaW = area[2];
@@ -918,16 +933,18 @@
               const left = areaX + Math.max(0, Math.floor((areaW - totalW)/2));
               // Center text vertically in the area
               const areaH = area[3] || 28;
-              const yTop = areaY + Math.max(0, Math.floor((areaH - SIZE_BIG) / 2));
-              text(left, yTop, s, SIZE_BIG, 'bold', op.rect);
+              const yTop = areaY + Math.max(0, Math.floor((areaH - fontSize) / 2));
+              text(left, yTop, s, fontSize, 'bold', op.rect);
               if (badge){
                 ctx.strokeStyle = '#000';
                 ctx.strokeRect(badge[0], badge[1], badge[2], badge[3]);
                 text(badge[0] + 2, badge[1] + Math.max(0, Math.floor((badge[3]-10)/2)), '°F', 10);
               } else {
                 // Adjust degree and F symbols to align with centered temperature
-                text(left + tw + 2, yTop + 4, '°', 12);
-                text(left + tw + 8, yTop + 4, 'F', 12);
+                const unitSize = 12;
+                const unitYOffset = 3;
+                text(left + tw + 2, yTop + unitYOffset, '°', unitSize);
+                text(left + tw + 8, yTop + unitYOffset, 'F', unitSize);
               }
               const key = (op.rect === 'INSIDE_TEMP') ? 'inside' : (op.rect === 'OUT_TEMP' ? 'outside' : null);
               if (key){ window.__tempMetrics[key] = { rect: { x: areaX, y: areaY, w: areaW, h: (area[3]||0) }, contentLeft: left, totalW: (tw + unitsW) }; }
@@ -951,6 +968,14 @@
             }
             case 'iconIn': {
               const r = rects[op.rect]; if (!r) break;
+              // Track that FOOTER_R has rendered content
+              if (op.rect === 'FOOTER_R' && validationEnabled) {
+                renderedContent['FOOTER_R'] = {
+                  text: 'weather_icon',
+                  fontSize: 0,
+                  actualBounds: { x: r[0], y: r[1], width: r[2], height: r[3] }
+                };
+              }
               // Render weather bar: for default spec keep legacy constants to preserve goldens.
               // In v2 grid mode, derive from FOOTER_R to ensure alignment with geometry.
               const fpx = ((fonts['small']||{}).px) || pxSmall;
@@ -1025,8 +1050,8 @@
             }
             case 'shortCondition': {
               const r = rects[op.rect]; if (!r) break;
-              // Skip duplicate label in v2/v2.1; v1 keeps the short condition
-              if (typeof window !== 'undefined' && window.__specMode && String(window.__specMode).startsWith('v2')){ break; }
+              // v2 doesn't need duplicate label
+              if (typeof window !== 'undefined' && true /* always v2 */){ break; }
               const fpx = ((fonts[op.font||'small']||{}).px) || pxSmall;
               const s = String((window.lastData && window.lastData.weather) || 'Cloudy').split(/[\s-]+/)[0];
               const ty = r[1] + Math.max(0, Math.floor((r[3] - fpx)/2));
@@ -1034,7 +1059,8 @@
               break;
             }
             case 'batteryGlyph': {
-              const x = op.x||0, y = (op.y||0) + 4, bw = op.w||13, bh = op.h||7;
+              // Keep battery icon within bounds by not adding extra y offset
+              const x = op.x||0, y = op.y||0, bw = op.w||13, bh = op.h||7;
               // Prefer battery_percent; fall back to op.percent template or 0
               let pct = 0;
               try{
@@ -1049,16 +1075,19 @@
               window.__layoutMetrics.statusLeft.batteryIcon = { x, y, w: bw, h: bh };
               
               // Track battery icon for validation
-              if (validationEnabled && rects.FOOTER_L) {
-                const fl = rects.FOOTER_L;
-                const iconRight = x + bw + 2; // Including the terminal
-                if (x < fl[0] || y < fl[1] || iconRight > (fl[0] + fl[2]) || (y + bh) > (fl[1] + fl[3])) {
-                  // Battery icon is outside FOOTER_L bounds
-                  renderedContent['BATTERY_ICON'] = {
-                    text: 'battery',
+              if (validationEnabled) {
+                // Just track that we rendered the battery icon
+                renderedContent['BATTERY_ICON'] = {
+                  text: 'battery',
+                  fontSize: 0,
+                  actualBounds: { x, y, width: bw + 2, height: bh }
+                };
+                // Also mark FOOTER_L as having content since battery is part of it
+                if (!renderedContent['FOOTER_L']) {
+                  renderedContent['FOOTER_L'] = {
+                    text: 'battery_area',
                     fontSize: 0,
-                    actualBounds: { x, y, width: bw + 2, height: bh },
-                    outsideRegion: 'FOOTER_L'
+                    actualBounds: { x, y, width: bw + 2, height: bh }
                   };
                 }
               }
@@ -1070,7 +1099,10 @@
       }
     }catch(e){ }
   }
-  window.drawFromSpec = drawFromSpec;
+  // Ensure global exposure
+  if (typeof window !== 'undefined') {
+    window.drawFromSpec = drawFromSpec;
+  }
 
   const DEFAULTS = {
     room_name: 'Office',
@@ -1081,6 +1113,7 @@
     outside_hum_pct: 53,
     weather: 'cloudy',
     wind_mph: 4.2,
+    wind_mps: 1.88,  // Add default wind_mps value
     battery_percent: 76,
     battery_voltage: 4.01,
     days: '128',
@@ -1106,6 +1139,15 @@
   } catch(e) {}
 
   function draw(data){
+    console.log('draw() called with data:', data);
+    
+    // Ensure canvas is initialized
+    if (!ctx) {
+      console.error('Canvas context not initialized');
+      return;
+    }
+    console.log('Canvas context available');
+    
     // Clear rendered content tracking for validation
     renderedContent = {};
     emptyRegions.clear();
@@ -1118,10 +1160,17 @@
     }
     try{ if (typeof window !== 'undefined') window.lastData = lastData; }catch(e){}
     // Render via spec only
-    const variant = QS.get('variant') || (typeof window!=='undefined' && window.UI_SPEC && window.UI_SPEC.defaultVariant) || 'v1';
+    const variant = QS.get('variant') || (typeof window!=='undefined' && window.UI_SPEC && window.UI_SPEC.defaultVariant) || 'v2';
+    console.log('Using variant:', variant);
+    
     ctx.fillStyle = '#fff'; ctx.fillRect(0,0,WIDTH,HEIGHT);
+    
+    console.log('geometryOnly:', geometryOnly, 'drawFromSpec exists:', typeof window.drawFromSpec === 'function');
     if (!geometryOnly && typeof window !== 'undefined' && typeof window.drawFromSpec === 'function'){
+      console.log('Calling drawFromSpec');
       window.drawFromSpec(ctx, lastData, variant);
+    } else {
+      console.log('Skipping drawFromSpec - geometryOnly:', geometryOnly);
     }
     drawGridOverlay();
     drawRectsOverlay();
@@ -1160,8 +1209,19 @@
   }
 
   async function load(){
+    console.log('load() called');
+    
+    // Initialize canvas first
+    if (!initCanvas()) {
+      console.error('Failed to initialize canvas');
+      return;
+    }
+    console.log('Canvas initialized successfully');
+    
     loadRegionPrefs();
     await loadCentralGeometry();
+    
+    console.log('Calling draw with lastData:', lastData);
     draw(lastData);
     try{
       const gres = await fetch('geometry.json?v=2');
@@ -1217,26 +1277,36 @@
     }catch(e){}
   }
 
-  document.getElementById('refresh').addEventListener('click', async ()=>{
-    try{
-      const res = await fetch('sample_data.json');
-      const data = await res.json();
-      data.time = new Date().toTimeString().slice(0,5);
-      lastData = data;
-      // Partial redraw demo: clear header time rect and re-render spec variant
-      const [hx,hy,hw,hh] = HEADER_TIME;
-      ctx.fillStyle = '#fff'; ctx.fillRect(hx,hy,hw,hh);
-      const variant = QS.get('variant') || (window.UI_SPEC && window.UI_SPEC.defaultVariant) || 'v1';
-      if (typeof window !== 'undefined' && typeof window.drawFromSpec === 'function'){
-        window.drawFromSpec(ctx, lastData, variant);
-      }
-      applyOneBitThreshold();
-    }catch(e){ load(); }
-  });
-  document.getElementById('showWindows').addEventListener('change', (e)=>{
-    showWindows = !!e.target.checked; draw({});
-  });
-  document.getElementById('stressMode').addEventListener('change', (e)=>{
+  const refreshEl = document.getElementById('refresh');
+  if (refreshEl) {
+    refreshEl.addEventListener('click', async ()=>{
+      try{
+        const res = await fetch('sample_data.json');
+        const data = await res.json();
+        data.time = new Date().toTimeString().slice(0,5);
+        lastData = data;
+        // Partial redraw demo: clear header time rect and re-render spec variant
+        const [hx,hy,hw,hh] = HEADER_TIME;
+        ctx.fillStyle = '#fff'; ctx.fillRect(hx,hy,hw,hh);
+        const variant = QS.get('variant') || (window.UI_SPEC && window.UI_SPEC.defaultVariant) || 'v2';
+        if (typeof window !== 'undefined' && typeof window.drawFromSpec === 'function'){
+          window.drawFromSpec(ctx, lastData, variant);
+        }
+        applyOneBitThreshold();
+      }catch(e){ load(); }
+    });
+  }
+  
+  const showWindowsEl = document.getElementById('showWindows');
+  if (showWindowsEl) {
+    showWindowsEl.addEventListener('change', (e)=>{
+      showWindows = !!e.target.checked; draw({});
+    });
+  }
+  
+  const stressModeEl = document.getElementById('stressMode');
+  if (stressModeEl) {
+    stressModeEl.addEventListener('change', (e)=>{
     stressMode = !!e.target.checked;
     const stress = {
       room_name: 'Extremely Long Room Name Example',
@@ -1255,8 +1325,9 @@
       days: '1',
       ip: '10.1.2.3'
     };
-    draw(stressMode ? stress : {});
-  });
+      draw(stressMode ? stress : {});
+    });
+  }
   const gridEl = document.getElementById('showGrid');
   if (gridEl) gridEl.addEventListener('change', (e)=>{ showGrid = !!e.target.checked; draw({}); });
   const rectsEl = document.getElementById('showRects');
@@ -1292,7 +1363,7 @@
           });
         }
       } catch(e) {}
-      const currentVar = QS.get('variant') || (window.UI_SPEC && window.UI_SPEC.defaultVariant) || 'v1';
+      const currentVar = QS.get('variant') || (window.UI_SPEC && window.UI_SPEC.defaultVariant) || 'v2';
       try { if ([...variantSel.options].some(o=>o.value===currentVar)) variantSel.value = currentVar; } catch(e) {}
       variantSel.addEventListener('change', ()=>{
         const url = new URL(window.location.href);
@@ -1313,12 +1384,8 @@
           base.battery_voltage = 3.42;
           break;
         case 'no_mqtt':
-          // simulate missing outside: use variant if present
-          if (window.UI_SPEC && window.UI_SPEC.variants && window.UI_SPEC.variants['v1_missing_outside']){
-            const url = new URL(window.location.href);
-            url.searchParams.set('variant','v1_missing_outside');
-            history.replaceState({},'',url.toString());
-          }
+          // Just use the single v2 variant
+          // Data will show as missing if not provided
           base.weather = '';
           base.outside_temp_f = '';
           base.outside_hum_pct = '';
@@ -1377,7 +1444,7 @@
           base.rects.INSIDE_TEMP_INNER = [LEFT_X + 4, innerY, LEFT_W - 28, innerH];
           base.rects.INSIDE_TEMP_BADGE = [LEFT_X + LEFT_W - 20, innerY, 16, 12];
           base.rects.INSIDE_RH   = [LEFT_X, ROW1_Y, LEFT_W, ROW_H];
-          base.rects.INSIDE_ROW2 = [LEFT_X, ROW2_Y, LEFT_W, ROW_H];  // Renamed from INSIDE_TIME to avoid confusion
+          base.rects.INSIDE_ROW2 = [LEFT_X, ROW2_Y, LEFT_W, ROW_H];  // Pressure row in v2
 
           base.rects.OUT_TEMP    = [RIGHT_X, TEMP_Y, RIGHT_W, TEMP_H];
           base.rects.OUT_LABEL_BOX = [RIGHT_X, TEMP_Y + 2, RIGHT_W, 12];
@@ -1478,7 +1545,25 @@
     });
   }
   
-  load();
+  // Expose critical functions to global scope
+  if (typeof window !== 'undefined') {
+    window.draw = draw;
+    window.drawFromSpec = drawFromSpec;
+    window.DEFAULTS = DEFAULTS;
+    window.lastData = lastData;
+    window.initCanvas = initCanvas;
+    window.load = load;
+    
+    console.log('Simulator functions exposed to window');
+  }
+  
+  // Wait for DOM to be ready before initializing
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', load);
+  } else {
+    // DOM is already ready
+    load();
+  }
 })();
 
 

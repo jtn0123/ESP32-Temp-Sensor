@@ -5,8 +5,8 @@
 
 // Layout identity for simulator ↔ firmware parity checks
 #define LAYOUT_VERSION 1
-#define LAYOUT_CRC 0x8A4560A1u
-#define LAYOUT_MD5 "8be8b6c9c38a436b7b3bfe77e6fff000"
+#define LAYOUT_CRC 0xCBEEDCECu
+#define LAYOUT_MD5 "c9ccf7d7e00b38ef02b86579dbf7bd65"
 
 // Display dimensions
 #define DISPLAY_WIDTH 250
@@ -18,7 +18,7 @@ static constexpr int RECT_HEADER_TIME[4] = { 172,   2,  72, 14};
 static constexpr int RECT_HEADER_CENTER[4] = { 100,   2,  50, 14};
 static constexpr int RECT_INSIDE_TEMP[4] = {   6,  36, 118, 28};
 static constexpr int RECT_INSIDE_RH[4] = {   6,  66, 118, 14};
-static constexpr int RECT_INSIDE_TIME[4] = {   6,  78, 118, 12};
+static constexpr int RECT_INSIDE_ROW2[4] = {   6,  78, 118, 12};
 static constexpr int RECT_OUT_TEMP[4] = { 129,  36,  94, 28};
 static constexpr int RECT_OUT_ICON[4] = { 210,  22,  28, 28};
 static constexpr int RECT_OUT_ROW1_L[4] = { 131,  68,  44, 12};
@@ -55,9 +55,9 @@ static_assert(36 + 28 <= DISPLAY_HEIGHT, "INSIDE_TEMP height");
 static_assert(RECT_INSIDE_RH[0] >= 0 && RECT_INSIDE_RH[1] >= 0, "INSIDE_RH origin");
 static_assert(6 + 118 <= DISPLAY_WIDTH,  "INSIDE_RH width");
 static_assert(66 + 14 <= DISPLAY_HEIGHT, "INSIDE_RH height");
-static_assert(RECT_INSIDE_TIME[0] >= 0 && RECT_INSIDE_TIME[1] >= 0, "INSIDE_TIME origin");
-static_assert(6 + 118 <= DISPLAY_WIDTH,  "INSIDE_TIME width");
-static_assert(78 + 12 <= DISPLAY_HEIGHT, "INSIDE_TIME height");
+static_assert(RECT_INSIDE_ROW2[0] >= 0 && RECT_INSIDE_ROW2[1] >= 0, "INSIDE_ROW2 origin");
+static_assert(6 + 118 <= DISPLAY_WIDTH,  "INSIDE_ROW2 width");
+static_assert(78 + 12 <= DISPLAY_HEIGHT, "INSIDE_ROW2 height");
 static_assert(RECT_OUT_TEMP[0] >= 0 && RECT_OUT_TEMP[1] >= 0, "OUT_TEMP origin");
 static_assert(129 + 94 <= DISPLAY_WIDTH,  "OUT_TEMP width");
 static_assert(36 + 28 <= DISPLAY_HEIGHT, "OUT_TEMP height");

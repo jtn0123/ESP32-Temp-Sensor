@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Display Simulator Debug</title>
+    <style>
+        body { font-family: monospace; padding: 20px; background: #f5f5f5; }
+        canvas { border: 3px solid #000; background: white; display: block; margin: 20px 0; }
+        #log { background: #000; color: #0f0; padding: 15px; height: 300px; overflow-y: auto; white-space: pre; font-size: 12px; }
+        button { padding: 10px 20px; margin: 5px; font-size: 14px; }
+        .success { color: #0f0; }
+        .error { color: #f00; }
+        .info { color: #ff0; }
+        .section { margin: 20px 0; padding: 15px; background: white; border: 1px solid #ddd; }
+    </style>
+</head>
+<body>
+    <h1>ESP32 Display Simulator Debug</h1>
+    
+    <div class="section">
+        <h2>Canvas</h2>
+        <canvas id="epd" width="250" height="122"></canvas>
+    </div>
+    
+    <div class="section">
+        <h2>Controls</h2>
+        <button onclick="runFullDiagnostic()">Run Full Diagnostic</button>
+        <button onclick="tryManualDraw()">Try Manual Draw</button>
+        <button onclick="clearLog()">Clear Log</button>
+    </div>
+    
+    <div class="section">
+        <h2>Diagnostic Log</h2>
+        <div id="log"></div>
+    </div>
+    
+    <script>
+        const logEl = document.getElementById('log');
+        let logBuffer = [];
+        
+        function log(msg, type = 'info') {
+            const timestamp = new Date().toISOString().split('T')[1].split('.')[0];
+            const entry = `[${timestamp}] ${msg}`;
+            logBuffer.push({msg: entry, type});
+            
+            if (type === 'error') {
+                console.error(msg);
+            } else {
+                console.log(msg);
+            }
+            
+            updateLog();
+        }
+        
+        function updateLog() {
+            logEl.innerHTML = logBuffer.map(entry => 
+                `<span class="${entry.type}">${entry.msg}</span>`
+            ).join('\n');
+            logEl.scrollTop = logEl.scrollHeight;
+        }
+        
+        function clearLog() {
+            logBuffer = [];
+            updateLog();
+        }
+        
+        function runFullDiagnostic() {
+            log('=== Starting Full Diagnostic ===', 'info');
+            
+            // 1. Check if scripts loaded
+            log('Checking script loading...', 'info');
+            
+            if (typeof window.UI_SPEC !== 'undefined') {
+                log('[OK] UI_SPEC loaded', 'success');
+                log(`  Variants: ${JSON.stringify(Object.keys(window.UI_SPEC.variants || {}))}`, 'info');
+                log(`  Default: ${window.UI_SPEC.defaultVariant}`, 'info');
+            } else {
+                log('[FAIL] UI_SPEC not loaded - ui_generated.js may have failed', 'error');
+            }
+            
+            // 2. Check canvas
+            log('Checking canvas...', 'info');
+            const canvas = document.getElementById('epd');
+            if (canvas) {
+                log('[OK] Canvas element found', 'success');
+                const ctx = canvas.getContext('2d');
+                if (ctx) {
+                    log('[OK] 2D context obtained', 'success');
+                } else {
+                    log('[FAIL] Could not get 2D context', 'error');
+                }
+            } else {
+                log('[FAIL] Canvas element not found', 'error');
+            }
+            
+            // 3. Check for draw function
+            log('Checking functions...', 'info');
+            if (typeof window.draw === 'function') {
+                log('[OK] window.draw function exists', 'success');
+            } else {
+                log('[FAIL] window.draw function not found', 'error');
+            }
+            
+            if (typeof window.drawFromSpec === 'function') {
+                log('[OK] window.drawFromSpec function exists', 'success');
+            } else {
+                log('[FAIL] window.drawFromSpec function not found', 'error');
+            }
+            
+            // 4. Check defaults
+            if (window.DEFAULTS) {
+                log('[OK] DEFAULTS object exists', 'success');
+                log(`  Keys: ${Object.keys(window.DEFAULTS).join(', ')}`, 'info');
+            } else {
+                log('[FAIL] DEFAULTS not found', 'error');
+            }
+            
+            // 5. Try to draw
+            log('Attempting to draw...', 'info');
+            try {
+                if (window.draw) {
+                    const testData = {
+                        room_name: 'DEBUG TEST',
+                        inside_temp_f: 99.9,
+                        inside_hum_pct: 88,
+                        outside_temp_f: 11.1,
+                        outside_hum_pct: 22,
+                        weather: 'testing',
+                        time_hhmm: '23:59',
+                        battery_percent: 100,
+                        battery_voltage: 4.20,
+                        days: '999',
+                        ip: '127.0.0.1',
+                        pressure_hpa: 1234.5,
+                        wind_mps: 99.9
+                    };
+                    
+                    window.draw(testData);
+                    log('[OK] Draw function called successfully', 'success');
+                    
+                    // Check if canvas has content
+                    const canvas = document.getElementById('epd');
+                    const ctx = canvas.getContext('2d');
+                    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                    let nonWhitePixels = 0;
+                    
+                    for (let i = 0; i < imageData.data.length; i += 4) {
+                        if (imageData.data[i] < 255 || imageData.data[i+1] < 255 || imageData.data[i+2] < 255) {
+                            nonWhitePixels++;
+                        }
+                    }
+                    
+                    if (nonWhitePixels > 0) {
+                        log(`[OK] Canvas has content (${nonWhitePixels} non-white pixels)`, 'success');
+                    } else {
+                        log('[FAIL] Canvas is completely white/blank', 'error');
+                    }
+                } else {
+                    log('[FAIL] window.draw is not available', 'error');
+                }
+            } catch (e) {
+                log(`[FAIL] Error during draw: ${e.message}`, 'error');
+                log(`  Stack: ${e.stack}`, 'error');
+            }
+            
+            log('=== Diagnostic Complete ===', 'info');
+        }
+        
+        function tryManualDraw() {
+            log('Attempting manual draw with minimal code...', 'info');
+            
+            const canvas = document.getElementById('epd');
+            if (!canvas) {
+                log('[FAIL] No canvas element', 'error');
+                return;
+            }
+            
+            const ctx = canvas.getContext('2d');
+            if (!ctx) {
+                log('[FAIL] No context', 'error');
+                return;
+            }
+            
+            // Clear canvas
+            ctx.fillStyle = '#fff';
+            ctx.fillRect(0, 0, 250, 122);
+            
+            // Draw test pattern
+            ctx.fillStyle = '#000';
+            ctx.font = '14px monospace';
+            ctx.fillText('MANUAL DRAW TEST', 10, 20);
+            ctx.fillRect(10, 30, 230, 2);
+            ctx.fillText('If you see this, canvas works', 10, 50);
+            ctx.fillRect(10, 60, 100, 20);
+            ctx.fillRect(140, 60, 100, 20);
+            
+            log('[OK] Manual draw complete', 'success');
+        }
+        
+        // Load scripts and run diagnostic
+        function loadAndTest() {
+            log('Loading scripts...', 'info');
+            
+            // Load ui_generated.js
+            const script1 = document.createElement('script');
+            script1.src = 'ui_generated.js';
+            script1.onload = () => {
+                log('[OK] ui_generated.js loaded', 'success');
+                
+                // Load sim.js
+                const script2 = document.createElement('script');
+                script2.src = 'sim.js';
+                script2.onload = () => {
+                    log('[OK] sim.js loaded', 'success');
+                    
+                    // Wait a bit for initialization
+                    setTimeout(() => {
+                        log('Running diagnostic after script load...', 'info');
+                        runFullDiagnostic();
+                    }, 500);
+                };
+                script2.onerror = () => log('[FAIL] Failed to load sim.js', 'error');
+                document.head.appendChild(script2);
+            };
+            script1.onerror = () => log('[FAIL] Failed to load ui_generated.js', 'error');
+            document.head.appendChild(script1);
+        }
+        
+        // Start on page load
+        window.addEventListener('DOMContentLoaded', () => {
+            log('=== Page loaded, starting test ===', 'info');
+            loadAndTest();
+        });
+    </script>
+</body>
+</html>
