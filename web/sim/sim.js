@@ -24,7 +24,8 @@
   function initCanvas() {
     canvas = document.getElementById('epd');
     if (!canvas) {
-      console.error('Canvas element #epd not found');
+      // Canvas not found yet - this is OK, it might be created later
+      console.log('Canvas element #epd not found yet');
       return false;
     }
     ctx = canvas.getContext('2d');
@@ -34,6 +35,8 @@
     }
     canvas.style.imageRendering = 'pixelated';
     ctx.imageSmoothingEnabled = false;
+    
+    console.log('Canvas initialized successfully');
     
     // Expose for debugging
     window._canvas = canvas;
@@ -1143,8 +1146,11 @@
     
     // Ensure canvas is initialized
     if (!ctx) {
-      console.error('Canvas context not initialized');
-      return;
+      // Try to initialize canvas if not ready yet
+      if (!initCanvas()) {
+        console.log('Canvas not ready yet, deferring draw');
+        return;
+      }
     }
     console.log('Canvas context available');
     
@@ -1211,12 +1217,10 @@
   async function load(){
     console.log('load() called');
     
-    // Initialize canvas first
+    // Try to initialize canvas (it's OK if it fails, draw() will retry)
     if (!initCanvas()) {
-      console.error('Failed to initialize canvas');
-      return;
+      console.log('Canvas not ready during initial load');
     }
-    console.log('Canvas initialized successfully');
     
     loadRegionPrefs();
     await loadCentralGeometry();
