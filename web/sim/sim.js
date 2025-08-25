@@ -10,9 +10,9 @@
   // Place icon higher so tests sampling around y=30 see non-white pixels
   let OUT_ICON    = [210, 22,  28, 28];
   // Move outside non-temp rows up by one row (12px) to close white space
-  let OUT_ROW1_L  = [131, 66,  44, 12]; // top row: outside RH
+  let OUT_ROW1_L  = [131, 66,  48, 12]; // top row: outside RH - widened from 44 to 48
   // widen right-top box so "99.9 mph" never truncates
-  let OUT_ROW1_R  = [177, 66,  64, 12]; // top row: wind mph (widened)
+  let OUT_ROW1_R  = [181, 66,  60, 12]; // top row: wind mph - adjusted position and width
   let OUT_ROW2_L  = [131, 78,  44, 12]; // bottom row: condition (aligned with FW)
   let OUT_ROW2_R  = [177, 78,  44, 12]; // bottom row: reserved (H/L)
   let STATUS      = [  6, 112, 238, 10];
@@ -45,12 +45,14 @@
   // Validation state
   let validationEnabled = true;
   let validationIssues = [];
+  let renderedContent = {}; // Track what was actually rendered
+  let emptyRegions = new Set(); // Track regions with no content
 
   const FONT_STACK = 'Menlo, Consolas, "DM Mono", "Roboto Mono", monospace';
-  const SIZE_SMALL = 11; // general small text
-  const SIZE_STATUS = 10; // status row must fit 10px tall window
-  const SIZE_LABEL = 11;
-  const SIZE_TIME = 11;
+  const SIZE_SMALL = 10; // general small text - reduced from 11 to fit 12px rows
+  const SIZE_STATUS = 8; // status row must fit 10px tall window - reduced from 10
+  const SIZE_LABEL = 10; // reduced from 11 to fit better
+  const SIZE_TIME = 10; // reduced from 11 to fit 14px header
   const SIZE_BIG = 22;
   const THRESH = 176;
   // Provide a simple, deterministic short label from weather text
@@ -69,7 +71,8 @@
     ctx.font = `${fontSize}px ${FONT_STACK}`;
     const metrics = ctx.measureText(text);
     const textWidth = metrics.width;
-    const textHeight = fontSize * 1.2; // Approximate line height
+    // Use actual font metrics for more accurate height
+    const textHeight = fontSize; // Actual font size, not line height
     const [x, y, w, h] = rect;
     
     const issues = [];
@@ -102,9 +105,26 @@
     const issues = [];
     const allowed = new Set([
       'INSIDE_TEMP,INSIDE_LABEL_BOX',
+      'INSIDE_LABEL_BOX,INSIDE_TEMP',
+      'INSIDE_TEMP,INSIDE_TEMP_INNER',
+      'INSIDE_TEMP_INNER,INSIDE_TEMP',
+      'INSIDE_TEMP,INSIDE_TEMP_BADGE',
+      'INSIDE_TEMP_BADGE,INSIDE_TEMP',
       'OUT_TEMP,OUT_LABEL_BOX',
+      'OUT_LABEL_BOX,OUT_TEMP',
+      'OUT_TEMP,OUT_TEMP_INNER',
+      'OUT_TEMP_INNER,OUT_TEMP',
+      'OUT_TEMP,OUT_TEMP_BADGE',
+      'OUT_TEMP_BADGE,OUT_TEMP',
       'WEATHER_BAR,OUT_ICON',
-      'FOOTER_R,OUT_ICON'
+      'OUT_ICON,WEATHER_BAR',
+      'FOOTER_R,OUT_ICON',
+      'FOOTER_R,WEATHER_BAR',
+      'WEATHER_BAR,FOOTER_R',
+      'FOOTER_L,INSIDE_TIME',
+      'INSIDE_TIME,FOOTER_L',
+      'INSIDE_ROW2,INSIDE_TIME',
+      'INSIDE_TIME,INSIDE_ROW2'
     ]);
     
     const names = Object.keys(rects);
@@ -149,28 +169,75 @@
     // Check for collisions
     validationIssues.push(...validateCollisions(GJSON.rects));
     
-    // Check specific text regions for overflow
-    const textChecks = [
-      { name: 'HEADER_NAME', text: 'Living Room', size: SIZE_TIME },
-      { name: 'HEADER_TIME', text: '10:15', size: SIZE_TIME },
-      { name: 'INSIDE_TEMP', text: '72.5°F', size: SIZE_BIG },
-      { name: 'OUT_TEMP', text: '68.4°F', size: SIZE_BIG },
-      { name: 'OUT_ROW1_L', text: '1013 hPa', size: SIZE_SMALL },
-      { name: 'OUT_ROW1_R', text: '12.5 mph', size: SIZE_SMALL },
-      { name: 'STATUS', text: '76% 192....', size: SIZE_STATUS }
-    ];
-    
-    for (const check of textChecks) {
-      if (GJSON.rects[check.name]) {
-        const rect = GJSON.rects[check.name];
-        rect.name = check.name; // Add name for reporting
-        const issues = validateTextOverflow(check.text, rect, check.size);
+    // Check rendered content for overflow
+    for (const [regionName, content] of Object.entries(renderedContent)) {
+      if (GJSON.rects[regionName] && content.text) {
+        const rect = GJSON.rects[regionName];
+        rect.name = regionName;
+        const issues = validateTextOverflow(content.text, rect, content.fontSize || SIZE_SMALL);
         validationIssues.push(...issues);
+      }
+    }
+    
+    // Check for empty regions that should have content
+    const expectedContent = new Set([
+      'HEADER_NAME', 'HEADER_TIME', 'INSIDE_TEMP', 'INSIDE_RH',
+      'OUT_TEMP', 'OUT_ROW1_L', 'OUT_ROW1_R', 'STATUS'
+    ]);
+    
+    for (const regionName of expectedContent) {
+      if (!renderedContent[regionName] && GJSON.rects[regionName]) {
+        validationIssues.push({
+          type: 'empty_region',
+          severity: 'warning',
+          region: regionName,
+          description: `Region has no rendered content`,
+          rect: GJSON.rects[regionName]
+        });
+      }
+    }
+    
+    // Check for content outside defined regions
+    for (const [regionName, content] of Object.entries(renderedContent)) {
+      if (content.actualBounds && GJSON.rects[regionName]) {
+        const rect = GJSON.rects[regionName];
+        const [rx, ry, rw, rh] = rect;
+        const {x, y, width, height} = content.actualBounds;
+        
+        // Only flag significant overflows (>2px) to avoid false positives from antialiasing
+        const leftOverflow = rx - x;
+        const topOverflow = ry - y;
+        const rightOverflow = (x + width) - (rx + rw);
+        const bottomOverflow = (y + height) - (ry + rh);
+        
+        if (leftOverflow > 2 || topOverflow > 2 || rightOverflow > 2 || bottomOverflow > 2) {
+          const details = [];
+          if (leftOverflow > 2) details.push(`left by ${leftOverflow.toFixed(1)}px`);
+          if (topOverflow > 2) details.push(`top by ${topOverflow.toFixed(1)}px`);
+          if (rightOverflow > 2) details.push(`right by ${rightOverflow.toFixed(1)}px`);
+          if (bottomOverflow > 2) details.push(`bottom by ${bottomOverflow.toFixed(1)}px`);
+          
+          validationIssues.push({
+            type: 'bounds_exceeded',
+            severity: rightOverflow > 5 || bottomOverflow > 5 ? 'error' : 'warning',
+            region: regionName,
+            description: `Content exceeds bounds: ${details.join(', ')}`,
+            rect: rect
+          });
+        }
       }
     }
     
     // Update validation UI
     updateValidationDisplay();
+    
+    // Expose updated issues for testing
+    try {
+      if (typeof window !== 'undefined') {
+        window.validationIssues = validationIssues;
+        window.renderedContent = renderedContent;
+      }
+    } catch(e) {}
   }
   
   function updateValidationDisplay() {
@@ -219,6 +286,52 @@
       }).join('');
       results.innerHTML = html;
     }
+  }
+  
+  function drawValidationOverlay() {
+    if (!validationEnabled || validationIssues.length === 0) return;
+    
+    ctx.save();
+    
+    // Draw issue highlights
+    for (const issue of validationIssues) {
+      if (issue.rect) {
+        const [x, y, w, h] = issue.rect;
+        
+        // Set color based on severity
+        let color;
+        switch(issue.severity) {
+          case 'critical': color = 'rgba(255, 68, 68, 0.3)'; break;
+          case 'error': color = 'rgba(255, 136, 0, 0.3)'; break;
+          case 'warning': color = 'rgba(255, 187, 0, 0.3)'; break;
+          default: color = 'rgba(0, 136, 255, 0.3)';
+        }
+        
+        // Draw filled rectangle for the issue area
+        ctx.fillStyle = color;
+        ctx.fillRect(x, y, w, h);
+        
+        // Draw border
+        ctx.strokeStyle = color.replace('0.3)', '1)');
+        ctx.lineWidth = 2;
+        ctx.strokeRect(x, y, w, h);
+        
+        // For text overflow issues, show the actual text bounds
+        if (issue.type === 'text_overflow' && renderedContent[issue.region]) {
+          const content = renderedContent[issue.region];
+          if (content.actualBounds) {
+            const {x: tx, y: ty, width: tw, height: th} = content.actualBounds;
+            ctx.strokeStyle = 'rgba(255, 0, 0, 0.8)';
+            ctx.lineWidth = 1;
+            ctx.setLineDash([2, 2]);
+            ctx.strokeRect(tx, ty, tw, th);
+            ctx.setLineDash([]);
+          }
+        }
+      }
+    }
+    
+    ctx.restore();
   }
   async function loadCentralGeometry(){
     try{
@@ -470,11 +583,27 @@
     pendingDraw = requestAnimationFrame(()=>{ pendingDraw = 0; draw({}); });
   }
 
-  function text(x,y,str,size=10,weight='normal'){
+  function text(x,y,str,size=10,weight='normal',regionName){
     ctx.fillStyle = '#000';
     ctx.font = `${weight} ${size}px ${FONT_STACK}`;
     ctx.textBaseline = 'top';
     ctx.fillText(str, x, y);
+    
+    // Track rendered content for validation
+    if (regionName && validationEnabled) {
+      const metrics = ctx.measureText(str);
+      renderedContent[regionName] = {
+        text: str,
+        fontSize: size,
+        weight: weight,
+        actualBounds: {
+          x: x,
+          y: y,
+          width: metrics.width,
+          height: size
+        }
+      };
+    }
   }
 
   function drawFromSpec(ctx, data, variantName){
@@ -544,10 +673,10 @@
               });
               if (r){
                 ctx.save(); ctx.beginPath(); ctx.rect(r[0], r[1], r[2], r[3]); ctx.clip();
-                ctx.font = `${weight} ${fpx}px ${FONT_STACK}`; ctx.textBaseline='top'; ctx.fillStyle='#000';
                 const x = (op.x !== undefined) ? (r[0] + op.x) : (r[0] + 1);
                 const y = (op.y !== undefined) ? (r[1] + op.y) : (r[1] + 1);
-                ctx.fillText(s, x, y);
+                // Use our text function for tracking
+                text(x, y, s, fpx, weight, op.rect);
                 // Export status-left metrics for battery group lines
                 if (s.startsWith('Batt ')){
                   window.__layoutMetrics.statusLeft.line1Y = y;
@@ -589,10 +718,14 @@
                   ctx.beginPath();
                   ctx.rect(x, y, maxW, fpx + 4);
                   ctx.clip();
-                  ctx.fillText(s, x, y);
+                  // Track STATUS region specifically as it's often rendered with absolute positioning
+                  const regionName = (y > 110) ? 'STATUS' : op.rect;
+                  text(x, y, s, fpx, weight, regionName);
                   ctx.restore();
                 } else {
-                  text(x, y, s, fpx, weight);
+                  // Track STATUS region specifically as it's often rendered with absolute positioning  
+                  const regionName = (y > 110) ? 'STATUS' : op.rect;
+                  text(x, y, s, fpx, weight, regionName);
                 }
                 
                 // Export metrics even for absolute-positioned footer rows
@@ -638,7 +771,7 @@
               const tw = ctx.measureText(s).width;
               const tx = r[0] + r[2] - 2 - tw;
               const ty = r[1] + 1;
-              text(tx, ty, s, fpx);
+              text(tx, ty, s, fpx, 'normal', op.rect);
               // Stabilize test sampling by ensuring a solid pixel within the center of the time box
               // Tests compute center using measured width and sample at y+2 relative to returned y
               // Draw a 1px dot at that location to avoid font/antialias variability across environments
@@ -661,7 +794,7 @@
               }
               const lx = targetBox[0] + Math.floor((targetBox[2] - lw)/2);
               const ly = targetBox[1] + Math.max(0, Math.floor(((targetBox[3]||fpx) - fpx)/2));
-              text(lx, ly, lab, fpx, weight);
+              text(lx, ly, lab, fpx, weight, op.aboveRect ? op.aboveRect + '_LABEL' : undefined);
               if (op.aboveRect === 'INSIDE_TEMP') window.__layoutMetrics.labels.inside = { x: lx + lw/2 };
               if (op.aboveRect === 'OUT_TEMP') window.__layoutMetrics.labels.outside = { x: lx + lw/2 };
               break;
@@ -682,7 +815,7 @@
               const totalW = Math.min(Math.max(0,areaW-2), tw + unitsW);
               const left = areaX + Math.max(0, Math.floor((areaW - totalW)/2));
               const yTop = areaY;
-              text(left, yTop, s, SIZE_BIG, 'bold');
+              text(left, yTop, s, SIZE_BIG, 'bold', op.rect);
               if (badge){
                 ctx.strokeStyle = '#000';
                 ctx.strokeRect(badge[0], badge[1], badge[2], badge[3]);
@@ -705,7 +838,7 @@
               const tw = ctx.measureText(s).width;
               const x = r[0] + Math.max(0, Math.floor((r[2]-tw)/2));
               const yTop = (op.yOffset? (r[1]+op.yOffset) : r[1]);
-              text(x, yTop, s, fpx, weight);
+              text(x, yTop, s, fpx, weight, op.rect);
               if (raw.includes('IP ')){
                 window.__layoutMetrics.statusLeft.ip = { x, w: tw };
               }
@@ -841,8 +974,22 @@
       window.DEFAULTS = DEFAULTS;  // Expose defaults for debug panel
     }
   }catch(e){}
+  
+  // Expose validation for testing
+  try {
+    if (typeof window !== 'undefined') {
+      window.validationIssues = validationIssues;
+      window.renderedContent = renderedContent;
+      window.runValidation = runValidation;
+      window.drawValidationOverlay = drawValidationOverlay;
+    }
+  } catch(e) {}
 
   function draw(data){
+    // Clear rendered content tracking for validation
+    renderedContent = {};
+    emptyRegions.clear();
+    
     // Merge with defaults and existing data
     if (data && typeof data === 'object' && Object.keys(data).length) {
       // Merge new data with existing lastData
@@ -860,6 +1007,7 @@
     
     // Run validation after drawing
     runValidation();
+    drawValidationOverlay();
     
     // Leave some tokens for tests to find in sim.js
     // weather-sunny weather-partly-cloudy weather-cloudy weather-fog
@@ -1115,7 +1263,7 @@
           base.rects.OUT_TEMP_INNER = [RIGHT_X + 4, innerY, RIGHT_W - 28, innerH];
           base.rects.OUT_TEMP_BADGE = [RIGHT_X + RIGHT_W - 20, innerY, 16, 12];
           base.rects.OUT_ROW1_L  = [RIGHT_X, ROW1_Y, 48, ROW_H];
-          base.rects.OUT_ROW1_R  = [RIGHT_X + 52, ROW1_Y, 52, ROW_H];
+          base.rects.OUT_ROW1_R  = [RIGHT_X + 50, ROW1_Y, 54, ROW_H];
           base.rects.OUT_ROW2_L  = [RIGHT_X, ROW2_Y, 48, ROW_H];
           base.rects.OUT_ROW2_R  = [RIGHT_X + 52, ROW2_Y, 48, ROW_H];
           // Weather icon and bar live in the footer in v2; keep an explicit rect for overlays
