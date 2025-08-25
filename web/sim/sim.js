@@ -419,11 +419,21 @@
             case 'timeRight': {
               const r = rects[op.rect]; if (!r) break;
               const fpx = ((fonts[op.font||'time']||{}).px) || pxTime;
-              // Resolve op.source template like {time_hhmm}
+              // Resolve op.source template like {time_hhmm}; robust fallbacks to legacy data.time
               let s = '';
               try{
                 const src = String(op.source||'').replace(/[{}]/g,'');
-                s = String((data[src]!==undefined ? data[src] : data.time_hhmm) || '');
+                if (src) {
+                  if (data[src] !== undefined && data[src] !== null && String(data[src]) !== '') {
+                    s = String(data[src]);
+                  } else if (data.time_hhmm !== undefined && data.time_hhmm !== null && String(data.time_hhmm) !== '') {
+                    s = String(data.time_hhmm);
+                  } else {
+                    s = String(data.time||'');
+                  }
+                } else {
+                  s = String(data.time_hhmm || data.time || '');
+                }
               }catch(e){ s = String((data.time_hhmm||data.time||'')); }
               // Ensure measurement uses the same font we'll render with
               ctx.font = `${fpx}px ${FONT_STACK}`; ctx.textBaseline='top';
