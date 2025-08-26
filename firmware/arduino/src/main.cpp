@@ -69,28 +69,22 @@ static void partial_update_outside_condition(const char* short_condition);
 static void partial_update_weather_icon(const char* weather);
 // New helpers: prefer OpenWeather fields (id/icon/desc) when available
 static void partial_update_weather_icon_from_outside(const OutsideReadings& o);
-static void draw_weather_icon_region_at(int16_t x, int16_t y, int16_t w,
-                                        int16_t h, const char* weather);
-static void draw_weather_icon_region_at_from_outside(int16_t x, int16_t y,
-                                                     int16_t w, int16_t h,
+static void draw_weather_icon_region_at(int16_t x, int16_t y, int16_t w, int16_t h,
+                                        const char* weather);
+static void draw_weather_icon_region_at_from_outside(int16_t x, int16_t y, int16_t w, int16_t h,
                                                      const OutsideReadings& o);
 // Footer-only weather updater to keep geometry consistent with full renders
-static void partial_update_footer_weather_from_outside(
-    const OutsideReadings& o);
+static void partial_update_footer_weather_from_outside(const OutsideReadings& o);
 static void draw_header_time(const char* time_str);
 // Accessor to avoid forward reference ordering issues
 static inline float get_last_outside_f();
-static bool maybe_redraw_status(const BatteryStatus& bs, const char* ip_cstr,
-                                const int rect[4]);
+static bool maybe_redraw_status(const BatteryStatus& bs, const char* ip_cstr, const int rect[4]);
 template <typename DrawFnFwd>
 static inline void draw_in_region(const int rect[4], DrawFnFwd drawFn);
-static inline int16_t text_width_default_font(const char* s,
-                                               uint8_t size);
+static inline int16_t text_width_default_font(const char* s, uint8_t size);
 // Forward decls used by spec renderer implemented earlier in the file
-static inline void draw_temp_number_and_units(const int rect[4],
-                                               const char* temp_f);
-static void make_short_condition_cstr(const char* weather, char* out,
-                                       size_t out_size);
+static inline void draw_temp_number_and_units(const int rect[4], const char* temp_f);
+static void make_short_condition_cstr(const char* weather, char* out, size_t out_size);
 // Remove duplicate non-inline declaration to avoid separate symbol
 #if USE_UI_SPEC
 // Minimal spec interpreter (full-window only) for variant rendering
@@ -136,9 +130,7 @@ static inline const int* rect_ptr_by_id(uint8_t rid) {
 
 // Forward to implementation placed after display declaration
 static void draw_from_spec_full_impl(uint8_t variantId);
-static void draw_from_spec_full(uint8_t variantId) {
-  draw_from_spec_full_impl(variantId);
-}
+static void draw_from_spec_full(uint8_t variantId) { draw_from_spec_full_impl(variantId); }
 #endif
 #endif
 
@@ -153,9 +145,8 @@ static void draw_from_spec_full(uint8_t variantId) {
 #define EINK_RST -1  // FeatherWing ties panel reset to Feather RESET
 #endif
 #ifndef EINK_BUSY
-#define EINK_BUSY                                                                                  \
-  -1  // FeatherWing BUSY not connected; use -1 so library times
-     // waits
+#define EINK_BUSY -1  // FeatherWing BUSY not connected; use -1 so library times
+                     // waits
 #endif
 
 // 2.13" b/w class; choose the one matching your panel
@@ -195,10 +186,8 @@ static void draw_from_spec_full_impl(uint8_t variantId) {
   int comp_count = 0;
   const ComponentOps* comps = get_variant_ops(variantId, &comp_count);
   display.drawRect(0, 0, EINK_WIDTH, EINK_HEIGHT, GxEPD_BLACK);
-  display.drawLine(1, 16 + TOP_Y_OFFSET, EINK_WIDTH - 2, 16 + TOP_Y_OFFSET,
-                   GxEPD_BLACK);
-  display.drawLine(125, 18 + TOP_Y_OFFSET, 125, EINK_HEIGHT - 2,
-                   GxEPD_BLACK);
+  display.drawLine(1, 16 + TOP_Y_OFFSET, EINK_WIDTH - 2, 16 + TOP_Y_OFFSET, GxEPD_BLACK);
+  display.drawLine(125, 18 + TOP_Y_OFFSET, 125, EINK_HEIGHT - 2, GxEPD_BLACK);
   for (int ci = 0; ci < comp_count; ++ci) {
     const ComponentOps& co = comps[ci];
     for (int i = 0; i < co.count; ++i) {
@@ -253,8 +242,7 @@ static void draw_from_spec_full_impl(uint8_t variantId) {
         }
         display.setTextColor(GxEPD_BLACK);
         display.setTextSize(1);
-        if (r && tx == 0 &&
-            (op.align == ALIGN_RIGHT || op.align == ALIGN_CENTER)) {
+        if (r && tx == 0 && (op.align == ALIGN_RIGHT || op.align == ALIGN_CENTER)) {
           int16_t tw = text_width_default_font(out.c_str(), 1);
           tx = r[0] + 1;
           if (op.align == ALIGN_RIGHT)
@@ -271,10 +259,8 @@ static void draw_from_spec_full_impl(uint8_t variantId) {
         char hhmm[8];
         net_time_hhmm(hhmm, sizeof(hhmm));
         int16_t tw = text_width_default_font(hhmm, 1);
-        int16_t rx = static_cast<int16_t>(
-            HEADER_TIME[0] + HEADER_TIME[2] - 2 - tw);
-        int16_t by = static_cast<int16_t>(
-            HEADER_TIME[1] + TOP_Y_OFFSET + HEADER_TIME[3] - 2);
+        int16_t rx = static_cast<int16_t>(HEADER_TIME[0] + HEADER_TIME[2] - 2 - tw);
+        int16_t by = static_cast<int16_t>(HEADER_TIME[1] + TOP_Y_OFFSET + HEADER_TIME[3] - 2);
         display.setTextColor(GxEPD_BLACK);
         display.setTextSize(1);
         display.setCursor(rx, by);
@@ -326,12 +312,10 @@ static void draw_from_spec_full_impl(uint8_t variantId) {
           break;
         OutsideReadings o = net_get_outside();
         if (o.validWeatherIcon || o.validWeatherId) {
-          draw_weather_icon_region_at_from_outside(
-              r[0], r[1] + TOP_Y_OFFSET, r[2], r[3], o);
+          draw_weather_icon_region_at_from_outside(r[0], r[1] + TOP_Y_OFFSET, r[2], r[3], o);
         } else {
           const char* weather = o.validWeather ? o.weather : "";
-          draw_weather_icon_region_at(
-              r[0], r[1] + TOP_Y_OFFSET, r[2], r[3], weather);
+          draw_weather_icon_region_at(r[0], r[1] + TOP_Y_OFFSET, r[2], r[3], weather);
         }
         break;
       }

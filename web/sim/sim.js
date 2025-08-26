@@ -875,7 +875,15 @@
         ctx.fillStyle = '#000';
         ctx.font = `bold 10px ${FONT_STACK}`;
         ctx.textBaseline = 'top';
-        ctx.fillText(String(name), x+2, y+2);
+        // Use shorter labels for small regions to avoid overflow
+        let label = String(name);
+        if (name === 'WEATHER_ICON') {
+          label = 'ICON';
+        } else if (w < 50 && label.length > 8) {
+          // Truncate long labels in narrow regions
+          label = label.substring(0, 6) + '..';
+        }
+        ctx.fillText(label, x+2, y+2);
       }
     });
     // Distinguish chrome/border lines by drawing them in green in overlay mode

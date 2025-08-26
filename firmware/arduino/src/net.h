@@ -50,7 +50,7 @@ struct OutsideReadings {
   float humidityPct = NAN;
   char weather[64];
   // OpenWeatherMap single primary item support
-  int weatherId = 0;     // OWM weather[0].id
+  int weatherId = 0;    // OWM weather[0].id
   char weatherDesc[64];  // OWM weather[0].description
   char weatherIcon[8];  // OWM weather[0].icon (e.g., "10n")
   float windMps = NAN;
@@ -95,8 +95,8 @@ inline bool parse_bssid(const char* str, uint8_t out[6]) {
   if (!str)
     return false;
   int vals[6];
-  int n = sscanf(str, "%x:%x:%x:%x:%x:%x", &vals[0], &vals[1], &vals[2],
-                  &vals[3], &vals[4], &vals[5]);
+  int n =
+      sscanf(str, "%x:%x:%x:%x:%x:%x", &vals[0], &vals[1], &vals[2], &vals[3], &vals[4], &vals[5]);
   if (n != 6)
     return false;
   for (int i = 0; i < 6; ++i)
@@ -681,7 +681,7 @@ static void ensure_wifi_connected_provisioned_impl() {
   // Attempt connection using creds in NVS
   start_wifi_station_connect_from_nvs(WIFI_CONNECT_TIMEOUT_MS);
 }
-#endif // USE_WIFI_PROVISIONING
+#endif  // USE_WIFI_PROVISIONING
 
 inline bool net_wifi_clear_provisioning() {
 #if USE_WIFI_PROVISIONING
@@ -774,7 +774,7 @@ inline void ensure_wifi_connected() {
   cfg.sta.scan_method = WIFI_FAST_SCAN;
   cfg.sta.threshold.rssi = WIFI_RSSI_THRESHOLD;
   cfg.sta.threshold.authmode = WIFI_AUTHMODE_THRESHOLD;
-  cfg.sta.channel = 0; // do not hard-lock channel
+  cfg.sta.channel = 0;  // do not hard-lock channel
   if (have_bssid) {
     memcpy(cfg.sta.bssid, prefer_bssid, 6);
     cfg.sta.bssid_set = 1;
@@ -1158,11 +1158,11 @@ inline void net_publish_ha_discovery() {
     // HA
     int suggestedPrecision = 0;
     if (strcmp(unit, "°F") == 0)
-      suggestedPrecision = 1; // Fahrenheit: one decimal
+      suggestedPrecision = 1;  // Fahrenheit: one decimal
     else if (strcmp(unit, "V") == 0)
-      suggestedPrecision = 2; // Volts: two decimals
+      suggestedPrecision = 2;  // Volts: two decimals
     else if (strcmp(unit, "hPa") == 0)
-      suggestedPrecision = 1; // Pressure: one decimal
+      suggestedPrecision = 1;  // Pressure: one decimal
                               //     else
     suggestedPrecision = 0;   // Percent and others: integer
     // Full HA discovery keys for maximum compatibility; retained
