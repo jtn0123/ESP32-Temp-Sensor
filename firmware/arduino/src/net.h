@@ -4,8 +4,6 @@
 // C system / ESP-IDF C headers
 #include <esp_wifi.h>
 #include <time.h>
-
-// C++ system headers
 #include <cstdio>
 
 // C++/Arduino and third-party headers
@@ -30,8 +28,6 @@
 #endif
 #include "power.h"
 #include "sensors.h"
-// Layout identity (version, CRC, md5)
-#include "display_layout.h"
 
 // All configuration should come from generated_config.h
 
@@ -42,26 +38,17 @@ inline void net_publish_pressure(float pressureHPa);
 inline void net_publish_battery(float voltage, int percent);
 inline void net_publish_wifi_rssi(int rssiDbm);
 inline void net_publish_publish_latency_ms(uint32_t publishLatencyMs);
-// Forward declaration for UI debug snapshot publisher
-inline void net_publish_debug_ui(const char* payload, bool retain);
 
 struct OutsideReadings {
   float temperatureC = NAN;
   float humidityPct = NAN;
   char weather[64];
-  // OpenWeatherMap single primary item support
-  int weatherId = 0;    // OWM weather[0].id
-  char weatherDesc[64];  // OWM weather[0].description
-  char weatherIcon[8];  // OWM weather[0].icon (e.g., "10n")
   float windMps = NAN;
   float highTempC = NAN;
   float lowTempC = NAN;
   bool validTemp = false;
   bool validHum = false;
   bool validWeather = false;
-  bool validWeatherId = false;
-  bool validWeatherDesc = false;
-  bool validWeatherIcon = false;
   bool validWind = false;
   bool validHigh = false;
   bool validLow = false;
@@ -70,16 +57,6 @@ struct OutsideReadings {
 static WiFiClient g_wifi_client;
 static PubSubClient g_mqtt(g_wifi_client);
 static OutsideReadings g_outside;
-// Flag set when any outside MQTT field changes; consumed by UI to trigger
-static volatile bool g_outside_dirty = false;
-inline bool net_consume_outside_dirty() {
-  bool was = g_outside_dirty;
-  g_outside_dirty = false;
-  return was;
-}
-// Optional time (HH:MM) from MQTT; fallback to SNTP/RTC
-static char g_time_hhmm[8] = {0};
-static bool g_have_time_from_mqtt = false;
 static char g_client_id[40];
 static Preferences g_net_prefs;
 static Preferences g_offline_prefs;
@@ -96,13 +73,8 @@ inline bool parse_bssid(const char* str, uint8_t out[6]) {
     return false;
   int vals[6];
   int n =
-      sscanf(str,
-              "%x:%x:%x:%x:%x:%x",
-              &vals[0],
-              &vals[1],
-              &vals[2],
-              &vals[3],
-              &vals[4],
+      sscanf(str, "%x:%x:%x:%x:%x:%x", &vals[0], &vals[1], &vals[2], &vals[3],
+    &vals[4], &vals[5]);
   if (n != 6)
     return false;
   for (int i = 0; i < 6; ++i)
@@ -224,7 +196,8 @@ inline void ensure_time_synced_if_stale() {
   // Poll briefly until time looks sane
   uint32_t start = millis();
   while (static_cast<uint32_t>(time(nullptr)) < TIME_FRESH_EPOCH_MIN &&
-         millis() - start < 2000UL) {
+    millis()
+    - start < 2000UL) {
     delay(50);
   }
   uint32_t now_epoch = static_cast<uint32_t>(time(nullptr));
@@ -270,9 +243,8 @@ inline void offline_set_bounds(uint32_t head, uint32_t tail) {
   g_offline_prefs.putUInt("tail", tail);
 }
 
-inline void offline_key_for(uint32_t seq, char out[], size_t out_size) {
-  snprintf(out, out_size, "s%u", seq);
-}
+inline void offline_key_for(uint32_t seq, char out[],
+    size_t out_size) { snprintf(out, out_size, "s%u", seq); }
 
 inline void offline_enqueue_sample(float tempC, float rhPct) {
   uint32_t ts = static_cast<uint32_t>(time(nullptr));
@@ -294,14 +266,13 @@ inline void offline_enqueue_sample(float tempC, float rhPct) {
   offline_set_bounds(head + 1, tail);
   g_offline_prefs.end();
   Serial.printf("Offline: queued seq=%u ts=%u (C=%.2f RH=%.0f)\n",
-                 static_cast<unsigned>(head),
-                static_cast<unsigned>(ts),
-                //     s.tempC,
-                s.rhPct);
+                static_cast<unsigned>(head), static_cast<unsigned>(ts),
+//     s.tempC,
+    s.rhPct);
 }
 
-inline uint32_t net_publish_inside_history(uint32_t epoch,
-                                            float tempC,
+inline uint32_t net_publish_inside_history(uint32_t epoch, float tempC,
+    float rhPct) {
   if (!g_mqtt.connected())
     return 0;
   char topic[128];
@@ -312,17 +283,14 @@ inline uint32_t net_publish_inside_history(uint32_t epoch,
   dtostrf(tempC * 9.0f / 5.0f + 32.0f, 0, 1, tbuf);
   dtostrf(rhPct, 0, 0, rhbuf);
   char payload[96];
-  int plen = snprintf(payload,
-                       sizeof(payload),
-                       "{\"ts\":%u,
-                       \"tempF\":%s,
-                       \"rh\":%s}",
+int plen = snprintf(payload, sizeof(payload),
+                      "{\"ts\":%u,\"tempF\":%s,\"rh\":%s}",
                       static_cast<unsigned>(epoch), tbuf, rhbuf);
   g_mqtt.publish(topic, payload, false);
   // Approximate bytes published as topic + payload length
   uint32_t tlen = static_cast<uint32_t>(strlen(topic));
   uint32_t blen = static_cast<uint32_t>(plen > 0 ? plen :
-                                            static_cast<int>(strlen(payload)));
+    static_cast<int>(strlen(payload)));
   return tlen + blen;
 }
 
@@ -341,20 +309,27 @@ inline void offline_drain_if_any() {
   if (to_send > OFFLINE_DRAIN_MAX_PER_WAKE)
     to_send = OFFLINE_DRAIN_MAX_PER_WAKE;
   Serial.printf("Offline: draining %u samples (tail=%u head=%u)\n",
-                 static_cast<unsigned>(to_send),
-                static_cast<unsigned>(tail), static_cast<unsigned>(head));
+                static_cast<unsigned>(to_send), static_cast<unsigned>(tail),
+    static_cast<unsigned>(head));
   uint32_t drain_start_ms = millis();
   uint32_t bytes_sent = 0;
   uint32_t orig_tail = tail;
   uint32_t processed = 0;
   while (processed < to_send && g_mqtt.connected()) {
     // Time budget check before reading/publishing next sample
-    if (OFFLINE_DRAIN_MAX_MS > 0 &&
-        (millis() - drain_start_ms) >= OFFLINE_DRAIN_MAX_MS) {
-      Serial.printf("Offline: drain stop (time budget) elapsed_ms=%u sent=%u "
-                     "bytes=%u\n",
-                    static_cast<unsigned>(millis() - drain_start_ms),
-                    static_cast<unsigned>(tail - orig_tail),
+    if (OFFLINE_DRAIN_MAX_MS > 0 && (millis() - drain_start_ms) >=
+    OFFLINE_DRAIN_MAX_MS) {
+
+
+
+
+
+
+    Serial.printf(
+        "Offline: drain stop (time budget) elapsed_ms=%u sent=%u bytes=%u\n",
+        static_cast<unsigned>(millis() - drain_start_ms),
+        static_cast<unsigned>(tail - orig_tail),
+        static_cast<unsigned>(bytes_sent));
       break;
     }
     uint32_t seq = tail;
@@ -375,14 +350,23 @@ inline void offline_drain_if_any() {
         delay(5);
       }
       // Post-publish budget checks
-      if ((OFFLINE_DRAIN_MAX_BYTES > 0 && bytes_sent >= OFFLINE_DRAIN_MAX_BYTES) ||
-          (OFFLINE_DRAIN_MAX_MS > 0 &&
-           (millis() - drain_start_ms) >= OFFLINE_DRAIN_MAX_MS)) {
-        Serial.printf("Offline: drain stop (%s budget) elapsed_ms=%u sent=%u "
-                      "bytes=%u\n",
-                      (bytes_sent >= OFFLINE_DRAIN_MAX_BYTES ? "byte" : "time"),
-                      static_cast<unsigned>(millis() - drain_start_ms),
-                      static_cast<unsigned>(tail - orig_tail),
+      if ((OFFLINE_DRAIN_MAX_BYTES > 0 && bytes_sent >=
+    OFFLINE_DRAIN_MAX_BYTES)
+    ||
+          (OFFLINE_DRAIN_MAX_MS > 0 && (millis() - drain_start_ms) >=
+    OFFLINE_DRAIN_MAX_MS)) {
+
+
+
+
+
+
+    Serial.printf(
+        "Offline: drain stop (%s budget) elapsed_ms=%u sent=%u bytes=%u\n",
+        (bytes_sent >= OFFLINE_DRAIN_MAX_BYTES ? "byte" : "time"),
+        static_cast<unsigned>(millis() - drain_start_ms),
+        static_cast<unsigned>(tail - orig_tail),
+    static_cast<unsigned>(bytes_sent));
         break;
       }
     } else {
@@ -395,9 +379,11 @@ inline void offline_drain_if_any() {
   g_offline_prefs.end();
 }
 
-inline void mqtt_callback(char* topic, uint8_t* payload, unsigned int length) {
+inline void mqtt_callback(char* topic, uint8_t* payload,
+    unsigned int length) {
   char val[128];
-  unsigned int n = length < (sizeof(val) - 1) ? length : (unsigned int)(sizeof(val) - 1);
+  unsigned int n = length < (sizeof(val) - 1) ? length : (unsigned
+    int)(sizeof(val) - 1);
   for (unsigned int i = 0; i < n; ++i)
     val[i] = static_cast<char>(payload[i]);
   val[n] = '\0';
@@ -421,88 +407,16 @@ inline void mqtt_callback(char* topic, uint8_t* payload, unsigned int length) {
     }
     return;
   }
-  // Device command handler: sensors/<room>/cmd -> on-demand UI debug snapshot
-  {
-    char cmdTopic[128];
-    snprintf(cmdTopic, sizeof(cmdTopic), "%s/cmd", MQTT_PUB_BASE);
-    if (strcmp(topic, cmdTopic) == 0) {
-      String s = String(val);
-      s.trim();
-      s.toLowerCase();
-      if (s == "ui_debug" || s == "ui") {
-        float tempF = (g_outside.validTemp && isfinite(g_outside.temperatureC))
-                          ? (g_outside.temperatureC * 9.0f / 5.0f + 32.0f)
-                          : NAN;
-        const char* w = (g_outside.validWeather && g_outside.weather[0]) ? g_outside.weather : NULL;
-        const char* wd =
-            (g_outside.validWeatherDesc && g_outside.weatherDesc[0]) ? g_outside.weatherDesc : NULL;
-        const char* wi =
-            (g_outside.validWeatherIcon && g_outside.weatherIcon[0]) ? g_outside.weatherIcon : NULL;
-        char buf[256];
-        snprintf(buf, sizeof(buf),
-                 "{\"event\":\"ui_debug\",\"outside\":{\"tempF\":%s,\"rhPct\":%s,\"windMps\":%s,"
-                 "\"weather\":%s,\"weatherId\":%d,\"weatherDesc\":%s,\"weatherIcon\":%s}}",
-                 (isfinite(tempF) ? String(tempF, 1).c_str() : "null"),
-                 (g_outside.validHum && isfinite(g_outside.humidityPct)
-                      ? String(g_outside.humidityPct, 0).c_str()
-                      : "null"),
-                 (g_outside.validWind && isfinite(g_outside.windMps)
-                      ? String(g_outside.windMps, 1).c_str()
-                      : "null"),
-                 (w ? (String("\"") + w + "\"").c_str() : "null"),
-                 (g_outside.validWeatherId ? g_outside.weatherId : 0),
-                 (wd ? (String("\"") + wd + "\"").c_str() : "null"),
-                 (wi ? (String("\"") + wi + "\"").c_str() : "null"));
-        net_publish_debug_ui(buf, true);
-      }
-      return;
-    }
-  }
   if (ends_with(topic, "/temp")) {
     g_outside.temperatureC = atof(val);
     g_outside.validTemp = true;
-    g_outside_dirty = true;
   } else if (ends_with(topic, "/hum") || ends_with(topic, "/rh")) {
     g_outside.humidityPct = atof(val);
     g_outside.validHum = true;
-    g_outside_dirty = true;
-  } else if (ends_with(topic, "/temp_f")) {
-    // Fahrenheit alias: convert to Celsius for internal representation
-    float f = atof(val);
-    float c = (f - 32.0f) * (5.0f / 9.0f);
-    g_outside.temperatureC = c;
-    g_outside.validTemp = isfinite(c);
-    g_outside_dirty = true;
   } else if (ends_with(topic, "/weather")) {
     strncpy(g_outside.weather, val, sizeof(g_outside.weather) - 1);
     g_outside.weather[sizeof(g_outside.weather) - 1] = '\0';
     g_outside.validWeather = g_outside.weather[0] != '\0';
-    g_outside_dirty = true;
-  } else if (ends_with(topic, "/condition")) {
-    // Alias for textual condition
-    strncpy(g_outside.weather, val, sizeof(g_outside.weather) - 1);
-    g_outside.weather[sizeof(g_outside.weather) - 1] = '\0';
-    g_outside.validWeather = g_outside.weather[0] != '\0';
-    g_outside_dirty = true;
-  } else if (ends_with(topic, "/weather_id")) {
-    g_outside.weatherId = atoi(val);
-    g_outside.validWeatherId = (g_outside.weatherId != 0) || (strcmp(val,
-    g_outside_dirty = true;
-  } else if (ends_with(topic, "/condition_code")) {
-    // Alias for numeric condition code
-    g_outside.weatherId = atoi(val);
-    g_outside.validWeatherId = (g_outside.weatherId != 0) || (strcmp(val,
-    g_outside_dirty = true;
-  } else if (ends_with(topic, "/weather_desc")) {
-    strncpy(g_outside.weatherDesc, val, sizeof(g_outside.weatherDesc) - 1);
-    g_outside.weatherDesc[sizeof(g_outside.weatherDesc) - 1] = '\0';
-    g_outside.validWeatherDesc = g_outside.weatherDesc[0] != '\0';
-    g_outside_dirty = true;
-  } else if (ends_with(topic, "/weather_icon")) {
-    strncpy(g_outside.weatherIcon, val, sizeof(g_outside.weatherIcon) - 1);
-    g_outside.weatherIcon[sizeof(g_outside.weatherIcon) - 1] = '\0';
-    g_outside.validWeatherIcon = g_outside.weatherIcon[0] != '\0';
-    g_outside_dirty = true;
   } else if (ends_with(topic, "/wind") || ends_with(topic, "/wind_mps") ||
              ends_with(topic, "/wind_mph")) {
     float w = atof(val);
@@ -510,31 +424,12 @@ inline void mqtt_callback(char* topic, uint8_t* payload, unsigned int length) {
       w = w / 2.237f;
     g_outside.windMps = w;
     g_outside.validWind = isfinite(w);
-    g_outside_dirty = true;
   } else if (ends_with(topic, "/hi") || ends_with(topic, "/high")) {
     g_outside.highTempC = atof(val);
     g_outside.validHigh = isfinite(g_outside.highTempC);
-    g_outside_dirty = true;
   } else if (ends_with(topic, "/lo") || ends_with(topic, "/low")) {
     g_outside.lowTempC = atof(val);
     g_outside.validLow = isfinite(g_outside.lowTempC);
-    g_outside_dirty = true;
-  } else if (ends_with(topic, "/time") || ends_with(topic, "/clock")) {
-    // Accept sanitized HH:MM text for header time
-    char buf[8] = {0};
-    size_t j = 0;
-    for (unsigned int i = 0; i < n && j < sizeof(buf) - 1; ++i) {
-      char c = val[i];
-      if ((c >= '0' && c <= '9') || c == ':')
-        buf[j++] = c;
-    }
-    buf[j] = '\0';
-    if (strlen(buf) == 5 && buf[2] == ':' && isdigit(buf[0]) && isdigit(buf[1]) &&
-        isdigit(buf[3]) && isdigit(buf[4])) {
-      strncpy(g_time_hhmm, buf, sizeof(g_time_hhmm));
-      g_time_hhmm[sizeof(g_time_hhmm) - 1] = '\0';
-      g_have_time_from_mqtt = true;
-    }
   }
 }
 
@@ -552,6 +447,7 @@ static void ensure_system_netif_and_loop_inited() {
   e = esp_event_loop_create_default();
   if (e != ESP_OK && e != ESP_ERR_INVALID_STATE) {
     Serial.printf("esp_event_loop_create_default err=%d\n",
+    static_cast<int>(e));
   }
   done = true;
 }
@@ -566,7 +462,7 @@ static bool start_wifi_station_connect_from_nvs(uint32_t timeout_ms) {
   esp_wifi_set_country_code(WIFI_COUNTRY, true);
 #endif
   // Unlock channel and apply thresholds and optional preferred BSSID
-  //     remembered
+//     remembered
   // in our own NVS
   wifi_config_t cfg;
   memset(&cfg, 0, sizeof(cfg));
@@ -581,15 +477,21 @@ static bool start_wifi_station_connect_from_nvs(uint32_t timeout_ms) {
   bool have_bssid = false;
   if (nvs_load_last_ap(last_ssid, prefer_bssid)) {
     if (last_ssid.length() > 0 &&
-        strncmp((const char*)cfg.sta.ssid,
-                 last_ssid.c_str(),
+        strncmp((const char*)cfg.sta.ssid, last_ssid.c_str(),
+    sizeof(cfg.sta.ssid)) == 0) {
       memcpy(cfg.sta.bssid, prefer_bssid, 6);
       cfg.sta.bssid_set = 1;
       have_bssid = true;
 
-      Serial.printf("WiFi: preferring BSSID %02x:%02x:%02x:%02x:%02x:%02x (prov)\n",
-                    prefer_bssid[0], prefer_bssid[1], prefer_bssid[2], prefer_bssid[3],
-                    prefer_bssid[4], prefer_bssid[5]);
+
+
+
+
+
+    Serial.printf(
+        "WiFi: preferring BSSID %02x:%02x:%02x:%02x:%02x:%02x (prov)\n",
+        prefer_bssid[0], prefer_bssid[1], prefer_bssid[2], prefer_bssid[3],
+        prefer_bssid[4], prefer_bssid[5]);
     } else {
       memset(cfg.sta.bssid, 0, 6);
       cfg.sta.bssid_set = 0;
@@ -603,9 +505,8 @@ static bool start_wifi_station_connect_from_nvs(uint32_t timeout_ms) {
     delay(100);
   }
   if (WiFi.isConnected()) {
-    Serial.printf("WiFi: connected,
-                   IP %s RSSI %d dBm\n",
-                   WiFi.localIP().toString().c_str(),
+    Serial.printf("WiFi: connected, IP %s RSSI %d dBm\n",
+    WiFi.localIP().toString().c_str(),
                   WiFi.RSSI());
     // Reset failure counter on success
     nvs_set_bssid_fail_count(0);
@@ -621,13 +522,14 @@ static bool start_wifi_station_connect_from_nvs(uint32_t timeout_ms) {
     return true;
   }
   Serial.printf("WiFi: connect timeout (status=%d)\n",
+    static_cast<int>(WiFi.status()));
   // Increment consecutive failure count and clear saved BSSID after N misses
   if (have_bssid) {
     uint32_t c = nvs_get_bssid_fail_count();
     c++;
     nvs_set_bssid_fail_count(c);
     if (c >= WIFI_BSSID_FAIL_CLEAR_N) {
-      Serial.println("WiFi: clearing saved BSSID after repeated failures (prov)");
+    Serial.println("WiFi: clearing saved BSSID after repeated failures (prov)");
       nvs_clear_last_ap();
       nvs_set_bssid_fail_count(0);
     }
@@ -666,9 +568,8 @@ static void ensure_wifi_connected_provisioned_impl() {
     // Generate friendly service name: PROV_XXXXXX (lower 24 bits of MAC)
     char service_name[16];
     uint64_t mac = ESP.getEfuseMac();
-    snprintf(service_name,
-              sizeof(service_name),
-              "PROV_%06X",
+    snprintf(service_name, sizeof(service_name), "PROV_%06X",
+    (unsigned int)(mac & 0xFFFFFF));
     const char* service_key = NULL;  // open softAP by default
 #if WIFI_PROV_SECURITY == 1
     wifi_prov_security_t sec = WIFI_PROV_SECURITY_1;
@@ -684,14 +585,14 @@ static void ensure_wifi_connected_provisioned_impl() {
 //                   "BLE",
 #endif
                   service_name);
-    if (wifi_prov_mgr_start_provisioning(sec,
-         pop,
-         service_name,
+    if (wifi_prov_mgr_start_provisioning(sec, pop, service_name,
+    service_key) != ESP_OK) {
       Serial.println("WiFiProv: start failed");
     } else {
       // Wait until provisioned or timeout
       uint32_t t0 = millis();
-      while (millis() - t0 < static_cast<uint32_t>(WIFI_PROV_TIMEOUT_SEC) * 1000U) {
+      while (millis() - t0 < static_cast<uint32_t>(WIFI_PROV_TIMEOUT_SEC) *
+    1000U) {
         bool prov = false;
         if (wifi_prov_mgr_is_provisioned(&prov) == ESP_OK && prov)
           break;
@@ -754,7 +655,8 @@ inline void ensure_wifi_connected() {
   {
     IPAddress ip, gw, sn;
     IPAddress d1(0, 0, 0, 0), d2(0, 0, 0, 0);
-    bool ok = ip.fromString(WIFI_STATIC_IP) && gw.fromString(WIFI_STATIC_GATEWAY) &&
+    bool ok = ip.fromString(WIFI_STATIC_IP) &&
+    gw.fromString(WIFI_STATIC_GATEWAY) &&
               sn.fromString(WIFI_STATIC_SUBNET);
 #ifdef WIFI_STATIC_DNS1
     d1.fromString(WIFI_STATIC_DNS1);
@@ -785,15 +687,16 @@ inline void ensure_wifi_connected() {
   // Preconfigure station with connect=false so we can tweak IDF fields before
   // connecting
   if (have_bssid) {
-    WiFi.begin(WIFI_SSID,
-                WIFI_PASS,
-                0 /*channel*/,
-                prefer_bssid,
-    Serial.printf("WiFi: preferring BSSID %02x:%02x:%02x:%02x:%02x:%02x\n", prefer_bssid[0],
-                  prefer_bssid[1], prefer_bssid[2], prefer_bssid[3], prefer_bssid[4],
+    WiFi.begin(WIFI_SSID, WIFI_PASS, 0 /*channel*/, prefer_bssid,
+    false /*connect*/);
+    Serial.printf("WiFi: preferring BSSID %02x:%02x:%02x:%02x:%02x:%02x\n",
+    prefer_bssid[0],
+                  prefer_bssid[1], prefer_bssid[2], prefer_bssid[3],
+    prefer_bssid[4],
                   prefer_bssid[5]);
   } else {
-    WiFi.begin(WIFI_SSID, WIFI_PASS, 0 /*channel*/, nullptr, false /*connect*/);
+    WiFi.begin(WIFI_SSID, WIFI_PASS, 0 /*channel*/, nullptr,
+    false /*connect*/);
   }
 
   // Apply FAST scan + thresholds, and ensure channel is unlocked
@@ -820,7 +723,8 @@ inline void ensure_wifi_connected() {
   uint32_t start = millis();
   // Give BSSID-pinned attempt a shorter window before falling back
   uint32_t bssid_try_ms =
-      have_bssid ? (WIFI_CONNECT_TIMEOUT_MS > 4000 ? 3000U : WIFI_CONNECT_TIMEOUT_MS / 2) : 0U;
+      have_bssid ? (WIFI_CONNECT_TIMEOUT_MS > 4000 ? 3000U :
+    WIFI_CONNECT_TIMEOUT_MS / 2) : 0U;
   bool fallback_done = false;
   while (!WiFi.isConnected() && millis() - start < WIFI_CONNECT_TIMEOUT_MS) {
     if (have_bssid && !fallback_done && (millis() - start) >= bssid_try_ms) {
@@ -843,9 +747,8 @@ inline void ensure_wifi_connected() {
     delay(100);
   }
   if (WiFi.isConnected()) {
-    Serial.printf("WiFi: connected,
-                   IP %s RSSI %d dBm\n",
-                   WiFi.localIP().toString().c_str(),
+    Serial.printf("WiFi: connected, IP %s RSSI %d dBm\n",
+    WiFi.localIP().toString().c_str(),
                   WiFi.RSSI());
     // Reset failure counter on success
     nvs_set_bssid_fail_count(0);
@@ -859,8 +762,9 @@ inline void ensure_wifi_connected() {
     }
   } else {
     Serial.printf("WiFi: connect timeout (status=%d)\n",
+    static_cast<int>(WiFi.status()));
     // Increment consecutive failure count and clear saved BSSID after N
-    //     misses
+//     misses
     if (have_bssid) {
       uint32_t c = nvs_get_bssid_fail_count();
       c++;
@@ -889,13 +793,12 @@ inline void ensure_mqtt_connected() {
   g_mqtt.setBufferSize(1024);
 #endif
   g_mqtt.setCallback(mqtt_callback);
-  Serial.printf("MQTT: connecting to %s:%u...\n",
-                 MQTT_HOST,
+  Serial.printf("MQTT: connecting to %s:%u...\n", MQTT_HOST,
+    static_cast<unsigned>(MQTT_PORT));
   uint64_t mac = ESP.getEfuseMac();
   // Use lower 24 bits
-  snprintf(g_client_id,
-            sizeof(g_client_id),
-            "esp32-room-%06x",
+  snprintf(g_client_id, sizeof(g_client_id), "esp32-room-%06x",
+    (unsigned int)(mac & 0xFFFFFF));
   uint32_t start = millis();
   const char* user = nullptr;
   const char* pass = nullptr;
@@ -911,12 +814,8 @@ inline void ensure_mqtt_connected() {
   // unexpectedly
   char availTopic[128];
   snprintf(availTopic, sizeof(availTopic), "%s/availability", MQTT_PUB_BASE);
-  while (!g_mqtt.connect(g_client_id,
-          user,
-          pass,
-          availTopic,
-          0,
-          true,
+  while (!g_mqtt.connect(g_client_id, user, pass, availTopic, 0, true,
+    "offline") &&
          millis() - start < MQTT_CONNECT_TIMEOUT_MS) {
     delay(200);
   }
@@ -932,18 +831,9 @@ inline void ensure_mqtt_connected() {
       Serial.printf("MQTT: subscribed %s\n", topic);
     };
     sub("/temp");
-    // Accept Fahrenheit alias for temperature
-    sub("/temp_f");
     sub("/hum");
     sub("/rh");
-    // Textual condition (alias for weather description)
     sub("/weather");
-    sub("/condition");
-    sub("/weather_id");
-    // Numeric condition code alias
-    sub("/condition_code");
-    sub("/weather_desc");
-    sub("/weather_icon");
     sub("/wind");
     sub("/wind_mps");
     sub("/wind_mph");
@@ -954,15 +844,10 @@ inline void ensure_mqtt_connected() {
     // Subscribe to Home Assistant birth topic for rediscovery on HA restarts
     g_mqtt.subscribe("homeassistant/status");
     Serial.printf("MQTT: subscribed %s\n", "homeassistant/status");
-    // Subscribe to device command topic for on-demand UI debug snapshots
-    char cmdTopic[128];
-    snprintf(cmdTopic, sizeof(cmdTopic), "%s/cmd", MQTT_PUB_BASE);
-    g_mqtt.subscribe(cmdTopic);
-    Serial.printf("MQTT: subscribed %s\n", cmdTopic);
     // On successful MQTT connection, try to drain any offline backlog
     offline_drain_if_any();
   } else {
-    Serial.printf("MQTT: connect timeout/fail (state=%d)\n", g_mqtt.state());
+    Serial.println("MQTT: connect timeout/fail");
   }
 }
 
@@ -971,20 +856,6 @@ inline void net_begin() {
   // Refresh time occasionally; quick and only when stale
   ensure_time_synced_if_stale();
   ensure_mqtt_connected();
-}
-
-inline void net_time_hhmm(char* out, size_t out_size) {
-  if (!out || out_size == 0)
-    return;
-  if (g_have_time_from_mqtt && g_time_hhmm[0] != '\0') {
-    strncpy(out, g_time_hhmm, out_size);
-    out[out_size - 1] = '\0';
-    return;
-  }
-  time_t now = time(nullptr);
-  struct tm tm_now;
-  localtime_r(&now, &tm_now);
-  snprintf(out, out_size, "%02d:%02d", tm_now.tm_hour, tm_now.tm_min);
 }
 
 inline void net_loop() {
@@ -1022,11 +893,8 @@ inline void net_ip_cstr(char* out, size_t out_size) {
     return;
   }
   IPAddress ip = WiFi.localIP();
-  snprintf(out,
-            out_size,
-            "%u.%u.%u.%u",
-            static_cast<unsigned>(ip[0]),
-            static_cast<unsigned>(ip[1]),
+  snprintf(out, out_size, "%u.%u.%u.%u", static_cast<unsigned>(ip[0]),
+    static_cast<unsigned>(ip[1]),
            static_cast<unsigned>(ip[2]), static_cast<unsigned>(ip[3]));
 }
 
@@ -1108,9 +976,8 @@ inline void net_publish_publish_latency_ms(uint32_t publishLatencyMs) {
   char payload[16];
   const char* base = MQTT_PUB_BASE;
   snprintf(topic, sizeof(topic), "%s/debug/publish_ms", base);
-  snprintf(payload,
-            sizeof(payload),
-            "%u",
+  snprintf(payload, sizeof(payload), "%u",
+    static_cast<unsigned>(publishLatencyMs));
   g_mqtt.publish(topic, payload, true);
 }
 
@@ -1131,30 +998,6 @@ inline void net_publish_debug_json(const char* payload, bool retain = false) {
   g_mqtt.publish(topic, payload, retain);
 }
 
-// Publish a UI debug snapshot (outside readings + values used in UI), retained
-inline void net_publish_debug_ui(const char* payload, bool retain = true) {
-  if (!g_mqtt.connected() || !payload)
-    return;
-  char topic[128];
-  snprintf(topic, sizeof(topic), "%s/debug_ui", MQTT_PUB_BASE);
-  g_mqtt.publish(topic, payload, retain);
-}
-
-// Publish layout identity for sim↔device parity checks
-inline void net_publish_layout_identity() {
-  if (!g_mqtt.connected())
-    return;
-  char topic[128];
-  snprintf(topic, sizeof(topic), "%s/layout", MQTT_PUB_BASE);
-  char payload[96];
-  snprintf(payload,
-            sizeof(payload),
-            "{\"layout_version\":%u,
-            \"layout_crc\":\"0x%08X\"}",
-           static_cast<unsigned>(LAYOUT_VERSION),
-  g_mqtt.publish(topic, payload, true);
-}
-
 inline void net_publish_last_crash(const char* reason_or_null) {
   if (!g_mqtt.connected())
     return;
@@ -1170,7 +1013,8 @@ inline void net_publish_last_crash(const char* reason_or_null) {
 
 // Publish a small probe message to measure publish latency without affecting
 // retained state
-inline void net_publish_debug_probe(const char* payload, bool retain = false) {
+inline void net_publish_debug_probe(const char* payload,
+    bool retain = false) {
   if (!g_mqtt.connected() || !payload)
     return;
   char topic[128];
@@ -1187,25 +1031,29 @@ inline void net_publish_ha_discovery() {
   char availTopic[128];
   snprintf(availTopic, sizeof(availTopic), "%s/availability", MQTT_PUB_BASE);
   // Expire entities slightly after our scheduled wake so HA greys stale
-  //     values
+//     values
   // if we miss a cycle
   uint32_t expireAfterSec = static_cast<uint32_t>(WAKE_INTERVAL_SEC) + 120U;
 
   // Helper to publish one discovery config
-  auto pub_disc = [&](const char* key, const char* name, const char* unit, const char* dev_class,
+  auto pub_disc = [&](const char* key, const char* name, const char* unit,
+    const char* dev_class,
                       const char* state_suffix) {
     char discTopic[192];
     snprintf(discTopic, sizeof(discTopic), "homeassistant/sensor/%s_%s/config",
 
-             g_client_id, key);
+
+
+
+
+
+    g_client_id, key);
     char stateTopic[192];
-    snprintf(stateTopic,
-              sizeof(stateTopic),
-              "%s/%s",
-              MQTT_PUB_BASE,
+    snprintf(stateTopic, sizeof(stateTopic), "%s/%s", MQTT_PUB_BASE,
+    state_suffix);
     char payload[640];
     // Choose a suggested display precision based on unit to stabilize graphs
-    //     in
+//     in
     // HA
     int suggestedPrecision = 0;
     if (strcmp(unit, "°F") == 0)
@@ -1214,48 +1062,39 @@ inline void net_publish_ha_discovery() {
       suggestedPrecision = 2;  // Volts: two decimals
     else if (strcmp(unit, "hPa") == 0)
       suggestedPrecision = 1;  // Pressure: one decimal
-                              //     else
-    suggestedPrecision = 0;   // Percent and others: integer
+//     else
+      suggestedPrecision = 0;  // Percent and others: integer
     // Full HA discovery keys for maximum compatibility; retained
     snprintf(payload, sizeof(payload),
 
-             "{\"name\":\"%s\",\"unique_id\":\"%s_%s\",\"state_topic\":\"%s\","
-             //              "\"availability_topic\":\"%s\",\"unit_of_measurement\":\"%s\","
+    "{\"name\":\"%s\",\"unique_id\":\"%s_%s\",\"state_topic\":\"%s\","
+//              "\"availability_topic\":\"%s\",\"unit_of_measurement\":\"%s\","
              "\"device_class\":\"%s\",\"state_class\":\"measurement\","
-             //              "\"suggested_display_precision\":%d,\"expire_after\":%u,"
+//              "\"suggested_display_precision\":%d,\"expire_after\":%u,"
              "\"device\":{\"identifiers\":[\"%s\"],\"name\":\"ESP32 Room Node: "
-             //              "%s\",\"manufacturer\":\"DIY\",\"model\":\"Feather "
+//              "%s\",\"manufacturer\":\"DIY\",\"model\":\"Feather "
              "ESP32-S2\",\"sw_version\":\"%s\"}}",
              name, g_client_id, key, stateTopic, availTopic, unit, dev_class,
-             //     suggestedPrecision,
-             static_cast<unsigned>(expireAfterSec),
-                                    g_client_id,
-                                    ROOM_NAME,
+//     suggestedPrecision,
+             static_cast<unsigned>(expireAfterSec), g_client_id, ROOM_NAME,
+    FW_VERSION);
     g_mqtt.publish(discTopic, payload, true);
     Serial.print("HA discovery -> ");
     Serial.println(discTopic);
   };
 
-  pub_disc("inside_temp",
-            "Inside Temperature",
-            "°F",
-            "temperature",
+  pub_disc("inside_temp", "Inside Temperature", "°F", "temperature",
+    "inside/temp");
   pub_disc("inside_hum", "Inside Humidity", "%", "humidity", "inside/hum");
-  pub_disc("inside_pressure",
-            "Barometric Pressure",
-            "hPa",
-            "pressure",
-  pub_disc("battery_volts",
-            "Battery Voltage",
-            "V",
-            "voltage",
+  pub_disc("inside_pressure", "Barometric Pressure", "hPa", "pressure",
+    "inside/pressure");
+  pub_disc("battery_volts", "Battery Voltage", "V", "voltage",
+    "battery/voltage");
   pub_disc("battery_pct", "Battery", "%", "battery", "battery/percent");
   // Additional diagnostics published each wake
   pub_disc("wifi_rssi", "WiFi RSSI", "dBm", "signal_strength", "wifi/rssi");
-  pub_disc("publish_ms",
-            "Publish Latency",
-            "ms",
-            "duration",
+  pub_disc("publish_ms", "Publish Latency", "ms", "duration",
+    "debug/publish_ms");
 }
 
 inline bool net_wifi_is_connected() { return WiFi.isConnected(); }
@@ -1266,7 +1105,8 @@ inline void net_prepare_for_sleep() {
   // Publish availability offline and disconnect cleanly before deep sleep
   if (g_mqtt.connected()) {
     char availTopic[128];
-    snprintf(availTopic, sizeof(availTopic), "%s/availability", MQTT_PUB_BASE);
+    snprintf(availTopic, sizeof(availTopic), "%s/availability",
+    MQTT_PUB_BASE);
     g_mqtt.publish(availTopic, "offline", true);
     mqtt_pump(100);
     g_mqtt.disconnect();
