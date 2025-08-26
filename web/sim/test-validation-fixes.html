@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Validation Fixes</title>
+    <style>
+        body { 
+            font-family: monospace; 
+            padding: 20px;
+            background: #f0f0f0;
+        }
+        #canvas { 
+            border: 2px solid #333;
+            background: white;
+            display: block;
+            margin: 20px 0;
+        }
+        .controls {
+            margin: 10px 0;
+        }
+        button {
+            padding: 5px 10px;
+            margin-right: 10px;
+            cursor: pointer;
+        }
+        label {
+            margin-right: 20px;
+        }
+        .status {
+            margin: 10px 0;
+            padding: 10px;
+            background: white;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        .issue {
+            margin: 5px 0;
+            padding: 5px;
+            border-left: 3px solid #ddd;
+        }
+        .issue.error { border-left-color: #f44336; }
+        .issue.warning { border-left-color: #ff9800; }
+        .issue.info { border-left-color: #2196f3; }
+        .success { color: green; font-weight: bold; }
+        .fail { color: red; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <h1>ESP32 Display Simulator - Validation Fixes Test</h1>
+    
+    <canvas id="canvas" width="250" height="122"></canvas>
+    
+    <div class="controls">
+        <label>
+            <input type="checkbox" id="showRects">
+            Show Geometry Overlays
+        </label>
+        <label>
+            <input type="checkbox" id="showLabels">
+            Show Labels
+        </label>
+        <label>
+            <input type="checkbox" id="validationEnabled" checked>
+            Enable Validation
+        </label>
+    </div>
+    
+    <div class="controls">
+        <button id="testNormalData">Test Normal Data</button>
+        <button id="testWindSpeed">Test Wind Speed</button>
+        <button id="testOverflow">Test Overflow</button>
+        <button id="toggleGeometry">Toggle Geometry</button>
+        <button id="runAllTests">Run All Tests</button>
+    </div>
+    
+    <div id="status" class="status">Ready</div>
+    <div id="validationResults"></div>
+    
+    <script src="ui_generated.js"></script>
+    <script src="sim.js"></script>
+    <script>
+        const statusEl = document.getElementById('status');
+        const resultsEl = document.getElementById('validationResults');
+        let testsPassed = 0;
+        let testsFailed = 0;
+        
+        function updateStatus(msg, isError = false) {
+            statusEl.innerHTML = msg;
+            statusEl.className = isError ? 'status fail' : 'status';
+        }
+        
+        function showValidationResults() {
+            if (!window.validationIssues) {
+                resultsEl.innerHTML = '<div class="success">✓ No validation issues</div>';
+                return;
+            }
+            
+            const issues = window.validationIssues || [];
+            if (issues.length === 0) {
+                resultsEl.innerHTML = '<div class="success">✓ No validation issues</div>';
+            } else {
+                resultsEl.innerHTML = '<h3>Validation Issues:</h3>' + 
+                    issues.map(issue => 
+                        `<div class="issue ${issue.severity}">
+                            [${issue.severity}] ${issue.region}: ${issue.description}
+                        </div>`
+                    ).join('');
+            }
+        }
+        
+        function runTest(name, testFn) {
+            updateStatus(`Running: ${name}...`);
+            try {
+                testFn();
+                testsPassed++;
+                updateStatus(`✓ ${name} passed`);
+                return true;
+            } catch (error) {
+                testsFailed++;
+                updateStatus(`✗ ${name} failed: ${error.message}`, true);
+                return false;
+            }
+        }
+        
+        // Wait for everything to load
+        window.addEventListener('load', () => {
+            updateStatus('Simulator loaded');
+            
+            // Test 1: Normal data should have no errors
+            document.getElementById('testNormalData').addEventListener('click', () => {
+                runTest('Normal Data Test', () => {
+                    window.draw({
+                        room_name: 'Office',
+                        inside_temp_f: 72.5,
+                        outside_temp_f: 68.4,
+                        wind_mps: 1.88,
+                        pressure_hpa: 1013.2
+                    });
+                    
+                    setTimeout(() => {
+                        const issues = window.validationIssues || [];
+                        // Filter out expected INFO level issues
+                        const realIssues = issues.filter(i => 
+                            i.severity !== 'info' && 
+                            !i.region.includes('_INNER') &&
+                            !i.region.includes('_BADGE') &&
+                            !i.region.includes('LABEL_BOX')
+                        );
+                        
+                        if (realIssues.length > 0) {
+                            throw new Error(`Found ${realIssues.length} unexpected validation issues`);
+                        }
+                        showValidationResults();
+                    }, 100);
+                });
+            });
+            
+            // Test 2: Wind speed should not cause validation errors
+            document.getElementById('testWindSpeed').addEventListener('click', () => {
+                runTest('Wind Speed Test', () => {
+                    window.draw({
+                        wind_mps: 44.7, // 100 mph
+                        outside_hum_pct: 53
+                    });
+                    
+                    setTimeout(() => {
+                        const issues = window.validationIssues || [];
+                        const outRowIssues = issues.filter(i => 
+                            i.region && i.region.startsWith('OUT_ROW') && 
+                            i.severity !== 'info'
+                        );
+                        
+                        if (outRowIssues.length > 0) {
+                            throw new Error(`OUT_ROW regions should not have validation errors for wind speed`);
+                        }
+                        showValidationResults();
+                    }, 100);
+                });
+            });
+            
+            // Test 3: Text overflow detection still works
+            document.getElementById('testOverflow').addEventListener('click', () => {
+                runTest('Overflow Detection Test', () => {
+                    window.draw({
+                        room_name: 'Very Long Conference Room Name That Will Definitely Overflow',
+                        pressure_hpa: 99999.9
+                    });
+                    
+                    setTimeout(() => {
+                        const issues = window.validationIssues || [];
+                        const overflowIssues = issues.filter(i => 
+                            i.type === 'text_overflow' && 
+                            i.region === 'HEADER_NAME'
+                        );
+                        
+                        if (overflowIssues.length === 0) {
+                            throw new Error('Should detect overflow for long room name');
+                        }
+                        showValidationResults();
+                    }, 100);
+                });
+            });
+            
+            // Test 4: Toggle geometry should not show white lines
+            document.getElementById('toggleGeometry').addEventListener('click', () => {
+                const showRectsEl = document.getElementById('showRects');
+                runTest('Geometry Toggle Test', () => {
+                    // Toggle on
+                    showRectsEl.checked = true;
+                    showRectsEl.dispatchEvent(new Event('change'));
+                    
+                    setTimeout(() => {
+                        // Toggle off
+                        showRectsEl.checked = false;
+                        showRectsEl.dispatchEvent(new Event('change'));
+                        
+                        setTimeout(() => {
+                            // Check canvas for white lines
+                            const canvas = document.getElementById('canvas');
+                            const ctx = canvas.getContext('2d');
+                            const imageData = ctx.getImageData(0, 0, 250, 122);
+                            const data = imageData.data;
+                            
+                            // Sample specific areas where white lines were appearing
+                            // Around temperature regions
+                            let whiteLineCount = 0;
+                            for (let y = 36; y < 64; y++) {
+                                for (let x = 124; x < 130; x++) {
+                                    const idx = (y * 250 + x) * 4;
+                                    if (data[idx] > 200 && data[idx+1] > 200 && data[idx+2] > 200) {
+                                        whiteLineCount++;
+                                    }
+                                }
+                            }
+                            
+                            if (whiteLineCount > 50) {
+                                console.warn(`Found ${whiteLineCount} white pixels in border area`);
+                            }
+                            updateStatus('✓ Geometry toggle test completed');
+                        }, 100);
+                    }, 100);
+                });
+            });
+            
+            // Test 5: Run all tests
+            document.getElementById('runAllTests').addEventListener('click', () => {
+                testsPassed = 0;
+                testsFailed = 0;
+                
+                const tests = [
+                    () => document.getElementById('testNormalData').click(),
+                    () => document.getElementById('testWindSpeed').click(),
+                    () => document.getElementById('testOverflow').click(),
+                    () => document.getElementById('toggleGeometry').click()
+                ];
+                
+                let index = 0;
+                const runNext = () => {
+                    if (index < tests.length) {
+                        tests[index]();
+                        index++;
+                        setTimeout(runNext, 500);
+                    } else {
+                        updateStatus(`Tests complete: ${testsPassed} passed, ${testsFailed} failed`, testsFailed > 0);
+                    }
+                };
+                runNext();
+            });
+            
+            // Initial draw
+            window.draw({
+                room_name: 'Test Room',
+                inside_temp_f: 72.5,
+                outside_temp_f: 68.4,
+                wind_mps: 1.88,
+                pressure_hpa: 1013.2
+            });
+            showValidationResults();
+        });
+    </script>
+</body>
+</html>

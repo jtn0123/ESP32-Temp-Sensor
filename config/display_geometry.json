@@ -1,6 +1,6 @@
 {
   "layout_version": 1,
-  "layout_crc": "0x35C2E727",
+  "layout_crc": "0x5297704E",
   "canvas": {
     "w": 250,
     "h": 122
@@ -89,7 +89,7 @@
       160,
       32
     ],
-    "FOOTER_R": [
+    "FOOTER_WEATHER": [
       170,
       90,
       74,

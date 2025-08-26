@@ -331,7 +331,7 @@
     const fields = [
       'room_name', 'time_hhmm', 'fw_version',
       'inside_temp_f', 'inside_hum_pct', 'pressure_hpa', 'co2_ppm',
-      'outside_temp_f', 'outside_hum_pct', 'wind_mph', 'weather', 'uv_index', 'rain_mm',
+      'outside_temp_f', 'outside_hum_pct', 'outside_pressure_hpa', 'wind_mph', 'weather', 'uv_index', 'rain_mm',
       'battery_percent', 'battery_voltage', 'ip', 'days'
     ];
     

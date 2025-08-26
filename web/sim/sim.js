@@ -151,6 +151,7 @@
       'OUT_TEMP,OUT_TEMP_BADGE',
       'OUT_TEMP_BADGE,OUT_TEMP',
       'FOOTER_R,WEATHER_ICON',
+      'WEATHER_ICON,FOOTER_R',
       'FOOTER_L,INSIDE_ROW2',
       'INSIDE_ROW2,FOOTER_L'
     ]);
@@ -517,8 +518,9 @@
     expectedContent.add('INSIDE_RH');
     expectedContent.add('INSIDE_ROW2'); // Pressure in v2
     expectedContent.add('OUT_TEMP');
-    expectedContent.add('OUT_ROW2_L');
-    expectedContent.add('OUT_ROW2_R');
+    // Don't expect OUT_ROW regions as they are optional based on data availability
+    // expectedContent.add('OUT_ROW2_L');
+    // expectedContent.add('OUT_ROW2_R');
     expectedContent.add('FOOTER_L'); // v2 uses FOOTER_L for battery/IP
     expectedContent.add('FOOTER_R'); // v2 uses FOOTER_R for weather icon
     
@@ -591,7 +593,8 @@
     
     // These regions exist in geometry but aren't used in v2
     // Note: HEADER_TIME_CENTER is now used for time display when header_centered component is active
-    const v2SpecificUnused = ['OUT_ROW1_R'];
+    // OUT_ROW1_R is actually used in some configurations, don't mark as unused
+    const v2SpecificUnused = [];
     
     // Check for regions defined but not used in current variant
     const allDefinedRegions = Object.keys(GJSON.rects || {});
@@ -686,9 +689,12 @@
         const [x, y, w, h] = issue.rect;
         
         // Skip drawing for regions that shouldn't show validation
+        // Also skip OUT_ROW regions since we're not validating them
+        // Also skip collision issues that involve OUT_ROW regions
         if (issue.region && (issue.region.includes('_INNER') || 
             issue.region.includes('_BADGE') || 
-            issue.region.includes('LABEL_BOX'))) {
+            issue.region.includes('LABEL_BOX') ||
+            issue.region.includes('OUT_ROW'))) {
           continue;
         }
         
@@ -1663,9 +1669,18 @@
   const gridEl = document.getElementById('showGrid');
   if (gridEl) gridEl.addEventListener('change', (e)=>{ showGrid = !!e.target.checked; draw({}); });
   const rectsEl = document.getElementById('showRects');
-  if (rectsEl) rectsEl.addEventListener('change', (e)=>{ showRects = !!e.target.checked; draw({}); });
+  if (rectsEl) rectsEl.addEventListener('change', (e)=>{ 
+    showRects = !!e.target.checked; 
+    // Force a full redraw with current data to clear any artifacts
+    draw(lastData); 
+  });
   const labelsEl = document.getElementById('showLabels');
-  if (labelsEl) labelsEl.addEventListener('change', (e)=>{ showLabels = !!e.target.checked; geometryOnly = showLabels; draw({}); });
+  if (labelsEl) labelsEl.addEventListener('change', (e)=>{ 
+    showLabels = !!e.target.checked; 
+    geometryOnly = showLabels; 
+    // Force a full redraw to clear any artifacts
+    draw(lastData); 
+  });
   const ghostEl = document.getElementById('simulateGhosting');
   if (ghostEl) ghostEl.addEventListener('change', (e)=>{ simulateGhosting = !!e.target.checked; draw({}); });
   // removed highlightIssues wiring

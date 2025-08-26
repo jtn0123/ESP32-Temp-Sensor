@@ -43,6 +43,7 @@ const UiOpHeader kOps_outside[] = {
     { OP_TEMPGROUPCENTERED, 12, 0, 2, 0, 0, 0, 0, "outside_temp_f", NULL },
     { OP_ICONIN, 13, 0, 0, 0, 0, 0, 0, "weather", NULL },
     { OP_TEXT, 8, 2, 0, 0, 0, 0, 0, "{weather_short}", NULL },
+    { OP_TEXT, 9, 2, 0, 0, 0, 0, 0, "{outside_pressure_hpa:.0f} hPa", NULL },
     { OP_TEXT, 10, 2, 0, 0, 0, 0, 0, "{outside_hum_pct}% RH", NULL },
     { OP_TEXT, 11, 2, 0, 0, 0, 0, 0, "{wind_mps->mph:.1f} mph", NULL },
 };
@@ -53,7 +54,6 @@ const UiOpHeader kOps_footer_split[] = {
     { OP_TEXT, 255, 2, 0, 26, 86, 0, 0, "Batt {battery_voltage:.2f}V {battery_percent}%", NULL },
     { OP_TEXT, 255, 2, 0, 26, 96, 0, 0, "~{days}d", NULL },
     { OP_TEXTCENTEREDIN, 0, 2, 2, 22, 0, 0, 0, "IP {ip}", NULL },
-    { OP_TEXTCENTEREDIN, 1, 2, 2, 11, 0, 0, 0, "{weather}", NULL },
 };
 const int kOps_footer_split_count = sizeof(kOps_footer_split)/sizeof(kOps_footer_split[0]);
 

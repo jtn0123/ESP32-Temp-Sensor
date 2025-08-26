@@ -7,7 +7,7 @@
 namespace ui {
 enum RectId {
     RECT_FOOTER_L,
-    RECT_FOOTER_R,
+    RECT_FOOTER_WEATHER,
     RECT_HEADER_NAME,
     RECT_HEADER_TIME_CENTER,
     RECT_HEADER_VERSION,
@@ -62,8 +62,8 @@ static constexpr int kComponent_chrome_opcount = 6;
 static constexpr int kComponent_header_centered_opcount = 4;
 static constexpr int kComponent_header_opcount = 3;
 static constexpr int kComponent_inside_opcount = 4;
-static constexpr int kComponent_outside_opcount = 6;
-static constexpr int kComponent_footer_split_opcount = 5;
+static constexpr int kComponent_outside_opcount = 7;
+static constexpr int kComponent_footer_split_opcount = 4;
 static constexpr int kTotalOpCount = 28;
 
 struct ComponentOps { const UiOpHeader* ops; int count; const char* name; };

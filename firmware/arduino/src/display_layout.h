@@ -5,8 +5,8 @@
 
 // Layout identity for simulator ↔ firmware parity checks
 #define LAYOUT_VERSION 1
-#define LAYOUT_CRC 0x35C2E727u
-#define LAYOUT_MD5 "3ea32748e3118e1c74fa089e03e22788"
+#define LAYOUT_CRC 0x5297704Eu
+#define LAYOUT_MD5 "ca44557c67c8e341ee73e5fed05b5c08"
 
 // Display dimensions
 #define DISPLAY_WIDTH 250
@@ -26,7 +26,7 @@ static constexpr int RECT_OUT_ROW1_R[4] = { 177,  68,  64, 12};
 static constexpr int RECT_OUT_ROW2_L[4] = { 131,  78,  44, 12};
 static constexpr int RECT_OUT_ROW2_R[4] = { 177,  78,  44, 12};
 static constexpr int RECT_FOOTER_L[4] = {   6,  90, 160, 32};
-static constexpr int RECT_FOOTER_R[4] = { 170,  90,  74, 32};
+static constexpr int RECT_FOOTER_WEATHER[4] = { 170,  90,  74, 32};
 
 enum WeatherIconId {
     ICON_CLEAR = 0,
@@ -78,7 +78,7 @@ static_assert(78 + 12 <= DISPLAY_HEIGHT, "OUT_ROW2_R height");
 static_assert(RECT_FOOTER_L[0] >= 0 && RECT_FOOTER_L[1] >= 0, "FOOTER_L origin");
 static_assert(6 + 160 <= DISPLAY_WIDTH,  "FOOTER_L width");
 static_assert(90 + 32 <= DISPLAY_HEIGHT, "FOOTER_L height");
-static_assert(RECT_FOOTER_R[0] >= 0 && RECT_FOOTER_R[1] >= 0, "FOOTER_R origin");
-static_assert(170 + 74 <= DISPLAY_WIDTH,  "FOOTER_R width");
-static_assert(90 + 32 <= DISPLAY_HEIGHT, "FOOTER_R height");
+static_assert(RECT_FOOTER_WEATHER[0] >= 0 && RECT_FOOTER_WEATHER[1] >= 0, "FOOTER_WEATHER origin");
+static_assert(170 + 74 <= DISPLAY_WIDTH,  "FOOTER_WEATHER width");
+static_assert(90 + 32 <= DISPLAY_HEIGHT, "FOOTER_WEATHER height");
 
