@@ -15,7 +15,7 @@
     frameCount: 0
   };
 
-  // Test data scenarios
+  // Test data scenarios - expanded with more edge cases
   const testScenarios = {
     // Edge cases for text overflow
     text_overflow: {
@@ -26,6 +26,12 @@
         { name: "Long weather", data: { weather: "Thunderstorms with heavy rain and strong winds" }},
         { name: "Max pressure", data: { pressure_hpa: "9999.9" }},
         { name: "Long IP", data: { ip: "192.168.100.200" }},
+        { name: "Decimal precision", data: { 
+          inside_temp_f: "72.3456",
+          pressure_hpa: "1013.25678",
+          battery_voltage: "4.0123456"
+        }},
+        { name: "Very long version", data: { fw_version: "1.2.3-beta.456+build789" }},
         { name: "All max values", data: { 
           room_name: "Very Long Room Name Test",
           inside_temp_f: "999.9",
@@ -130,6 +136,82 @@
         { name: "Degrees", data: { inside_temp_f: "72.5°", outside_temp_f: "68.4°" }},
         { name: "Quotes", data: { weather: "light 'rain' expected" }},
         { name: "Math symbols", data: { room_name: "Room > 100 < 200" }}
+      ]
+    },
+    
+    // Refresh and power scenarios
+    refresh_scenarios: {
+      name: "Display Refresh",
+      scenarios: [
+        { name: "Minimal change", data: { time_hhmm: "10:33" }}, // Only time changes
+        { name: "Temperature only", data: { inside_temp_f: "72.6" }},
+        { name: "All sensors", data: { 
+          inside_temp_f: "73.0", 
+          inside_hum_pct: "48",
+          outside_temp_f: "69.0",
+          pressure_hpa: "1014.0"
+        }},
+        { name: "Weather change", data: { weather: "rain", wind_mph: "15.5" }},
+        { name: "Battery critical", data: { battery_percent: "3", battery_voltage: "3.2" }},
+        { name: "Network change", data: { ip: "10.0.0.1" }}
+      ]
+    },
+    
+    // Real-world data patterns
+    real_world: {
+      name: "Real World Data",
+      scenarios: [
+        { name: "Morning", data: { 
+          time_hhmm: "6:30",
+          inside_temp_f: "65.2",
+          inside_hum_pct: "52",
+          outside_temp_f: "48.5",
+          weather: "partly-cloudy"
+        }},
+        { name: "Hot afternoon", data: {
+          time_hhmm: "14:45",
+          inside_temp_f: "78.5",
+          inside_hum_pct: "35",
+          outside_temp_f: "95.2",
+          weather: "sunny",
+          wind_mph: "8.5"
+        }},
+        { name: "Rainy evening", data: {
+          time_hhmm: "19:20",
+          inside_temp_f: "72.0",
+          inside_hum_pct: "65",
+          outside_temp_f: "58.0",
+          weather: "rain",
+          pressure_hpa: "1008.5"
+        }},
+        { name: "Winter night", data: {
+          time_hhmm: "23:15",
+          inside_temp_f: "68.0",
+          inside_hum_pct: "28",
+          outside_temp_f: "12.5",
+          weather: "clear-night",
+          wind_mph: "2.0"
+        }},
+        { name: "Storm warning", data: {
+          inside_temp_f: "71.0",
+          outside_temp_f: "65.0",
+          pressure_hpa: "985.0",
+          weather: "thunderstorm",
+          wind_mph: "35.5"
+        }}
+      ]
+    },
+    
+    // Error states
+    error_states: {
+      name: "Error States",
+      scenarios: [
+        { name: "Sensor error", data: { inside_temp_f: "ERR", inside_hum_pct: "ERR" }},
+        { name: "Network down", data: { ip: "0.0.0.0", mqtt_status: "disconnected" }},
+        { name: "Invalid JSON", data: { room_name: null, time_hhmm: undefined }},
+        { name: "NaN values", data: { inside_temp_f: NaN, battery_percent: "NaN" }},
+        { name: "Empty strings", data: { room_name: "", weather: "", ip: "" }},
+        { name: "Negative battery", data: { battery_percent: "-10", battery_voltage: "-1" }}
       ]
     }
   };

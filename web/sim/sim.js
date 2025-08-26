@@ -88,37 +88,48 @@
   }
   
   // UI Validation Functions
-  function validateTextOverflow(text, rect, fontSize) {
+  function validateTextOverflow(text, rect, fontSize, weight = 'normal') {
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
-    ctx.font = `${fontSize}px ${FONT_STACK}`;
+    // Include font weight in measurement for accuracy
+    ctx.font = `${weight} ${fontSize}px ${FONT_STACK}`;
     const metrics = ctx.measureText(text);
     const textWidth = metrics.width;
-    // Use actual font metrics for more accurate height
-    const textHeight = fontSize; // Actual font size, not line height
+    
+    // Use more accurate font metrics including ascent/descent
+    const actualHeight = metrics.actualBoundingBoxAscent + metrics.actualBoundingBoxDescent || fontSize * 1.2;
     const [x, y, w, h] = rect;
     
     const issues = [];
     if (textWidth > w) {
       const overflow = textWidth - w;
       const pct = (overflow / w) * 100;
+      // More granular severity levels
+      let severity = 'warning';
+      if (pct > 50) severity = 'critical';
+      else if (pct > 25) severity = 'error';
+      else if (pct > 10) severity = 'warning';
+      else severity = 'info';
+      
       issues.push({
         type: 'text_overflow',
-        severity: pct > 50 ? 'critical' : pct > 20 ? 'error' : 'warning',
+        severity: severity,
         region: rect.name || 'unknown',
-        description: `Text overflows by ${overflow.toFixed(1)}px (${pct.toFixed(1)}%)`,
-        rect: rect
+        description: `Text "${text}" overflows by ${overflow.toFixed(1)}px (${pct.toFixed(1)}%)`,
+        rect: rect,
+        suggestion: pct > 25 ? 'Consider truncation or smaller font' : 'Minor overflow, may be acceptable'
       });
     }
-    if (textHeight > h) {
-      const overflow = textHeight - h;
+    if (actualHeight > h) {
+      const overflow = actualHeight - h;
       const pct = (overflow / h) * 100;
       issues.push({
-        type: 'text_overflow',
-        severity: pct > 50 ? 'error' : 'warning',
+        type: 'text_overflow_vertical',
+        severity: pct > 30 ? 'error' : 'warning',
         region: rect.name || 'unknown',
-        description: `Text height exceeds bounds by ${overflow.toFixed(1)}px`,
-        rect: rect
+        description: `Text height (${actualHeight.toFixed(1)}px) exceeds bounds by ${overflow.toFixed(1)}px`,
+        rect: rect,
+        suggestion: 'Reduce font size or increase region height'
       });
     }
     return issues;
@@ -144,6 +155,18 @@
       'INSIDE_ROW2,FOOTER_L'
     ]);
     
+    // Region importance weights for severity calculation
+    const regionImportance = {
+      'INSIDE_TEMP': 10,
+      'OUT_TEMP': 10,
+      'HEADER_NAME': 8,
+      'INSIDE_RH': 7,
+      'OUT_ROW1_L': 6,
+      'OUT_ROW2_L': 6,
+      'FOOTER_L': 5,
+      'FOOTER_R': 5
+    };
+    
     const names = Object.keys(rects);
     for (let i = 0; i < names.length; i++) {
       for (let j = i + 1; j < names.length; j++) {
@@ -162,15 +185,29 @@
             const smaller = Math.min(w1 * h1, w2 * h2);
             const pct = (area / smaller) * 100;
             
-            if (pct > 10) {
-              issues.push({
-                type: 'collision',
-                severity: pct > 50 ? 'error' : 'warning',
-                region: pair,
-                description: `${name1} and ${name2} overlap by ${pct.toFixed(1)}%`,
-                rect: [Math.max(x1, x2), Math.max(y1, y2), overlapX, overlapY]
-              });
-            }
+            // Calculate importance factor
+            const importance1 = regionImportance[name1] || 1;
+            const importance2 = regionImportance[name2] || 1;
+            const maxImportance = Math.max(importance1, importance2);
+            
+            // Adjust severity based on overlap percentage and importance
+            let severity;
+            if (pct > 75) severity = 'critical';
+            else if (pct > 50 || (pct > 25 && maxImportance >= 8)) severity = 'error';
+            else if (pct > 20 || (pct > 10 && maxImportance >= 6)) severity = 'warning';
+            else if (pct > 5) severity = 'info';
+            else continue; // Skip very minor overlaps
+            
+            issues.push({
+              type: 'collision',
+              severity: severity,
+              region: pair,
+              description: `${name1} and ${name2} overlap by ${pct.toFixed(1)}% (${overlapX}x${overlapY}px)`,
+              rect: [Math.max(x1, x2), Math.max(y1, y2), overlapX, overlapY],
+              suggestion: pct > 50 ? 'Major overlap - adjust layout spacing' : 
+                         pct > 25 ? 'Significant overlap - consider reducing element sizes' :
+                         'Minor overlap - may be intentional for visual effect'
+            });
           }
         }
       }
@@ -207,23 +244,197 @@
       badge.style.color = 'black';
     }
     
-    // Update results list
+    // Update results list with enhanced formatting and suggestions
     if (validationIssues.length === 0) {
       results.innerHTML = '<div style="color:#666;">No validation issues detected</div>';
     } else {
-      const html = validationIssues.map(issue => {
-        const icon = {
-          critical: '[CRITICAL]',
-          error: '[ERROR]',
-          warning: '[WARNING]'
-        }[issue.severity] || '[INFO]';
+      const grouped = {};
+      validationIssues.forEach(issue => {
+        if (!grouped[issue.severity]) grouped[issue.severity] = [];
+        grouped[issue.severity].push(issue);
+      });
+      
+      let html = '';
+      const severityOrder = ['critical', 'error', 'warning', 'info'];
+      const severityColors = {
+        critical: '#ff4444',
+        error: '#ff8800',
+        warning: '#ffbb00',
+        info: '#4488ff'
+      };
+      
+      severityOrder.forEach(severity => {
+        if (!grouped[severity]) return;
         
-        return `<div style="margin-bottom:4px;">
-          ${icon} <strong>[${issue.region}]</strong> ${issue.description}
-        </div>`;
-      }).join('');
+        html += `<div style="margin-top:8px;border-left:3px solid ${severityColors[severity]};padding-left:8px;">`;
+        grouped[severity].forEach(issue => {
+          const icon = {
+            critical: '🔴',
+            error: '🟠',
+            warning: '🟡',
+            info: 'ℹ️'
+          }[issue.severity];
+          
+          html += `<div style="margin-bottom:6px;">
+            <div><span style="font-weight:bold;">${icon} ${issue.type.replace(/_/g, ' ').toUpperCase()}</span> 
+            <span style="color:#666;font-size:10px;">[${issue.region}]</span></div>
+            <div style="margin-left:20px;font-size:11px;">${issue.description}</div>`;
+          
+          if (issue.suggestion) {
+            html += `<div style="margin-left:20px;font-size:10px;color:#666;font-style:italic;">
+              💡 ${issue.suggestion}</div>`;
+          }
+          
+          // Add action buttons for certain issues
+          if (issue.type === 'text_overflow' && issue.severity !== 'info') {
+            html += `<div style="margin-left:20px;margin-top:2px;">
+              <button onclick="window.applyValidationFix('truncate', '${issue.region}')" 
+                      style="font-size:10px;padding:1px 4px;">Apply Truncation</button>
+              <button onclick="window.applyValidationFix('smaller_font', '${issue.region}')" 
+                      style="font-size:10px;padding:1px 4px;">Reduce Font</button>
+            </div>`;
+          }
+          
+          html += '</div>';
+        });
+        html += '</div>';
+      });
+      
       results.innerHTML = html;
     }
+  }
+  
+  // Validate data ranges and formats
+  function validateDataRanges(data) {
+    const issues = [];
+    
+    // Temperature range checks
+    if (data.inside_temp_f !== undefined) {
+      const temp = parseFloat(data.inside_temp_f);
+      if (isNaN(temp)) {
+        issues.push({
+          type: 'invalid_data_format',
+          severity: 'error',
+          region: 'INSIDE_TEMP',
+          description: `Invalid temperature format: "${data.inside_temp_f}"`,
+          suggestion: 'Use numeric value'
+        });
+      } else if (temp < -40 || temp > 150) {
+        issues.push({
+          type: 'data_out_of_range',
+          severity: 'warning',
+          region: 'INSIDE_TEMP',
+          description: `Temperature ${temp}°F is outside realistic range (-40 to 150°F)`,
+          suggestion: 'Check sensor calibration'
+        });
+      }
+    }
+    
+    // Humidity range checks
+    if (data.inside_hum_pct !== undefined) {
+      const hum = parseFloat(data.inside_hum_pct);
+      if (!isNaN(hum) && (hum < 0 || hum > 100)) {
+        issues.push({
+          type: 'data_out_of_range',
+          severity: 'error',
+          region: 'INSIDE_RH',
+          description: `Humidity ${hum}% is outside valid range (0-100%)`,
+          suggestion: 'Humidity must be between 0 and 100%'
+        });
+      }
+    }
+    
+    // Battery percentage checks
+    if (data.battery_percent !== undefined) {
+      const batt = parseFloat(data.battery_percent);
+      if (!isNaN(batt) && (batt < 0 || batt > 100)) {
+        issues.push({
+          type: 'data_out_of_range',
+          severity: 'warning',
+          region: 'FOOTER_L',
+          description: `Battery ${batt}% is outside valid range`,
+          suggestion: 'Battery percentage must be 0-100%'
+        });
+      }
+    }
+    
+    // Pressure range checks
+    if (data.pressure_hpa !== undefined) {
+      const pressure = parseFloat(data.pressure_hpa);
+      if (!isNaN(pressure) && (pressure < 850 || pressure > 1100)) {
+        issues.push({
+          type: 'data_out_of_range',
+          severity: 'warning',
+          region: 'INSIDE_ROW2',
+          description: `Pressure ${pressure} hPa is unusual (typical: 950-1050 hPa)`,
+          suggestion: 'Verify barometer reading'
+        });
+      }
+    }
+    
+    // CO2 range checks
+    if (data.co2_ppm !== undefined) {
+      const co2 = parseFloat(data.co2_ppm);
+      if (!isNaN(co2)) {
+        if (co2 < 400) {
+          issues.push({
+            type: 'data_out_of_range',
+            severity: 'info',
+            region: 'data',
+            description: `CO2 ${co2} ppm is below outdoor levels (400 ppm)`,
+            suggestion: 'Sensor may need calibration'
+          });
+        } else if (co2 > 5000) {
+          issues.push({
+            type: 'data_out_of_range',
+            severity: 'warning',
+            region: 'data',
+            description: `CO2 ${co2} ppm is dangerously high`,
+            suggestion: 'Check ventilation or sensor accuracy'
+          });
+        }
+      }
+    }
+    
+    validationIssues.push(...issues);
+    return issues;
+  }
+  
+  // Validate baseline alignment between related regions
+  function validateBaselineAlignment(renderedContent) {
+    const issues = [];
+    const alignmentGroups = [
+      ['INSIDE_TEMP', 'OUT_TEMP'],
+      ['INSIDE_RH', 'OUT_ROW2_L'],
+      ['HEADER_NAME', 'HEADER_VERSION'],
+      ['FOOTER_L', 'FOOTER_R']
+    ];
+    
+    for (const group of alignmentGroups) {
+      const baselines = [];
+      for (const regionName of group) {
+        if (renderedContent[regionName] && renderedContent[regionName].actualBounds) {
+          const bounds = renderedContent[regionName].actualBounds;
+          baselines.push({ region: regionName, y: bounds.y });
+        }
+      }
+      
+      if (baselines.length > 1) {
+        const maxDiff = Math.max(...baselines.map(b => b.y)) - Math.min(...baselines.map(b => b.y));
+        if (maxDiff > 2) { // Allow 2px tolerance
+          issues.push({
+            type: 'baseline_misalignment',
+            severity: maxDiff > 5 ? 'error' : 'warning',
+            region: group.join(' vs '),
+            description: `Baseline misalignment of ${maxDiff.toFixed(1)}px between ${group.join(' and ')}`,
+            suggestion: 'Adjust vertical positioning for consistent alignment',
+            rect: null
+          });
+        }
+      }
+    }
+    
+    return issues;
   }
   
   function runValidation() {
@@ -239,7 +450,7 @@
       if (GJSON.rects[regionName] && content.text) {
         const rect = GJSON.rects[regionName];
         rect.name = regionName;
-        const issues = validateTextOverflow(content.text, rect, content.fontSize || SIZE_SMALL);
+        const issues = validateTextOverflow(content.text, rect, content.fontSize || SIZE_SMALL, content.weight || 'normal');
         validationIssues.push(...issues);
         
         // Check for incomplete data (e.g., "mph" without a number, "%" without a value)
@@ -252,11 +463,27 @@
             severity: 'warning',
             region: regionName,
             description: `Region shows units without value: "${text}"`,
-            rect: rect
+            rect: rect,
+            suggestion: 'Check data source or add fallback value'
+          });
+        }
+        
+        // Check for truncated numbers
+        if (text.includes('...') && /\d/.test(text)) {
+          validationIssues.push({
+            type: 'truncated_number',
+            severity: 'error',
+            region: regionName,
+            description: `Number appears truncated: "${text}"`,
+            rect: rect,
+            suggestion: 'Increase region width or reduce decimal places'
           });
         }
       }
     }
+    
+    // Check baseline alignment
+    validationIssues.push(...validateBaselineAlignment(renderedContent));
     
     // Check for empty regions that should have content (varies by variant)
     const variant = QS.get('variant') || (window.UI_SPEC && window.UI_SPEC.defaultVariant) || 'v2';
@@ -374,17 +601,52 @@
       }
     }
     
-    // Check for missing data fields
+    // Check for missing data fields with better categorization
     if (missingDataFields.size > 0) {
       const fields = Array.from(missingDataFields).sort();
-      validationIssues.push({
-        type: 'missing_data',
-        severity: 'info',
-        region: 'data',
-        description: `Missing data fields: ${fields.join(', ')}`,
-        rect: null
-      });
+      const criticalFields = ['inside_temp_f', 'room_name'];
+      const importantFields = ['outside_temp_f', 'inside_hum_pct', 'battery_percent'];
+      
+      const missingCritical = fields.filter(f => criticalFields.includes(f));
+      const missingImportant = fields.filter(f => importantFields.includes(f));
+      
+      if (missingCritical.length > 0) {
+        validationIssues.push({
+          type: 'missing_critical_data',
+          severity: 'error',
+          region: 'data',
+          description: `Missing critical data: ${missingCritical.join(', ')}`,
+          rect: null,
+          suggestion: 'These fields are essential for basic functionality'
+        });
+      }
+      
+      if (missingImportant.length > 0) {
+        validationIssues.push({
+          type: 'missing_important_data',
+          severity: 'warning',
+          region: 'data',
+          description: `Missing important data: ${missingImportant.join(', ')}`,
+          rect: null,
+          suggestion: 'Consider adding fallback values or placeholder text'
+        });
+      }
+      
+      const others = fields.filter(f => !criticalFields.includes(f) && !importantFields.includes(f));
+      if (others.length > 0) {
+        validationIssues.push({
+          type: 'missing_data',
+          severity: 'info',
+          region: 'data',
+          description: `Missing optional data: ${others.join(', ')}`,
+          rect: null,
+          suggestion: 'Optional fields - display may work without them'
+        });
+      }
     }
+    
+    // Validate data ranges and formats
+    validateDataRanges(lastData);
     
     // Update validation UI
     updateValidationDisplay();
@@ -1192,15 +1454,39 @@
       applyOneBitThreshold();
     }
     if (simulateGhosting){
-      // Light residue effect from previous frame: draw faint stipple
+      // Enhanced eInk ghosting simulation
       const img = ctx.getImageData(0,0,WIDTH,HEIGHT);
       const d = img.data;
+      
+      // Multiple ghosting effects for realism
       for (let i=0;i<d.length;i+=4){
-        // randomly darken a tiny subset of white pixels to simulate residue
+        const x = (i/4) % WIDTH;
+        const y = Math.floor((i/4) / WIDTH);
+        
+        // 1. Previous image retention (more pronounced near edges)
         if (d[i] === 255){
-          if ((i % 97) === 0) { d[i]=d[i+1]=d[i+2]=220; }
+          const edgeDist = Math.min(x, WIDTH-x, y, HEIGHT-y);
+          const edgeFactor = edgeDist < 20 ? 0.15 : 0.05;
+          if (Math.random() < edgeFactor) {
+            const ghost = 255 - Math.floor(Math.random() * 35 + 10);
+            d[i]=d[i+1]=d[i+2]=ghost;
+          }
+        }
+        
+        // 2. Partial refresh artifacts (horizontal bands)
+        if (y % 32 === 0 || y % 32 === 31) { // Refresh boundaries
+          if (d[i] === 255 && Math.random() < 0.1) {
+            d[i]=d[i+1]=d[i+2]=240;
+          }
+        }
+        
+        // 3. Voltage-dependent contrast variation
+        const contrastNoise = Math.sin(x * 0.1) * Math.cos(y * 0.1) * 10;
+        if (d[i] === 0) {
+          d[i]=d[i+1]=d[i+2]=Math.max(0, Math.min(30, Math.floor(contrastNoise)));
         }
       }
+      
       ctx.putImageData(img,0,0);
       applyOneBitThreshold();
     }
@@ -1542,6 +1828,40 @@
     });
   }
   
+  // Function to apply validation fixes
+  function applyValidationFix(fixType, region) {
+    console.log(`Applying fix: ${fixType} to region: ${region}`);
+    
+    if (fixType === 'truncate') {
+      // Find the data field for this region and truncate it
+      if (region === 'HEADER_NAME' && lastData.room_name) {
+        const maxLen = 15; // Reasonable max for header
+        if (lastData.room_name.length > maxLen) {
+          lastData.room_name = lastData.room_name.substring(0, maxLen - 3) + '...';
+          draw(lastData);
+          debugLog(`Truncated room name to fit`, 'success');
+        }
+      }
+    } else if (fixType === 'smaller_font') {
+      // This would need firmware changes, so just log suggestion
+      debugLog(`Font size reduction would require firmware update for ${region}`, 'info');
+    }
+  }
+  
+  // Helper function for debug logging
+  function debugLog(message, type = 'info') {
+    const debugConsole = document.getElementById('debugConsole');
+    if (debugConsole) {
+      const timestamp = new Date().toTimeString().slice(0,8);
+      const entry = document.createElement('div');
+      entry.style.fontSize = '10px';
+      entry.innerHTML = `${timestamp} [${type.toUpperCase()}] ${message}`;
+      debugConsole.appendChild(entry);
+      debugConsole.scrollTop = debugConsole.scrollHeight;
+    }
+    console.log(`[${type}] ${message}`);
+  }
+  
   // Expose critical functions to global scope
   if (typeof window !== 'undefined') {
     window.draw = draw;
@@ -1550,6 +1870,8 @@
     window.lastData = lastData;
     window.initCanvas = initCanvas;
     window.load = load;
+    window.applyValidationFix = applyValidationFix;
+    window.debugLog = debugLog;
     
     console.log('Simulator functions exposed to window');
   }

@@ -199,7 +199,9 @@ def test_validation_report_generation():
                 "error": 1,
                 "warning": 1,
                 "info": 0
-            }
+            },
+            "regions_with_issues": 2,
+            "clean_regions": 8
         },
         screenshots={}
     )
