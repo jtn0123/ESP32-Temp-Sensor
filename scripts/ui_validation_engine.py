@@ -240,7 +240,10 @@ class UIValidationEngine:
                         issue_type=ValidationType.TEXT_OVERFLOW,
                         severity=severity,
                         region=region.name,
-                        description=f"Text overflows vertically by {overflow_px:.1f}px ({overflow_pct:.1f}%)",
+                        description=(
+                            f"Text overflows vertically by {overflow_px:.1f}px "
+                            f"({overflow_pct:.1f}%)"
+                        ),
                         coordinates=region.rect,
                         actual_value=f"{text_height:.1f}px",
                         expected_value=f"<={rect_height}px"
@@ -254,7 +257,9 @@ class UIValidationEngine:
 
         return issues
 
-    def validate_content_bounds(self, img: np.ndarray, region: RegionValidation) -> List[ValidationIssue]:
+    def validate_content_bounds(
+        self, img: np.ndarray, region: RegionValidation
+    ) -> List[ValidationIssue]:
         """Validate that actual content stays within region bounds"""
         issues = []
         x, y, w, h = region.rect
@@ -367,13 +372,22 @@ class UIValidationEngine:
                         desc = f"Content collision between {region1.name} and {region2.name}"
                     elif overlap_pct > 50:
                         severity = ValidationSeverity.ERROR
-                        desc = f"Major overlap ({overlap_pct:.1f}%) between {region1.name} and {region2.name}"
+                        desc = (
+                            f"Major overlap ({overlap_pct:.1f}%) between "
+                            f"{region1.name} and {region2.name}"
+                        )
                     elif overlap_pct > 10:
                         severity = ValidationSeverity.WARNING
-                        desc = f"Overlap ({overlap_pct:.1f}%) between {region1.name} and {region2.name}"
+                        desc = (
+                            f"Overlap ({overlap_pct:.1f}%) between "
+                            f"{region1.name} and {region2.name}"
+                        )
                     else:
                         severity = ValidationSeverity.INFO
-                        desc = f"Minor overlap ({overlap_pct:.1f}%) between {region1.name} and {region2.name}"
+                        desc = (
+                            f"Minor overlap ({overlap_pct:.1f}%) between "
+                            f"{region1.name} and {region2.name}"
+                        )
 
                     issues.append(ValidationIssue(
                         issue_type=ValidationType.COLLISION,
@@ -400,7 +414,10 @@ class UIValidationEngine:
                     issue_type=ValidationType.MISALIGNMENT,
                     severity=ValidationSeverity.WARNING,
                     region=",".join([r.name for r in inside_regions]),
-                    description=f"Inside elements not left-aligned: x positions {sorted(x_positions)}",
+                    description=(
+                        f"Inside elements not left-aligned: x positions "
+                        f"{sorted(x_positions)}"
+                    ),
                     actual_value=str(sorted(x_positions)),
                     expected_value=str(min(x_positions))
                 ))
@@ -557,10 +574,13 @@ class UIValidationEngine:
                     screenshot = self.capture_screenshot(page)
                     screenshots[scenario['name']] = screenshot
 
-                    # Get regions from UI spec
+                    # Get regions from UI spec, filtering out internal helper rectangles
                     regions = {}
                     if self.ui_spec and "rects" in self.ui_spec:
                         for name, rect in self.ui_spec["rects"].items():
+                            # Skip internal helper rectangles - these are implementation details
+                            if self._is_internal_helper_rect(name):
+                                continue
                             regions[name] = RegionValidation(
                                 name=name,
                                 rect=tuple(rect),
@@ -629,6 +649,10 @@ class UIValidationEngine:
             screenshots=screenshots
         )
 
+    def _is_internal_helper_rect(self, name: str) -> bool:
+        """Check if a rectangle is an internal helper (not a real display region)"""
+        return '_INNER' in name or '_BADGE' in name or 'LABEL_BOX' in name
+    
     def _categorize_region(self, name: str) -> str:
         """Categorize a region by its name"""
         n = name.lower()

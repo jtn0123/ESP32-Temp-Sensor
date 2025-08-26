@@ -3,6 +3,11 @@
 ## Summary
 Comprehensive improvements to the ESP32 eInk display simulator for more realistic emulation and better issue detection.
 
+### Latest Update: Fixed Internal Rectangle Border Issue
+- **Problem**: Thick black borders were appearing around internal helper rectangles (_INNER, _BADGE, LABEL_BOX)
+- **Solution**: Filtered these internal implementation details from both display and validation
+- **Result**: Clean borders show only for actual display regions
+
 ## Key Improvements Implemented
 
 ### 1. Enhanced Text Measurement Accuracy

@@ -224,9 +224,13 @@ def get_weather_icon_tests() -> List[VisualTestCase]:
 def get_battery_state_tests() -> List[VisualTestCase]:
     """Test cases for battery states"""
     return [
-        VisualTestCase("battery_critical", "battery", {"battery_percent": 5, "battery_voltage": 3.3}),
+        VisualTestCase("battery_critical", "battery", {
+            "battery_percent": 5, "battery_voltage": 3.3
+        }),
         VisualTestCase("battery_low", "battery", {"battery_percent": 15, "battery_voltage": 3.5}),
-        VisualTestCase("battery_medium", "battery", {"battery_percent": 50, "battery_voltage": 3.7}),
+        VisualTestCase("battery_medium", "battery", {
+            "battery_percent": 50, "battery_voltage": 3.7
+        }),
         VisualTestCase("battery_high", "battery", {"battery_percent": 85, "battery_voltage": 4.0}),
         VisualTestCase("battery_full", "battery", {"battery_percent": 100, "battery_voltage": 4.2}),
         VisualTestCase("battery_empty", "battery", {"battery_percent": 0, "battery_voltage": 3.0})
@@ -236,12 +240,18 @@ def get_battery_state_tests() -> List[VisualTestCase]:
 def get_text_rendering_tests() -> List[VisualTestCase]:
     """Test cases for text rendering edge cases"""
     return [
-        VisualTestCase("text_overflow_room", "text", {"room_name": "Very Long Conference Room Name That Should Be Truncated"}),
+        VisualTestCase("text_overflow_room", "text", {
+            "room_name": "Very Long Conference Room Name That Should Be Truncated"
+        }),
         VisualTestCase("text_unicode", "text", {"room_name": "Café École 日本 🏠"}),
         VisualTestCase("text_special_chars", "text", {"room_name": "Lab #3 & Test @ 50%"}),
-        VisualTestCase("text_max_temp", "text", {"inside_temp_f": "999.9", "outside_temp_f": "-99.9"}),
+        VisualTestCase("text_max_temp", "text", {
+            "inside_temp_f": "999.9", "outside_temp_f": "-99.9"
+        }),
         VisualTestCase("text_max_pressure", "text", {"pressure_hpa": "9999.9"}),
-        VisualTestCase("text_long_weather", "text", {"weather": "Heavy thunderstorms with torrential rain"}),
+        VisualTestCase("text_long_weather", "text", {
+            "weather": "Heavy thunderstorms with torrential rain"
+        }),
         VisualTestCase("text_all_fields", "text", {
             "room_name": "Test Room",
             "time_hhmm": "23:59",
@@ -263,13 +273,17 @@ def get_missing_data_tests() -> List[VisualTestCase]:
     """Test cases for missing data scenarios"""
     return [
         VisualTestCase("missing_inside", "missing", {"inside_temp_f": "", "inside_hum_pct": ""}),
-        VisualTestCase("missing_outside", "missing", {"outside_temp_f": "", "outside_hum_pct": "", "weather": ""}),
+        VisualTestCase("missing_outside", "missing", {
+            "outside_temp_f": "", "outside_hum_pct": "", "weather": ""
+        }),
         VisualTestCase("missing_all", "missing", {
             "inside_temp_f": "", "outside_temp_f": "",
             "inside_hum_pct": "", "outside_hum_pct": "",
             "weather": "", "ip": ""
         }),
-        VisualTestCase("missing_partial", "missing", {"inside_temp_f": "72", "inside_hum_pct": "", "pressure_hpa": ""})
+        VisualTestCase("missing_partial", "missing", {
+            "inside_temp_f": "72", "inside_hum_pct": "", "pressure_hpa": ""
+        })
     ]
 
 
@@ -376,7 +390,11 @@ def test_comprehensive_suite(tester):
         "passed": len(results["passed"]),
         "failed": len(results["failed"]),
         "new": len(results["new"]),
-        "pass_rate": (len(results["passed"]) / results["total"] * 100) if results["total"] > 0 else 0
+        "pass_rate": (
+            (len(results["passed"]) / results["total"] * 100)
+            if results["total"] > 0
+            else 0
+        )
     }
 
     print("\nVisual Regression Report:")
