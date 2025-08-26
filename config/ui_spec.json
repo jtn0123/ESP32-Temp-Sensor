@@ -17,14 +17,13 @@
     "INSIDE_RH":   [6, 66, 118, 14],
     "INSIDE_ROW2": [6, 78, 118, 12],
     "OUT_TEMP":    [129, 36, 94, 28],
-    "OUT_ICON":    [210, 22, 28, 28],
+    "WEATHER_ICON":    [210, 22, 28, 28],
     "OUT_ROW1_L":  [131, 68, 44, 12],
     "OUT_ROW1_R":  [177, 68, 64, 12],
     "OUT_ROW2_L":  [131, 78, 44, 12],
     "OUT_ROW2_R":  [177, 78, 44, 12],
     "FOOTER_L":    [6, 90, 160, 32],
-    "FOOTER_R":    [170, 90, 74, 32],
-    "STATUS":      [6, 112, 238, 10]
+    "FOOTER_R":    [170, 90, 74, 32]
   },
   "iconMap": [
     { "match": ["storm", "thunder", "lightning"], "icon": "weather-lightning" },
@@ -69,6 +68,7 @@
     "outside": [
       { "op": "labelCentered", "y": 22, "aboveRect": "OUT_TEMP", "text": "OUTSIDE", "font": "label" },
       { "op": "tempGroupCentered", "rect": "OUT_TEMP", "value": "{outside_temp_f}" },
+      { "op": "iconIn", "rect": "WEATHER_ICON", "iconFromWeather": "{weather}" },
       { "op": "text", "rect": "OUT_ROW2_L", "font": "small", "align": "left", "text": "{outside_hum_pct}% RH" },
       { "op": "text", "rect": "OUT_ROW2_R", "font": "small", "align": "left", "text": "{wind_mps->mph:.1f} mph" }
     ],
@@ -77,8 +77,7 @@
       { "op": "text", "x": 26, "y": 86, "font": "small", "text": "Batt {battery_voltage:.2f}V {battery_percent}%" },
       { "op": "text", "x": 26, "y": 96, "font": "small", "text": "~{days}d" },
       { "op": "textCenteredIn", "rect": "FOOTER_L", "yOffset": 22, "font": "small", "text": "IP {ip}" },
-      { "op": "iconIn", "rect": "FOOTER_R", "iconFromWeather": "{weather}" },
-      { "op": "shortCondition", "rect": "FOOTER_R", "font": "small", "align": "left", "xOffset": 28 }
+      { "op": "textCenteredIn", "rect": "FOOTER_R", "yOffset": 11, "font": "small", "text": "{weather}" }
     ]
   },
   "variants": {
@@ -89,12 +88,13 @@
     "partial": {
       "INSIDE_TEMP": ["tempGroupCentered"],
       "OUT_TEMP": ["tempGroupCentered"],
+      "WEATHER_ICON": ["iconIn"],
       "OUT_ROW2_L": ["text"],
       "OUT_ROW2_R": ["text"],
       "HEADER_TIME_CENTER": ["textCenteredIn"],
       "HEADER_VERSION": ["text"],
       "FOOTER_L": ["batteryGlyph", "text", "text", "text"],
-      "FOOTER_R": ["iconIn", "shortCondition"]
+      "FOOTER_R": ["textCenteredIn"]
     }
   }
 }

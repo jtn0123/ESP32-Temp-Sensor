@@ -145,7 +145,7 @@ def draw_layout(draw: ImageDraw.ImageDraw, data: dict):
     INSIDE_RH = R("INSIDE_RH", (6, 66, 6 + 118, 66 + 14))
     _INSIDE_TIME = R("INSIDE_TIME", (6, 82, 6 + 118, 82 + 12))
     OUT_TEMP = R("OUT_TEMP", (129, 36, 129 + 94, 36 + 28))
-    R("OUT_ICON", (210, 22, 210 + 28, 22 + 28))
+    R("WEATHER_ICON", (210, 22, 210 + 28, 22 + 28))
     R("OUT_ROW1_L", (131, 68, 131 + 44, 68 + 12))
     R("OUT_ROW1_R", (177, 68, 177 + 64, 68 + 12))
     OUT_ROW2_L = R("OUT_ROW2_L", (131, 78, 131 + 44, 78 + 12))

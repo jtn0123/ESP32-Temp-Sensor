@@ -14,13 +14,12 @@ enum RectId {
     RECT_INSIDE_RH,
     RECT_INSIDE_ROW2,
     RECT_INSIDE_TEMP,
-    RECT_OUT_ICON,
     RECT_OUT_ROW1_L,
     RECT_OUT_ROW1_R,
     RECT_OUT_ROW2_L,
     RECT_OUT_ROW2_R,
     RECT_OUT_TEMP,
-    RECT_STATUS,
+    RECT_WEATHER_ICON,
     RECT__COUNT,
 };
 
@@ -39,7 +38,6 @@ enum UiOpKind {
     OP_ICONIN,
     OP_LABELCENTERED,
     OP_LINE,
-    OP_SHORTCONDITION,
     OP_TEMPGROUPCENTERED,
     OP_TEXT,
     OP_TEXTCENTEREDIN,
@@ -64,8 +62,8 @@ static constexpr int kComponent_chrome_opcount = 6;
 static constexpr int kComponent_header_centered_opcount = 4;
 static constexpr int kComponent_header_opcount = 3;
 static constexpr int kComponent_inside_opcount = 4;
-static constexpr int kComponent_outside_opcount = 4;
-static constexpr int kComponent_footer_split_opcount = 6;
+static constexpr int kComponent_outside_opcount = 5;
+static constexpr int kComponent_footer_split_opcount = 5;
 static constexpr int kTotalOpCount = 27;
 
 struct ComponentOps { const UiOpHeader* ops; int count; const char* name; };

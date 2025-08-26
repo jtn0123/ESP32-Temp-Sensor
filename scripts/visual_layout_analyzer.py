@@ -149,7 +149,6 @@ class VisualLayoutAnalyzer:
                 'INSIDE_RH': 'Inside humidity percentage',
                 'OUT_ROW1_L': 'Outside humidity',
                 'OUT_ROW1_R': 'Wind speed',
-                'WEATHER_BAR': 'Weather icon and condition',
                 'STATUS': 'Battery and system status',
             },
         }
@@ -224,19 +223,16 @@ class VisualLayoutAnalyzer:
             n = name.upper()
             if n.startswith('INSIDE_TEMP') or n == 'INSIDE_LABEL_BOX': return 'INSIDE_TEMP'
             if n.startswith('OUT_TEMP') or n == 'OUT_LABEL_BOX': return 'OUT_TEMP'
-            if n in ('FOOTER_L','FOOTER_R','STATUS','WEATHER_BAR'): return 'FOOTER'
-            if n in ('OUT_ICON',): return 'WEATHER'
+            if n in ('FOOTER_L','FOOTER_R','STATUS'): return 'FOOTER'
+            if n in ('WEATHER_ICON',): return 'WEATHER'
             return None
         def expected_overlap(a: str, ra: Tuple[int,int,int,int], b: str, rb: Tuple[int,int,int,int]) -> bool:
             ga, gb = group(a), group(b)
             if ga and ga == gb and (contains(ra, rb) or contains(rb, ra)):
                 return True
-            if (a.upper() == 'WEATHER_BAR' and b.upper() == 'OUT_ICON' and contains(ra, rb)) or \
-               (b.upper() == 'WEATHER_BAR' and a.upper() == 'OUT_ICON' and contains(rb, ra)):
-                return True
-            # OUT_ICON lives inside the right footer region
-            if (a.upper() == 'FOOTER_R' and b.upper() == 'OUT_ICON' and contains(ra, rb)) or \
-               (b.upper() == 'FOOTER_R' and a.upper() == 'OUT_ICON' and contains(rb, ra)):
+            # WEATHER_ICON lives inside the right footer region
+            if (a.upper() == 'FOOTER_R' and b.upper() == 'WEATHER_ICON' and contains(ra, rb)) or \
+               (b.upper() == 'FOOTER_R' and a.upper() == 'WEATHER_ICON' and contains(rb, ra)):
                 return True
             return False
         for i, a in enumerate(names):

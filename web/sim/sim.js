@@ -10,14 +10,13 @@
   let INSIDE_ROW2 = [  6, 82, 118, 12];
   let OUT_TEMP    = [131, 36,  90, 28];
   // Place icon higher so tests sampling around y=30 see non-white pixels
-  let OUT_ICON    = [210, 22,  28, 28];
+  let WEATHER_ICON = [210, 22,  28, 28];
   // Move outside non-temp rows up by one row (12px) to close white space
   let OUT_ROW1_L  = [131, 66,  48, 12]; // top row: outside RH - widened from 44 to 48
   // widen right-top box so "99.9 mph" never truncates
   let OUT_ROW1_R  = [181, 66,  60, 12]; // top row: wind mph - adjusted position and width
   let OUT_ROW2_L  = [131, 78,  44, 12]; // bottom row: condition (aligned with FW)
   let OUT_ROW2_R  = [177, 78,  44, 12]; // bottom row: reserved (H/L)
-  let STATUS      = [  6, 112, 238, 10];
 
   let canvas = null;
   let ctx = null;
@@ -75,7 +74,6 @@
 
   const FONT_STACK = 'Menlo, Consolas, "DM Mono", "Roboto Mono", monospace';
   const SIZE_SMALL = 10; // general small text - reduced from 11 to fit 12px rows
-  const SIZE_STATUS = 8; // status row must fit 10px tall window - reduced from 10
   const SIZE_LABEL = 10; // reduced from 11 to fit better
   const SIZE_TIME = 10; // reduced from 11 to fit 14px header
   const SIZE_BIG = 22;
@@ -141,11 +139,7 @@
       'OUT_TEMP_INNER,OUT_TEMP',
       'OUT_TEMP,OUT_TEMP_BADGE',
       'OUT_TEMP_BADGE,OUT_TEMP',
-      'WEATHER_BAR,OUT_ICON',
-      'OUT_ICON,WEATHER_BAR',
-      'FOOTER_R,OUT_ICON',
-      'FOOTER_R,WEATHER_BAR',
-      'WEATHER_BAR,FOOTER_R',
+      'FOOTER_R,WEATHER_ICON',
       'FOOTER_L,INSIDE_ROW2',
       'INSIDE_ROW2,FOOTER_L'
     ]);
@@ -356,7 +350,7 @@
     
     // These regions exist in geometry but aren't used in v2
     // Note: HEADER_TIME_CENTER is now used for time display when header_centered component is active
-    const v2SpecificUnused = ['OUT_ICON', 'OUT_ROW1_L', 'OUT_ROW1_R', 'STATUS', 'WEATHER_BAR'];
+    const v2SpecificUnused = ['OUT_ROW1_L', 'OUT_ROW1_R'];
     
     // Check for regions defined but not used in current variant
     const allDefinedRegions = Object.keys(GJSON.rects || {});
@@ -465,12 +459,11 @@
           INSIDE_RH   = R.INSIDE_RH   || INSIDE_RH;
           INSIDE_ROW2 = R.INSIDE_ROW2 || INSIDE_ROW2;
           OUT_TEMP    = R.OUT_TEMP    || OUT_TEMP;
-          OUT_ICON    = R.OUT_ICON    || OUT_ICON;
+          WEATHER_ICON = R.WEATHER_ICON || WEATHER_ICON;
           OUT_ROW1_L  = R.OUT_ROW1_L  || OUT_ROW1_L;
           OUT_ROW1_R  = R.OUT_ROW1_R  || OUT_ROW1_R;
           OUT_ROW2_L  = R.OUT_ROW2_L  || OUT_ROW2_L;
           OUT_ROW2_R  = R.OUT_ROW2_R  || OUT_ROW2_R;
-          STATUS      = R.STATUS      || STATUS;
           return;
         }
       }
@@ -491,12 +484,11 @@
           INSIDE_RH   = R.INSIDE_RH   || INSIDE_RH;
           INSIDE_ROW2 = R.INSIDE_ROW2 || INSIDE_ROW2;
           OUT_TEMP    = R.OUT_TEMP    || OUT_TEMP;
-          OUT_ICON    = R.OUT_ICON    || OUT_ICON;
+          WEATHER_ICON = R.WEATHER_ICON || WEATHER_ICON;
           OUT_ROW1_L  = R.OUT_ROW1_L  || OUT_ROW1_L;
           OUT_ROW1_R  = R.OUT_ROW1_R  || OUT_ROW1_R;
           OUT_ROW2_L  = R.OUT_ROW2_L  || OUT_ROW2_L;
           OUT_ROW2_R  = R.OUT_ROW2_R  || OUT_ROW2_R;
-          STATUS      = R.STATUS      || STATUS;
         }
       }
     }catch(e){ }
@@ -616,10 +608,10 @@
   function getRectCategory(name){
     const n = String(name||'');
     if (n.startsWith('HEADER_')) return 'header';
-    if (n.startsWith('FOOTER_') || n === 'STATUS' || n === 'WEATHER_BAR') return 'footer';
+    if (n.startsWith('FOOTER_')) return 'footer';
     if (/_LABEL_BOX$/.test(n)) return 'label';
     if (/_TEMP(|_INNER|_BADGE)?$/.test(n) || n.startsWith('OUT_ROW') || n === 'INSIDE_RH' || n === 'INSIDE_ROW2') return 'temp';
-    if (n === 'OUT_ICON') return 'temp';
+    if (n === 'WEATHER_ICON') return 'temp';
     return 'temp';
   }
 
@@ -841,13 +833,13 @@
                   ctx.beginPath();
                   ctx.rect(x, y, maxW, fpx + 4);
                   ctx.clip();
-                  // Track STATUS region specifically as it's often rendered with absolute positioning
-                  const regionName = (y > 110) ? 'STATUS' : op.rect;
+                  // Use the actual rect name for tracking
+                  const regionName = op.rect;
                   text(x, y, s, fpx, weight, regionName);
                   ctx.restore();
                 } else {
-                  // Track STATUS region specifically as it's often rendered with absolute positioning  
-                  const regionName = (y > 110) ? 'STATUS' : op.rect;
+                  // Use the actual rect name for tracking
+                  const regionName = op.rect;
                   text(x, y, s, fpx, weight, regionName);
                 }
                 
@@ -1463,18 +1455,14 @@
           base.rects.OUT_ROW1_R  = [RIGHT_X + 50, ROW1_Y, 54, ROW_H];
           base.rects.OUT_ROW2_L  = [RIGHT_X, ROW2_Y, 48, ROW_H];
           base.rects.OUT_ROW2_R  = [RIGHT_X + 52, ROW2_Y, 48, ROW_H];
-          // Weather icon and bar live in the footer in v2; keep an explicit rect for overlays
-          base.rects.WEATHER_BAR = [RIGHT_X, FOOTER_Y, RIGHT_W, FOOTER_H];
-          // Tuck icon fully within FOOTER_R/WEATHER_BAR box with margin; adapt height to footer
+          // Tuck icon fully within FOOTER_R box with margin; adapt height to footer
           const iconH = Math.min(18, Math.max(12, FOOTER_H - 4));
           const iconY = FOOTER_Y + Math.max(1, Math.floor((FOOTER_H - iconH)/2));
-          base.rects.OUT_ICON    = [RIGHT_X + 4, iconY, 20, iconH];
+          base.rects.WEATHER_ICON = [RIGHT_X + 4, iconY, 20, iconH];
 
           // Footer columns align exactly to the column widths
           base.rects.FOOTER_L    = [LEFT_X, FOOTER_Y, LEFT_W, FOOTER_H];
           base.rects.FOOTER_R    = [RIGHT_X, FOOTER_Y, RIGHT_W, FOOTER_H];
-          // Status at the bottom, thinner to avoid overlaps
-          base.rects.STATUS      = [LEFT_X, 116, 226, 6];
 
           // Adjust chrome lines to match grid
           if (base.components && Array.isArray(base.components.chrome)){
