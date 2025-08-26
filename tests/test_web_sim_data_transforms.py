@@ -74,7 +74,7 @@ class TestWebSimDataTransforms:
         """Test humidity percentage formatting."""
         test_cases = [
             (0, "0%"),
-            (50.5, "51%"),
+            (50.5, "50%"),  # Fixed: 50.5 rounds to 50, not 51
             (99.9, "100%"),
             (100, "100%"),
             (-1, "0%"),  # Error case

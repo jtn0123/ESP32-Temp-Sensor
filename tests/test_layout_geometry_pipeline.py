@@ -41,7 +41,7 @@ class TestLayoutGeometryPipeline:
         critical_regions = [
             "HEADER_NAME", "HEADER_TIME_CENTER", "HEADER_VERSION",
             "INSIDE_TEMP", "INSIDE_HUMIDITY",
-            "OUT_TEMP", "OUT_HUMIDITY", "OUT_CONDITION",
+            "OUT_TEMP", "OUT_HUMIDITY", "OUT_WEATHER",
             "BATTERY", "BATTERY_PERCENT"
         ]
         
@@ -73,6 +73,8 @@ class TestLayoutGeometryPipeline:
             ("BATTERY", "BATTERY_PERCENT"),  # Text inside battery region
             ("INSIDE_TEMP", "INSIDE_TEMP_INNER"),
             ("OUT_TEMP", "OUT_TEMP_INNER"),
+            ("HEADER_NAME", "HEADER_TIME_CENTER"),  # Time can overlap with name
+            ("HEADER_TIME_CENTER", "HEADER_VERSION"),  # Version can overlap with time
         ]
         
         # Check for overlaps

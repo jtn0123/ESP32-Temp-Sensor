@@ -81,8 +81,10 @@ static inline void draw_in_region(const int rect[4], DrawFnFwd drawFn);
 static inline int16_t text_width_default_font(const char* s,
                                              uint8_t size);
 // Forward decls used by spec renderer implemented earlier in the file
-static inline void draw_temp_number_and_units(const int rect[4], const char* temp_f);
-static void make_short_condition_cstr(const char* weather, char* out, size_t out_size);
+static inline void draw_temp_number_and_units(const int rect[4],
+                                             const char* temp_f);
+static void make_short_condition_cstr(const char* weather, char* out,
+                                      size_t out_size);
 #if USE_UI_SPEC
 // Minimal spec interpreter (full-window only) for variant rendering
 static void draw_from_spec_full(uint8_t variantId);
@@ -426,9 +428,9 @@ static bool g_full_only_mode = false;  // when true, always do full refresh
 
 static Preferences g_prefs;
 
-static inline void nvs_begin_cache(
-    g_prefs.begin("cache",
-    false); }) {
+static inline void nvs_begin_cache() {
+  g_prefs.begin("cache", false);
+}
 static inline void nvs_load_cache_if_unset() {
   if (!isfinite(last_inside_f))
     last_inside_f = g_prefs.getFloat("li_f", NAN);

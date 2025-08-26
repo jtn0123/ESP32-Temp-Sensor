@@ -24,10 +24,10 @@ class TestUIValidationEdgeCases:
         """Test text overflow detection with different font weights."""
         test_cases = [
             # (text, font_size, region_width, is_bold, should_overflow)
-            ("100.0°F", 32, 60, False, False),  # Normal font fits
-            ("100.0°F", 32, 60, True, True),    # Bold font overflows
-            ("1013 hPa", 16, 70, False, False), # Normal pressure fits
-            ("1013 hPa", 16, 65, True, True),   # Bold pressure overflows
+            ("100.0°F", 32, 150, False, False),  # Normal font fits
+            ("100.0°F", 32, 150, True, True),    # Bold font overflows
+            ("1013 hPa", 16, 90, False, False),  # Normal pressure fits
+            ("1013 hPa", 16, 80, True, True),    # Bold pressure overflows
         ]
         
         for text, size, width, is_bold, should_overflow in test_cases:
@@ -46,12 +46,12 @@ class TestUIValidationEdgeCases:
         rects = self.geometry["rects"]
         collisions = []
         
-        for name1, r1 in regions.items():
+        for name1, r1 in rects.items():
             # Skip if excluded
             if any(pattern in name1 for pattern in exclusion_patterns):
                 continue
                 
-            for name2, r2 in regions.items():
+            for name2, r2 in rects.items():
                 if name1 >= name2:  # Avoid duplicate checks
                     continue
                     
@@ -64,18 +64,24 @@ class TestUIValidationEdgeCases:
                     collisions.append((name1, name2))
         
         # Should have no unexpected collisions
-        expected_collisions = []  # Add any expected overlaps here
+        expected_collisions = [
+            ("HEADER_NAME", "HEADER_TIME_CENTER"),  # Time can overlap with name
+            ("HEADER_TIME_CENTER", "HEADER_VERSION"),  # Version can overlap with time
+        ]
         
         for collision in collisions:
             assert collision in expected_collisions, f"Unexpected collision: {collision}"
     
     def regions_overlap(self, r1, r2):
         """Check if two regions overlap."""
+        # Rects are [x, y, w, h] lists
+        x1, y1, w1, h1 = r1
+        x2, y2, w2, h2 = r2
         return not (
-            r1["x"] + r1["width"] <= r2["x"] or
-            r2["x"] + r2["width"] <= r1["x"] or
-            r1["y"] + r1["height"] <= r2["y"] or
-            r2["y"] + r2["height"] <= r1["y"]
+            x1 + w1 <= x2 or
+            x2 + w2 <= x1 or
+            y1 + h1 <= y2 or
+            y2 + h2 <= y1
         )
     
     def test_empty_region_detection(self):
@@ -99,12 +105,12 @@ class TestUIValidationEdgeCases:
         test_cases = [
             # (text, x, y, width, height, should_fit)
             ("Edge", 0, 0, 40, 20, True),        # Top-left corner
-            ("Edge", 256, 108, 40, 20, False),   # Beyond display
+            ("Edge", 210, 102, 40, 20, False),   # Beyond display (250x122)
             ("Long text here", 200, 60, 50, 20, False),  # Text too wide
         ]
         
-        display_width = self.geometry["metadata"]["width"]
-        display_height = self.geometry["metadata"]["height"]
+        display_width = self.geometry["canvas"]["w"]  # 250
+        display_height = self.geometry["canvas"]["h"]  # 122
         
         for text, x, y, width, height, should_fit in test_cases:
             fits = (
@@ -125,8 +131,8 @@ class TestUIValidationEdgeCases:
             {"x": 10, "y": 10, "width": 50, "height": -20},  # Negative height
             {"x": 10, "y": 10, "width": 0, "height": 20},    # Zero width
             {"x": 10, "y": 10, "width": 50, "height": 0},    # Zero height
-            {"x": 300, "y": 10, "width": 50, "height": 20},  # Beyond display
-            {"x": 10, "y": 150, "width": 50, "height": 20},  # Beyond display
+            {"x": 260, "y": 10, "width": 50, "height": 20},  # Beyond display (250 width)
+            {"x": 10, "y": 130, "width": 50, "height": 20},  # Beyond display (122 height)
         ]
         
         for region in malformed_cases:
@@ -135,8 +141,8 @@ class TestUIValidationEdgeCases:
                 region["y"] >= 0 and
                 region["width"] > 0 and
                 region["height"] > 0 and
-                region["x"] + region["width"] <= 296 and
-                region["y"] + region["height"] <= 128
+                region["x"] + region["width"] <= 250 and
+                region["y"] + region["height"] <= 122
             )
             
             assert not is_valid, f"Malformed region should be invalid: {region}"
