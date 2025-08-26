@@ -1681,7 +1681,7 @@ static void smoke_full_window_test() {
 
 static void partial_update_inside_temp(const char* in_temp_f, char trend) {
   int rect[4] =
-      {INSIDE_TEMP[0], static_cast<int16_t>(INSIDE_TEMP[1] + TOP_Y_OFFSET),;
+      {INSIDE_TEMP[0], static_cast<int16_t>(INSIDE_TEMP[1] + TOP_Y_OFFSET),
                  INSIDE_TEMP[2], INSIDE_TEMP[3]};
   draw_in_region(rect, [&](int16_t x, int16_t y, int16_t w, int16_t h) {
     display.setTextColor(GxEPD_BLACK);
@@ -1735,7 +1735,7 @@ static void partial_update_outside_temp(const char* out_temp_f, char trend) {
 
 static void partial_update_outside_rh(const char* out_rh) {
   int rect[4] =
-      {OUT_ROW2_L[0], static_cast<int16_t>(OUT_ROW2_L[1] + TOP_Y_OFFSET),;
+      {OUT_ROW2_L[0], static_cast<int16_t>(OUT_ROW2_L[1] + TOP_Y_OFFSET),
                                                       OUT_ROW2_L[2],
                  OUT_ROW2_L[3]};
   draw_in_region(rect, [&](int16_t x, int16_t y, int16_t w, int16_t h) {
@@ -1749,7 +1749,7 @@ static void partial_update_outside_rh(const char* out_rh) {
 
 static void partial_update_inside_rh(const char* in_rh) {
   int rect[4] =
-      {INSIDE_RH[0], static_cast<int16_t>(INSIDE_RH[1] + TOP_Y_OFFSET),;
+      {INSIDE_RH[0], static_cast<int16_t>(INSIDE_RH[1] + TOP_Y_OFFSET),
                                                      INSIDE_RH[2],
                  INSIDE_RH[3]};
   draw_in_region(rect, [&](int16_t x, int16_t y, int16_t w, int16_t h) {
@@ -1772,7 +1772,7 @@ static void partial_update_weather_icon(const char* weather) {
 
 static void partial_update_outside_wind(const char* wind_str) {
   int rect[4] =
-      {OUT_ROW2_R[0], static_cast<int16_t>(OUT_ROW2_R[1] + TOP_Y_OFFSET),;
+      {OUT_ROW2_R[0], static_cast<int16_t>(OUT_ROW2_R[1] + TOP_Y_OFFSET),
                                                       OUT_ROW2_R[2],
                  OUT_ROW2_R[3]};
   draw_in_region(rect, [&](int16_t x, int16_t y, int16_t, int16_t) {
@@ -1785,7 +1785,7 @@ static void partial_update_outside_wind(const char* wind_str) {
 
 static void partial_update_outside_condition(const char* short_condition) {
   int rect[4] =
-      {OUT_ROW1_L[0], static_cast<int16_t>(OUT_ROW1_L[1] + TOP_Y_OFFSET),;
+      {OUT_ROW1_L[0], static_cast<int16_t>(OUT_ROW1_L[1] + TOP_Y_OFFSET),
                                                       OUT_ROW1_L[2],
                  OUT_ROW1_L[3]};
   draw_in_region(rect, [&](int16_t x, int16_t y, int16_t, int16_t) {
@@ -1798,7 +1798,7 @@ static void partial_update_outside_condition(const char* short_condition) {
 
 static void partial_update_outside_hilo(float highC, float lowC) {
   int rect[4] =
-      {OUT_ROW2_R[0], static_cast<int16_t>(OUT_ROW2_R[1] + TOP_Y_OFFSET),;
+      {OUT_ROW2_R[0], static_cast<int16_t>(OUT_ROW2_R[1] + TOP_Y_OFFSET),
                                                       OUT_ROW2_R[2],
                  OUT_ROW2_R[3]};
   draw_in_region(rect, [&](int16_t x, int16_t y, int16_t, int16_t) {
@@ -2013,8 +2013,8 @@ void setup() {
     // Measure publish time using a non-retained probe topic
     int64_t pub_probe_start_us = esp_timer_get_time();
     net_publish_debug_probe("1", false);
-    uint32_t ms_publish =
-        static_cast<uint32_t>((esp_timer_get_time() - pub_probe_start_us) / 1000);
+    uint32_t ms_publish = static_cast<uint32_t>(
+        (esp_timer_get_time() - pub_probe_start_us) / 1000);
     // Publish diagnostics: WiFi RSSI and publish latency
     net_publish_wifi_rssi(WiFi.RSSI());
     net_publish_publish_latency_ms(ms_publish);
