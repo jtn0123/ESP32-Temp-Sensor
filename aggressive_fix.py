@@ -5,6 +5,7 @@ Aggressive fix for remaining clang lint issues - target under 20
 
 import re
 
+
 def aggressive_fix(content):
     """Aggressively fix remaining issues"""
     lines = content.split('\n')

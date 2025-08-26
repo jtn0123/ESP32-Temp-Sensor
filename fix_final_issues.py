@@ -5,6 +5,7 @@ Fix final remaining clang lint issues - target under 20 errors
 
 import re
 
+
 def fix_final_issues(content):
     """Fix remaining line length and whitespace issues"""
     lines = content.split('\n')

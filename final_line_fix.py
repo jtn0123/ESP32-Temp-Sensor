@@ -5,6 +5,7 @@ Final comprehensive fix for remaining line length issues in main.cpp
 
 import re
 
+
 def fix_remaining_lines(content):
     """Fix remaining line length issues"""
     lines = content.split('\n')

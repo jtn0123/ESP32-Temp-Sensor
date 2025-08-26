@@ -5,6 +5,7 @@ Fix function parameter line length issues in main.cpp
 
 import re
 
+
 def fix_function_parameters(content):
     """Fix long function parameter lines"""
     lines = content.split('\n')
@@ -39,7 +40,6 @@ def fix_function_parameters(content):
                         func_start = func_match.group(1)
 
                         # Collect all parameters
-                        params = []
                         current_param = ""
                         in_parens = False
 
