@@ -458,7 +458,6 @@ static inline void nvs_store_int(const char* key,
                                   int32_t v) { g_prefs.putInt(key,
 static inline void nvs_store_uint(const char* key,
                                    uint32_t v) { g_prefs.putUInt(key,
-
 static constexpr float THRESH_TEMP_F = 0.2f;                        // redraw/publish threshold in F
 static constexpr float THRESH_TEMP_C_FROM_F = THRESH_TEMP_F / 1.8f;  // ~0.111C
 static constexpr float THRESH_RH = 1.0f;                            // percent
@@ -1125,8 +1124,8 @@ static void make_short_condition_cstr(const char* weather,
     char c = *p;
     // Treat common separators and hyphen as delimiters so HA values like
     // "clear-night" or "snowy-rainy" shorten to a single word.
-    if (c == ' ' || c == '\t' || c == ',
-         ' || c == ';' || c == ':' || c == '/' || c == '-')
+    if (c == ' ' || c == '\t' || c == ','
+         || c == ';' || c == ':' || c == '/' || c == '-')
       break;
     out[i++] = c;
     p++;
