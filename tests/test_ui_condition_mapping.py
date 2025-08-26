@@ -276,7 +276,7 @@ def test_condition_display_constraints():
         assert w > 0 and h > 0, "Weather icon dimensions should be positive"
 
     # Check footer area for condition text
-    footer_rect = rects.get("FOOTER_R")
+    footer_rect = rects.get("FOOTER_WEATHER")
     if footer_rect:
         x, y, w, h = footer_rect
         # Should have enough space for shortened condition text (max 8 chars)

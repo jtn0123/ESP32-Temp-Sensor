@@ -101,14 +101,14 @@ def test_allowed_overlaps_excludes_internal():
             rect=(10, 40, 100, 30),
             category="temp"
         ),
-        "FOOTER_R": RegionValidation(
-            name="FOOTER_R",
+        "FOOTER_WEATHER": RegionValidation(
+            name="FOOTER_WEATHER",
             rect=(120, 90, 50, 20),
             category="footer"
         ),
         "WEATHER_ICON": RegionValidation(
             name="WEATHER_ICON",
-            rect=(115, 85, 30, 30),  # Overlaps with FOOTER_R
+            rect=(115, 85, 30, 30),  # Overlaps with FOOTER_WEATHER
             category="other"
         ),
     }
@@ -116,10 +116,10 @@ def test_allowed_overlaps_excludes_internal():
     # Run collision check
     issues = engine.validate_collisions(regions)
 
-    # FOOTER_R and WEATHER_ICON overlap is allowed, so should not be reported
+    # FOOTER_WEATHER and WEATHER_ICON overlap is allowed, so should not be reported
     weather_footer_issues = [
         i for i in issues
-        if ("FOOTER_R" in i.region and "WEATHER_ICON" in i.region)
+        if ("FOOTER_WEATHER" in i.region and "WEATHER_ICON" in i.region)
     ]
 
     # This overlap should be allowed (it's in the allowed list)

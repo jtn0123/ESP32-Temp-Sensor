@@ -335,7 +335,7 @@ class UIValidationEngine:
         allowed_overlaps = {
             ("INSIDE_TEMP", "INSIDE_LABEL_BOX"),
             ("OUT_TEMP", "OUT_LABEL_BOX"),
-            ("FOOTER_R", "WEATHER_ICON"),
+            ("FOOTER_WEATHER", "WEATHER_ICON"),
         }
 
         # Check all pairs of regions

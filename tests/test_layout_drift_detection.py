@@ -118,7 +118,7 @@ def test_layout_rect_overlap_detection():
     exclusive_pairs = [
         ("INSIDE_TEMP", "OUT_TEMP"),
         ("HEADER_NAME", "HEADER_TIME"),
-        ("FOOTER_L", "FOOTER_R"),
+        ("FOOTER_L", "FOOTER_WEATHER"),
     ]
 
     for rect1_name, rect2_name in exclusive_pairs:
@@ -240,7 +240,7 @@ def test_partial_update_regions():
         "OUT_TEMP",
         "HEADER_TIME",
         "FOOTER_L",
-        "FOOTER_R"
+        "FOOTER_WEATHER"
     ]
 
     for rect_name in expected_partial_rects:

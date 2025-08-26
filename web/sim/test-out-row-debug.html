@@ -91,7 +91,7 @@
             document.getElementById('showValidation').addEventListener('click', () => {
                 const issues = window.validationIssues || [];
                 const outRowIssues = issues.filter(i => 
-                    i.region && (i.region.includes('OUT_ROW') || i.region === 'WEATHER_ICON' || i.region === 'FOOTER_R')
+                    i.region && (i.region.includes('OUT_ROW') || i.region === 'WEATHER_ICON' || i.region === 'FOOTER_WEATHER')
                 );
                 
                 if (outRowIssues.length === 0) {
@@ -118,7 +118,7 @@
                 const outRowContent = {};
                 
                 Object.entries(rendered).forEach(([key, value]) => {
-                    if (key.includes('OUT_ROW') || key === 'WEATHER_ICON' || key === 'FOOTER_R') {
+                    if (key.includes('OUT_ROW') || key === 'WEATHER_ICON' || key === 'FOOTER_WEATHER') {
                         outRowContent[key] = value;
                     }
                 });

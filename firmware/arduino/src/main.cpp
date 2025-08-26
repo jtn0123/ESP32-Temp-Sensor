@@ -40,7 +40,7 @@
 #define OUT_ROW2_L RECT_OUT_ROW2_L
 #define OUT_ROW2_R RECT_OUT_ROW2_R
 #define FOOTER_L RECT_FOOTER_L
-#define FOOTER_R RECT_FOOTER_R
+#define FOOTER_WEATHER RECT_FOOTER_WEATHER
 #define STATUS_ RECT_STATUS_
 
 // Forward declaration for status pixel tick used in pump_network_ms
@@ -122,8 +122,8 @@ static inline const int* rect_ptr_by_id(uint8_t rid) {
     return OUT_ROW2_R;
   case ui::RECT_FOOTER_L:
     return FOOTER_L;
-  case ui::RECT_FOOTER_R:
-    return FOOTER_R;
+  case ui::RECT_FOOTER_WEATHER:
+    return FOOTER_WEATHER;
   case ui::RECT_STATUS:
     return STATUS_;
   default:
@@ -1541,10 +1541,10 @@ static void full_refresh() {
     }
     // Footer right: icon + weather word (only location for icon)
     {
-      int16_t x = FOOTER_R[0];
-      int16_t y = FOOTER_R[1];
-      int16_t w = FOOTER_R[2];
-      int16_t h = FOOTER_R[3];
+      int16_t x = FOOTER_WEATHER[0];
+      int16_t y = FOOTER_WEATHER[1];
+      int16_t w = FOOTER_WEATHER[2];
+      int16_t h = FOOTER_WEATHER[3];
       if (o.validWeather || o.validWeatherId || o.validWeatherIcon || last_icon_id >= 0) {
         char sc[24];
         if (o.validWeatherDesc && o.weatherDesc[0])
@@ -1721,7 +1721,7 @@ static void partial_update_outside_hilo(float highC, float lowC) {
 
 // Footer-only weather updater using the same geometry as full renders
 static void partial_update_footer_weather_from_outside(const OutsideReadings& o) {
-  draw_in_region(FOOTER_R, [&](int16_t x, int16_t y, int16_t w, int16_t h) {
+  draw_in_region(FOOTER_WEATHER, [&](int16_t x, int16_t y, int16_t w, int16_t h) {
     display.fillRect(x, y, w, h, GxEPD_WHITE);
     // Icon at left
     int16_t ix = static_cast<int16_t>(x + 2);

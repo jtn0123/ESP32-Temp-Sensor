@@ -270,7 +270,7 @@ class VisualLayoutAnalyzer:
                 return 'INSIDE_TEMP'
             if n.startswith('OUT_TEMP') or n == 'OUT_LABEL_BOX':
                 return 'OUT_TEMP'
-            if n in ('FOOTER_L', 'FOOTER_R', 'STATUS'):
+            if n in ('FOOTER_L', 'FOOTER_WEATHER', 'STATUS'):
                 return 'FOOTER'
             if n in ('WEATHER_ICON',):
                 return 'WEATHER'
@@ -283,8 +283,8 @@ class VisualLayoutAnalyzer:
             if ga and ga == gb and (contains(ra, rb) or contains(rb, ra)):
                 return True
             # WEATHER_ICON lives inside the right footer region
-            if (a.upper() == 'FOOTER_R' and b.upper() == 'WEATHER_ICON' and contains(ra, rb)) or \
-               (b.upper() == 'FOOTER_R' and a.upper() == 'WEATHER_ICON' and contains(rb, ra)):
+            if (a.upper() == 'FOOTER_WEATHER' and b.upper() == 'WEATHER_ICON' and contains(ra, rb)) or \
+               (b.upper() == 'FOOTER_WEATHER' and a.upper() == 'WEATHER_ICON' and contains(rb, ra)):
                 return True
             return False
         for i, a in enumerate(names):

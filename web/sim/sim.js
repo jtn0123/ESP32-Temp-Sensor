@@ -150,8 +150,8 @@
       'OUT_TEMP_INNER,OUT_TEMP',
       'OUT_TEMP,OUT_TEMP_BADGE',
       'OUT_TEMP_BADGE,OUT_TEMP',
-      'FOOTER_R,WEATHER_ICON',
-      'WEATHER_ICON,FOOTER_R',
+      'FOOTER_WEATHER,WEATHER_ICON',
+      'WEATHER_ICON,FOOTER_WEATHER',
       'FOOTER_L,INSIDE_ROW2',
       'INSIDE_ROW2,FOOTER_L'
     ]);
@@ -165,7 +165,7 @@
       'OUT_ROW1_L': 6,
       'OUT_ROW2_L': 6,
       'FOOTER_L': 5,
-      'FOOTER_R': 5
+      'FOOTER_WEATHER': 5
     };
     
     const names = Object.keys(rects);
@@ -408,7 +408,7 @@
       ['INSIDE_TEMP', 'OUT_TEMP'],
       ['INSIDE_RH', 'OUT_ROW2_L'],
       ['HEADER_NAME', 'HEADER_VERSION'],
-      ['FOOTER_L', 'FOOTER_R']
+      ['FOOTER_L', 'FOOTER_WEATHER']
     ];
     
     for (const group of alignmentGroups) {
@@ -522,7 +522,7 @@
     // expectedContent.add('OUT_ROW2_L');
     // expectedContent.add('OUT_ROW2_R');
     expectedContent.add('FOOTER_L'); // v2 uses FOOTER_L for battery/IP
-    expectedContent.add('FOOTER_R'); // v2 uses FOOTER_R for weather icon
+    expectedContent.add('FOOTER_WEATHER'); // v2 uses FOOTER_WEATHER for weather icon
     
     for (const regionName of expectedContent) {
       if (!renderedContent[regionName] && GJSON.rects[regionName]) {
@@ -1269,20 +1269,20 @@
             }
             case 'iconIn': {
               const r = rects[op.rect]; if (!r) break;
-              // Track that FOOTER_R has rendered content
-              if (op.rect === 'FOOTER_R' && validationEnabled) {
-                renderedContent['FOOTER_R'] = {
+              // Track that FOOTER_WEATHER has rendered content
+              if (op.rect === 'FOOTER_WEATHER' && validationEnabled) {
+                renderedContent['FOOTER_WEATHER'] = {
                   text: 'weather_icon',
                   fontSize: 0,
                   actualBounds: { x: r[0], y: r[1], width: r[2], height: r[3] }
                 };
               }
               // Render weather bar: for default spec keep legacy constants to preserve goldens.
-              // In v2 grid mode, derive from FOOTER_R to ensure alignment with geometry.
+              // In v2 grid mode, derive from FOOTER_WEATHER to ensure alignment with geometry.
               const fpx = ((fonts['small']||{}).px) || pxSmall;
-              let barX = 130, barY = 95, barW = 114, barH = (rects.FOOTER_R? rects.FOOTER_R[3] : 24);
-              if (typeof window !== 'undefined' && window.__specMode === 'v2_grid' && rects.FOOTER_R){
-                const fr = rects.FOOTER_R;
+              let barX = 130, barY = 95, barW = 114, barH = (rects.FOOTER_WEATHER? rects.FOOTER_WEATHER[3] : 24);
+              if (typeof window !== 'undefined' && window.__specMode === 'v2_grid' && rects.FOOTER_WEATHER){
+                const fr = rects.FOOTER_WEATHER;
                 barW = fr[2];
                 barH = Math.min(22, Math.max(12, fr[3] - 4));
                 barX = fr[0];
@@ -1801,14 +1801,14 @@
           base.rects.OUT_ROW1_R  = [RIGHT_X + 50, ROW1_Y, 54, ROW_H];
           base.rects.OUT_ROW2_L  = [RIGHT_X, ROW2_Y, 48, ROW_H];
           base.rects.OUT_ROW2_R  = [RIGHT_X + 52, ROW2_Y, 48, ROW_H];
-          // Tuck icon fully within FOOTER_R box with margin; adapt height to footer
+          // Tuck icon fully within FOOTER_WEATHER box with margin; adapt height to footer
           const iconH = Math.min(18, Math.max(12, FOOTER_H - 4));
           const iconY = FOOTER_Y + Math.max(1, Math.floor((FOOTER_H - iconH)/2));
           base.rects.WEATHER_ICON = [RIGHT_X + 4, iconY, 20, iconH];
 
           // Footer columns align exactly to the column widths
           base.rects.FOOTER_L    = [LEFT_X, FOOTER_Y, LEFT_W, FOOTER_H];
-          base.rects.FOOTER_R    = [RIGHT_X, FOOTER_Y, RIGHT_W, FOOTER_H];
+          base.rects.FOOTER_WEATHER    = [RIGHT_X, FOOTER_Y, RIGHT_W, FOOTER_H];
 
           // Adjust chrome lines to match grid
           if (base.components && Array.isArray(base.components.chrome)){

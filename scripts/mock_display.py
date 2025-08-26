@@ -151,7 +151,7 @@ def draw_layout(draw: ImageDraw.ImageDraw, data: dict):
     OUT_ROW2_L = R("OUT_ROW2_L", (131, 78, 131 + 44, 78 + 12))
     OUT_ROW2_R = R("OUT_ROW2_R", (177, 78, 177 + 44, 78 + 12))
     FOOTER_L = R("FOOTER_L", (6, 90, 6 + 160, 90 + 32))
-    FOOTER_R = R("FOOTER_R", (170, 90, 170 + 74, 90 + 32))
+    FOOTER_WEATHER = R("FOOTER_WEATHER", (170, 90, 170 + 74, 90 + 32))
     R("STATUS", (6, 112, 6 + 238, 112 + 10))
 
     # Frame and header
@@ -244,7 +244,7 @@ def draw_layout(draw: ImageDraw.ImageDraw, data: dict):
     bar_x = 130
     bar_y = 95
     bar_w = 114
-    bar_h = FOOTER_R[3]
+    bar_h = FOOTER_WEATHER[3]
     icon_w = min(26, bar_w - 60)
     icon_h = min(22, bar_h - 4)
     gap = 8
