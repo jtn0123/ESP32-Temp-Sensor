@@ -34,7 +34,7 @@
 #define INSIDE_RH INSIDE_HUMIDITY  // Backward compat
 #define OUT_ICON WEATHER_ICON  // Map to WEATHER_ICON from display_layout.h
 #define OUT_ROW1_L OUT_WEATHER  // Map to OUT_WEATHER from display_layout.h
-#define OUT_ROW1_R OUT_PRESSURE  // Map to OUT_PRESSURE from display_layout.h  
+#define OUT_ROW1_R OUT_PRESSURE  // Map to OUT_PRESSURE from display_layout.h
 #define OUT_ROW2_L OUT_HUMIDITY  // Map to OUT_HUMIDITY from display_layout.h
 #define OUT_ROW2_R OUT_WIND  // Map to OUT_WIND from display_layout.h
 #define FOOTER_L FOOTER_STATUS  // Backward compat
@@ -63,22 +63,27 @@ static void partial_update_outside_condition(const char* short_condition);
 static void partial_update_weather_icon(const char* weather);
 // New helpers: prefer OpenWeather fields (id/icon/desc) when available
 static void partial_update_weather_icon_from_outside(const OutsideReadings& o);
-static void draw_weather_icon_region_at(int16_t x, int16_t y, int16_t w, int16_t h,
-                                        const char* weather);
-static void draw_weather_icon_region_at_from_outside(int16_t x, int16_t y, int16_t w, int16_t h,
+static void draw_weather_icon_region_at(int16_t x, int16_t y, int16_t w,
+                                        int16_t h, const char* weather);
+static void draw_weather_icon_region_at_from_outside(int16_t x, int16_t y,
+                                                     int16_t w, int16_t h,
                                                      const OutsideReadings& o);
 // Footer-only weather updater to keep geometry consistent with full renders
-static void partial_update_footer_weather_from_outside(const OutsideReadings& o);
+static void partial_update_footer_weather_from_outside(
+    const OutsideReadings& o);
 static void draw_header_time(const char* time_str);
 // Accessor to avoid forward reference ordering issues
 static inline float get_last_outside_f();
-static bool maybe_redraw_status(const BatteryStatus& bs, const char* ip_cstr, const int rect[4]);
+static bool maybe_redraw_status(const BatteryStatus& bs, const char* ip_cstr,
+                                const int rect[4]);
 template <typename DrawFnFwd>
 static inline void draw_in_region(const int rect[4], DrawFnFwd drawFn);
-static inline int16_t text_width_default_font(const char* s, uint8_t size);
+static inline int16_t text_width_default_font(const char* s,
+                                             uint8_t size);
 // Forward decls used by spec renderer implemented earlier in the file
-static inline void draw_temp_number_and_units(const int rect[4], const char* temp_f);
-static void make_short_condition_cstr(const char* weather, char* out, size_t out_size);
+static inline void draw_temp_number_and_units(const int rect[4],
+static void make_short_condition_cstr(const char* weather,
+                                       char* out,
 // Remove duplicate non-inline declaration to avoid separate symbol
 #if USE_UI_SPEC
 // Minimal spec interpreter (full-window only) for variant rendering
@@ -124,7 +129,9 @@ static inline const int* rect_ptr_by_id(uint8_t rid) {
 
 // Forward to implementation placed after display declaration
 static void draw_from_spec_full_impl(uint8_t variantId);
-static void draw_from_spec_full(uint8_t variantId) { draw_from_spec_full_impl(variantId); }
+static void draw_from_spec_full(uint8_t variantId) {
+  draw_from_spec_full_impl(variantId);
+}
 #endif
 #endif
 
@@ -180,7 +187,10 @@ static void draw_from_spec_full_impl(uint8_t variantId) {
   int comp_count = 0;
   const ComponentOps* comps = get_variant_ops(variantId, &comp_count);
   display.drawRect(0, 0, EINK_WIDTH, EINK_HEIGHT, GxEPD_BLACK);
-  display.drawLine(1, 16 + TOP_Y_OFFSET, EINK_WIDTH - 2, 16 + TOP_Y_OFFSET, GxEPD_BLACK);
+  display.drawLine(1,
+                    16 + TOP_Y_OFFSET,
+                    EINK_WIDTH - 2,
+                    16 + TOP_Y_OFFSET,
   display.drawLine(125, 18 + TOP_Y_OFFSET, 125, EINK_HEIGHT - 2, GxEPD_BLACK);
   for (int ci = 0; ci < comp_count; ++ci) {
     const ComponentOps& co = comps[ci];
@@ -283,14 +293,18 @@ static void draw_from_spec_full_impl(uint8_t variantId) {
         if (r == INSIDE_TEMP) {
           InsideReadings ir = read_inside_sensors();
           if (isfinite(ir.temperatureC)) {
-            snprintf(temp_buf, sizeof(temp_buf), "%.1f", ir.temperatureC * 9.0 / 5.0 + 32.0);
+            snprintf(temp_buf,
+                      sizeof(temp_buf),
+                      "%.1f",
           } else {
             snprintf(temp_buf, sizeof(temp_buf), "--");
           }
         } else if (r == OUT_TEMP) {
           OutsideReadings orr = net_get_outside();
           if (orr.validTemp && isfinite(orr.temperatureC)) {
-            snprintf(temp_buf, sizeof(temp_buf), "%.1f", orr.temperatureC * 9.0 / 5.0 + 32.0);
+            snprintf(temp_buf,
+                      sizeof(temp_buf),
+                      "%.1f",
           } else if (isfinite(get_last_outside_f())) {
             snprintf(temp_buf, sizeof(temp_buf), "%.1f", get_last_outside_f());
           } else {
@@ -306,10 +320,16 @@ static void draw_from_spec_full_impl(uint8_t variantId) {
           break;
         OutsideReadings o = net_get_outside();
         if (o.validWeatherIcon || o.validWeatherId) {
-          draw_weather_icon_region_at_from_outside(r[0], r[1] + TOP_Y_OFFSET, r[2], r[3], o);
+          draw_weather_icon_region_at_from_outside(r[0],
+                                                    r[1] + TOP_Y_OFFSET,
+                                                    r[2],
+                                                    r[3],
         } else {
           const char* weather = o.validWeather ? o.weather : "";
-          draw_weather_icon_region_at(r[0], r[1] + TOP_Y_OFFSET, r[2], r[3], weather);
+          draw_weather_icon_region_at(r[0],
+                                       r[1] + TOP_Y_OFFSET,
+                                       r[2],
+                                       r[3],
         }
         break;
       }
@@ -353,11 +373,16 @@ static void draw_from_spec_full_impl(uint8_t variantId) {
         BatteryStatus bs = read_battery_status();
         int16_t bx = op.p0, by = op.p1, bw = op.p2, bh = op.p3;
         display.drawRect(bx, by, bw, bh, GxEPD_BLACK);
-        display.fillRect(static_cast<int16_t>(bx + bw), static_cast<int16_t>(by + 2), 2, 3,
+        display.fillRect(static_cast<int16_t>(bx + bw),
+                          static_cast<int16_t>(by + 2),
+                          2,
+                          3,
                          GxEPD_BLACK);
         int16_t fillw = static_cast<int16_t>(((bw - 2) * (bs.percent / 100.0f) + 0.5f));
         if (fillw > 0)
-          display.fillRect(static_cast<int16_t>(bx + 1), static_cast<int16_t>(by + 1), fillw,
+          display.fillRect(static_cast<int16_t>(bx + 1),
+                            static_cast<int16_t>(by + 1),
+                            fillw,
                            static_cast<int16_t>(bh - 2), GxEPD_BLACK);
         break;
       }
@@ -427,9 +452,12 @@ static inline void nvs_load_cache_if_unset() {
   g_full_only_mode = g_prefs.getUChar("full_only", 0) != 0;
   // Remove legacy ui_variant preference; single UI variant remains
 }
-static inline void nvs_store_float(const char* key, float v) { g_prefs.putFloat(key, v); }
-static inline void nvs_store_int(const char* key, int32_t v) { g_prefs.putInt(key, v); }
-static inline void nvs_store_uint(const char* key, uint32_t v) { g_prefs.putUInt(key, v); }
+static inline void nvs_store_float(const char* key,
+                                    float v) { g_prefs.putFloat(key,
+static inline void nvs_store_int(const char* key,
+                                  int32_t v) { g_prefs.putInt(key,
+static inline void nvs_store_uint(const char* key,
+                                   uint32_t v) { g_prefs.putUInt(key,
 
 static constexpr float THRESH_TEMP_F = 0.2f;                        // redraw/publish threshold in F
 static constexpr float THRESH_TEMP_C_FROM_F = THRESH_TEMP_F / 1.8f;  // ~0.111C
@@ -451,7 +479,8 @@ static const char* wakeup_cause_str(esp_sleep_wakeup_cause_t c);
 static inline void print_boot_diagnostics() {
   Serial.printf("Reset: %s, Wake: %s\n", reset_reason_str(esp_reset_reason()),
                 wakeup_cause_str(esp_sleep_get_wakeup_cause()));
-  Serial.printf("Heap: free=%u min=%u\n", static_cast<unsigned>(esp_get_free_heap_size()),
+  Serial.printf("Heap: free=%u min=%u\n",
+                 static_cast<unsigned>(esp_get_free_heap_size()),
                 static_cast<unsigned>(esp_get_minimum_free_heap_size()));
 }
 
@@ -499,7 +528,8 @@ static void pump_network_ms(uint32_t duration_ms) {
 #endif
 #endif
 
-static Adafruit_NeoPixel s_statusPixel(1, STATUS_PIXEL_PIN, NEO_GRB + NEO_KHZ800);
+static Adafruit_NeoPixel s_statusPixel(1,
+                                        STATUS_PIXEL_PIN,
 static uint32_t s_lastPixelMs = 0;
 static uint8_t s_hue = 0;
 static uint8_t s_breath = 0;  // brightness phase for subtle breathing
@@ -560,7 +590,9 @@ static void emit_metrics_json(float tempC, float rhPct, float pressHPa) {
   Serial.print("\"layout_crc\":\"");
   {
     char crcbuf[12];
-    snprintf(crcbuf, sizeof(crcbuf), "0x%08X", static_cast<unsigned>(LAYOUT_CRC));
+    snprintf(crcbuf,
+              sizeof(crcbuf),
+              "0x%08X",
     Serial.print(crcbuf);
   }
   Serial.print("\"");
@@ -683,14 +715,16 @@ static void handle_serial_command_line(const String& line) {
     net_ip_cstr(ip_c, sizeof(ip_c));
     BatteryStatus bs = read_battery_status();
     Serial.printf("status ip=%s wifi=%s mqtt=%s v=%.2f pct=%d partial=%u\n", ip_c,
-                  net_wifi_is_connected() ? "up" : "down", net_mqtt_is_connected() ? "up" : "down",
+                  net_wifi_is_connected() ? "up" : "down",
+                                         net_mqtt_is_connected() ? "up" : "down",
                   static_cast<double>(bs.voltage), bs.percent,
                   static_cast<unsigned>(partial_counter));
     return;
   }
   if (op == "metrics") {
     InsideReadings latest = read_inside_sensors();
-    emit_metrics_json(latest.temperatureC, latest.humidityPct, latest.pressureHPa);
+    emit_metrics_json(latest.temperatureC,
+                       latest.humidityPct,
     return;
   }
   if (op == "ptest") {
@@ -732,7 +766,10 @@ static void handle_serial_command_line(const String& line) {
       Serial.println(F("ptest: status done"));
     } else if (which == "header_time") {
       // Draw a test time string in header time region
-      draw_in_region(HEADER_TIME, [&](int16_t xx, int16_t yy, int16_t ww, int16_t hh) {
+      draw_in_region(HEADER_TIME,
+                      [&](int16_t xx,
+                      int16_t yy,
+                      int16_t ww,
         display.setTextColor(GxEPD_BLACK);
         display.setTextSize(1);
         int16_t rx = xx + ww - 2 - text_width_default_font("10:32", 1);
@@ -871,11 +908,17 @@ static void draw_static_chrome() {
   // Draw outer border flush to panel extents
   display.drawRect(0, 0, EINK_WIDTH, EINK_HEIGHT, GxEPD_BLACK);
   // Header underline aligned with simulator and other draw paths
-  display.drawLine(1, 22 + TOP_Y_OFFSET, EINK_WIDTH - 2, 22 + TOP_Y_OFFSET, GxEPD_BLACK);
+  display.drawLine(1,
+                    22 + TOP_Y_OFFSET,
+                    EINK_WIDTH - 2,
+                    22 + TOP_Y_OFFSET,
   // Extend the center divider to the bottom frame to match the simulator
   display.drawLine(125, 18 + TOP_Y_OFFSET, 125, EINK_HEIGHT - 2, GxEPD_BLACK);
   // Single header underline between header and content
-  display.drawLine(1, 16 + TOP_Y_OFFSET, EINK_WIDTH - 2, 16 + TOP_Y_OFFSET, GxEPD_BLACK);
+  display.drawLine(1,
+                    16 + TOP_Y_OFFSET,
+                    EINK_WIDTH - 2,
+                    16 + TOP_Y_OFFSET,
   // Horizontal rule for footer region (drawn at top edge of footer)
   display.drawLine(1, FOOTER_L[1], EINK_WIDTH - 2, FOOTER_L[1], GxEPD_BLACK);
 
@@ -892,7 +935,7 @@ static void draw_static_chrome() {
   display.setCursor(131, 22 + TOP_Y_OFFSET);
   display.print(F("OUTSIDE"));
   // Top-right version string within HEADER_TIME box
-  display.setCursor(HEADER_TIME[0] + HEADER_TIME[2] - 2 - text_width_default_font("v", 1) -
+  display.setCursor(HEADER_TIME[0] + HEADER_TIME[2] - 2 - text_width_default_font("v",
                         text_width_default_font(FW_VERSION, 1),
                     HEADER_TIME[1] + TOP_Y_OFFSET + HEADER_TIME[3] - 8);
   display.print(F("v"));
@@ -951,7 +994,7 @@ static inline void draw_right_aligned_text_in_rect(const int rect[4], const char
   });
 }
 
-static inline void draw_temp_number_and_units(const int rect[4], const char* temp_f) {
+static inline void draw_temp_number_and_units(const int rect[4],
   // Reserve a small units strip on the right so units do not shift as number
   // width changes
   const int16_t units_w = 14;  // pixels
@@ -1049,7 +1092,12 @@ static inline bool maybe_redraw_status(const BatteryStatus& bs, const char* ip_c
                                        const int rect[4]) {
   char buf[96];
   // Stacked footer signature (3-row status)
-  snprintf(buf, sizeof(buf), "B%.2f|%d|D%d|IP%s", bs.voltage, bs.percent, bs.estimatedDays,
+  snprintf(buf,
+            sizeof(buf),
+            "B%.2f|%d|D%d|IP%s",
+            bs.voltage,
+            bs.percent,
+            bs.estimatedDays,
            ip_cstr);
   uint32_t crc = fast_crc32((const uint8_t*)buf, strlen(buf));
   if (crc != last_status_crc) {
@@ -1060,7 +1108,8 @@ static inline bool maybe_redraw_status(const BatteryStatus& bs, const char* ip_c
   return false;
 }
 
-static void make_short_condition_cstr(const char* weather, char* out, size_t out_size) {
+static void make_short_condition_cstr(const char* weather,
+                                       char* out,
   if (!out || out_size == 0)
     return;
   out[0] = '\0';
@@ -1076,7 +1125,8 @@ static void make_short_condition_cstr(const char* weather, char* out, size_t out
     char c = *p;
     // Treat common separators and hyphen as delimiters so HA values like
     // "clear-night" or "snowy-rainy" shorten to a single word.
-    if (c == ' ' || c == '\t' || c == ',' || c == ';' || c == ':' || c == '/' || c == '-')
+    if (c == ' ' || c == '\t' || c == ',
+         ' || c == ';' || c == ':' || c == '/' || c == '-')
       break;
     out[i++] = c;
     p++;
@@ -1124,11 +1174,16 @@ static void draw_status_line(const BatteryStatus& bs, const char* ip_cstr) {
       int16_t bw = 13;
       int16_t bh = 7;
       display.drawRect(bx, by, bw, bh, GxEPD_BLACK);
-      display.fillRect(static_cast<int16_t>(bx + bw), static_cast<int16_t>(by + 2), 2, 3,
+      display.fillRect(static_cast<int16_t>(bx + bw),
+                        static_cast<int16_t>(by + 2),
+                        2,
+                        3,
                        GxEPD_BLACK);
       int16_t fillw = static_cast<int16_t>(((bw - 2) * (bs.percent / 100.0f) + 0.5f));
       if (fillw > 0)
-        display.fillRect(static_cast<int16_t>(bx + 1), static_cast<int16_t>(by + 1), fillw,
+        display.fillRect(static_cast<int16_t>(bx + 1),
+                          static_cast<int16_t>(by + 1),
+                          fillw,
                          static_cast<int16_t>(bh - 2), GxEPD_BLACK);
       cx = static_cast<int16_t>(cx + bw + 6);
     }
@@ -1154,7 +1209,7 @@ static void draw_status_line(const BatteryStatus& bs, const char* ip_cstr) {
   });
 }
 
-static inline void draw_status_line_direct(const BatteryStatus& bs, const char* ip_cstr) {
+static inline void draw_status_line_direct(const BatteryStatus& bs,
   int16_t xx = STATUS_[0];
   int16_t yy = static_cast<int16_t>(STATUS_[1] + STATUS_Y_ADJ);
   int16_t ww = STATUS_[2];
@@ -1169,11 +1224,16 @@ static inline void draw_status_line_direct(const BatteryStatus& bs, const char* 
     int16_t bw2 = 13;
     int16_t bh2 = 7;
     display.drawRect(bx, by, bw2, bh2, GxEPD_BLACK);
-    display.fillRect(static_cast<int16_t>(bx + bw2), static_cast<int16_t>(by + 2), 2, 3,
+    display.fillRect(static_cast<int16_t>(bx + bw2),
+                      static_cast<int16_t>(by + 2),
+                      2,
+                      3,
                      GxEPD_BLACK);
     int16_t fillw = static_cast<int16_t>(((bw2 - 2) * (bs.percent / 100.0f) + 0.5f));
     if (fillw > 0)
-      display.fillRect(static_cast<int16_t>(bx + 1), static_cast<int16_t>(by + 1), fillw,
+      display.fillRect(static_cast<int16_t>(bx + 1),
+                        static_cast<int16_t>(by + 1),
+                        fillw,
                        static_cast<int16_t>(bh2 - 2), GxEPD_BLACK);
     cx = static_cast<int16_t>(cx + bw2 + 6);
   }
@@ -1186,11 +1246,22 @@ static inline void draw_status_line_direct(const BatteryStatus& bs, const char* 
   char left_full[64];
   char left_nobatt[64];
   char left_tail[32];
-  snprintf(left_full, sizeof(left_full), "Batt %.2fV %d%% | ~%dd", bs.voltage, bs.percent,
+  snprintf(left_full,
+            sizeof(left_full),
+            "Batt %.2fV %d%% | ~%dd",
+            bs.voltage,
+            bs.percent,
            bs.estimatedDays);
-  snprintf(left_nobatt, sizeof(left_nobatt), "%.2fV %d%% | ~%dd", bs.voltage, bs.percent,
+  snprintf(left_nobatt,
+            sizeof(left_nobatt),
+            "%.2fV %d%% | ~%dd",
+            bs.voltage,
+            bs.percent,
            bs.estimatedDays);
-  snprintf(left_tail, sizeof(left_tail), "%d%% | ~%dd", bs.percent, bs.estimatedDays);
+  snprintf(left_tail,
+            sizeof(left_tail),
+            "%d%% | ~%dd",
+            bs.percent,
   int16_t available = static_cast<int16_t>(rx - cx - 2);
   const char* to_print = left_full;
   display.getTextBounds(to_print, 0, 0, &bx, &by2, &bw3, &bh3);
@@ -1232,7 +1303,8 @@ static void draw_values(const char* in_temp_f, const char* in_rh, const char* ou
 
   // Outside temp: numeric right-aligned, units drawn separately
   {
-    int rect[4] = {OUT_TEMP[0], static_cast<int16_t>(OUT_TEMP[1] + TOP_Y_OFFSET), OUT_TEMP[2],
+    int rect[4] = {OUT_TEMP[0], static_cast<int16_t>(OUT_TEMP[1] + TOP_Y_OFFSET),
+                                                      OUT_TEMP[2],
                    OUT_TEMP[3]};
     draw_temp_number_and_units(rect, out_temp_f);
   }
@@ -1321,7 +1393,7 @@ static IconId map_openweather_to_icon(const OutsideReadings& o) {
       if (strncmp(ic, "01", 2) == 0)
         return (strchr(ic, 'n') ? ICON_WEATHER_NIGHT : ICON_WEATHER_SUNNY);
       if (strncmp(ic, "02", 2) == 0)
-        return (strchr(ic, 'n') ? ICON_WEATHER_NIGHT_PARTLY_CLOUDY : ICON_WEATHER_PARTLY_CLOUDY);
+        return (strchr(ic,
       if (strncmp(ic, "03", 2) == 0)
         return ICON_WEATHER_CLOUDY;
       if (strncmp(ic, "04", 2) == 0)
@@ -1413,10 +1485,14 @@ static void full_refresh() {
   char in_rh[16];
   snprintf(in_temp, sizeof(in_temp), isfinite(r.temperatureC) ? "%.1f" : "--",
            r.temperatureC * 9.0 / 5.0 + 32.0);
-  snprintf(in_rh, sizeof(in_rh), isfinite(r.humidityPct) ? "%.0f" : "--", r.humidityPct);
+  snprintf(in_rh,
+            sizeof(in_rh),
+            isfinite(r.humidityPct) ? "%.0f" : "--",
   char out_temp[16];
   if (o.validTemp && isfinite(o.temperatureC)) {
-    snprintf(out_temp, sizeof(out_temp), "%.1f", o.temperatureC * 9.0 / 5.0 + 32.0);
+    snprintf(out_temp,
+              sizeof(out_temp),
+              "%.1f",
   } else if (isfinite(last_outside_f)) {
     snprintf(out_temp, sizeof(out_temp), "%.1f", last_outside_f);
   } else {
@@ -1465,7 +1541,8 @@ static void full_refresh() {
     }
     // Outside condition text removed from middle; only show condition in footer
     // Outside temp
-    draw_temp_number_and_units_direct(OUT_TEMP[0], static_cast<int16_t>(OUT_TEMP[1] + TOP_Y_OFFSET),
+    draw_temp_number_and_units_direct(OUT_TEMP[0],
+                                       static_cast<int16_t>(OUT_TEMP[1] + TOP_Y_OFFSET),
                                       OUT_TEMP[2], OUT_TEMP[3], out_temp);
     // Outside RH and wind
     if (have_out_rh) {
@@ -1550,7 +1627,7 @@ static void full_refresh() {
         char sig[64];
         snprintf(sig, sizeof(sig), "I%d|%s", static_cast<int>(icon_id),
                  (o.validWeather || o.validWeatherDesc) ? sc : "");
-        last_footer_weather_crc = fast_crc32(reinterpret_cast<const uint8_t*>(sig), strlen(sig));
+        last_footer_weather_crc = fast_crc32(reinterpret_cast<const uint8_t*>(sig),
       }
     }
   } while (display.nextPage());
@@ -1564,7 +1641,10 @@ static void smoke_full_window_test() {
     page_count++;
     display.fillScreen(GxEPD_WHITE);
     // 1px border to validate geometry and orientation visually
-    display.drawRect(0, 0, display.width() - 1, display.height() - 1, GxEPD_BLACK);
+    display.drawRect(0,
+                      0,
+                      display.width() - 1,
+                      display.height() - 1,
     display.setTextColor(GxEPD_BLACK);
     display.setTextSize(1);
     display.setCursor(4, 14);
@@ -1605,7 +1685,8 @@ static void partial_update_inside_temp(const char* in_temp_f, char trend) {
 }
 
 static void partial_update_outside_temp(const char* out_temp_f, char trend) {
-  int rect[4] = {OUT_TEMP[0], static_cast<int16_t>(OUT_TEMP[1] + TOP_Y_OFFSET), OUT_TEMP[2],
+  int rect[4] = {OUT_TEMP[0], static_cast<int16_t>(OUT_TEMP[1] + TOP_Y_OFFSET),
+                                                    OUT_TEMP[2],
                  OUT_TEMP[3]};
   draw_in_region(rect, [&](int16_t x, int16_t y, int16_t w, int16_t h) {
     display.setTextColor(GxEPD_BLACK);
@@ -1630,7 +1711,8 @@ static void partial_update_outside_temp(const char* out_temp_f, char trend) {
 }
 
 static void partial_update_outside_rh(const char* out_rh) {
-  int rect[4] = {OUT_ROW2_L[0], static_cast<int16_t>(OUT_ROW2_L[1] + TOP_Y_OFFSET), OUT_ROW2_L[2],
+  int rect[4] = {OUT_ROW2_L[0], static_cast<int16_t>(OUT_ROW2_L[1] + TOP_Y_OFFSET),
+                                                      OUT_ROW2_L[2],
                  OUT_ROW2_L[3]};
   draw_in_region(rect, [&](int16_t x, int16_t y, int16_t w, int16_t h) {
     display.setTextColor(GxEPD_BLACK);
@@ -1642,7 +1724,8 @@ static void partial_update_outside_rh(const char* out_rh) {
 }
 
 static void partial_update_inside_rh(const char* in_rh) {
-  int rect[4] = {INSIDE_RH[0], static_cast<int16_t>(INSIDE_RH[1] + TOP_Y_OFFSET), INSIDE_RH[2],
+  int rect[4] = {INSIDE_RH[0], static_cast<int16_t>(INSIDE_RH[1] + TOP_Y_OFFSET),
+                                                     INSIDE_RH[2],
                  INSIDE_RH[3]};
   draw_in_region(rect, [&](int16_t x, int16_t y, int16_t w, int16_t h) {
     display.setTextColor(GxEPD_BLACK);
@@ -1654,7 +1737,8 @@ static void partial_update_inside_rh(const char* in_rh) {
 }
 
 static void partial_update_weather_icon(const char* weather) {
-  int rect[4] = {OUT_ICON[0], static_cast<int16_t>(OUT_ICON[1] + TOP_Y_OFFSET), OUT_ICON[2],
+  int rect[4] = {OUT_ICON[0], static_cast<int16_t>(OUT_ICON[1] + TOP_Y_OFFSET),
+                                                    OUT_ICON[2],
                  OUT_ICON[3]};
   draw_in_region(rect, [&](int16_t xx, int16_t yy, int16_t ww, int16_t hh) {
     draw_weather_icon_region_at(xx, yy, ww, hh, weather);
@@ -1662,7 +1746,8 @@ static void partial_update_weather_icon(const char* weather) {
 }
 
 static void partial_update_outside_wind(const char* wind_str) {
-  int rect[4] = {OUT_ROW2_R[0], static_cast<int16_t>(OUT_ROW2_R[1] + TOP_Y_OFFSET), OUT_ROW2_R[2],
+  int rect[4] = {OUT_ROW2_R[0], static_cast<int16_t>(OUT_ROW2_R[1] + TOP_Y_OFFSET),
+                                                      OUT_ROW2_R[2],
                  OUT_ROW2_R[3]};
   draw_in_region(rect, [&](int16_t x, int16_t y, int16_t, int16_t) {
     display.setTextColor(GxEPD_BLACK);
@@ -1673,7 +1758,8 @@ static void partial_update_outside_wind(const char* wind_str) {
 }
 
 static void partial_update_outside_condition(const char* short_condition) {
-  int rect[4] = {OUT_ROW1_L[0], static_cast<int16_t>(OUT_ROW1_L[1] + TOP_Y_OFFSET), OUT_ROW1_L[2],
+  int rect[4] = {OUT_ROW1_L[0], static_cast<int16_t>(OUT_ROW1_L[1] + TOP_Y_OFFSET),
+                                                      OUT_ROW1_L[2],
                  OUT_ROW1_L[3]};
   draw_in_region(rect, [&](int16_t x, int16_t y, int16_t, int16_t) {
     display.setTextColor(GxEPD_BLACK);
@@ -1684,7 +1770,8 @@ static void partial_update_outside_condition(const char* short_condition) {
 }
 
 static void partial_update_outside_hilo(float highC, float lowC) {
-  int rect[4] = {OUT_ROW2_R[0], static_cast<int16_t>(OUT_ROW2_R[1] + TOP_Y_OFFSET), OUT_ROW2_R[2],
+  int rect[4] = {OUT_ROW2_R[0], static_cast<int16_t>(OUT_ROW2_R[1] + TOP_Y_OFFSET),
+                                                      OUT_ROW2_R[2],
                  OUT_ROW2_R[3]};
   draw_in_region(rect, [&](int16_t x, int16_t y, int16_t, int16_t) {
     display.setTextColor(GxEPD_BLACK);
@@ -1702,7 +1789,10 @@ static void partial_update_outside_hilo(float highC, float lowC) {
 
 // Footer-only weather updater using the same geometry as full renders
 static void partial_update_footer_weather_from_outside(const OutsideReadings& o) {
-  draw_in_region(FOOTER_WEATHER, [&](int16_t x, int16_t y, int16_t w, int16_t h) {
+  draw_in_region(FOOTER_WEATHER,
+                  [&](int16_t x,
+                  int16_t y,
+                  int16_t w,
     display.fillRect(x, y, w, h, GxEPD_WHITE);
     // Icon at left
     int16_t ix = static_cast<int16_t>(x + 2);
@@ -1805,7 +1895,9 @@ void setup() {
 #endif
   display.init(0);
   display.setRotation(1);  // landscape 250x122 coordinate system
-  Serial.printf("EINK %dx%d (rotation=%d)\n", display.width(), display.height(), 1);
+  Serial.printf("EINK %dx%d (rotation=%d)\n",
+                 display.width(),
+                 display.height(),
 #endif
   nvs_begin_cache();
   nvs_load_cache_if_unset();
@@ -1858,7 +1950,8 @@ void setup() {
     uint32_t ms_boot_to_wifi = static_cast<uint32_t>((t1_us - t0_us) / 1000);
     uint32_t ms_wifi_to_mqtt = static_cast<uint32_t>((t2_us - t1_us) / 1000);
     Serial.printf("Boot timing: wifi=%u ms mqtt=%u ms sensor=%u ms\n",
-                  static_cast<unsigned>(ms_boot_to_wifi), static_cast<unsigned>(ms_wifi_to_mqtt),
+                  static_cast<unsigned>(ms_boot_to_wifi),
+                                         static_cast<unsigned>(ms_wifi_to_mqtt),
                   static_cast<unsigned>(dbg_ms_sensor));
     // Repeat reset/wake later so it shows even if early prints were missed
     Serial.printf("Reset: %s, Wake: %s\n", reset_reason_str(esp_reset_reason()),
@@ -1894,7 +1987,7 @@ void setup() {
              "cause\":\"%s\",\"rtc_wake_count\":%u}",
              ms_boot_to_wifi, ms_wifi_to_mqtt, ms_sensor_read, ms_publish, sleep_scheduled_ms,
              deep_sleep_us, reset_reason_str(esp_reset_reason()),
-             wakeup_cause_str(esp_sleep_get_wakeup_cause()), static_cast<unsigned>(rtc_wake_count));
+             wakeup_cause_str(esp_sleep_get_wakeup_cause()),
     net_publish_debug_json(dbg, false);
     // Publish layout identity for quick visual parity checks in dashboards
     net_publish_layout_identity();
@@ -1917,14 +2010,14 @@ void setup() {
     }
   }
   uint32_t ms_fetch = static_cast<uint32_t>(millis() - fetch_start_ms);
-  Serial.printf("DBG: after fetch retained ms=%u\n", static_cast<unsigned>(ms_fetch));
+  Serial.printf("DBG: after fetch retained ms=%u\n",
   bool outside_after = net_get_outside().validTemp || net_get_outside().validHum ||
                        net_get_outside().validWeather || net_get_outside().validWind;
   if (ms_fetch >= static_cast<uint32_t>(FETCH_RETAINED_TIMEOUT_MS) && !outside_after &&
       !outside_before && !g_outside_warned) {
     s_timeouts_mask |= TIMEOUT_BIT_FETCH;
     g_outside_warned = true;  // only warn once until outside data later appears
-    Serial.printf("Note: no outside retained data yet (waited %u ms). Continuing...\n", ms_fetch);
+    Serial.printf("Note: no outside retained data yet (waited %u ms). Continuing...\n",
   }
 
   // Publish a retained UI-debug snapshot so tests/diagnostics can assert what the device believes
@@ -1945,9 +2038,12 @@ void setup() {
         "{\"event\":\"ui_debug\",\"time\":\"%s\",\"outside\":{\"tempF\":%s,\"rhPct\":%s,"
         "\"windMps\":%s,\"weather\":%s,\"weatherId\":%d,\"weatherDesc\":%s,\"weatherIcon\":%s}}",
         hhmm_dbg, (isfinite(tempF) ? String(tempF, 1).c_str() : "null"),
-        (o.validHum && isfinite(o.humidityPct) ? String(o.humidityPct, 0).c_str() : "null"),
-        (o.validWind && isfinite(o.windMps) ? String(o.windMps, 1).c_str() : "null"),
-        (w ? (String("\"") + w + "\"").c_str() : "null"), (o.validWeatherId ? o.weatherId : 0),
+        (o.validHum && isfinite(o.humidityPct) ? String(o.humidityPct,
+          0).c_str() : "null"),
+        (o.validWind && isfinite(o.windMps) ? String(o.windMps,
+          1).c_str() : "null"),
+        (w ? (String("\"") + w + "\"").c_str() : "null"),
+          (o.validWeatherId ? o.weatherId : 0),
         (wd ? (String("\"") + wd + "\"").c_str() : "null"),
         (wi ? (String("\"") + wi + "\"").c_str() : "null"));
     net_publish_debug_ui(buf, true);
@@ -2009,12 +2105,15 @@ void setup() {
     if (sens2_ms > static_cast<uint32_t>(SENSOR_PHASE_TIMEOUT_MS)) {
       s_timeouts_mask |= TIMEOUT_BIT_SENSOR;
 
-      Serial.printf("Timeout: sensor read (secondary) exceeded budget ms=%u budget=%u\n", sens2_ms,
+      Serial.printf("Timeout: sensor read (secondary) exceeded budget ms=%u budget=%u\n",
+                     sens2_ms,
                     static_cast<unsigned>(SENSOR_PHASE_TIMEOUT_MS));
     }
     char in_temp[16];
     if (isfinite(r.temperatureC)) {
-      snprintf(in_temp, sizeof(in_temp), "%.1f", r.temperatureC * 9.0 / 5.0 + 32.0);
+      snprintf(in_temp,
+                sizeof(in_temp),
+                "%.1f",
     } else {
       snprintf(in_temp, sizeof(in_temp), "--");
     }
@@ -2029,7 +2128,7 @@ void setup() {
     }
     // Only redraw inside temp when changed beyond threshold
     maybe_redraw_numeric(INSIDE_TEMP, now_in_f, last_inside_f, THRESH_TEMP_F,
-                         [&]() { partial_update_inside_temp(in_temp, trend_in); });
+                         [&]() { partial_update_inside_temp(in_temp,
     if (isfinite(last_inside_f))
       nvs_store_float("li_f", last_inside_f);
     // Inside RH partial update + publish only when changed beyond thresholds
@@ -2072,7 +2171,9 @@ void setup() {
     OutsideReadings o = net_get_outside();
     if (o.validTemp) {
       char out_temp[16];
-      snprintf(out_temp, sizeof(out_temp), "%.1f", o.temperatureC * 9.0 / 5.0 + 32.0);
+      snprintf(out_temp,
+                sizeof(out_temp),
+                "%.1f",
       char trend_out = '0';
       float now_out_f = o.temperatureC * 9.0f / 5.0f + 32.0f;
       if (isfinite(last_outside_f)) {
@@ -2087,14 +2188,14 @@ void setup() {
       if (temp_changed && o.validHum && isfinite(o.humidityPct)) {
         // Merge redraws: update temp and RH in same wake when both changed
         maybe_redraw_numeric(OUT_TEMP, now_out_f, last_outside_f, THRESH_TEMP_F,
-                             [&]() { partial_update_outside_temp(out_temp, trend_out); });
+                             [&]() { partial_update_outside_temp(out_temp,
         char out_rh2[16];
         snprintf(out_rh2, sizeof(out_rh2), "%.0f", o.humidityPct);
         maybe_redraw_numeric(OUT_ROW2_L, o.humidityPct, last_outside_rh, THRESH_RH,
                              [&]() { partial_update_outside_rh(out_rh2); });
       } else {
         maybe_redraw_numeric(OUT_TEMP, now_out_f, last_outside_f, THRESH_TEMP_F,
-                             [&]() { partial_update_outside_temp(out_temp, trend_out); });
+                             [&]() { partial_update_outside_temp(out_temp,
       }
       if (isfinite(last_outside_f))
         nvs_store_float("lo_f", last_outside_f);
@@ -2109,21 +2210,27 @@ void setup() {
     }
     if (o.validWeather) {
       IconId id = (o.validWeatherIcon || o.validWeatherId) ? map_openweather_to_icon(o) :
-    map_weather_to_icon(o.weather); maybe_redraw_value<int32_t>(OUT_ICON, static_cast<int32_t>(id),
+    map_weather_to_icon(o.weather); maybe_redraw_value<int32_t>(OUT_ICON,
+                         static_cast<int32_t>(id),
     last_icon_id,
                                   [&]() {
                                     if (o.validWeatherIcon || o.validWeatherId) {
                                       int rect_tmp[4] = { OUT_ICON[0],
-    static_cast<int16_t>(OUT_ICON[1] + TOP_Y_OFFSET), OUT_ICON[2], OUT_ICON[3] };
+    static_cast<int16_t>(OUT_ICON[1] + TOP_Y_OFFSET),
+                          OUT_ICON[2],
                                       draw_in_region(rect_tmp,
                                                      [&](int16_t xx, int16_t yy, int16_t ww, int16_t
-    hh){ draw_weather_icon_region_at_from_outside(xx, yy, ww, hh, o); }); } else {
+    hh){ draw_weather_icon_region_at_from_outside(xx,
+                                                   yy,
+                                                   ww,
+                                                   hh,
                                       partial_update_weather_icon(o.weather);
                                     }
                                   });
       nvs_store_int("icon", last_icon_id);
       char sc[24];
-      if (o.validWeatherDesc && o.weatherDesc[0]) make_short_condition_cstr(o.weatherDesc, sc,
+      if (o.validWeatherDesc && o.weatherDesc[0]) make_short_condition_cstr(o.weatherDesc,
+           sc,
     sizeof(sc)); else make_short_condition_cstr(o.weather, sc, sizeof(sc));
       partial_update_outside_condition(sc);
     }
@@ -2181,7 +2288,7 @@ void setup() {
   if (sens2_ms > static_cast<uint32_t>(SENSOR_PHASE_TIMEOUT_MS)) {
     s_timeouts_mask |= TIMEOUT_BIT_SENSOR;
     Serial.printf("Timeout: sensor read exceeded budget ms=%u budget=%u\n",
-                  static_cast<unsigned>(sens2_ms), static_cast<unsigned>(SENSOR_PHASE_TIMEOUT_MS));
+                  static_cast<unsigned>(sens2_ms),
   }
   uint32_t publish_phase_start = millis();
   bool publish_any = false;
@@ -2214,7 +2321,11 @@ void setup() {
     String ip = net_ip();
     BatteryStatus bs = read_battery_status();
     char payload[96];
-    snprintf(payload, sizeof(payload), "headless=1 ip=%s v=%.2f pct=%d", ip.c_str(), bs.voltage,
+    snprintf(payload,
+              sizeof(payload),
+              "headless=1 ip=%s v=%.2f pct=%d",
+              ip.c_str(),
+              bs.voltage,
              bs.percent);
     net_publish_status(payload, true);
     if (isfinite(bs.voltage) && bs.percent >= 0) {
@@ -2236,9 +2347,10 @@ void setup() {
   {
     Serial.println("DBG: before metrics json");
     InsideReadings latest = read_inside_sensors();
-    emit_metrics_json(latest.temperatureC, latest.humidityPct, latest.pressureHPa);
+    emit_metrics_json(latest.temperatureC,
+                       latest.humidityPct,
     Serial.println("DBG: after metrics json");
-    Serial.printf("RTC wake count: %u\n", static_cast<unsigned>(rtc_wake_count));
+    Serial.printf("RTC wake count: %u\n",
   }
 
   // Publish a concise timeout summary JSON if MQTT is connected
@@ -2253,7 +2365,7 @@ void setup() {
     Serial.println("DBG: after timeout summary json");
   }
   // Also emit a compact timeouts mask on USB
-  Serial.printf("Timeouts mask: 0x%02X\n", static_cast<unsigned>(s_timeouts_mask));
+  Serial.printf("Timeouts mask: 0x%02X\n",
 
   partial_counter++;
   // Persist partial refresh cadence so it survives reset
@@ -2299,7 +2411,8 @@ void setup() {
     static uint32_t last_metrics = 0;
     if (millis() - last_metrics > 2000) {
       InsideReadings latest = read_inside_sensors();
-      emit_metrics_json(latest.temperatureC, latest.humidityPct, latest.pressureHPa);
+      emit_metrics_json(latest.temperatureC,
+                         latest.humidityPct,
       last_metrics = millis();
     }
 #if USE_DISPLAY
@@ -2325,7 +2438,7 @@ void setup() {
   }
 #else
 #if DEV_CYCLE_MODE
-  Serial.printf("Dev cycle: sleeping for %us\n", static_cast<unsigned>(DEV_SLEEP_SEC));
+  Serial.printf("Dev cycle: sleeping for %us\n",
   nvs_end_cache();
 #if USE_STATUS_PIXEL
   status_pixel_off();
@@ -2344,7 +2457,9 @@ void setup() {
   // Pre-sleep heartbeat for dev cycle
   {
     char hb[96];
-    snprintf(hb, sizeof(hb), "sleeping=1 sec=%u", static_cast<unsigned>(DEV_SLEEP_SEC));
+    snprintf(hb,
+              sizeof(hb),
+              "sleeping=1 sec=%u",
     net_publish_status(hb, true);
   }
   net_prepare_for_sleep();
@@ -2370,7 +2485,9 @@ void setup() {
   // Pre-sleep heartbeat for normal cycle
   {
     char hb[96];
-    snprintf(hb, sizeof(hb), "sleeping=1 sec=%u", static_cast<unsigned>(WAKE_INTERVAL_SEC));
+    snprintf(hb,
+              sizeof(hb),
+              "sleeping=1 sec=%u",
     net_publish_status(hb, true);
   }
   net_prepare_for_sleep();
