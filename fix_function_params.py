@@ -28,7 +28,7 @@ def fix_function_parameters(content):
                 func_lines.append(lines[j])  # Add the opening brace line
 
                 # Join all function lines and check length
-                full_func = ' '.join([l.strip() for l in func_lines])
+                full_func = ' '.join([line.strip() for line in func_lines])
 
                 if len(full_func) > 80 and ',' in full_func:
                     # Reformat the function parameters

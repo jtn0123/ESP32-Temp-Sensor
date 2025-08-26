@@ -283,7 +283,7 @@ class TestNVSCorruption:
             try:
                 # Simulate corruption
                 raise ValueError("NVS corrupted")
-            except:
+            except Exception:
                 return {
                     'wifi_ssid': '',
                     'mqtt_broker': '',

@@ -74,7 +74,8 @@ def fix_remaining_patterns(content):
             right_side = assign_match.group(2)
 
             # Check if right side is a complex expression
-            if ('(' in right_side and ')' in right_side) or ('+' in right_side and len(right_side) > 40):
+            if (('(' in right_side and ')' in right_side) or
+                    ('+' in right_side and len(right_side) > 40)):
                 fixed_lines.append(f"{indent}{left_side}")
                 fixed_lines.append(f"{indent}    {right_side};")
                 continue

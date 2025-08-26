@@ -1,6 +1,6 @@
 PY=python3
 
-.PHONY: test test-web browsers rebaseline lint fw
+.PHONY: test test-web browsers rebaseline lint lint-python lint-cpp lint-fix lint-all fw
 
 test:
 	$(PY) -m pytest
@@ -40,8 +40,24 @@ with open(p,'w') as f: f.write(md5)
 print('wrote', p, md5)
 PY
 
-lint:
-	@echo "No linters configured yet"
+lint: lint-python lint-cpp
+
+lint-python:
+	@echo "Running Python linters..."
+	@python3 -m ruff check . --quiet
+	@python3 -m mypy . --hide-error-context --no-color-output --ignore-missing-imports
+
+lint-cpp:
+	@echo "Running C++ linters..."
+	@python3 -m cpplint firmware/arduino/src/*.{h,cpp}
+
+lint-fix:
+	@echo "Auto-fixing Python linting issues..."
+	@python3 -m ruff check . --fix --unsafe-fixes
+	@echo "✅ Python auto-fixes applied"
+
+lint-all: lint
+	@echo "🎉 All linters passed!"
 
 fw:
 	@echo "Building Arduino firmware"

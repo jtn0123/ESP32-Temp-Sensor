@@ -68,7 +68,9 @@ class TestWebSimDataTransforms:
 
         for pressure, expected in test_cases:
             # Test that formatting fits in expected width
-            assert len(expected) <= 8, f"Pressure {pressure} formatted as '{expected}' exceeds display width"
+            assert len(expected) <= 8, (
+                f"Pressure {pressure} formatted as '{expected}' exceeds display width"
+            )
 
     def test_humidity_percentage_display(self):
         """Test humidity percentage formatting."""

@@ -72,7 +72,10 @@ class TestUIValidationEdgeCases:
         ]
 
         for collision in collisions:
-            assert collision in expected_collisions or (collision[1], collision[0]) in expected_collisions, f"Unexpected collision: {collision}"
+            assert (collision in expected_collisions or
+                    (collision[1], collision[0]) in expected_collisions), (
+                f"Unexpected collision: {collision}"
+            )
 
     def regions_overlap(self, r1, r2):
         """Check if two regions overlap."""

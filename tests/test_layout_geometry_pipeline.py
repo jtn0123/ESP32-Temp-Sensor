@@ -163,12 +163,17 @@ class TestLayoutGeometryPipeline:
 
         for name, expected_size in expected_sizes.items():
             if name in fonts:
-                assert fonts[name] == expected_size, f"Font {name} should be {expected_size}, got {fonts[name]}"
+                assert fonts[name] == expected_size, (
+                    f"Font {name} should be {expected_size}, got {fonts[name]}"
+                )
 
     def test_geometry_version_tracking(self):
         """Test that geometry version is properly tracked."""
         # Check for version or CRC in the geometry
-        assert "layout_version" in self.geometry or "layout_crc" in self.geometry, "Geometry should have version or CRC tracking"
+        assert ("layout_version" in self.geometry or
+                "layout_crc" in self.geometry), (
+            "Geometry should have version or CRC tracking"
+        )
 
         # If CRC exists, should be valid hex
         if "layout_crc" in self.geometry:

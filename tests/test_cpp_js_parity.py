@@ -144,7 +144,9 @@ class TestCppJsParity:
             cpp_size = self.get_cpp_font_size(size_name)
             js_size = self.get_js_font_size(size_name)
 
-            assert cpp_size == js_size, f"Font size '{size_name}' mismatch: C++={cpp_size}, JS={js_size}"
+            assert cpp_size == js_size, (
+                f"Font size '{size_name}' mismatch: C++={cpp_size}, JS={js_size}"
+            )
 
     def get_cpp_font_size(self, size_name):
         """Get font size from C++ definitions."""
@@ -172,7 +174,9 @@ class TestCppJsParity:
             cpp_icon = self.get_cpp_battery_icon(percentage)
             js_icon = self.get_js_battery_icon(percentage)
 
-            assert cpp_icon == js_icon, f"Battery icon mismatch at {percentage}%: C++={cpp_icon}, JS={js_icon}"
+            assert cpp_icon == js_icon, (
+                f"Battery icon mismatch at {percentage}%: C++={cpp_icon}, JS={js_icon}"
+            )
 
     def get_cpp_battery_icon(self, percentage):
         """Get battery icon from C++ logic."""
@@ -217,7 +221,9 @@ class TestCppJsParity:
 
         # Would need to compile and run C++ CRC function
         # For now, verify Python CRC is consistent
-        assert python_crc == self.calculate_python_crc(test_data), "CRC calculation not deterministic"
+        assert python_crc == self.calculate_python_crc(test_data), (
+            "CRC calculation not deterministic"
+        )
 
     def calculate_python_crc(self, data):
         """Calculate CRC32 in Python."""

@@ -23,7 +23,10 @@ def aggressive_fix(content):
         # Pattern 1: Very long lines - break at any reasonable point
         if len(line) > 90:
             # Try breaking at various operators
-            operators = [' && ', ' || ', ' + ', ' - ', ' * ', ' / ', ' == ', ' != ', ' < ', ' > ', ' <= ', ' >= ', ', ']
+            operators = [
+                ' && ', ' || ', ' + ', ' - ', ' * ', ' / ', ' == ', ' != ',
+                ' < ', ' > ', ' <= ', ' >= ', ', '
+            ]
             for operator in operators:
                 if operator in line and len(line) > 80:
                     parts = line.split(operator, 1)  # Split only on first occurrence
@@ -70,7 +73,8 @@ def aggressive_fix(content):
                         continue
 
             # Try breaking at assignment operators
-            if '=' in line and not line.strip().startswith('//') and not line.strip().startswith('#'):
+            if ('=' in line and not line.strip().startswith('//') and
+                    not line.strip().startswith('#')):
                 assign_match = re.match(r'(\s*[^=]*=)\s*(.*);?', line.strip())
                 if assign_match:
                     indent = re.match(r'^(\s*)', line).group(1)
