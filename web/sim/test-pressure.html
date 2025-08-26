@@ -75,7 +75,7 @@
         </div>
         
         <div style="margin-top: 20px; padding: 10px; background: #f9f9f9;">
-            <h4>Current OUT_ROW Values:</h4>
+            <h4>Current Outside Metric Values:</h4>
             <div id="rowStatus"></div>
         </div>
     </div>
@@ -114,10 +114,10 @@
             
             // Show what's being displayed
             document.getElementById('rowStatus').innerHTML = `
-                <strong>OUT_ROW1_L:</strong> ${data.weather_short || '(empty)'}<br>
-                <strong>OUT_ROW1_R:</strong> ${data.outside_pressure_hpa ? data.outside_pressure_hpa.toFixed(0) + ' hPa' : '(empty)'}<br>
-                <strong>OUT_ROW2_L:</strong> ${data.outside_hum_pct}% RH<br>
-                <strong>OUT_ROW2_R:</strong> ${(data.wind_mps * 2.237).toFixed(1)} mph
+                <strong>OUT_WEATHER:</strong> ${data.weather_short || '(empty)'}<br>
+                <strong>OUT_PRESSURE:</strong> ${data.outside_pressure_hpa ? data.outside_pressure_hpa.toFixed(0) + ' hPa' : '(empty)'}<br>
+                <strong>OUT_HUMIDITY:</strong> ${data.outside_hum_pct}% RH<br>
+                <strong>OUT_WIND:</strong> ${(data.wind_mps * 2.237).toFixed(1)} mph
             `;
         }
         

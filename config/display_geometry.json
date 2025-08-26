@@ -1,6 +1,6 @@
 {
   "layout_version": 1,
-  "layout_crc": "0x5297704E",
+  "layout_crc": "0x153B7A86",
   "canvas": {
     "w": 250,
     "h": 122
@@ -59,25 +59,25 @@
       28,
       28
     ],
-    "OUT_ROW1_L": [
+    "OUT_WEATHER": [
       131,
       68,
       44,
       12
     ],
-    "OUT_ROW1_R": [
+    "OUT_PRESSURE": [
       177,
       68,
       64,
       12
     ],
-    "OUT_ROW2_L": [
+    "OUT_HUMIDITY": [
       131,
       78,
       44,
       12
     ],
-    "OUT_ROW2_R": [
+    "OUT_WIND": [
       177,
       78,
       44,

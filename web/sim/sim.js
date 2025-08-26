@@ -11,12 +11,11 @@
   let OUT_TEMP    = [131, 36,  90, 28];
   // Place icon higher so tests sampling around y=30 see non-white pixels
   let WEATHER_ICON = [210, 22,  28, 28];
-  // Move outside non-temp rows up by one row (12px) to close white space
-  let OUT_ROW1_L  = [131, 66,  48, 12]; // top row: outside RH - widened from 44 to 48
-  // widen right-top box so "99.9 mph" never truncates
-  let OUT_ROW1_R  = [181, 66,  60, 12]; // top row: wind mph - adjusted position and width
-  let OUT_ROW2_L  = [131, 78,  44, 12]; // bottom row: condition (aligned with FW)
-  let OUT_ROW2_R  = [177, 78,  44, 12]; // bottom row: reserved (H/L)
+  // Outside metric regions with meaningful names
+  let OUT_WEATHER  = [131, 68,  44, 12]; // Weather description
+  let OUT_PRESSURE = [177, 68,  64, 12]; // Outside pressure
+  let OUT_HUMIDITY = [131, 78,  44, 12]; // Outside humidity
+  let OUT_WIND     = [177, 78,  44, 12]; // Wind speed
 
   let canvas = null;
   let ctx = null;
@@ -162,8 +161,8 @@
       'OUT_TEMP': 10,
       'HEADER_NAME': 8,
       'INSIDE_RH': 7,
-      'OUT_ROW1_L': 6,
-      'OUT_ROW2_L': 6,
+      'OUT_WEATHER': 6,
+      'OUT_HUMIDITY': 6,
       'FOOTER_L': 5,
       'FOOTER_WEATHER': 5
     };
@@ -406,7 +405,7 @@
     const issues = [];
     const alignmentGroups = [
       ['INSIDE_TEMP', 'OUT_TEMP'],
-      ['INSIDE_RH', 'OUT_ROW2_L'],
+      ['INSIDE_RH', 'OUT_HUMIDITY'],
       ['HEADER_NAME', 'HEADER_VERSION'],
       ['FOOTER_L', 'FOOTER_WEATHER']
     ];
@@ -456,11 +455,12 @@
     for (const [regionName, content] of Object.entries(renderedContent)) {
       if (GJSON.rects[regionName] && content.text) {
         // Skip validation for internal helper regions and temp regions with complex layouts
-        // Also skip OUT_ROW regions that have known tight bounds
+        // Also skip outside metric regions that have known tight bounds
         if (regionName.includes('_INNER') || regionName.includes('_BADGE') || 
             regionName.includes('LABEL_BOX') || 
             regionName === 'INSIDE_TEMP' || regionName === 'OUT_TEMP' ||
-            regionName.startsWith('OUT_ROW')) {
+            regionName === 'OUT_WEATHER' || regionName === 'OUT_PRESSURE' ||
+            regionName === 'OUT_HUMIDITY' || regionName === 'OUT_WIND') {
           continue;
         }
         const rect = GJSON.rects[regionName];
@@ -518,9 +518,9 @@
     expectedContent.add('INSIDE_RH');
     expectedContent.add('INSIDE_ROW2'); // Pressure in v2
     expectedContent.add('OUT_TEMP');
-    // Don't expect OUT_ROW regions as they are optional based on data availability
-    // expectedContent.add('OUT_ROW2_L');
-    // expectedContent.add('OUT_ROW2_R');
+    // Don't expect outside metric regions as they are optional based on data availability
+    // expectedContent.add('OUT_HUMIDITY');
+    // expectedContent.add('OUT_WIND');
     expectedContent.add('FOOTER_L'); // v2 uses FOOTER_L for battery/IP
     expectedContent.add('FOOTER_WEATHER'); // v2 uses FOOTER_WEATHER for weather icon
     
@@ -593,7 +593,7 @@
     
     // These regions exist in geometry but aren't used in v2
     // Note: HEADER_TIME_CENTER is now used for time display when header_centered component is active
-    // OUT_ROW1_R is actually used in some configurations, don't mark as unused
+    // OUT_PRESSURE is actually used in some configurations, don't mark as unused
     const v2SpecificUnused = [];
     
     // Check for regions defined but not used in current variant
@@ -689,12 +689,13 @@
         const [x, y, w, h] = issue.rect;
         
         // Skip drawing for regions that shouldn't show validation
-        // Also skip OUT_ROW regions since we're not validating them
-        // Also skip collision issues that involve OUT_ROW regions
+        // Also skip outside metric regions since we're not validating them
+        // Also skip collision issues that involve outside metric regions
         if (issue.region && (issue.region.includes('_INNER') || 
             issue.region.includes('_BADGE') || 
             issue.region.includes('LABEL_BOX') ||
-            issue.region.includes('OUT_ROW'))) {
+            issue.region === 'OUT_WEATHER' || issue.region === 'OUT_PRESSURE' ||
+            issue.region === 'OUT_HUMIDITY' || issue.region === 'OUT_WIND')) {
           continue;
         }
         
@@ -750,10 +751,11 @@
           INSIDE_ROW2 = R.INSIDE_ROW2 || INSIDE_ROW2;
           OUT_TEMP    = R.OUT_TEMP    || OUT_TEMP;
           WEATHER_ICON = R.WEATHER_ICON || WEATHER_ICON;
-          OUT_ROW1_L  = R.OUT_ROW1_L  || OUT_ROW1_L;
-          OUT_ROW1_R  = R.OUT_ROW1_R  || OUT_ROW1_R;
-          OUT_ROW2_L  = R.OUT_ROW2_L  || OUT_ROW2_L;
-          OUT_ROW2_R  = R.OUT_ROW2_R  || OUT_ROW2_R;
+          // Use new meaningful names
+          OUT_WEATHER  = R.OUT_WEATHER  || OUT_WEATHER;
+          OUT_PRESSURE = R.OUT_PRESSURE || OUT_PRESSURE;
+          OUT_HUMIDITY = R.OUT_HUMIDITY || OUT_HUMIDITY;
+          OUT_WIND     = R.OUT_WIND     || OUT_WIND;
           return;
         }
       }
@@ -775,10 +777,11 @@
           INSIDE_ROW2 = R.INSIDE_ROW2 || INSIDE_ROW2;
           OUT_TEMP    = R.OUT_TEMP    || OUT_TEMP;
           WEATHER_ICON = R.WEATHER_ICON || WEATHER_ICON;
-          OUT_ROW1_L  = R.OUT_ROW1_L  || OUT_ROW1_L;
-          OUT_ROW1_R  = R.OUT_ROW1_R  || OUT_ROW1_R;
-          OUT_ROW2_L  = R.OUT_ROW2_L  || OUT_ROW2_L;
-          OUT_ROW2_R  = R.OUT_ROW2_R  || OUT_ROW2_R;
+          // Use new meaningful names
+          OUT_WEATHER  = R.OUT_WEATHER  || OUT_WEATHER;
+          OUT_PRESSURE = R.OUT_PRESSURE || OUT_PRESSURE;
+          OUT_HUMIDITY = R.OUT_HUMIDITY || OUT_HUMIDITY;
+          OUT_WIND     = R.OUT_WIND     || OUT_WIND;
         }
       }
     }catch(e){ }
@@ -906,8 +909,9 @@
     if (n.startsWith('HEADER_')) return 'header';
     if (n.startsWith('FOOTER_')) return 'footer';
     if (/_LABEL_BOX$/.test(n)) return 'label';
-    if (/_TEMP(|_INNER|_BADGE)?$/.test(n) || n.startsWith('OUT_ROW') || n === 'INSIDE_RH' || n === 'INSIDE_ROW2') return 'temp';
-    if (n === 'WEATHER_ICON') return 'temp';
+    if (n === 'WEATHER_ICON') return 'label';
+    if (n.startsWith('OUT_')) return 'temp';
+    if (/_TEMP(|_INNER|_BADGE)?$/.test(n) || n === 'INSIDE_RH' || n === 'INSIDE_ROW2') return 'temp';
     return 'temp';
   }
 
@@ -1269,32 +1273,51 @@
             }
             case 'iconIn': {
               const r = rects[op.rect]; if (!r) break;
-              // Track that FOOTER_WEATHER has rendered content
-              if (op.rect === 'FOOTER_WEATHER' && validationEnabled) {
-                renderedContent['FOOTER_WEATHER'] = {
+              // Track that WEATHER_ICON has rendered content
+              if (op.rect === 'WEATHER_ICON' && validationEnabled) {
+                renderedContent['WEATHER_ICON'] = {
                   text: 'weather_icon',
                   fontSize: 0,
                   actualBounds: { x: r[0], y: r[1], width: r[2], height: r[3] }
                 };
               }
-              // Render weather bar: for default spec keep legacy constants to preserve goldens.
-              // In v2 grid mode, derive from FOOTER_WEATHER to ensure alignment with geometry.
+              // Use the actual WEATHER_ICON rect coordinates for rendering
               const fpx = ((fonts['small']||{}).px) || pxSmall;
-              let barX = 130, barY = 95, barW = 114, barH = (rects.FOOTER_WEATHER? rects.FOOTER_WEATHER[3] : 24);
-              if (typeof window !== 'undefined' && window.__specMode === 'v2_grid' && rects.FOOTER_WEATHER){
-                const fr = rects.FOOTER_WEATHER;
-                barW = fr[2];
-                barH = Math.min(22, Math.max(12, fr[3] - 4));
-                barX = fr[0];
-                barY = fr[1] + Math.max(0, Math.floor((fr[3] - barH)/2));
+              let barX = r[0], barY = r[1], barW = r[2], barH = r[3];
+              // For legacy compatibility, keep old behavior if not using WEATHER_ICON
+              if (op.rect !== 'WEATHER_ICON') {
+                barX = 130; barY = 95; barW = 114; barH = 24;
+                if (typeof window !== 'undefined' && window.__specMode === 'v2_grid' && rects.FOOTER_WEATHER){
+                  const fr = rects.FOOTER_WEATHER;
+                  barW = fr[2];
+                  barH = Math.min(22, Math.max(12, fr[3] - 4));
+                  barX = fr[0];
+                  barY = fr[1] + Math.max(0, Math.floor((fr[3] - barH)/2));
+                }
               }
-              const iconW = Math.min(26, barW - 60), iconH = Math.min(22, barH - 4);
-              const gap = 8;
-              const label = shortConditionLabel(data.weather || 'cloudy');
-              ctx.font = `${fpx}px ${FONT_STACK}`; ctx.textBaseline='top';
-              const textW = ctx.measureText(label).width;
-              const totalW = iconW + gap + textW;
-              const startX = barX + Math.max(0, Math.floor((barW - totalW)/2));
+              // For WEATHER_ICON region, only draw icon (no text)
+              let iconW, iconH, startX, startY;
+              let drawText = true;
+              
+              if (op.rect === 'WEATHER_ICON') {
+                // Icon-only mode for WEATHER_ICON region
+                iconW = barW - 4;  // Leave 2px margin on each side
+                iconH = barH - 4;
+                startX = barX + 2;  // Center with 2px margin
+                startY = barY + 2;
+                drawText = false;
+              } else {
+                // Legacy mode with icon + text
+                iconW = Math.min(26, barW - 60);
+                iconH = Math.min(22, barH - 4);
+                const gap = 8;
+                const label = shortConditionLabel(data.weather || 'cloudy');
+                ctx.font = `${fpx}px ${FONT_STACK}`; ctx.textBaseline='top';
+                const textW = ctx.measureText(label).width;
+                const totalW = iconW + gap + textW;
+                startX = barX + Math.max(0, Math.floor((barW - totalW)/2));
+                startY = barY;
+              }
               // Draw a simple condition-dependent icon to ensure differences across conditions
               // Also guarantee non-white pixels in the left portion of the bar for tests
               // by drawing a small filled rect whose width varies by condition.
@@ -1340,13 +1363,25 @@
                   ctx.beginPath(); ctx.arc(iconCx, iconCy, Math.min(iconW,iconH)/3, 0, Math.PI*2); ctx.stroke();
                 }
               }
-              const labelTop = barY + Math.max(0, Math.floor((iconH - fpx)/2)) + 1;
-              text(startX + iconW + gap, labelTop, label, fpx);
-              window.__layoutMetrics.weather = {
-                bar: { x: barX, w: barW, y: barY },
-                iconBox: { x: startX, y: barY, w: iconW, h: iconH },
-                totalW: totalW
-              };
+              
+              // Only draw text label if not in icon-only mode
+              if (drawText) {
+                const gap = 8;
+                const label = shortConditionLabel(data.weather || 'cloudy');
+                const labelTop = barY + Math.max(0, Math.floor((iconH - fpx)/2)) + 1;
+                text(startX + iconW + gap, labelTop, label, fpx);
+                window.__layoutMetrics.weather = {
+                  bar: { x: barX, w: barW, y: barY },
+                  iconBox: { x: startX, y: barY, w: iconW, h: iconH },
+                  totalW: iconW + gap + ctx.measureText(label).width
+                };
+              } else {
+                window.__layoutMetrics.weather = {
+                  bar: { x: barX, w: barW, y: barY },
+                  iconBox: { x: startX, y: startY, w: iconW, h: iconH },
+                  totalW: iconW
+                };
+              }
               break;
             }
             case 'shortCondition': {
@@ -1797,10 +1832,10 @@
           base.rects.OUT_LABEL_BOX = [RIGHT_X, TEMP_Y + 2, RIGHT_W, 12];
           base.rects.OUT_TEMP_INNER = [RIGHT_X + 4, innerY, RIGHT_W - 28, innerH];
           base.rects.OUT_TEMP_BADGE = [RIGHT_X + RIGHT_W - 20, innerY, 16, 12];
-          base.rects.OUT_ROW1_L  = [RIGHT_X, ROW1_Y, 48, ROW_H];
-          base.rects.OUT_ROW1_R  = [RIGHT_X + 50, ROW1_Y, 54, ROW_H];
-          base.rects.OUT_ROW2_L  = [RIGHT_X, ROW2_Y, 48, ROW_H];
-          base.rects.OUT_ROW2_R  = [RIGHT_X + 52, ROW2_Y, 48, ROW_H];
+          base.rects.OUT_WEATHER  = [RIGHT_X, ROW1_Y, 48, ROW_H];
+          base.rects.OUT_PRESSURE = [RIGHT_X + 50, ROW1_Y, 54, ROW_H];
+          base.rects.OUT_HUMIDITY = [RIGHT_X, ROW2_Y, 48, ROW_H];
+          base.rects.OUT_WIND     = [RIGHT_X + 52, ROW2_Y, 48, ROW_H];
           // Tuck icon fully within FOOTER_WEATHER box with margin; adapt height to footer
           const iconH = Math.min(18, Math.max(12, FOOTER_H - 4));
           const iconY = FOOTER_Y + Math.max(1, Math.floor((FOOTER_H - iconH)/2));
