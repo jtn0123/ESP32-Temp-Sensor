@@ -119,7 +119,9 @@ class VisualRegressionTester:
 
         return (different_pixels / total_pixels) * 100
 
-    def save_comparison(self, name: str, baseline: np.ndarray, current: np.ndarray, diff_pct: float):
+    def save_comparison(
+        self, name: str, baseline: np.ndarray, current: np.ndarray, diff_pct: float
+    ):
         """Save comparison images for debugging"""
         comparison = Image.new('RGB', (250 * 3 + 20, 122))
 
@@ -208,11 +210,20 @@ def get_weather_icon_tests() -> List[VisualTestCase]:
     """Test cases for weather icons"""
     return [
         VisualTestCase("icon_sunny", "weather", {"weather": "sunny", "outside_temp_f": "75"}),
-        VisualTestCase("icon_partly_cloudy", "weather", {"weather": "partly-cloudy", "outside_temp_f": "68"}),
+        VisualTestCase(
+            "icon_partly_cloudy", "weather",
+            {"weather": "partly-cloudy", "outside_temp_f": "68"}
+        ),
         VisualTestCase("icon_cloudy", "weather", {"weather": "cloudy", "outside_temp_f": "62"}),
         VisualTestCase("icon_rain", "weather", {"weather": "rain", "outside_temp_f": "55"}),
-        VisualTestCase("icon_pouring", "weather", {"weather": "pouring rain", "outside_temp_f": "50"}),
-        VisualTestCase("icon_thunderstorm", "weather", {"weather": "thunderstorm", "outside_temp_f": "65"}),
+        VisualTestCase(
+            "icon_pouring", "weather",
+            {"weather": "pouring rain", "outside_temp_f": "50"}
+        ),
+        VisualTestCase(
+            "icon_thunderstorm", "weather",
+            {"weather": "thunderstorm", "outside_temp_f": "65"}
+        ),
         VisualTestCase("icon_snow", "weather", {"weather": "snow", "outside_temp_f": "28"}),
         VisualTestCase("icon_fog", "weather", {"weather": "fog", "outside_temp_f": "45"}),
         VisualTestCase("icon_windy", "weather", {"weather": "windy", "wind_mph": "25"}),

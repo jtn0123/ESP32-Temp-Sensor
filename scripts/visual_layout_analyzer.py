@@ -72,11 +72,16 @@ class VisualLayoutAnalyzer:
 
     def _categorize(self, name: str) -> str:
         n = name.lower()
-        if n.startswith("header_"): return "header"
-        if n.startswith("footer_") or name == "STATUS": return "footer"
-        if "label" in n: return "label"
-        if n.startswith("out_row"): return "footer"
-        if n.startswith("inside_") or n.startswith("out_") or "temp" in n: return "temp"
+        if n.startswith("header_"):
+            return "header"
+        if n.startswith("footer_") or name == "STATUS":
+            return "footer"
+        if "label" in n:
+            return "label"
+        if n.startswith("out_row"):
+            return "footer"
+        if n.startswith("inside_") or n.startswith("out_") or "temp" in n:
+            return "temp"
         return "other"
 
     def _capture(self, page, overlays: bool) -> bytes:
@@ -98,14 +103,20 @@ class VisualLayoutAnalyzer:
         try:
             rects = page.evaluate("() => (window.UI_SPEC && window.UI_SPEC.rects) || {}")
             if rects and isinstance(rects, dict):
-                return {str(k): [int(v[0]), int(v[1]), int(v[2]), int(v[3])] for k,v in rects.items() if isinstance(v, list) and len(v)==4}
+                return {
+                str(k): [int(v[0]), int(v[1]), int(v[2]), int(v[3])]
+                for k, v in rects.items()
+                if isinstance(v, list) and len(v) == 4
+            }
         except Exception:
             pass
         # fallback to ui_spec.json
         spec = json.loads((ROOT / "config" / "ui_spec.json").read_text())
         return spec.get("rects", {})
 
-    def capture_variant(self, page, variant: str) -> Tuple[np.ndarray, np.ndarray, Dict[str, List[int]]]:
+    def capture_variant(
+        self, page, variant: str
+    ) -> Tuple[np.ndarray, np.ndarray, Dict[str, List[int]]]:
         page.wait_for_timeout(100)
         rects = self._get_rects_from_page(page)
         # A: base capture without overlays (for coverage)
@@ -119,7 +130,11 @@ class VisualLayoutAnalyzer:
     def analyze_coverage(self, img: np.ndarray, rects: Dict[str, List[int]]) -> Dict[str, RegionAnalysis]:
         H, W = img.shape[0], img.shape[1]
         # Convert to grayscale and threshold
-        gray = 0.2126 * img[:, :, 0] + 0.7152 * img[:, :, 1] + 0.0722 * img[:, :, 2]
+        gray = (
+            0.2126 * img[:, :, 0] +
+            0.7152 * img[:, :, 1] +
+            0.0722 * img[:, :, 2]
+        )
         binary = (gray < 176).astype(np.uint8)
         out: Dict[str, RegionAnalysis] = {}
         for name, (x,y,w,h) in rects.items():
@@ -217,16 +232,24 @@ class VisualLayoutAnalyzer:
         issues: List[LayoutIssue] = []
         names = list(analyses.keys())
         def contains(r1: Tuple[int,int,int,int], r2: Tuple[int,int,int,int]) -> bool:
-            x1,y1,w1,h1 = r1; x2,y2,w2,h2 = r2
+            x1, y1, w1, h1 = r1
+            x2, y2, w2, h2 = r2
             return x1 <= x2 and y1 <= y2 and (x1+w1) >= (x2+w2) and (y1+h1) >= (y2+h2)
         def group(name: str) -> Optional[str]:
             n = name.upper()
-            if n.startswith('INSIDE_TEMP') or n == 'INSIDE_LABEL_BOX': return 'INSIDE_TEMP'
-            if n.startswith('OUT_TEMP') or n == 'OUT_LABEL_BOX': return 'OUT_TEMP'
-            if n in ('FOOTER_L','FOOTER_R','STATUS'): return 'FOOTER'
-            if n in ('WEATHER_ICON',): return 'WEATHER'
+            if n.startswith('INSIDE_TEMP') or n == 'INSIDE_LABEL_BOX':
+                return 'INSIDE_TEMP'
+            if n.startswith('OUT_TEMP') or n == 'OUT_LABEL_BOX':
+                return 'OUT_TEMP'
+            if n in ('FOOTER_L', 'FOOTER_R', 'STATUS'):
+                return 'FOOTER'
+            if n in ('WEATHER_ICON',):
+                return 'WEATHER'
             return None
-        def expected_overlap(a: str, ra: Tuple[int,int,int,int], b: str, rb: Tuple[int,int,int,int]) -> bool:
+        def expected_overlap(
+            a: str, ra: Tuple[int, int, int, int],
+            b: str, rb: Tuple[int, int, int, int]
+        ) -> bool:
             ga, gb = group(a), group(b)
             if ga and ga == gb and (contains(ra, rb) or contains(rb, ra)):
                 return True
@@ -248,32 +271,49 @@ class VisualLayoutAnalyzer:
                     base = min(w1*h1, w2*h2)
                     pct = (area/base)*100.0 if base>0 else 0.0
                     sev = 'critical' if pct>50 else ('warning' if pct>10 else 'info')
-                    issues.append(LayoutIssue('overlap', sev, [a,b], f"{a}∩{b} ≈ {pct:.1f}%", (L,T,R-L,B-T)))
+                    issues.append(LayoutIssue(
+                        'overlap', sev, [a, b], f"{a}∩{b} ≈ {pct:.1f}%", (L, T, R - L, B - T)
+                    ))
         return issues
 
-    def detect_alignment(self, analyses: Dict[str, RegionAnalysis], grid4: bool) -> List[LayoutIssue]:
+    def detect_alignment(
+        self, analyses: Dict[str, RegionAnalysis], grid4: bool
+    ) -> List[LayoutIssue]:
         issues: List[LayoutIssue] = []
         # Inside left alignment
         inside = [a for a in analyses.values() if a.name.startswith('INSIDE_')]
         if len(inside)>=2:
             xs = {a.rect[0] for a in inside}
             if len(xs)>1:
-                issues.append(LayoutIssue('misalignment','warning',[a.name for a in inside], f"INSIDE_* x not equal: {sorted(xs)}"))
+                issues.append(LayoutIssue(
+                    'misalignment', 'warning', [a.name for a in inside],
+                    f"INSIDE_* x not equal: {sorted(xs)}"
+                ))
         # OUT_ROW*_L vs OUT_ROW*_R y alignment
-        rows = sorted([a for a in analyses.values() if a.name.startswith('OUT_ROW')], key=lambda r:(r.rect[1], r.name))
+        rows = sorted(
+            [a for a in analyses.values() if a.name.startswith('OUT_ROW')],
+            key=lambda r: (r.rect[1], r.name)
+        )
         for i in range(0,len(rows),2):
             if i+1<len(rows):
                 a,b = rows[i], rows[i+1]
                 if abs(a.rect[1]-b.rect[1])>1:
-                    issues.append(LayoutIssue('misalignment','warning',[a.name,b.name], f"Row y mismatch: {a.name}@{a.rect[1]} vs {b.name}@{b.rect[1]}"))
+                    issues.append(LayoutIssue(
+                        'misalignment', 'warning', [a.name, b.name],
+                        f"Row y mismatch: {a.name}@{a.rect[1]} vs {b.name}@{b.rect[1]}"
+                    ))
         # v2 grid alignment (x,y multiples of 4)
         if grid4:
             bad_pos = [a.name for a in analyses.values() if (a.rect[0]%4!=0 or a.rect[1]%4!=0)]
             if bad_pos:
-                issues.append(LayoutIssue('misalignment','info', bad_pos, 'Position not aligned to 4px grid'))
+                issues.append(LayoutIssue(
+                    'misalignment', 'info', bad_pos, 'Position not aligned to 4px grid'
+                ))
             bad_size = [a.name for a in analyses.values() if (a.rect[2]%4!=0 or a.rect[3]%4!=0)]
             if bad_size:
-                issues.append(LayoutIssue('misalignment','info', bad_size, 'Size not aligned to 4px grid'))
+                issues.append(LayoutIssue(
+                    'misalignment', 'info', bad_size, 'Size not aligned to 4px grid'
+                ))
         return issues
 
     def detect_canvas_overflow(self, analyses: Dict[str, RegionAnalysis]) -> List[LayoutIssue]:
@@ -282,7 +322,10 @@ class VisualLayoutAnalyzer:
         for name, a in analyses.items():
             x,y,w,h = a.rect
             if x < 0 or y < 0 or (x+w) > CANVAS_W or (y+h) > CANVAS_H:
-                issues.append(LayoutIssue('overflow','critical',[name], f"{name} exceeds canvas: ({x},{y},{w},{h})"))
+                issues.append(LayoutIssue(
+                    'overflow', 'critical', [name],
+                    f"{name} exceeds canvas: ({x},{y},{w},{h})"
+                ))
         return issues
 
     def detect_gaps(self, analyses: Dict[str, RegionAnalysis]) -> List[LayoutIssue]:
@@ -296,20 +339,32 @@ class VisualLayoutAnalyzer:
                 # no-op unless we establish goldens; keep structure
         return issues
 
-    def annotate(self, base_img: np.ndarray, analyses: Dict[str, RegionAnalysis], issues: List[LayoutIssue]) -> Image.Image:
+    def annotate(
+        self, base_img: np.ndarray, analyses: Dict[str, RegionAnalysis],
+        issues: List[LayoutIssue]
+    ) -> Image.Image:
         img = Image.fromarray(base_img).convert('RGBA')
         ov = Image.new('RGBA', img.size, (0,0,0,0))
         draw = ImageDraw.Draw(ov)
         for a in analyses.values():
             x,y,w,h = a.rect
-            draw.rectangle([x,y,x+w-1,y+h-1], outline=(128,128,128,255), fill=(128,128,128,64), width=1)
+            draw.rectangle(
+                [x, y, x + w - 1, y + h - 1],
+                outline=(128, 128, 128, 255),
+                fill=(128, 128, 128, 64),
+                width=1
+            )
             try:
                 font = ImageFont.load_default()
                 draw.text((x+2,y+2), a.name, fill=(0,0,0,255), font=font)
             except Exception:
                 draw.text((x+2,y+2), a.name, fill=(0,0,0,255))
         for issue in issues:
-            color = (255,0,0,128) if issue.severity=='critical' else ((255,165,0,128) if issue.severity=='warning' else (255,255,0,128))
+            color = (
+                (255, 0, 0, 128) if issue.severity == 'critical'
+                else (255, 165, 0, 128) if issue.severity == 'warning'
+                else (255, 255, 0, 128)
+            )
             if issue.coordinates:
                 x,y,w,h = issue.coordinates
                 draw.rectangle([x,y,x+w-1,y+h-1], outline=color[:3]+(255,), fill=color, width=2)
@@ -317,7 +372,12 @@ class VisualLayoutAnalyzer:
                 for r in issue.regions:
                     if r in analyses:
                         x,y,w,h = analyses[r].rect
-                        draw.rectangle([x,y,x+w-1,y+h-1], outline=color[:3]+(255,), fill=color, width=2)
+                        draw.rectangle(
+                            [x, y, x + w - 1, y + h - 1],
+                            outline=color[:3] + (255,),
+                            fill=color,
+                            width=2
+                        )
         return Image.alpha_composite(img, ov).convert('RGB')
 
     def run(self, variants: Optional[List[str]] = None) -> Dict[str, Dict[str, object]]:
@@ -348,10 +408,16 @@ class VisualLayoutAnalyzer:
                     # Enhanced text report
                     report_txt = self.generate_enhanced_text_report(variant, analyses, issues)
                     (self.out_dir / f"layout_analysis_{variant}_report.txt").write_text(report_txt)
-                    results[variant] = {"analyses": analyses, "issues": issues, "text_report": report_txt, "summary": self._generate_variant_summary(analyses, issues)}
+                    results[variant] = {
+                        "analyses": analyses,
+                        "issues": issues,
+                        "text_report": report_txt,
+                        "summary": self._generate_variant_summary(analyses, issues)
+                    }
                 browser.close()
         finally:
-            server.terminate(); server.wait(timeout=2)
+            server.terminate()
+            server.wait(timeout=2)
         return results
 
 

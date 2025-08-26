@@ -185,7 +185,9 @@ class UIValidationEngine:
                 if (el) text = el.textContent || '';
 
                 // Estimate text bounds based on region's expected font
-                const fontSize = {self.known_text_patterns.get(region.name, {}).get('font_size', 11)};
+                const fontSize = {
+                    self.known_text_patterns.get(region.name, {}).get('font_size', 11)
+                };
                 ctx.font = `${{fontSize}}px monospace`;
                 const metrics = ctx.measureText(text || 'Sample Text');
 
@@ -432,7 +434,10 @@ class UIValidationEngine:
                         issue_type=ValidationType.MISALIGNMENT,
                         severity=ValidationSeverity.WARNING,
                         region=",".join([r.name for r in row_regions]),
-                        description=f"Row elements not horizontally aligned: y positions {sorted(y_positions)}",
+                        description=(
+                            f"Row elements not horizontally aligned: y positions "
+                            f"{sorted(y_positions)}"
+                        ),
                         actual_value=str(sorted(y_positions)),
                         expected_value=str(min(y_positions))
                     ))
@@ -482,7 +487,10 @@ class UIValidationEngine:
     def _start_http_server(self, port: int) -> subprocess.Popen:
         """Start local HTTP server for web simulator"""
         return subprocess.Popen(
-            [sys.executable, "-m", "http.server", str(port), "--bind", "127.0.0.1", "-d", self.web_root],
+            [
+                sys.executable, "-m", "http.server", str(port),
+                "--bind", "127.0.0.1", "-d", self.web_root
+            ],
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL
         )
@@ -613,7 +621,10 @@ class UIValidationEngine:
 
                     # Merge regions
                     for name, region in regions.items():
-                        if name not in all_regions or len(region.issues) > len(all_regions[name].issues):
+                        if (
+                            name not in all_regions or
+                            len(region.issues) > len(all_regions[name].issues)
+                        ):
                             all_regions[name] = region
 
                 browser.close()
@@ -626,10 +637,18 @@ class UIValidationEngine:
         summary = {
             "total_issues": len(all_issues),
             "by_severity": {
-                ValidationSeverity.CRITICAL.value: len([i for i in all_issues if i.severity == ValidationSeverity.CRITICAL]),
-                ValidationSeverity.ERROR.value: len([i for i in all_issues if i.severity == ValidationSeverity.ERROR]),
-                ValidationSeverity.WARNING.value: len([i for i in all_issues if i.severity == ValidationSeverity.WARNING]),
-                ValidationSeverity.INFO.value: len([i for i in all_issues if i.severity == ValidationSeverity.INFO])
+                ValidationSeverity.CRITICAL.value: len([
+                    i for i in all_issues if i.severity == ValidationSeverity.CRITICAL
+                ]),
+                ValidationSeverity.ERROR.value: len([
+                    i for i in all_issues if i.severity == ValidationSeverity.ERROR
+                ]),
+                ValidationSeverity.WARNING.value: len([
+                    i for i in all_issues if i.severity == ValidationSeverity.WARNING
+                ]),
+                ValidationSeverity.INFO.value: len([
+                    i for i in all_issues if i.severity == ValidationSeverity.INFO
+                ])
             },
             "by_type": {
                 t.value: len([i for i in all_issues if i.issue_type == t])
@@ -656,10 +675,14 @@ class UIValidationEngine:
     def _categorize_region(self, name: str) -> str:
         """Categorize a region by its name"""
         n = name.lower()
-        if "header" in n: return "header"
-        if "footer" in n or "status" in n: return "footer"
-        if "temp" in n: return "temp"
-        if "label" in n or "rh" in n: return "label"
+        if "header" in n:
+            return "header"
+        if "footer" in n or "status" in n:
+            return "footer"
+        if "temp" in n:
+            return "temp"
+        if "label" in n or "rh" in n:
+            return "label"
         return "other"
 
     def generate_report(self, validation: ValidationReport) -> str:
@@ -702,11 +725,17 @@ class UIValidationEngine:
                         ValidationSeverity.INFO: "ℹ️"
                     }[severity]
 
-                    lines.append(f"\n{icon} {severity.value.upper()} ({len(severity_issues)} issues):")
+                    lines.append(
+                        f"\n{icon} {severity.value.upper()} "
+                        f"({len(severity_issues)} issues):"
+                    )
                     for issue in severity_issues[:10]:  # Limit to first 10 of each type
                         lines.append(f"  • [{issue.region}] {issue.description}")
                         if issue.actual_value and issue.expected_value:
-                            lines.append(f"    Actual: {issue.actual_value}, Expected: {issue.expected_value}")
+                            lines.append(
+                                f"    Actual: {issue.actual_value}, "
+                                f"Expected: {issue.expected_value}"
+                            )
 
         lines.extend([
             "",
@@ -780,8 +809,15 @@ class UIValidationEngine:
                     # Draw semi-transparent overlay
                     overlay = Image.new("RGBA", img.size, (0, 0, 0, 0))
                     overlay_draw = ImageDraw.Draw(overlay)
-                    overlay_draw.rectangle([x, y, x+w-1, y+h-1], fill=color, outline=color[:3]+(255,), width=2)
-                    annotated = Image.alpha_composite(annotated.convert("RGBA"), overlay).convert("RGB")
+                    overlay_draw.rectangle(
+                        [x, y, x + w - 1, y + h - 1],
+                        fill=color,
+                        outline=color[:3] + (255,),
+                        width=2
+                    )
+                    annotated = Image.alpha_composite(
+                        annotated.convert("RGBA"), overlay
+                    ).convert("RGB")
 
             # Save both versions
             img.save(report_dir / f"{name}_original.png")
