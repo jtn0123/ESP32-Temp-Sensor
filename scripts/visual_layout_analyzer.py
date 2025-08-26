@@ -8,14 +8,13 @@ gaps, and alignment issues, and generates annotated reports.
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 import json
-import os
+from pathlib import Path
+import subprocess
 import sys
 import time
-import subprocess
-from dataclasses import dataclass
-from pathlib import Path
-from typing import Dict, List, Tuple, Optional
+from typing import Dict, List, Optional, Tuple
 
 # Add project root to path
 ROOT = Path(__file__).resolve().parents[1]
@@ -23,6 +22,7 @@ sys.path.insert(0, str(ROOT))
 
 try:
     import io
+
     import numpy as np
     from PIL import Image, ImageDraw, ImageFont
     from playwright.sync_api import sync_playwright
@@ -292,8 +292,7 @@ class VisualLayoutAnalyzer:
         pairs = [('INSIDE_TEMP','INSIDE_RH'), ('OUT_TEMP','OUT_ROW1_L')]
         for a,b in pairs:
             if a in analyses and b in analyses:
-                exp = analyses[b].rect[1]-bottom(analyses[a])
-                actual = exp  # computed from current rects; placeholder for future golden
+                analyses[b].rect[1]-bottom(analyses[a])
                 # no-op unless we establish goldens; keep structure
         return issues
 

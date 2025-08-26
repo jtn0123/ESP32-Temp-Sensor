@@ -4,15 +4,14 @@ Visual regression testing for ESP32 display simulator
 Tests icons, battery states, text rendering, and UI element positioning
 """
 
-import json
-import os
-import sys
-import time
-import subprocess
-from pathlib import Path
-from typing import Dict, List, Any, Optional
 from dataclasses import dataclass
 import hashlib
+import json
+from pathlib import Path
+import subprocess
+import sys
+import time
+from typing import Any, Dict, List, Optional
 
 import pytest
 
@@ -21,10 +20,11 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 try:
+    import io
+
     import numpy as np
     from PIL import Image, ImageChops
-    import io
-    from playwright.sync_api import sync_playwright, Page
+    from playwright.sync_api import Page, sync_playwright
 except ImportError as e:
     print(f"Missing dependency: {e}")
     print("Install with: pip install numpy pillow playwright")
@@ -43,14 +43,14 @@ class VisualTestCase:
 
 class VisualRegressionTester:
     """Visual regression testing for the display simulator"""
-    
+
     def __init__(self):
         self.web_root = ROOT / "web" / "sim"
         self.baseline_dir = ROOT / "tests" / "visual_baselines"
         self.output_dir = ROOT / "tests" / "visual_output"
         self.baseline_dir.mkdir(exist_ok=True)
         self.output_dir.mkdir(exist_ok=True)
-        
+
     def _start_server(self, port: int) -> subprocess.Popen:
         """Start HTTP server for web simulator"""
         return subprocess.Popen(
@@ -59,14 +59,14 @@ class VisualRegressionTester:
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL
         )
-    
+
     def _find_free_port(self) -> int:
         """Find an available port"""
         import socket
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             s.bind(("127.0.0.1", 0))
             return s.getsockname()[1]
-    
+
     def capture_screenshot(self, page: Page, test_data: Dict[str, Any]) -> np.ndarray:
         """Capture screenshot with given test data"""
         # Apply test data
@@ -74,15 +74,15 @@ class VisualRegressionTester:
             window.testData = {json.dumps(test_data)};
             if (window.draw) window.draw(window.testData);
         """)
-        
+
         # Wait for render
         page.wait_for_timeout(200)
-        
+
         # Capture screenshot
         screenshot = page.screenshot(clip={"x": 0, "y": 0, "width": 250, "height": 122})
         img = Image.open(io.BytesIO(screenshot))
         return np.array(img)
-    
+
     def compute_hash(self, image: np.ndarray) -> str:
         """Compute perceptual hash of image for comparison"""
         # Convert to grayscale
@@ -90,55 +90,55 @@ class VisualRegressionTester:
             gray = np.dot(image[..., :3], [0.2989, 0.5870, 0.1140])
         else:
             gray = image
-        
+
         # Resize to 8x8 for DCT
         from PIL import Image
         img = Image.fromarray(gray.astype(np.uint8))
         img = img.resize((8, 8), Image.Resampling.LANCZOS)
-        
+
         # Compute hash
         pixels = np.array(img).flatten()
         avg = pixels.mean()
         hash_bits = (pixels > avg).astype(int)
-        
+
         # Convert to hex string
         hash_str = ''.join(str(b) for b in hash_bits)
         return hashlib.md5(hash_str.encode()).hexdigest()[:16]
-    
+
     def compare_images(self, img1: np.ndarray, img2: np.ndarray) -> float:
         """Compare two images and return difference percentage"""
         if img1.shape != img2.shape:
             return 100.0
-        
+
         # Calculate pixel-wise difference
         diff = np.abs(img1.astype(float) - img2.astype(float))
-        
+
         # Count significantly different pixels (threshold > 10)
         different_pixels = np.sum(diff > 10)
         total_pixels = img1.shape[0] * img1.shape[1]
-        
+
         return (different_pixels / total_pixels) * 100
-    
+
     def save_comparison(self, name: str, baseline: np.ndarray, current: np.ndarray, diff_pct: float):
         """Save comparison images for debugging"""
         comparison = Image.new('RGB', (250 * 3 + 20, 122))
-        
+
         # Baseline
         comparison.paste(Image.fromarray(baseline), (0, 0))
-        
+
         # Current
         comparison.paste(Image.fromarray(current), (260, 0))
-        
+
         # Difference
         baseline_img = Image.fromarray(baseline)
         current_img = Image.fromarray(current)
         diff_img = ImageChops.difference(baseline_img.convert('RGB'), current_img.convert('RGB'))
         comparison.paste(diff_img, (520, 0))
-        
+
         # Save with metadata
         output_path = self.output_dir / f"{name}_comparison.png"
         comparison.save(output_path)
-        
+
         # Also save metadata
         metadata = {
             "name": name,
@@ -146,7 +146,7 @@ class VisualRegressionTester:
             "timestamp": time.time()
         }
         (self.output_dir / f"{name}_metadata.json").write_text(json.dumps(metadata, indent=2))
-    
+
     def run_test_suite(self, test_cases: List[VisualTestCase]) -> Dict[str, Any]:
         """Run visual regression test suite"""
         port = self._find_free_port()
@@ -157,29 +157,29 @@ class VisualRegressionTester:
             "new": [],
             "total": len(test_cases)
         }
-        
+
         try:
             time.sleep(1)  # Let server start
-            
+
             with sync_playwright() as p:
                 browser = p.chromium.launch()
                 page = browser.new_page(viewport={"width": 700, "height": 400})
                 page.goto(f"http://127.0.0.1:{port}/index.html", wait_until="load")
                 page.wait_for_timeout(500)
-                
+
                 for test_case in test_cases:
                     # Capture current screenshot
                     current = self.capture_screenshot(page, test_case.data)
-                    current_hash = self.compute_hash(current)
-                    
+                    self.compute_hash(current)
+
                     # Check for baseline
                     baseline_path = self.baseline_dir / f"{test_case.name}.npy"
-                    
+
                     if baseline_path.exists():
                         # Load baseline and compare
                         baseline = np.load(baseline_path)
                         diff_pct = self.compare_images(baseline, current)
-                        
+
                         if diff_pct <= test_case.max_diff_percentage:
                             results["passed"].append(test_case.name)
                         else:
@@ -193,13 +193,13 @@ class VisualRegressionTester:
                         # New test, save baseline
                         np.save(baseline_path, current)
                         results["new"].append(test_case.name)
-                
+
                 browser.close()
-        
+
         finally:
             server.terminate()
             server.wait(timeout=2)
-        
+
         return results
 
 
@@ -298,13 +298,13 @@ def test_weather_icons(tester):
     """Test weather icon rendering"""
     test_cases = get_weather_icon_tests()
     results = tester.run_test_suite(test_cases)
-    
+
     # Report results
     if results["failed"]:
-        failures = "\n".join([f"  - {f['name']}: {f['diff']:.2f}% > {f['threshold']}%" 
+        failures = "\n".join([f"  - {f['name']}: {f['diff']:.2f}% > {f['threshold']}%"
                              for f in results["failed"]])
         pytest.fail(f"Visual regression failures:\n{failures}")
-    
+
     # New baselines are okay
     if results["new"]:
         print(f"Created {len(results['new'])} new baselines")
@@ -314,7 +314,7 @@ def test_battery_states(tester):
     """Test battery indicator states"""
     test_cases = get_battery_state_tests()
     results = tester.run_test_suite(test_cases)
-    
+
     if results["failed"]:
         failures = "\n".join([f"  - {f['name']}: {f['diff']:.2f}%" for f in results["failed"]])
         pytest.fail(f"Battery display regression:\n{failures}")
@@ -324,11 +324,11 @@ def test_text_rendering(tester):
     """Test text rendering edge cases"""
     test_cases = get_text_rendering_tests()
     results = tester.run_test_suite(test_cases)
-    
+
     # Text rendering may have slightly higher variance
     for test in test_cases:
         test.max_diff_percentage = 1.0  # Allow 1% difference for anti-aliasing
-    
+
     if results["failed"]:
         failures = "\n".join([f"  - {f['name']}: {f['diff']:.2f}%" for f in results["failed"]])
         pytest.fail(f"Text rendering regression:\n{failures}")
@@ -338,7 +338,7 @@ def test_missing_data_display(tester):
     """Test display with missing data"""
     test_cases = get_missing_data_tests()
     results = tester.run_test_suite(test_cases)
-    
+
     if results["failed"]:
         failures = "\n".join([f"  - {f['name']}: {f['diff']:.2f}%" for f in results["failed"]])
         pytest.fail(f"Missing data display regression:\n{failures}")
@@ -348,11 +348,11 @@ def test_ui_alignment(tester):
     """Test UI element alignment"""
     test_cases = get_alignment_tests()
     results = tester.run_test_suite(test_cases)
-    
+
     # Alignment should be pixel-perfect
     for test in test_cases:
         test.max_diff_percentage = 0.1  # Very strict
-    
+
     if results["failed"]:
         failures = "\n".join([f"  - {f['name']}: {f['diff']:.2f}%" for f in results["failed"]])
         pytest.fail(f"UI alignment regression:\n{failures}")
@@ -367,9 +367,9 @@ def test_comprehensive_suite(tester):
         get_missing_data_tests() +
         get_alignment_tests()
     )
-    
+
     results = tester.run_test_suite(all_tests)
-    
+
     # Generate report
     report = {
         "total": results["total"],
@@ -378,14 +378,14 @@ def test_comprehensive_suite(tester):
         "new": len(results["new"]),
         "pass_rate": (len(results["passed"]) / results["total"] * 100) if results["total"] > 0 else 0
     }
-    
-    print(f"\nVisual Regression Report:")
+
+    print("\nVisual Regression Report:")
     print(f"  Total tests: {report['total']}")
     print(f"  Passed: {report['passed']}")
     print(f"  Failed: {report['failed']}")
     print(f"  New baselines: {report['new']}")
     print(f"  Pass rate: {report['pass_rate']:.1f}%")
-    
+
     # Fail if regression detected
     if results["failed"]:
         pytest.fail(f"{len(results['failed'])} visual regressions detected")

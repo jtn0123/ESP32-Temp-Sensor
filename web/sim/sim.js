@@ -442,8 +442,14 @@
     
     validationIssues = [];
     
-    // Check for collisions
-    validationIssues.push(...validateCollisions(GJSON.rects));
+    // Check for collisions (filter out internal helper rects)
+    const rectsToValidate = {};
+    Object.entries(GJSON.rects).forEach(([name, rect]) => {
+      if (!name.includes('_INNER') && !name.includes('_BADGE') && !name.includes('LABEL_BOX')) {
+        rectsToValidate[name] = rect;
+      }
+    });
+    validationIssues.push(...validateCollisions(rectsToValidate));
     
     // Check rendered content for overflow and incomplete data
     for (const [regionName, content] of Object.entries(renderedContent)) {
@@ -821,6 +827,12 @@
     ctx.lineWidth = 1;
     Object.entries(GJSON.rects).forEach(([name, r])=>{
       if (!shouldShowRect(name)) return;
+      
+      // Skip internal helper rectangles - these are implementation details
+      if (name.includes('_INNER') || name.includes('_BADGE') || name.includes('LABEL_BOX')) {
+        return;
+      }
+      
       if (searchQuery){
         const q = searchQuery.toLowerCase();
         if (!String(name).toLowerCase().includes(q)) return;
@@ -923,6 +935,11 @@
     listEl.innerHTML = '';
     const names = Object.keys(GJSON.rects).sort();
     names.forEach(name=>{
+      // Skip internal helper rectangles from the list
+      if (name.includes('_INNER') || name.includes('_BADGE') || name.includes('LABEL_BOX')) {
+        return;
+      }
+      
       const cat = getRectCategory(name);
       const wrap = document.createElement('label');
       wrap.style.display = (regionFilters.all || regionFilters[cat]) ? 'block' : 'none';
@@ -1198,8 +1215,7 @@
               const yTop = areaY + Math.max(0, Math.floor((areaH - fontSize) / 2));
               text(left, yTop, s, fontSize, 'bold', op.rect);
               if (badge){
-                ctx.strokeStyle = '#000';
-                ctx.strokeRect(badge[0], badge[1], badge[2], badge[3]);
+                // Don't draw border around badge - just the text
                 text(badge[0] + 2, badge[1] + Math.max(0, Math.floor((badge[3]-10)/2)), '°F', 10);
               } else {
                 // Adjust degree and F symbols to align with centered temperature
