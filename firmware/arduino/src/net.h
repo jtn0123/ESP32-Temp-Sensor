@@ -223,7 +223,8 @@ inline void ensure_time_synced_if_stale() {
   configTime(0, 0, "pool.ntp.org", "time.nist.gov", "time.google.com");
   // Poll briefly until time looks sane
   uint32_t start = millis();
-  while (static_cast<uint32_t>(time(nullptr)) < TIME_FRESH_EPOCH_MIN && millis() - start < 2000UL) {
+  while (static_cast<uint32_t>(time(nullptr)) < TIME_FRESH_EPOCH_MIN &&
+         millis() - start < 2000UL) {
     delay(50);
   }
   uint32_t now_epoch = static_cast<uint32_t>(time(nullptr));
@@ -320,7 +321,8 @@ inline uint32_t net_publish_inside_history(uint32_t epoch,
   g_mqtt.publish(topic, payload, false);
   // Approximate bytes published as topic + payload length
   uint32_t tlen = static_cast<uint32_t>(strlen(topic));
-  uint32_t blen = static_cast<uint32_t>(plen > 0 ? plen : static_cast<int>(strlen(payload)));
+  uint32_t blen = static_cast<uint32_t>(plen > 0 ? plen :
+                                            static_cast<int>(strlen(payload)));
   return tlen + blen;
 }
 
@@ -347,8 +349,10 @@ inline void offline_drain_if_any() {
   uint32_t processed = 0;
   while (processed < to_send && g_mqtt.connected()) {
     // Time budget check before reading/publishing next sample
-    if (OFFLINE_DRAIN_MAX_MS > 0 && (millis() - drain_start_ms) >= OFFLINE_DRAIN_MAX_MS) {
-      Serial.printf("Offline: drain stop (time budget) elapsed_ms=%u sent=%u bytes=%u\n",
+    if (OFFLINE_DRAIN_MAX_MS > 0 &&
+        (millis() - drain_start_ms) >= OFFLINE_DRAIN_MAX_MS) {
+      Serial.printf("Offline: drain stop (time budget) elapsed_ms=%u sent=%u "
+                     "bytes=%u\n",
                     static_cast<unsigned>(millis() - drain_start_ms),
                     static_cast<unsigned>(tail - orig_tail),
       break;
@@ -372,8 +376,10 @@ inline void offline_drain_if_any() {
       }
       // Post-publish budget checks
       if ((OFFLINE_DRAIN_MAX_BYTES > 0 && bytes_sent >= OFFLINE_DRAIN_MAX_BYTES) ||
-          (OFFLINE_DRAIN_MAX_MS > 0 && (millis() - drain_start_ms) >= OFFLINE_DRAIN_MAX_MS)) {
-        Serial.printf("Offline: drain stop (%s budget) elapsed_ms=%u sent=%u bytes=%u\n",
+          (OFFLINE_DRAIN_MAX_MS > 0 &&
+           (millis() - drain_start_ms) >= OFFLINE_DRAIN_MAX_MS)) {
+        Serial.printf("Offline: drain stop (%s budget) elapsed_ms=%u sent=%u "
+                      "bytes=%u\n",
                       (bytes_sent >= OFFLINE_DRAIN_MAX_BYTES ? "byte" : "time"),
                       static_cast<unsigned>(millis() - drain_start_ms),
                       static_cast<unsigned>(tail - orig_tail),

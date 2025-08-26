@@ -26,32 +26,30 @@ class TestLayoutGeometryPipeline:
     
     def test_geometry_json_schema_validation(self):
         """Test that geometry JSON has required fields."""
-        assert "metadata" in self.geometry
-        assert "regions" in self.geometry
+        assert "canvas" in self.geometry
+        assert "rects" in self.geometry
         assert "fonts" in self.geometry
         
-        # Check metadata
-        metadata = self.geometry["metadata"]
-        assert "width" in metadata
-        assert "height" in metadata
-        assert metadata["width"] == 296
-        assert metadata["height"] == 128
+        # Check canvas dimensions
+        canvas = self.geometry["canvas"]
+        assert "w" in canvas
+        assert "h" in canvas
+        assert canvas["w"] == 250
+        assert canvas["h"] == 122
         
         # Check critical regions exist
         critical_regions = [
-            "HEADER_NAME", "HEADER_TIME", "HEADER_VERSION",
-            "INSIDE_TEMP", "INSIDE_HUMID",
-            "OUT_TEMP", "OUT_HUMID", "OUT_CONDITION",
-            "BATTERY", "BATTERY_ICON"
+            "HEADER_NAME", "HEADER_TIME_CENTER", "HEADER_VERSION",
+            "INSIDE_TEMP", "INSIDE_HUMIDITY",
+            "OUT_TEMP", "OUT_HUMIDITY", "OUT_CONDITION",
+            "BATTERY", "BATTERY_PERCENT"
         ]
         
-        regions = self.geometry["regions"]
+        rects = self.geometry["rects"]
         for region in critical_regions:
-            assert region in regions, f"Missing critical region: {region}"
-            assert "x" in regions[region]
-            assert "y" in regions[region]
-            assert "width" in regions[region]
-            assert "height" in regions[region]
+            assert region in rects, f"Missing critical region: {region}"
+            assert isinstance(rects[region], list), f"Region {region} should be a list"
+            assert len(rects[region]) == 4, f"Region {region} should have 4 values [x, y, w, h]"
     
     def test_geometry_bounds_validation(self):
         """Test that all regions fit within display bounds."""

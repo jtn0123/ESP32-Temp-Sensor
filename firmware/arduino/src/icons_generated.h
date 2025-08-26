@@ -476,16 +476,20 @@ inline void draw_icon_xbm(GFX& d, int16_t x, int16_t y,
                        color);
         break;
     case ICON_MOON_FULL:
-        d.drawXBitmap(x, y, moon_full_24x24_bits, ICON_W, ICON_H, color);
+        d.drawXBitmap(x, y, moon_full_24x24_bits, ICON_W, ICON_H,
+                       color);
         break;
     case ICON_MOON_WANING_GIBBOUS:
-        d.drawXBitmap(x, y, moon_waning_gibbous_24x24_bits, ICON_W, ICON_H, color);
+        d.drawXBitmap(x, y, moon_waning_gibbous_24x24_bits, ICON_W, ICON_H,
+                       color);
         break;
     case ICON_MOON_LAST_QUARTER:
-        d.drawXBitmap(x, y, moon_last_quarter_24x24_bits, ICON_W, ICON_H, color);
+        d.drawXBitmap(x, y, moon_last_quarter_24x24_bits, ICON_W, ICON_H,
+                       color);
         break;
     case ICON_MOON_WANING_CRESCENT:
-        d.drawXBitmap(x, y, moon_waning_crescent_24x24_bits, ICON_W, ICON_H, color);
+        d.drawXBitmap(x, y, moon_waning_crescent_24x24_bits, ICON_W, ICON_H,
+                       color);
         break;
     default: break;
     }

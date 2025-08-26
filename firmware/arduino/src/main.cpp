@@ -38,8 +38,7 @@
 #define OUT_ROW2_L OUT_HUMIDITY  // Map to OUT_HUMIDITY from display_layout.h
 #define OUT_ROW2_R OUT_WIND  // Map to OUT_WIND from display_layout.h
 #define FOOTER_L FOOTER_STATUS  // Backward compat
-#define STATUS_ FOOTER_STATUS  // Map to FOOTER_STATUS as there's no separate STATUS
-// region
+#define STATUS_ FOOTER_STATUS  // Map to FOOTER_STATUS (no separate region)
 
 // Forward declaration for status pixel tick used in pump_network_ms
 #if USE_STATUS_PIXEL
@@ -429,8 +428,9 @@ static bool g_full_only_mode = false;  // when true, always do full refresh
 
 static Preferences g_prefs;
 
-static inline void nvs_begin_cache() { g_prefs.begin("cache", false); }
-static inline void nvs_end_cache() { g_prefs.end(); }
+static inline void nvs_begin_cache(
+    g_prefs.begin("cache",
+    false); }) {
 static inline void nvs_load_cache_if_unset() {
   if (!isfinite(last_inside_f))
     last_inside_f = g_prefs.getFloat("li_f", NAN);
@@ -457,29 +457,12 @@ static inline void nvs_load_cache_if_unset() {
   g_full_only_mode = g_prefs.getUChar("full_only", 0) != 0;
   // Remove legacy ui_variant preference; single UI variant remains
 }
-static inline void nvs_store_float(const char* key,
-                                    float v) { g_prefs.putFloat(key,
-static inline void nvs_store_int(const char* key,
-                                  int32_t v) { g_prefs.putInt(key,
-static inline void nvs_store_uint(const char* key, uint32_t v) {
-    g_prefs.putUInt(key,
-static constexpr float THRESH_TEMP_F = 0.2f;  // redraw/publish threshold in F
-static constexpr float THRESH_TEMP_C_FROM_F = THRESH_TEMP_F / 1.8f;  // ~0.111C
-static constexpr float THRESH_RH = 1.0f;                            // percent
-static constexpr float THRESH_PRESS_HPA = 0.5f;                     // hPa
-
-// Timeout tracking for wake phases
-static uint32_t s_timeouts_mask = 0;
-#define TIMEOUT_BIT_SENSOR (1u << 0)
-#define TIMEOUT_BIT_FETCH (1u << 1)
-#define TIMEOUT_BIT_DISPLAY (1u << 2)
-#define TIMEOUT_BIT_PUBLISH (1u << 3)
-
-// Short boot diagnostics to help catch crashes/heap issues quickly on USB
-// Forward declarations for helpers defined later in this file
-static const char* reset_reason_str(esp_reset_reason_t r);
-static const char* wakeup_cause_str(esp_sleep_wakeup_cause_t c);
-
+static inline void nvs_store_float(
+    key,
+    ) {
+static inline void nvs_store_uint(
+    const char* key,
+    uint32_t v) {
 static inline void print_boot_diagnostics() {
   Serial.printf("Reset: %s, Wake: %s\n", reset_reason_str(esp_reset_reason()),
                 wakeup_cause_str(esp_sleep_get_wakeup_cause()));
@@ -987,8 +970,12 @@ static inline void draw_in_region(const int rect[4],
   } while (display.nextPage());
 }
 
-static inline void draw_right_aligned_text_in_rect(const int rect[4], const char* text,
-                                                   uint8_t textSize, int16_t paddingRight,
+static inline void draw_right_aligned_text_in_rect(
+    const int rect[4],
+    const char* text,
+    uint8_t textSize,
+    int16_t paddingRight,
+    int16_t baselineOffset) {
                                                    int16_t baselineOffset) {
   draw_in_region(rect, [&](int16_t x, int16_t y, int16_t w, int16_t h) {
     display.setTextColor(GxEPD_BLACK);
@@ -1001,14 +988,12 @@ static inline void draw_right_aligned_text_in_rect(const int rect[4], const char
   });
 }
 
-static inline void draw_temp_number_and_units(const int rect[4],
-  // Reserve a small units strip on the right so units do not shift as number
-  // width changes
-  const int16_t units_w = 14;  // pixels
-  int num_rect[4] = {rect[0], rect[1], rect[2] - units_w, rect[3]};
-  int units_rect[4] = {rect[0] + rect[2] - units_w, rect[1], units_w, rect[3]};
-
-  // Center numeric in its sub-rect
+static inline void draw_temp_number_and_units(
+    num_rect,
+    [&](int16_t x,
+    int16_t y,
+    int16_t w,
+    int16_t h) {
   draw_in_region(num_rect, [&](int16_t x, int16_t y, int16_t w, int16_t h) {
     display.setTextColor(GxEPD_BLACK);
     display.setTextSize(2);
@@ -1032,7 +1017,12 @@ static inline void draw_temp_number_and_units(const int rect[4],
 }
 
 // Direct draw variant for full-window paged renders (no nested partial pages)
-static inline void draw_temp_number_and_units_direct(int16_t x, int16_t y, int16_t w, int16_t h,
+static inline void draw_temp_number_and_units_direct(
+    int16_t x,
+    int16_t y,
+    int16_t w,
+    int16_t h,
+    const char* temp_f) {
                                                      const char* temp_f) {
   const int16_t units_w = 14;
   display.setTextColor(GxEPD_BLACK);
@@ -1072,7 +1062,8 @@ static inline uint32_t fast_crc32(const uint8_t* data, size_t len) {
 }
 
 template <typename DrawFn>
-static inline bool maybe_redraw_numeric(const int rect[4], float currentValue, float& lastValue,
+static inline bool maybe_redraw_numeric(const int rect[4],
+                                        float currentValue, float& lastValue,
                                         float threshold, DrawFn drawFn) {
   bool should = false;
   if (!isnan(currentValue) &&
@@ -1087,7 +1078,8 @@ static inline bool maybe_redraw_numeric(const int rect[4], float currentValue, f
 }
 
 template <typename T, typename DrawFn>
-static inline bool maybe_redraw_value(const int rect[4], const T& currentValue, T& lastValue,
+static inline bool maybe_redraw_value(const int rect[4],
+                                      const T& currentValue, T& lastValue,
                                       DrawFn drawFn) {
   if (currentValue != lastValue) {
     drawFn();
@@ -1097,7 +1089,8 @@ static inline bool maybe_redraw_value(const int rect[4], const T& currentValue, 
   return false;
 }
 
-static inline bool maybe_redraw_status(const BatteryStatus& bs, const char* ip_cstr,
+static inline bool maybe_redraw_status(const BatteryStatus& bs,
+                                       const char* ip_cstr,
                                        const int rect[4]) {
   char buf[96];
   // Stacked footer signature (3-row status)
