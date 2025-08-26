@@ -652,7 +652,7 @@ class UIValidationEngine:
     def _is_internal_helper_rect(self, name: str) -> bool:
         """Check if a rectangle is an internal helper (not a real display region)"""
         return '_INNER' in name or '_BADGE' in name or 'LABEL_BOX' in name
-    
+
     def _categorize_region(self, name: str) -> str:
         """Categorize a region by its name"""
         n = name.lower()

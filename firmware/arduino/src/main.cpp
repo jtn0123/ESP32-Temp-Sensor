@@ -192,8 +192,10 @@ static void draw_from_spec_full_impl(uint8_t variantId) {
   int comp_count = 0;
   const ComponentOps* comps = get_variant_ops(variantId, &comp_count);
   display.drawRect(0, 0, EINK_WIDTH, EINK_HEIGHT, GxEPD_BLACK);
-  display.drawLine(1, 16 + TOP_Y_OFFSET, EINK_WIDTH - 2, 16 + TOP_Y_OFFSET, GxEPD_BLACK);
-  display.drawLine(125, 18 + TOP_Y_OFFSET, 125, EINK_HEIGHT - 2, GxEPD_BLACK);
+  display.drawLine(1, 16 + TOP_Y_OFFSET, EINK_WIDTH - 2, 16 + TOP_Y_OFFSET,
+                   GxEPD_BLACK);
+  display.drawLine(125, 18 + TOP_Y_OFFSET, 125, EINK_HEIGHT - 2,
+                   GxEPD_BLACK);
   for (int ci = 0; ci < comp_count; ++ci) {
     const ComponentOps& co = comps[ci];
     for (int i = 0; i < co.count; ++i) {
@@ -248,7 +250,8 @@ static void draw_from_spec_full_impl(uint8_t variantId) {
         }
         display.setTextColor(GxEPD_BLACK);
         display.setTextSize(1);
-        if (r && tx == 0 && (op.align == ALIGN_RIGHT || op.align == ALIGN_CENTER)) {
+        if (r && tx == 0 &&
+            (op.align == ALIGN_RIGHT || op.align == ALIGN_CENTER)) {
           int16_t tw = text_width_default_font(out.c_str(), 1);
           tx = r[0] + 1;
           if (op.align == ALIGN_RIGHT)
@@ -265,8 +268,10 @@ static void draw_from_spec_full_impl(uint8_t variantId) {
         char hhmm[8];
         net_time_hhmm(hhmm, sizeof(hhmm));
         int16_t tw = text_width_default_font(hhmm, 1);
-        int16_t rx = static_cast<int16_t>(HEADER_TIME[0] + HEADER_TIME[2] - 2 - tw);
-        int16_t by = static_cast<int16_t>(HEADER_TIME[1] + TOP_Y_OFFSET + HEADER_TIME[3] - 2);
+        int16_t rx = static_cast<int16_t>(
+            HEADER_TIME[0] + HEADER_TIME[2] - 2 - tw);
+        int16_t by = static_cast<int16_t>(
+            HEADER_TIME[1] + TOP_Y_OFFSET + HEADER_TIME[3] - 2);
         display.setTextColor(GxEPD_BLACK);
         display.setTextSize(1);
         display.setCursor(rx, by);
@@ -318,10 +323,12 @@ static void draw_from_spec_full_impl(uint8_t variantId) {
           break;
         OutsideReadings o = net_get_outside();
         if (o.validWeatherIcon || o.validWeatherId) {
-          draw_weather_icon_region_at_from_outside(r[0], r[1] + TOP_Y_OFFSET, r[2], r[3], o);
+          draw_weather_icon_region_at_from_outside(
+              r[0], r[1] + TOP_Y_OFFSET, r[2], r[3], o);
         } else {
           const char* weather = o.validWeather ? o.weather : "";
-          draw_weather_icon_region_at(r[0], r[1] + TOP_Y_OFFSET, r[2], r[3], weather);
+          draw_weather_icon_region_at(
+              r[0], r[1] + TOP_Y_OFFSET, r[2], r[3], weather);
         }
         break;
       }
