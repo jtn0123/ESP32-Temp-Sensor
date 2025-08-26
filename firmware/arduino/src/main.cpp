@@ -988,13 +988,13 @@ static inline void draw_right_aligned_text_in_rect(
   });
 }
 
-static inline void draw_temp_number_and_units(const int num_rect[4],
-                                             const char* temp_f) {
-  const int* units_rect = num_rect;  // For now, use same rect for units
-  draw_in_region(num_rect, [&](int16_t x, int16_t y, int16_t w, int16_t h) {
+static inline void draw_temp_number_and_units(const int r[4],
+                                             const char* t) {
+  const int* units_rect = r;  // For now, use same rect for units
+  draw_in_region(r, [&](int16_t x, int16_t y, int16_t w, int16_t h) {
     display.setTextColor(GxEPD_BLACK);
     display.setTextSize(2);
-    int16_t tw = text_width_default_font(temp_f, 2);
+    int16_t tw = text_width_default_font(t, 2);
     int16_t rx = x + (w - tw) / 2;
     int16_t by = y + h - 4;
     display.setCursor(rx, by);
@@ -1287,8 +1287,9 @@ static inline void draw_status_line_direct(const BatteryStatus& bs,
   display.print(right);
 }
 
-static void draw_values(const char* in_temp_f, const char* in_rh, const char* out_temp_f,
-                        const char* out_rh, const char* time_str, const char* status) {
+static void draw_values(const char* in_temp_f, const char* in_rh,
+                        const char* out_temp_f, const char* out_rh,
+                        const char* time_str, const char* status) {
   display.setTextColor(GxEPD_BLACK);
   // Inside temp: numeric right-aligned, units drawn separately
   {
@@ -1466,8 +1467,8 @@ static void draw_weather_icon_region_at_from_outside(int16_t x, int16_t y,
   draw_icon(display, ix, iy, icon_id, GxEPD_BLACK);
 }
 
-static void draw_weather_icon_region_at(int16_t x, int16_t y, int16_t w, int16_t h,
-                                        const char* weather) {
+static void draw_weather_icon_region_at(int16_t x, int16_t y, int16_t w,
+                                        int16_t h, const char* weather) {
   display.fillRect(x, y, w, h, GxEPD_WHITE);
   int16_t ix = x + (w - ICON_W) / 2;
   int16_t iy = y + (h - ICON_H) / 2;

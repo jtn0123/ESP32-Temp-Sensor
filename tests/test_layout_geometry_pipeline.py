@@ -42,7 +42,7 @@ class TestLayoutGeometryPipeline:
             "HEADER_NAME", "HEADER_TIME_CENTER", "HEADER_VERSION",
             "INSIDE_TEMP", "INSIDE_HUMIDITY",
             "OUT_TEMP", "OUT_HUMIDITY", "OUT_WEATHER",
-            "BATTERY", "BATTERY_PERCENT"
+            "FOOTER_STATUS", "FOOTER_WEATHER"
         ]
         
         rects = self.geometry["rects"]
@@ -192,10 +192,10 @@ class TestLayoutGeometryPipeline:
             x, y, w, h = rects["HEADER_NAME"]
             assert y < 30, "Header should be near top"
         
-        # Battery should be at bottom
-        if "BATTERY" in rects:
-            x, y, w, h = rects["BATTERY"]
-            assert y > 90, "Battery should be near bottom"
+        # Footer should be at bottom
+        if "FOOTER_STATUS" in rects:
+            x, y, w, h = rects["FOOTER_STATUS"]
+            assert y > 80, "Footer should be near bottom"
         
         # Inside temp should be on left
         if "INSIDE_TEMP" in rects:
