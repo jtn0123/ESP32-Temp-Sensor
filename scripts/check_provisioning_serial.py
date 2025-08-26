@@ -6,21 +6,19 @@ import sys
 import time
 
 try:
-    import serial  # type: ignore
+    import serial
 except Exception:  # pragma: no cover - optional
-    serial = None  # type: ignore
+    serial = None
 
 
-def wait_for_lines(port: str, baud: int, timeout_s: float) -> tuple[
-    bool, bool, list[str]
-]:
+def wait_for_lines(port: str, baud: int, timeout_s: float) -> tuple[bool, bool, list[str]]:
     if serial is None:
         raise RuntimeError("pyserial not installed. pip install pyserial")
     end_at = time.time() + timeout_s
     saw_prov = False
     saw_connected = False
     lines: list[str] = []
-    with serial.Serial(port, baud, timeout=1) as ser:  # type: ignore[attr-defined]
+    with serial.Serial(port, baud, timeout=1) as ser:
         time.sleep(0.1)
         # send wificlear to force provisioning mode
         ser.write(b"wificlear\n")
@@ -48,19 +46,14 @@ def main() -> int:
     ap.add_argument("--timeout", type=float, default=60.0)
     args = ap.parse_args()
 
-    saw_prov, saw_connected, lines = wait_for_lines(
-        args.port, args.baud, args.timeout
-    )
+    saw_prov, saw_connected, lines = wait_for_lines(args.port, args.baud, args.timeout)
     print("Observed provisioning:", saw_prov)
     print("Observed connect:", saw_connected)
     if not saw_prov:
         print("ERROR: did not observe provisioning start", file=sys.stderr)
         return 2
     if not saw_connected:
-        print(
-            "ERROR: did not observe WiFi connected after provisioning",
-            file=sys.stderr
-        )
+        print("ERROR: did not observe WiFi connected after provisioning", file=sys.stderr)
         return 3
     return 0
 

@@ -13,96 +13,168 @@ _spec.loader.exec_module(pe)  # type: ignore
 POWER_EDGE_CASES = [
     # Zero/invalid inputs
     {
-        "capacity_mAh": 0, "sleep_current_mA": 0.09, "active_current_mA": 80,
-        "active_seconds": 45, "wake_interval_sec": 3600, "should_error": True
+        "capacity_mAh": 0,
+        "sleep_current_mA": 0.09,
+        "active_current_mA": 80,
+        "active_seconds": 45,
+        "wake_interval_sec": 3600,
+        "should_error": True,
     },
     {
-        "capacity_mAh": 3500, "sleep_current_mA": 0, "active_current_mA": 80,
-        "active_seconds": 45, "wake_interval_sec": 3600, "should_error": False
+        "capacity_mAh": 3500,
+        "sleep_current_mA": 0,
+        "active_current_mA": 80,
+        "active_seconds": 45,
+        "wake_interval_sec": 3600,
+        "should_error": False,
     },
     {
-        "capacity_mAh": 3500, "sleep_current_mA": 0.09, "active_current_mA": 0,
-        "active_seconds": 45, "wake_interval_sec": 3600, "should_error": False
+        "capacity_mAh": 3500,
+        "sleep_current_mA": 0.09,
+        "active_current_mA": 0,
+        "active_seconds": 45,
+        "wake_interval_sec": 3600,
+        "should_error": False,
     },
     {
-        "capacity_mAh": 3500, "sleep_current_mA": 0.09, "active_current_mA": 80,
-        "active_seconds": 0, "wake_interval_sec": 3600, "should_error": False
+        "capacity_mAh": 3500,
+        "sleep_current_mA": 0.09,
+        "active_current_mA": 80,
+        "active_seconds": 0,
+        "wake_interval_sec": 3600,
+        "should_error": False,
     },
-
     # Extremely high values (unrealistic but should handle gracefully)
     {
-        "capacity_mAh": 999999, "sleep_current_mA": 0.09, "active_current_mA": 80,
-        "active_seconds": 45, "wake_interval_sec": 3600, "should_error": False
+        "capacity_mAh": 999999,
+        "sleep_current_mA": 0.09,
+        "active_current_mA": 80,
+        "active_seconds": 45,
+        "wake_interval_sec": 3600,
+        "should_error": False,
     },
     {
-        "capacity_mAh": 3500, "sleep_current_mA": 999, "active_current_mA": 80,
-        "active_seconds": 45, "wake_interval_sec": 3600, "should_error": False
+        "capacity_mAh": 3500,
+        "sleep_current_mA": 999,
+        "active_current_mA": 80,
+        "active_seconds": 45,
+        "wake_interval_sec": 3600,
+        "should_error": False,
     },
     {
-        "capacity_mAh": 3500, "sleep_current_mA": 0.09, "active_current_mA": 9999,
-        "active_seconds": 45, "wake_interval_sec": 3600, "should_error": False
+        "capacity_mAh": 3500,
+        "sleep_current_mA": 0.09,
+        "active_current_mA": 9999,
+        "active_seconds": 45,
+        "wake_interval_sec": 3600,
+        "should_error": False,
     },
     {
-        "capacity_mAh": 3500, "sleep_current_mA": 0.09, "active_current_mA": 80,
-        "active_seconds": 99999, "wake_interval_sec": 3600, "should_error": False
+        "capacity_mAh": 3500,
+        "sleep_current_mA": 0.09,
+        "active_current_mA": 80,
+        "active_seconds": 99999,
+        "wake_interval_sec": 3600,
+        "should_error": False,
     },
-
     # Very short wake intervals (stress test)
     {
-        "capacity_mAh": 3500, "sleep_current_mA": 0.09, "active_current_mA": 80,
-        "active_seconds": 45, "wake_interval_sec": 60, "should_error": False
+        "capacity_mAh": 3500,
+        "sleep_current_mA": 0.09,
+        "active_current_mA": 80,
+        "active_seconds": 45,
+        "wake_interval_sec": 60,
+        "should_error": False,
     },
     {
-        "capacity_mAh": 3500, "sleep_current_mA": 0.09, "active_current_mA": 80,
-        "active_seconds": 45, "wake_interval_sec": 1, "should_error": False
+        "capacity_mAh": 3500,
+        "sleep_current_mA": 0.09,
+        "active_current_mA": 80,
+        "active_seconds": 45,
+        "wake_interval_sec": 1,
+        "should_error": False,
     },
-
     # Negative values (should handle gracefully)
     {
-        "capacity_mAh": -1000, "sleep_current_mA": 0.09, "active_current_mA": 80,
-        "active_seconds": 45, "wake_interval_sec": 3600, "should_error": True
+        "capacity_mAh": -1000,
+        "sleep_current_mA": 0.09,
+        "active_current_mA": 80,
+        "active_seconds": 45,
+        "wake_interval_sec": 3600,
+        "should_error": True,
     },
     {
-        "capacity_mAh": 3500, "sleep_current_mA": -0.1, "active_current_mA": 80,
-        "active_seconds": 45, "wake_interval_sec": 3600, "should_error": True
+        "capacity_mAh": 3500,
+        "sleep_current_mA": -0.1,
+        "active_current_mA": 80,
+        "active_seconds": 45,
+        "wake_interval_sec": 3600,
+        "should_error": True,
     },
     {
-        "capacity_mAh": 3500, "sleep_current_mA": 0.09, "active_current_mA": -10,
-        "active_seconds": 45, "wake_interval_sec": 3600, "should_error": True
+        "capacity_mAh": 3500,
+        "sleep_current_mA": 0.09,
+        "active_current_mA": -10,
+        "active_seconds": 45,
+        "wake_interval_sec": 3600,
+        "should_error": True,
     },
     {
-        "capacity_mAh": 3500, "sleep_current_mA": 0.09, "active_current_mA": 80,
-        "active_seconds": -5, "wake_interval_sec": 3600, "should_error": True
+        "capacity_mAh": 3500,
+        "sleep_current_mA": 0.09,
+        "active_current_mA": 80,
+        "active_seconds": -5,
+        "wake_interval_sec": 3600,
+        "should_error": True,
     },
-
     # Very small values
     {
-        "capacity_mAh": 1, "sleep_current_mA": 0.001, "active_current_mA": 1,
-        "active_seconds": 1, "wake_interval_sec": 3600, "should_error": False
+        "capacity_mAh": 1,
+        "sleep_current_mA": 0.001,
+        "active_current_mA": 1,
+        "active_seconds": 1,
+        "wake_interval_sec": 3600,
+        "should_error": False,
     },
     {
-        "capacity_mAh": 3500, "sleep_current_mA": 0.0001, "active_current_mA": 80,
-        "active_seconds": 45, "wake_interval_sec": 3600, "should_error": False
+        "capacity_mAh": 3500,
+        "sleep_current_mA": 0.0001,
+        "active_current_mA": 80,
+        "active_seconds": 45,
+        "wake_interval_sec": 3600,
+        "should_error": False,
     },
 ]
 
 # Battery chemistry scenarios
 BATTERY_CHEMISTRY_SCENARIOS = [
     {
-        "name": "LiPo 3.7V", "capacity_mAh": 3500, "nominal_voltage": 3.7,
-        "sleep_current_mA": 0.09, "active_current_mA": 80
+        "name": "LiPo 3.7V",
+        "capacity_mAh": 3500,
+        "nominal_voltage": 3.7,
+        "sleep_current_mA": 0.09,
+        "active_current_mA": 80,
     },
     {
-        "name": "Li-ion 18650", "capacity_mAh": 2500, "nominal_voltage": 3.6,
-        "sleep_current_mA": 0.05, "active_current_mA": 120
+        "name": "Li-ion 18650",
+        "capacity_mAh": 2500,
+        "nominal_voltage": 3.6,
+        "sleep_current_mA": 0.05,
+        "active_current_mA": 120,
     },
     {
-        "name": "Alkaline AA (2x)", "capacity_mAh": 2400, "nominal_voltage": 3.0,
-        "sleep_current_mA": 0.15, "active_current_mA": 60
+        "name": "Alkaline AA (2x)",
+        "capacity_mAh": 2400,
+        "nominal_voltage": 3.0,
+        "sleep_current_mA": 0.15,
+        "active_current_mA": 60,
     },
     {
-        "name": "NiMH AA (4x)", "capacity_mAh": 2000, "nominal_voltage": 4.8,
-        "sleep_current_mA": 0.8, "active_current_mA": 100
+        "name": "NiMH AA (4x)",
+        "capacity_mAh": 2000,
+        "nominal_voltage": 4.8,
+        "sleep_current_mA": 0.8,
+        "active_current_mA": 100,
     },
 ]
 
@@ -114,6 +186,7 @@ TEMPERATURE_SCENARIOS = [
     {"temp_c": 40, "capacity_multiplier": 0.9, "description": "Hot weather"},
     {"temp_c": 60, "capacity_multiplier": 0.7, "description": "Very hot"},
 ]
+
 
 def test_power_estimation_edge_cases():
     """Test power estimation with edge case inputs"""
@@ -128,8 +201,9 @@ def test_power_estimation_edge_cases():
         if case["should_error"]:
             # Should either raise an exception or return a sensible error value
             try:
-                days = pe.estimate_days(capacity, sleep_current, active_current,
-                                         active_seconds, wake_interval)
+                days = pe.estimate_days(
+                    capacity, sleep_current, active_current, active_seconds, wake_interval
+                )
                 # If no exception, should return a reasonable value or 0 for invalid inputs
                 assert days >= 0, f"Case {i}: Negative days for invalid input"
             except (ValueError, ZeroDivisionError):
@@ -137,10 +211,12 @@ def test_power_estimation_edge_cases():
                 pass
         else:
             # Should complete without error
-            days = pe.estimate_days(capacity, sleep_current, active_current,
-                                     active_seconds, wake_interval)
+            days = pe.estimate_days(
+                capacity, sleep_current, active_current, active_seconds, wake_interval
+            )
             assert days >= 0, f"Case {i}: Negative days for valid input"
-            assert not (days == float('inf')), f"Case {i}: Infinite days"
+            assert not (days == float("inf")), f"Case {i}: Infinite days"
+
 
 def test_power_estimation_mathematical_correctness():
     """Test mathematical correctness of power estimation"""
@@ -164,6 +240,7 @@ def test_power_estimation_mathematical_correctness():
 
     assert 130 < days < 160, f"Expected ~145 days, got {days}"
 
+
 def test_power_estimation_scaling():
     """Test that power estimates scale correctly with input changes"""
 
@@ -173,22 +250,26 @@ def test_power_estimation_scaling():
     base_active_time = 45
     base_interval = 3600
 
-    base_days = pe.estimate_days(base_capacity, base_sleep, base_active,
-                                  base_active_time, base_interval)
+    base_days = pe.estimate_days(
+        base_capacity, base_sleep, base_active, base_active_time, base_interval
+    )
 
     # Double capacity should roughly double days
-    double_capacity_days = pe.estimate_days(base_capacity * 2, base_sleep,
-                                             base_active, base_active_time, base_interval)
+    double_capacity_days = pe.estimate_days(
+        base_capacity * 2, base_sleep, base_active, base_active_time, base_interval
+    )
     assert 1.9 * base_days < double_capacity_days < 2.1 * base_days
 
     # Half capacity should roughly halve days
-    half_capacity_days = pe.estimate_days(base_capacity / 2, base_sleep,
-                                           base_active, base_active_time, base_interval)
+    half_capacity_days = pe.estimate_days(
+        base_capacity / 2, base_sleep, base_active, base_active_time, base_interval
+    )
     assert 0.45 * base_days < half_capacity_days < 0.55 * base_days
 
     # Double wake interval should significantly increase days according to the model
-    double_interval_days = pe.estimate_days(base_capacity, base_sleep, base_active,
-                                             base_active_time, base_interval * 2)
+    double_interval_days = pe.estimate_days(
+        base_capacity, base_sleep, base_active, base_active_time, base_interval * 2
+    )
     # Expected ratio based on average current formula:
     # avg = sleep + (active - sleep) * (awake / interval)
     avg1 = base_sleep + (base_active - base_sleep) * (base_active_time / base_interval)
@@ -197,6 +278,7 @@ def test_power_estimation_scaling():
     ratio = double_interval_days / base_days
     # Allow a small tolerance
     assert 0.95 * expected_ratio < ratio < 1.05 * expected_ratio
+
 
 def test_power_estimation_current_relationships():
     """Test that higher currents result in shorter battery life"""
@@ -222,6 +304,7 @@ def test_power_estimation_current_relationships():
     # Higher sleep current should result in shorter battery life
     assert low_sleep > medium_sleep > high_sleep
 
+
 def test_power_estimation_time_relationships():
     """Test that time parameters affect battery life correctly"""
 
@@ -232,7 +315,7 @@ def test_power_estimation_time_relationships():
     # Longer wake intervals should increase battery life
     short_interval = pe.estimate_days(capacity, sleep_current, active_current, 45, 1800)  # 30 min
     medium_interval = pe.estimate_days(capacity, sleep_current, active_current, 45, 3600)  # 1 hour
-    long_interval = pe.estimate_days(capacity, sleep_current, active_current, 45, 7200)   # 2 hours
+    long_interval = pe.estimate_days(capacity, sleep_current, active_current, 45, 7200)  # 2 hours
 
     assert short_interval < medium_interval < long_interval
 
@@ -242,6 +325,7 @@ def test_power_estimation_time_relationships():
     long_active = pe.estimate_days(capacity, sleep_current, active_current, 120, 3600)
 
     assert short_active > medium_active > long_active
+
 
 def test_battery_chemistry_scenarios():
     """Test power estimation with different battery chemistries"""
@@ -255,12 +339,12 @@ def test_battery_chemistry_scenarios():
             battery["sleep_current_mA"],
             battery["active_current_mA"],
             active_seconds,
-            wake_interval
+            wake_interval,
         )
 
         # Should produce reasonable battery life estimates
         assert days > 0, f"{battery['name']}: Invalid days estimate"
-        assert not (days == float('inf')), f"{battery['name']}: Infinite days"
+        assert not (days == float("inf")), f"{battery['name']}: Infinite days"
 
         # LiPo should generally have better performance than alkaline
         # (This is a rough sanity check)
@@ -268,6 +352,7 @@ def test_battery_chemistry_scenarios():
             assert days > 50, f"{battery['name']}: LiPo should last >50 days"
         elif "Alkaline" in battery["name"]:
             assert days > 20, f"{battery['name']}: Alkaline should last >20 days"
+
 
 def test_temperature_impact_estimation():
     """Test power estimation with temperature considerations"""
@@ -285,8 +370,9 @@ def test_temperature_impact_estimation():
         # Simulate temperature impact by adjusting capacity
         adjusted_capacity = base_capacity * temp_scenario["capacity_multiplier"]
 
-        days = pe.estimate_days(adjusted_capacity, sleep_current, active_current,
-                                  active_seconds, wake_interval)
+        days = pe.estimate_days(
+            adjusted_capacity, sleep_current, active_current, active_seconds, wake_interval
+        )
 
         # Colder temperatures should reduce battery life
         assert days > 0, f"{temp_scenario['description']}: Invalid days estimate"
@@ -294,6 +380,7 @@ def test_temperature_impact_estimation():
         # Very cold should have significantly reduced life
         if temp_scenario["temp_c"] == -20:
             assert days < 100, f"{temp_scenario['description']}: Should be <100 days in cold"
+
 
 def test_power_estimation_precision():
     """Test precision and rounding behavior of power estimates"""
@@ -303,7 +390,7 @@ def test_power_estimation_precision():
 
     # Small changes in current should produce proportional changes
     small_change = pe.estimate_days(3500, 0.0901, 80, 45, 3600)  # 0.11% increase
-    large_change = pe.estimate_days(3500, 0.1, 80, 45, 3600)     # 11% increase
+    large_change = pe.estimate_days(3500, 0.1, 80, 45, 3600)  # 11% increase
 
     # Small changes should have small effects
     ratio_small = small_change / base_days
@@ -311,6 +398,7 @@ def test_power_estimation_precision():
 
     assert 0.99 < ratio_small < 1.01, f"Small current change caused large effect: {ratio_small}"
     assert 0.8 < ratio_large < 1.0, f"Large current change effect: {ratio_large}"
+
 
 def test_power_estimation_consistency():
     """Test that repeated calculations give consistent results"""
@@ -326,23 +414,25 @@ def test_power_estimation_consistency():
     # All results should be identical
     assert len(set(results)) == 1, f"Inconsistent results: {results}"
 
+
 def test_power_estimation_bounds():
     """Test that power estimates stay within reasonable bounds"""
 
     test_cases = [
-        (100, 0.01, 10, 10, 3600),     # Small battery, low currents
+        (100, 0.01, 10, 10, 3600),  # Small battery, low currents
         (10000, 0.5, 500, 300, 3600),  # Large battery, high currents
-        (2000, 0.05, 50, 30, 1800),    # Medium, short intervals
-        (5000, 0.2, 150, 60, 7200),    # Large, long intervals
+        (2000, 0.05, 50, 30, 1800),  # Medium, short intervals
+        (5000, 0.2, 150, 60, 7200),  # Large, long intervals
     ]
 
     for capacity, sleep_current, active_current, active_seconds, wake_interval in test_cases:
-        days = pe.estimate_days(capacity, sleep_current, active_current,
-                                  active_seconds, wake_interval)
+        days = pe.estimate_days(
+            capacity, sleep_current, active_current, active_seconds, wake_interval
+        )
 
         # Should be positive finite number
         assert days > 0, f"Negative days for inputs: {locals()}"
-        assert days < float('inf'), f"Infinite days for inputs: {locals()}"
+        assert days < float("inf"), f"Infinite days for inputs: {locals()}"
 
         # Should be reasonable range for battery life (1 day to 1000 years)
         assert 1 <= days <= 365000, f"Unreasonable days estimate: {days}"

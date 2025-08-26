@@ -6,9 +6,9 @@ import sys
 import time
 
 try:
-    import serial  # type: ignore
+    import serial
 except Exception:  # pragma: no cover - optional at import time
-    serial = None  # type: ignore
+    serial = None
 
 
 @dataclass
@@ -90,7 +90,7 @@ def main() -> int:
         print("pyserial is not installed. Install with: pip3 install pyserial", file=sys.stderr)
         return 2
     try:
-        with serial.Serial(args.port, args.baud, timeout=1) as ser:  # type: ignore[attr-defined]
+        with serial.Serial(args.port, args.baud, timeout=1) as ser:
             # Give the port a moment after opening
             time.sleep(0.1)
             print(f"Connected to {args.port} @ {args.baud}")

@@ -4,7 +4,7 @@ import os
 import signal
 import time
 
-import paho.mqtt.client as mqtt  # type: ignore
+import paho.mqtt.client as mqtt
 
 
 def main():

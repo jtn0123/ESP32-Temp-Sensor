@@ -100,9 +100,7 @@ def main():
     thresholds = data.get("thresholds", {})
     # Optional firmware version: allow explicit config/env, else fallback to
     # git
-    fw_version = str(
-        data.get("fw_version", "") or os.environ.get("FW_VERSION", "") or ""
-    )
+    fw_version = str(data.get("fw_version", "") or os.environ.get("FW_VERSION", "") or "")
     if not fw_version:
         try:
             fw_version = (

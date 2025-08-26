@@ -1,6 +1,6 @@
 {
   "layout_version": 1,
-  "layout_crc": "0xB6E4058D",
+  "layout_crc": "0x38EBDAC0",
   "canvas": {
     "w": 250,
     "h": 122
@@ -35,13 +35,13 @@
       118,
       28
     ],
-    "INSIDE_RH": [
+    "INSIDE_HUMIDITY": [
       6,
       66,
       118,
       14
     ],
-    "INSIDE_ROW2": [
+    "INSIDE_PRESSURE": [
       6,
       78,
       118,
@@ -83,7 +83,7 @@
       44,
       12
     ],
-    "FOOTER_L": [
+    "FOOTER_STATUS": [
       6,
       90,
       160,

@@ -31,7 +31,7 @@ class TestDebugPanelIntegration:
             ["python3", "-m", "http.server", str(cls.port), "--bind", "127.0.0.1"],
             cwd=str(ROOT / "web" / "sim"),
             stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL
+            stderr=subprocess.DEVNULL,
         )
         time.sleep(1)
 

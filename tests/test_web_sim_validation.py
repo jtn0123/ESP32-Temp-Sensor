@@ -24,6 +24,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 WEB_SIM_PATH = Path(__file__).parent.parent / "web" / "sim"
 TEST_PORT = 8765
 
+
 class TestWebSimValidation:
     """Test the web simulator validation engine."""
 
@@ -35,7 +36,7 @@ class TestWebSimValidation:
             ["python3", "-m", "http.server", str(TEST_PORT)],
             cwd=WEB_SIM_PATH,
             stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL
+            stderr=subprocess.DEVNULL,
         )
         time.sleep(2)  # Wait for server to start
 
@@ -75,62 +76,62 @@ class TestWebSimValidation:
 
     def test_text_overflow_detection(self):
         """Test that text overflow is properly detected."""
-        self.load_simulator({
-            "room": "A Very Long Room Name That Will Definitely Overflow",
-            "temp": "999.9",
-            "temp_out": "888.8",
-            "rh": "100",
-            "rh_out": "100",
-            "pressure": "1013.25 hPa",  # Long pressure value
-            "wind": "99.9 mph"
-        })
+        self.load_simulator(
+            {
+                "room": "A Very Long Room Name That Will Definitely Overflow",
+                "temp": "999.9",
+                "temp_out": "888.8",
+                "rh": "100",
+                "rh_out": "100",
+                "pressure": "1013.25 hPa",  # Long pressure value
+                "wind": "99.9 mph",
+            }
+        )
 
         issues = self.get_validation_issues()
-        overflow_issues = [i for i in issues if i['type'] == 'text_overflow']
+        overflow_issues = [i for i in issues if i["type"] == "text_overflow"]
 
         assert len(overflow_issues) > 0, "Should detect text overflow issues"
 
         # Check specific regions that should overflow
-        overflow_regions = {i['region'] for i in overflow_issues}
-        assert 'HEADER_NAME' in overflow_regions, "Should detect header name overflow"
+        overflow_regions = {i["region"] for i in overflow_issues}
+        assert "HEADER_NAME" in overflow_regions, "Should detect header name overflow"
 
     def test_empty_region_detection(self):
         """Test that empty regions are properly detected."""
-        self.load_simulator({
-            # Minimal data - many regions will be empty
-            "room": "Test",
-            "temp": "72"
-        })
+        self.load_simulator(
+            {
+                # Minimal data - many regions will be empty
+                "room": "Test",
+                "temp": "72",
+            }
+        )
 
         issues = self.get_validation_issues()
-        empty_issues = [i for i in issues if i['type'] == 'empty_region']
+        empty_issues = [i for i in issues if i["type"] == "empty_region"]
 
         assert len(empty_issues) > 0, "Should detect empty regions"
 
         # Check that expected empty regions are detected
-        empty_regions = {i['region'] for i in empty_issues}
-        assert 'OUT_TEMP' in empty_regions, "Should detect empty outside temp"
-        assert 'STATUS' in empty_regions, "Should detect empty status"
+        empty_regions = {i["region"] for i in empty_issues}
+        assert "OUT_TEMP" in empty_regions, "Should detect empty outside temp"
+        assert "STATUS" in empty_regions, "Should detect empty status"
 
     def test_bounds_exceeded_detection(self):
         """Test that content exceeding region bounds is detected."""
-        self.load_simulator({
-            "room": "Test Room",
-            "temp": "72.5",
-            "temp_out": "68.4",
-            "rh": "47",
-            "rh_out": "53"
-        })
+        self.load_simulator(
+            {"room": "Test Room", "temp": "72.5", "temp_out": "68.4", "rh": "47", "rh_out": "53"}
+        )
 
         # Force validation
         self.driver.execute_script("runValidation();")
 
         issues = self.get_validation_issues()
-        bounds_issues = [i for i in issues if i['type'] == 'bounds_exceeded']
+        bounds_issues = [i for i in issues if i["type"] == "bounds_exceeded"]
 
         # Check if any temperature values exceed their bounds
         if bounds_issues:
-            bounds_regions = {i['region'] for i in bounds_issues}
+            bounds_regions = {i["region"] for i in bounds_issues}
             print(f"Detected bounds exceeded in: {bounds_regions}")
 
     def test_collision_detection(self):
@@ -148,7 +149,7 @@ class TestWebSimValidation:
         self.load_simulator()
         issues = self.driver.execute_script(script)
 
-        collision_issues = [i for i in issues if i['type'] == 'collision']
+        collision_issues = [i for i in issues if i["type"] == "collision"]
         assert len(collision_issues) > 0, "Should detect collisions when allowed list is empty"
 
     def test_validation_ui_updates(self):
@@ -160,8 +161,12 @@ class TestWebSimValidation:
         assert badge is not None, "Validation badge should exist"
 
         badge_text = badge.text
-        assert badge_text in ['OK', 'warnings', 'errors', 'critical'], \
-            f"Badge should show valid status, got: {badge_text}"
+        assert badge_text in [
+            "OK",
+            "warnings",
+            "errors",
+            "critical",
+        ], f"Badge should show valid status, got: {badge_text}"
 
         # Check results panel exists
         results = self.driver.find_element(By.ID, "validationResults")
@@ -169,11 +174,9 @@ class TestWebSimValidation:
 
     def test_visual_overlay_rendering(self):
         """Test that validation overlay renders correctly."""
-        self.load_simulator({
-            "room": "Very Long Room Name That Overflows",
-            "temp": "999.9",
-            "temp_out": "888.8"
-        })
+        self.load_simulator(
+            {"room": "Very Long Room Name That Overflows", "temp": "999.9", "temp_out": "888.8"}
+        )
 
         # Enable validation and check overlay is drawn
         script = """
@@ -189,6 +192,7 @@ class TestWebSimValidation:
         # Take screenshot to verify overlay (optional)
         # screenshot = self.driver.get_screenshot_as_png()
         # Path("test_validation_overlay.png").write_bytes(screenshot)
+
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

@@ -10,34 +10,27 @@ CONDITION_MAPPINGS = {
     "storm": "weather-lightning",
     "thunder": "weather-lightning",
     "lightning": "weather-lightning",
-
     # Rain conditions
     "pour": "weather-pouring",
     "rain": "weather-pouring",
     "shower": "weather-pouring",
-
     # Snow conditions
     "snow": "weather-snowy",
     "hail": "weather-snowy",
-
     # Fog conditions
     "fog": "weather-fog",
     "mist": "weather-fog",
     "haze": "weather-fog",
-
     # Cloudy conditions
     "part": "weather-partly-cloudy",
     "cloud": "weather-cloudy",
     "overcast": "weather-cloudy",
     "exceptional": "weather-cloudy",
-
     # Night conditions
     "night": "weather-night",
     "clear-night": "weather-night",
-
     # Wind conditions
     "wind": "weather-windy-variant",
-
     # Clear/sunny conditions (default)
     "clear": "weather-sunny",
     "sunny": "weather-sunny",
@@ -59,9 +52,9 @@ CONDITION_CODE_MAPPINGS = {
     10: "clear",  # fallback
     45: "fog",
     48: "fog",
-    49: "fog",   # Add missing codes for bounds test
-    50: "fog",   # Add missing codes for bounds test
-    51: "fog",   # Add missing codes for bounds test
+    49: "fog",  # Add missing codes for bounds test
+    50: "fog",  # Add missing codes for bounds test
+    51: "fog",  # Add missing codes for bounds test
 }
 
 # Test cases for condition shortening (from existing test file)
@@ -79,24 +72,28 @@ CONDITION_SHORTENING_CASES = [
     ("sunny", "SUNNY"),
 ]
 
+
 def _load_ui_spec() -> Dict:
     """Load the UI specification from the config file"""
-    ui_spec_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), \
-                                 "config", "ui_spec.json")
+    ui_spec_path = os.path.join(
+        os.path.dirname(os.path.dirname(__file__)), "config", "ui_spec.json"
+    )
 
     if not os.path.exists(ui_spec_path):
         pytest.skip("UI spec file not found")
 
     try:
-        with open(ui_spec_path, 'r') as f:
+        with open(ui_spec_path, "r") as f:
             return json.load(f)
     except Exception as e:
         pytest.fail(f"Failed to load UI spec: {e}")
+
 
 def _get_icon_mapping_from_spec() -> List[Dict]:
     """Extract icon mapping from UI spec"""
     spec = _load_ui_spec()
     return spec.get("iconMap", [])
+
 
 def test_condition_string_to_icon_mapping():
     """Test that condition strings map to correct icons"""
@@ -110,8 +107,9 @@ def test_condition_string_to_icon_mapping():
         found_match = False
         for rule in icon_map:
             if "match" in rule and condition in rule["match"]:
-                assert rule["icon"] == expected_icon, \
-                    f"Condition '{condition}' should map to {expected_icon}, got {rule['icon']}"
+                assert (
+                    rule["icon"] == expected_icon
+                ), f"Condition '{condition}' should map to {expected_icon}, got {rule['icon']}"
                 found_match = True
                 break
 
@@ -120,6 +118,7 @@ def test_condition_string_to_icon_mapping():
             default_rule = next((rule for rule in icon_map if rule.get("default")), None)
             if default_rule:
                 assert default_rule["icon"] == CONDITION_MAPPINGS.get("clear", "weather-sunny")
+
 
 def test_condition_code_to_string_mapping():
     """Test condition code to condition string conversion"""
@@ -131,6 +130,7 @@ def test_condition_code_to_string_mapping():
 
         # The expected condition should exist in our mappings
         assert expected_condition in CONDITION_MAPPINGS
+
 
 def test_icon_mapping_spec_format():
     """Test that the icon mapping in UI spec follows expected format"""
@@ -156,17 +156,20 @@ def test_icon_mapping_spec_format():
         else:
             pytest.fail(f"Invalid rule structure: {rule}")
 
+
 def test_condition_shortening_comprehensive():
     """Test condition text shortening for display"""
 
     # Test all shortening cases
     for input_condition, expected_short in CONDITION_SHORTENING_CASES:
         assert isinstance(expected_short, str)
-        assert len(expected_short) <= 8, \
-            f"Shortened condition '{expected_short}' too long (max 8 chars)"
+        assert (
+            len(expected_short) <= 8
+        ), f"Shortened condition '{expected_short}' too long (max 8 chars)"
 
         # Should not contain lowercase letters (should be uppercase)
         assert expected_short == expected_short.upper()
+
 
 def test_weather_icon_availability():
     """Test that all referenced weather icons exist in the icon set"""
@@ -189,6 +192,7 @@ def test_weather_icon_availability():
         assert " " not in icon
         assert icon.replace("-", "").replace("_", "").isalnum()
 
+
 def test_condition_code_bounds():
     """Test condition code boundary conditions"""
 
@@ -205,6 +209,7 @@ def test_condition_code_bounds():
         else:
             # Valid codes should have mappings
             assert code in CONDITION_CODE_MAPPINGS
+
 
 def test_condition_string_parsing():
     """Test parsing of condition strings with various formats"""
@@ -234,6 +239,7 @@ def test_condition_string_parsing():
         assert not condition_str.endswith(" ")
         assert not condition_str.endswith("-")
 
+
 def test_ui_spec_condition_integration():
     """Test integration between UI spec condition mapping and other components"""
 
@@ -257,6 +263,7 @@ def test_ui_spec_condition_integration():
         condition_ref = op.get("iconFromWeather")
         assert isinstance(condition_ref, str)
         assert len(condition_ref) > 0
+
 
 def test_condition_display_constraints():
     """Test that condition display meets UI constraints"""

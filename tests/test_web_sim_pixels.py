@@ -50,19 +50,19 @@ def test_web_sim_screenshot_matches_golden_with_tolerance(tmp_path):
 
             # Provide deterministic data
             data = {
-                    "room_name": "Office",
-                    "inside_temp_f": 72.5,
-                    "inside_hum_pct": 47,
-                    "outside_temp_f": 68.4,
-                    "outside_hum_pct": 53,
-                    "weather": "cloudy",
-                    "time_hhmm": "10:32",
-                    "ip": "192.168.1.42",
-                    "battery_voltage": 4.01,
-                    "battery_percent": 76,
-                    "days": "128",
-                    "wind_mph": 4.2,
-                }
+                "room_name": "Office",
+                "inside_temp_f": 72.5,
+                "inside_hum_pct": 47,
+                "outside_temp_f": 68.4,
+                "outside_hum_pct": 53,
+                "weather": "cloudy",
+                "time_hhmm": "10:32",
+                "ip": "192.168.1.42",
+                "battery_voltage": 4.01,
+                "battery_percent": 76,
+                "days": "128",
+                "wind_mph": 4.2,
+            }
 
             def handle_route(route):
                 route.fulfill(status=200, content_type="application/json", body=json.dumps(data))

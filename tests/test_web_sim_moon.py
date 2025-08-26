@@ -35,7 +35,7 @@ _CANVAS_RGBA_JS = (
     reason="playwright not installed",
 )
 def test_moon_phase_icon_draws_nonwhite_pixels():
-    from playwright.sync_api import sync_playwright  # type: ignore
+    from playwright.sync_api import sync_playwright
 
     web_root = os.path.join(os.path.dirname(os.path.dirname(__file__)), "web", "sim")
     port = _find_free_port()
@@ -100,7 +100,7 @@ def test_moon_phase_icon_draws_nonwhite_pixels():
     reason="playwright not installed",
 )
 def test_partial_refresh_header_time_remains_binary():
-    from playwright.sync_api import sync_playwright  # type: ignore
+    from playwright.sync_api import sync_playwright
 
     web_root = os.path.join(os.path.dirname(os.path.dirname(__file__)), "web", "sim")
     port = _find_free_port()
@@ -138,7 +138,7 @@ def test_partial_refresh_header_time_remains_binary():
     reason="playwright not installed",
 )
 def test_vector_fallback_when_svg_blocked():
-    from playwright.sync_api import sync_playwright  # type: ignore
+    from playwright.sync_api import sync_playwright
 
     web_root = os.path.join(os.path.dirname(os.path.dirname(__file__)), "web", "sim")
     port = _find_free_port()

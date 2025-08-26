@@ -11,7 +11,7 @@ MQTT_MESSAGE_FIXTURES = {
         "expected_type": "float",
         "expected_value": 72.5,
         "unit": "°F",
-        "retained": True
+        "retained": True,
     },
     "outdoor_humidity": {
         "topic": "home/outdoor/hum",
@@ -19,7 +19,7 @@ MQTT_MESSAGE_FIXTURES = {
         "expected_type": "int",
         "expected_value": 45,
         "unit": "%",
-        "retained": True
+        "retained": True,
     },
     "outdoor_condition": {
         "topic": "home/outdoor/condition",
@@ -27,7 +27,7 @@ MQTT_MESSAGE_FIXTURES = {
         "expected_type": "str",
         "expected_value": "partly-cloudy",
         "unit": None,
-        "retained": True
+        "retained": True,
     },
     "outdoor_condition_code": {
         "topic": "home/outdoor/condition_code",
@@ -35,7 +35,7 @@ MQTT_MESSAGE_FIXTURES = {
         "expected_type": "int",
         "expected_value": 3,
         "unit": None,
-        "retained": True
+        "retained": True,
     },
     "outdoor_wind": {
         "topic": "home/outdoor/wind_mph",
@@ -43,7 +43,7 @@ MQTT_MESSAGE_FIXTURES = {
         "expected_type": "float",
         "expected_value": 5.2,
         "unit": "mph",
-        "retained": True
+        "retained": True,
     },
     "outdoor_pressure": {
         "topic": "home/outdoor/pressure_hpa",
@@ -51,9 +51,8 @@ MQTT_MESSAGE_FIXTURES = {
         "expected_type": "float",
         "expected_value": 1013.2,
         "unit": "hPa",
-        "retained": True
+        "retained": True,
     },
-
     # Edge cases and error conditions
     "pressure_zero": {
         "topic": "home/outdoor/pressure_hpa",
@@ -62,7 +61,7 @@ MQTT_MESSAGE_FIXTURES = {
         "expected_value": 0,
         "unit": "hPa",
         "retained": True,
-        "should_display_dash": True  # UI should show "-" for zero pressure
+        "should_display_dash": True,  # UI should show "-" for zero pressure
     },
     "temp_negative": {
         "topic": "home/outdoor/temp",
@@ -70,7 +69,7 @@ MQTT_MESSAGE_FIXTURES = {
         "expected_type": "float",
         "expected_value": -5.2,
         "unit": "°F",
-        "retained": True
+        "retained": True,
     },
     "humidity_zero": {
         "topic": "home/outdoor/hum",
@@ -78,7 +77,7 @@ MQTT_MESSAGE_FIXTURES = {
         "expected_type": "int",
         "expected_value": 0,
         "unit": "%",
-        "retained": True
+        "retained": True,
     },
     "wind_zero": {
         "topic": "home/outdoor/wind_mph",
@@ -86,9 +85,8 @@ MQTT_MESSAGE_FIXTURES = {
         "expected_type": "float",
         "expected_value": 0.0,
         "unit": "mph",
-        "retained": True
+        "retained": True,
     },
-
     # Malformed messages for robustness testing
     "empty_payload": {
         "topic": "home/outdoor/temp",
@@ -97,7 +95,7 @@ MQTT_MESSAGE_FIXTURES = {
         "expected_value": None,
         "unit": None,
         "retained": True,
-        "should_be_ignored": True
+        "should_be_ignored": True,
     },
     "non_numeric_temp": {
         "topic": "home/outdoor/temp",
@@ -106,7 +104,7 @@ MQTT_MESSAGE_FIXTURES = {
         "expected_value": None,
         "unit": None,
         "retained": True,
-        "should_be_ignored": True
+        "should_be_ignored": True,
     },
     "very_large_temp": {
         "topic": "home/outdoor/temp",
@@ -115,9 +113,8 @@ MQTT_MESSAGE_FIXTURES = {
         "expected_value": 999.9,
         "unit": "°F",
         "retained": True,
-        "is_extreme": True
+        "is_extreme": True,
     },
-
     # HA entity format messages
     "ha_outdoor_temp": {
         "topic": "homeassistant/sensor/outdoor_temperature/state",
@@ -125,8 +122,8 @@ MQTT_MESSAGE_FIXTURES = {
         "expected_type": "float",
         "expected_value": 22.5,
         "unit": "°C",
-        "retained": False  # HA state topics are typically not retained
-    }
+        "retained": False,  # HA state topics are typically not retained
+    },
 }
 
 # HA discovery payload templates
@@ -145,8 +142,8 @@ HA_DISCOVERY_FIXTURES = {
             "identifiers": ["room_node"],
             "name": "ESP32 Room Node: Office",
             "manufacturer": "DIY",
-            "model": "Feather ESP32-S2"
-        }
+            "model": "Feather ESP32-S2",
+        },
     },
     "hum_sensor": {
         "name": "Outside Humidity",
@@ -162,10 +159,11 @@ HA_DISCOVERY_FIXTURES = {
             "identifiers": ["room_node"],
             "name": "ESP32 Room Node: Office",
             "manufacturer": "DIY",
-            "model": "Feather ESP32-S2"
-        }
-    }
+            "model": "Feather ESP32-S2",
+        },
+    },
 }
+
 
 def test_mqtt_message_parsing():
     """Test parsing of MQTT message payloads"""
@@ -185,6 +183,7 @@ def test_mqtt_message_parsing():
             parsed = _parse_payload(payload, fixture["expected_type"])
             assert parsed == fixture["expected_value"], f"Failed to parse {fixture_name}"
 
+
 def _parse_payload(payload: str, expected_type: str) -> Any:
     """Helper to parse payload based on expected type"""
     if expected_type == "float":
@@ -196,6 +195,7 @@ def _parse_payload(payload: str, expected_type: str) -> Any:
     else:
         return payload
 
+
 def test_mqtt_topic_format_validation():
     """Test MQTT topic format validation"""
 
@@ -204,7 +204,7 @@ def test_mqtt_topic_format_validation():
         "sensors/office/inside/hum",
         "homeassistant/sensor/room_node_temp/config",
         "sensors/office/availability",
-        "home/outdoor/condition_code"
+        "home/outdoor/condition_code",
     ]
 
     invalid_topics = [
@@ -212,7 +212,7 @@ def test_mqtt_topic_format_validation():
         "home/outdoor/temp/",  # trailing slash
         "home//outdoor/temp",  # double slash
         "home/outdoor/temp ",  # trailing space
-        "home/outdoor temp",   # space in middle
+        "home/outdoor temp",  # space in middle
     ]
 
     for topic in valid_topics:
@@ -220,6 +220,7 @@ def test_mqtt_topic_format_validation():
 
     for topic in invalid_topics:
         assert not _is_valid_mqtt_topic(topic), f"Invalid topic accepted: {topic}"
+
 
 def _is_valid_mqtt_topic(topic: str) -> bool:
     """Check if MQTT topic follows valid format"""
@@ -236,14 +237,19 @@ def _is_valid_mqtt_topic(topic: str) -> bool:
         return False
     return True
 
+
 def test_ha_discovery_payload_validation():
     """Test HA discovery payload format validation"""
 
     for fixture_name, payload in HA_DISCOVERY_FIXTURES.items():
         # Required fields for all HA discovery payloads
         required_fields = [
-            "name", "unique_id", "state_topic", "availability_topic",
-            "payload_available", "payload_not_available"
+            "name",
+            "unique_id",
+            "state_topic",
+            "availability_topic",
+            "payload_available",
+            "payload_not_available",
         ]
 
         for field in required_fields:
@@ -265,6 +271,7 @@ def test_ha_discovery_payload_validation():
             # Should be wake interval + buffer
             assert 1800 <= expire_after <= 86400  # 30min to 24h
 
+
 def test_message_retention_flags():
     """Test that messages have appropriate retention flags"""
 
@@ -274,18 +281,14 @@ def test_message_retention_flags():
         "home/outdoor/hum",
         "home/outdoor/condition",
         "sensors/office/inside/temp",
-        "sensors/office/availability"
+        "sensors/office/availability",
     ]
 
     # Discovery topics should be retained
-    discovery_topics = [
-        "homeassistant/sensor/room_node_temp/config"
-    ]
+    discovery_topics = ["homeassistant/sensor/room_node_temp/config"]
 
     # HA state topics are typically not retained (live updates)
-    non_retained_topics = [
-        "homeassistant/sensor/outdoor_temperature/state"
-    ]
+    non_retained_topics = ["homeassistant/sensor/outdoor_temperature/state"]
 
     for topic in retained_topics:
         fixture = next((f for f in MQTT_MESSAGE_FIXTURES.values() if f["topic"] == topic), None)
@@ -294,13 +297,15 @@ def test_message_retention_flags():
 
     for topic in discovery_topics:
         # Discovery payloads should always be retained
-        assert topic not in MQTT_MESSAGE_FIXTURES or \
-               MQTT_MESSAGE_FIXTURES.get(topic, {}).get("retained", True)
+        assert topic not in MQTT_MESSAGE_FIXTURES or MQTT_MESSAGE_FIXTURES.get(topic, {}).get(
+            "retained", True
+        )
 
     for topic in non_retained_topics:
         fixture = next((f for f in MQTT_MESSAGE_FIXTURES.values() if f["topic"] == topic), None)
         if fixture:
             assert not fixture["retained"], f"Topic {topic} should not be retained"
+
 
 def test_extreme_value_handling():
     """Test handling of extreme values"""
@@ -318,8 +323,10 @@ def test_extreme_value_handling():
             # Should parse without error, but UI should handle display appropriately
             assert isinstance(parsed, (int, float))
         except (ValueError, TypeError):
-            pytest.fail(f"Failed to parse extreme value {fixture['description']}: "
-                        f"{fixture['payload']}")
+            pytest.fail(
+                f"Failed to parse extreme value {fixture['description']}: " f"{fixture['payload']}"
+            )
+
 
 def test_unit_conversion_requirements():
     """Test that temperature values are properly handled for different units"""
@@ -337,6 +344,7 @@ def test_unit_conversion_requirements():
         temp_c = float(temp_str)
         # Should be reasonable °C range
         assert -30 <= temp_c <= 50, f"Unreasonable °C temperature: {temp_c}"
+
 
 def test_condition_code_mapping():
     """Test weather condition code to icon mapping"""
@@ -370,8 +378,17 @@ def test_condition_code_mapping():
     for code, expected_condition in condition_code_tests:
         assert isinstance(code, int)
         assert isinstance(expected_condition, str)
-        assert expected_condition in ["clear", "part", "cloud", "fog", "rain", "snow",
-                                       "shower", "thunder"]
+        assert expected_condition in [
+            "clear",
+            "part",
+            "cloud",
+            "fog",
+            "rain",
+            "snow",
+            "shower",
+            "thunder",
+        ]
+
 
 def test_mqtt_qos_requirements():
     """Test MQTT QoS level requirements"""
@@ -379,14 +396,14 @@ def test_mqtt_qos_requirements():
     # Discovery messages should use QoS 1
     discovery_topics = [
         "homeassistant/sensor/room_node_temp/config",
-        "homeassistant/sensor/room_node_hum/config"
+        "homeassistant/sensor/room_node_hum/config",
     ]
 
     # State messages should use QoS 1
     state_topics = [
         "sensors/office/inside/temp",
         "sensors/office/inside/hum",
-        "sensors/office/availability"
+        "sensors/office/availability",
     ]
 
     # All critical messages should use QoS 1 (at least once delivery)
@@ -394,6 +411,7 @@ def test_mqtt_qos_requirements():
         for topic in topics:
             # QoS 1 ensures delivery - important for sensor data
             assert True  # Placeholder - actual QoS validation would need MQTT client integration
+
 
 def test_message_size_constraints():
     """Test that MQTT message payloads are within reasonable size limits"""
@@ -409,6 +427,7 @@ def test_message_size_constraints():
         assert "\r" not in payload
         assert "\t" not in payload
         assert "\x00" not in payload
+
 
 def test_topic_naming_conventions():
     """Test that topics follow consistent naming conventions"""

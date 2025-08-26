@@ -14,15 +14,15 @@
     "HEADER_VERSION": [172, 2, 72, 14],
     "HEADER_TIME_CENTER": [100, 2, 50, 14],
     "INSIDE_TEMP": [6, 36, 118, 28],
-    "INSIDE_RH":   [6, 66, 118, 14],
-    "INSIDE_ROW2": [6, 78, 118, 12],
+    "INSIDE_HUMIDITY": [6, 66, 118, 14],
+    "INSIDE_PRESSURE": [6, 78, 118, 12],
     "OUT_TEMP":    [129, 36, 94, 28],
     "WEATHER_ICON":    [170, 90, 28, 32],
     "OUT_WEATHER":  [131, 68, 44, 12],
     "OUT_PRESSURE":  [177, 68, 64, 12],
     "OUT_HUMIDITY":  [131, 78, 44, 12],
     "OUT_WIND":  [177, 78, 44, 12],
-    "FOOTER_L":    [6, 90, 160, 32],
+    "FOOTER_STATUS": [6, 90, 160, 32],
     "FOOTER_WEATHER":    [200, 90, 44, 32]
   },
   "iconMap": [
@@ -62,8 +62,8 @@
     "inside": [
       { "op": "labelCentered", "y": 22, "aboveRect": "INSIDE_TEMP", "text": "INSIDE", "font": "label" },
       { "op": "tempGroupCentered", "rect": "INSIDE_TEMP", "value": "{inside_temp_f}" },
-      { "op": "text", "rect": "INSIDE_RH", "font": "small", "align": "left", "text": "{inside_hum_pct}% RH" },
-      { "op": "text", "rect": "INSIDE_ROW2", "font": "small", "align": "left", "text": "{pressure_hpa:.1f} hPa", "when": "has(pressure_hpa)" }
+      { "op": "text", "rect": "INSIDE_HUMIDITY", "font": "small", "align": "left", "text": "{inside_hum_pct}% RH" },
+      { "op": "text", "rect": "INSIDE_PRESSURE", "font": "small", "align": "left", "text": "{pressure_hpa:.1f} hPa", "when": "has(pressure_hpa)" }
     ],
     "outside": [
       { "op": "labelCentered", "y": 22, "aboveRect": "OUT_TEMP", "text": "OUTSIDE", "font": "label" },
@@ -78,7 +78,7 @@
       { "op": "batteryGlyph", "x": 8, "y": 88, "w": 13, "h": 7, "percent": "{battery_percent}" },
       { "op": "text", "x": 26, "y": 86, "font": "small", "text": "Batt {battery_voltage:.2f}V {battery_percent}%" },
       { "op": "text", "x": 26, "y": 96, "font": "small", "text": "~{days}d" },
-      { "op": "textCenteredIn", "rect": "FOOTER_L", "yOffset": 22, "font": "small", "text": "IP {ip}" },
+      { "op": "textCenteredIn", "rect": "FOOTER_STATUS", "yOffset": 22, "font": "small", "text": "IP {ip}" },
       { "op": "textCenteredIn", "rect": "FOOTER_WEATHER", "yOffset": 11, "font": "small", "text": "{weather}" }
     ]
   },
@@ -97,7 +97,7 @@
       "OUT_WIND": ["text"],
       "HEADER_TIME_CENTER": ["textCenteredIn"],
       "HEADER_VERSION": ["text"],
-      "FOOTER_L": ["batteryGlyph", "text", "text", "text"],
+      "FOOTER_STATUS": ["batteryGlyph", "text", "text", "text"],
       "FOOTER_WEATHER": ["textCenteredIn"]
     }
   }

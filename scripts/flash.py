@@ -11,9 +11,7 @@ def run(cmd: list[str]) -> int:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(
-        description="Flash ESP32 firmware with common modes"
-    )
+    parser = argparse.ArgumentParser(description="Flash ESP32 firmware with common modes")
     parser.add_argument(
         "--port",
         help=(

@@ -13,8 +13,8 @@ WAKE_INTERVAL_CONFIGS = {
     "7200": {"seconds": 7200, "valid": True},
     "14400": {"seconds": 14400, "valid": True},
     "30m": {"seconds": 1800, "valid": False},  # Not supported
-    "0": {"seconds": 0, "valid": False},       # Invalid
-    "-1": {"seconds": -1, "valid": False},     # Invalid
+    "0": {"seconds": 0, "valid": False},  # Invalid
+    "-1": {"seconds": -1, "valid": False},  # Invalid
 }
 
 # Threshold configurations for validation
@@ -23,39 +23,47 @@ THRESHOLD_RANGES = {
     "rh_pct": {"min": 0.0, "max": 10.0, "default": 1.0},
 }
 
+
 def _load_device_config() -> Dict[str, Any]:
     """Load device configuration from YAML files"""
     config_paths = [
         os.path.join(os.path.dirname(os.path.dirname(__file__)), "config", "device.yaml"),
-        os.path.join(os.path.dirname(os.path.dirname(__file__)), "config", "device.sample.yaml")
+        os.path.join(os.path.dirname(os.path.dirname(__file__)), "config", "device.sample.yaml"),
     ]
 
     for path in config_paths:
         if os.path.exists(path):
             try:
                 import yaml
-                with open(path, 'r') as f:
+
+                with open(path, "r") as f:
                     return yaml.safe_load(f) or {}
             except Exception:
                 continue
 
     return {}
 
+
 def _load_generated_config() -> Dict[str, str]:
     """Load generated configuration header to extract compile-time constants"""
-    header_path = os.path.join(os.path.dirname(os.path.dirname(__file__)),
-                              "firmware", "arduino", "src", "generated_config.h")
+    header_path = os.path.join(
+        os.path.dirname(os.path.dirname(__file__)),
+        "firmware",
+        "arduino",
+        "src",
+        "generated_config.h",
+    )
 
     if not os.path.exists(header_path):
         return {}
 
     defines = {}
     try:
-        with open(header_path, 'r', encoding='utf-8') as f:
+        with open(header_path, "r", encoding="utf-8") as f:
             content = f.read()
 
         # Extract #define statements
-        define_pattern = r'#define\s+(\w+)\s+(.+)'
+        define_pattern = r"#define\s+(\w+)\s+(.+)"
         for match in re.finditer(define_pattern, content):
             key, value = match.groups()
             defines[key] = value.strip()
@@ -64,6 +72,7 @@ def _load_generated_config() -> Dict[str, str]:
         pass
 
     return defines
+
 
 def test_wake_interval_validation():
     """Test wake interval configuration validation"""
@@ -86,6 +95,7 @@ def test_wake_interval_validation():
         except (ValueError, TypeError):
             pytest.fail(f"Invalid wake interval format: {wake_interval}")
 
+
 def test_wake_interval_compilation():
     """Test that wake interval is properly compiled into firmware"""
 
@@ -104,6 +114,7 @@ def test_wake_interval_compilation():
     except (ValueError, TypeError):
         pytest.fail(f"Invalid WAKE_INTERVAL_SEC format: {wake_interval_sec}")
 
+
 def test_threshold_validation():
     """Test threshold configuration validation"""
 
@@ -117,16 +128,20 @@ def test_threshold_validation():
 
             try:
                 value = float(threshold_value)
-                assert range_info["min"] <= value <= range_info["max"], \
-                    "Threshold {}={} out of range [{}, {}]".format(
-                        threshold_name, value, range_info['min'], range_info['max'])
+                assert (
+                    range_info["min"] <= value <= range_info["max"]
+                ), "Threshold {}={} out of range [{}, {}]".format(
+                    threshold_name, value, range_info["min"], range_info["max"]
+                )
                 assert value >= 0, f"Threshold {threshold_name}={value} must be non-negative"
             except (ValueError, TypeError):
                 pytest.fail(f"Invalid threshold value for {threshold_name}: {threshold_value}")
         else:
             # Should have default threshold
-            assert range_info["default"] > 0, \
-                f"Default threshold for {threshold_name} should be positive"
+            assert (
+                range_info["default"] > 0
+            ), f"Default threshold for {threshold_name} should be positive"
+
 
 def test_battery_config_validation():
     """Test battery configuration validation"""
@@ -155,6 +170,7 @@ def test_battery_config_validation():
         except (ValueError, TypeError):
             pytest.fail(f"Invalid battery low_pct: {battery['low_pct']}")
 
+
 def test_full_refresh_every_validation():
     """Test full refresh every configuration"""
 
@@ -168,6 +184,7 @@ def test_full_refresh_every_validation():
     except (ValueError, TypeError):
         pytest.fail(f"Invalid full_refresh_every: {full_refresh_every}")
 
+
 def test_outside_source_validation():
     """Test outside data source configuration"""
 
@@ -175,14 +192,16 @@ def test_outside_source_validation():
     outside_source = str(config.get("outside_source", "mqtt")).lower()
 
     valid_sources = ["mqtt", "ha"]
-    assert outside_source in valid_sources, \
-        f"outside_source={outside_source} must be one of {valid_sources}"
+    assert (
+        outside_source in valid_sources
+    ), f"outside_source={outside_source} must be one of {valid_sources}"
 
     # If outside_source is mqtt, MQTT config is required
     if outside_source == "mqtt":
         mqtt_config = config.get("mqtt", {})
         assert "host" in mqtt_config, "MQTT host required when outside_source=mqtt"
         assert mqtt_config["host"].strip(), "MQTT host cannot be empty"
+
 
 def test_room_name_validation():
     """Test room name configuration"""
@@ -199,6 +218,7 @@ def test_room_name_validation():
         invalid_chars = set("<>:/\\|?*#")
         for char in room_name:
             assert char not in invalid_chars, f"room_name contains invalid character: {char}"
+
 
 def test_mqtt_topic_construction_from_config():
     """Test that MQTT topics are built correctly from configuration"""
@@ -225,13 +245,14 @@ def test_mqtt_topic_construction_from_config():
         "inside_temp": f"{publish_base}/inside/temp",
         "availability": f"{publish_base}/availability",
         "outdoor_temp": f"{subscribe_base}/temp",
-        "outdoor_hum": f"{subscribe_base}/hum"
+        "outdoor_hum": f"{subscribe_base}/hum",
     }
 
     for topic_name, topic in test_topics.items():
         assert len(topic) > 0, f"Topic {topic_name} should not be empty"
         assert not topic.startswith("/"), f"Topic {topic_name} should not start with /"
         assert not topic.endswith("/"), f"Topic {topic_name} should not end with /"
+
 
 def test_firmware_version_handling():
     """Test firmware version configuration and handling"""
@@ -244,9 +265,11 @@ def test_firmware_version_handling():
         assert fw_version.strip(), "fw_version cannot be empty"
 
         # Should follow semantic versioning pattern
-        version_pattern = r'^v?\d+\.\d+(\.\d+)?(-[a-zA-Z0-9.-]+)?$'
-        assert re.match(version_pattern, fw_version), \
-            f"fw_version '{fw_version}' does not follow semantic versioning"
+        version_pattern = r"^v?\d+\.\d+(\.\d+)?(-[a-zA-Z0-9.-]+)?$"
+        assert re.match(
+            version_pattern, fw_version
+        ), f"fw_version '{fw_version}' does not follow semantic versioning"
+
 
 def test_wifi_config_validation():
     """Test Wi-Fi configuration validation"""
@@ -280,6 +303,7 @@ def test_wifi_config_validation():
                 for part in parts:
                     assert 0 <= int(part) <= 255, f"Invalid IP octet in {param}: {part}"
 
+
 def test_ha_entities_validation():
     """Test Home Assistant entity configuration"""
 
@@ -297,11 +321,13 @@ def test_ha_entities_validation():
 
         # Should follow HA entity ID format
         assert "." in entity_id, f"HA entity {entity_name} should contain domain: {entity_id}"
-        assert " " not in entity_id, \
-            f"HA entity {entity_name} should not contain spaces: {entity_id}"
+        assert (
+            " " not in entity_id
+        ), f"HA entity {entity_name} should not contain spaces: {entity_id}"
 
         # Common domains for weather/temperature sensors
         domain = entity_id.split(".")[0]
         valid_domains = ["sensor", "weather", "binary_sensor"]
-        assert domain in valid_domains, \
-            f"HA entity {entity_name} has invalid domain '{domain}': {entity_id}"
+        assert (
+            domain in valid_domains
+        ), f"HA entity {entity_name} has invalid domain '{domain}': {entity_id}"

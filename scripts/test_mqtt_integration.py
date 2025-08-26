@@ -20,7 +20,7 @@ import threading
 import time
 from typing import Dict, List, Optional, Tuple
 
-import paho.mqtt.client as mqtt  # type: ignore
+import paho.mqtt.client as mqtt
 
 
 def _now_ms() -> int:
@@ -121,13 +121,16 @@ class MqttTestClient:
             raise RuntimeError(f"Subscribe failed rc={result} topic={topic}")
         end_at = time.time() + timeout_s
         with self._subscribe_cond:
-            while int(mid) not in self._subscribed_mids and time.time() < end_at:
+            while (
+                mid is not None and int(mid) not in self._subscribed_mids and time.time() < end_at
+            ):
                 remaining = end_at - time.time()
                 if remaining <= 0:
                     break
                 self._subscribe_cond.wait(timeout=remaining)
             # Clean up recorded mid to avoid unbounded growth
-            self._subscribed_mids.discard(int(mid))
+            if mid is not None:
+                self._subscribed_mids.discard(int(mid))
 
     def subscribe_and_wait(
         self,

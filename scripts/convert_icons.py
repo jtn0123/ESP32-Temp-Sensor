@@ -14,9 +14,7 @@ from PIL import Image
 
 PROJECT_ROOT = os.path.dirname(os.path.dirname(__file__))
 SRC_DIR = os.path.join(PROJECT_ROOT, "web", "icons", "mdi")
-OUT_HEADER = os.path.join(
-    PROJECT_ROOT, "firmware", "arduino", "src", "icons_generated.h"
-)
+OUT_HEADER = os.path.join(PROJECT_ROOT, "firmware", "arduino", "src", "icons_generated.h")
 
 ICON_NAMES: list[str] = [
     # weather
@@ -49,14 +47,10 @@ def svg_to_png_bytes(svg_path: str) -> bytes:
     with open(svg_path, "rb") as f:
         svg_data = f.read()
     # Render at higher scale then downsample for sharper edges
-    return cairosvg.svg2png(
-        bytestring=svg_data, output_width=96, output_height=96
-    )
+    return cairosvg.svg2png(bytestring=svg_data, output_width=96, output_height=96)
 
 
-def rasterize_1bit_centered(
-    png_bytes: bytes, invert: bool = False
-) -> Image.Image:
+def rasterize_1bit_centered(png_bytes: bytes, invert: bool = False) -> Image.Image:
     with Image.open(io.BytesIO(png_bytes)) as im:
         # Preserve alpha and composite onto white to avoid black squares
         im = im.convert("RGBA")
@@ -160,9 +154,7 @@ def main() -> None:
 
     # draw helper
     header_lines.append("template<typename GFX>")
-    header_lines.append(
-        "inline void draw_icon_xbm(GFX& d, int16_t x, int16_t y,"
-    )
+    header_lines.append("inline void draw_icon_xbm(GFX& d, int16_t x, int16_t y,")
     header_lines.append("    IconId id, uint16_t color) {")
     header_lines.append("    switch (id) {")
     for name in ICON_NAMES:

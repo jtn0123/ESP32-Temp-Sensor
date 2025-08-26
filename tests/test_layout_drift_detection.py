@@ -27,7 +27,7 @@ def test_ui_spec_layout_drift():
         root = os.path.dirname(os.path.dirname(__file__))
         path = os.path.join(root, "firmware", "arduino", "src", "display_layout.h")
         if os.path.exists(path):
-            with open(path, 'r') as f:
+            with open(path, "r") as f:
                 generated_layout = f.read()
     assert f"DISPLAY_WIDTH {spec_width}" in generated_layout
     assert f"DISPLAY_HEIGHT {spec_height}" in generated_layout
@@ -37,6 +37,7 @@ def test_ui_spec_layout_drift():
     for rect_name, rect_coords in spec_rects.items():
         # Generated header should contain rect definitions
         assert rect_name in generated_layout, f"Missing rect {rect_name} in generated layout"
+
 
 def test_ui_spec_to_generated_parity():
     """Test that UI spec components generate consistent output"""
@@ -54,10 +55,11 @@ def test_ui_spec_to_generated_parity():
             root = os.path.dirname(os.path.dirname(__file__))
             layout_path = os.path.join(root, "firmware", "arduino", "src", "display_layout.h")
             if os.path.exists(layout_path):
-                with open(layout_path, 'r') as f:
+                with open(layout_path, "r") as f:
                     hdr = f.read()
-                assert f"RECT_{rect_name}" in hdr or rect_name in hdr, \
-                    f"Rect {rect_name} not used in generated outputs"
+                assert (
+                    f"RECT_{rect_name}" in hdr or rect_name in hdr
+                ), f"Rect {rect_name} not used in generated outputs"
 
     # Check that icon map is properly embedded
     icon_map = ui_spec.get("iconMap", [])
@@ -73,10 +75,12 @@ def test_ui_spec_to_generated_parity():
                 js_path = os.path.join(root, "web", "sim", "ui_generated.js")
                 in_js = False
                 if os.path.exists(js_path):
-                    with open(js_path, 'r') as f:
+                    with open(js_path, "r") as f:
                         in_js = icon_name in f.read()
-                assert icon_name in generated_cpp or in_js, \
-                    f"Icon {icon_name} not in generated outputs"
+                assert (
+                    icon_name in generated_cpp or in_js
+                ), f"Icon {icon_name} not in generated outputs"
+
 
 def test_layout_geometry_validation():
     """Test that layout geometry is within display bounds"""
@@ -97,10 +101,13 @@ def test_layout_geometry_validation():
             assert y >= 0, f"Rect {rect_name} y coordinate negative: {y}"
             assert w > 0, f"Rect {rect_name} width non-positive: {w}"
             assert h > 0, f"Rect {rect_name} height non-positive: {h}"
-            assert x + w <= max_width, \
-                f"Rect {rect_name} exceeds canvas width: {x + w} > {max_width}"
-            assert y + h <= max_height, \
-                f"Rect {rect_name} exceeds canvas height: {y + h} > {max_height}"
+            assert (
+                x + w <= max_width
+            ), f"Rect {rect_name} exceeds canvas width: {x + w} > {max_width}"
+            assert (
+                y + h <= max_height
+            ), f"Rect {rect_name} exceeds canvas height: {y + h} > {max_height}"
+
 
 def test_layout_rect_overlap_detection():
     """Test that layout rectangles don't overlap inappropriately"""
@@ -143,9 +150,11 @@ def test_layout_rect_overlap_detection():
                     overlap_ratio = overlap_area / total_area
 
                     # Allow small overlaps (e.g., borders) but not large ones
-                    assert overlap_ratio < 0.5, \
-                        f"Significant overlap between {rect1_name} and " \
-                            f"{rect2_name}: {overlap_ratio:.2f}"
+                    assert overlap_ratio < 0.5, (
+                        f"Significant overlap between {rect1_name} and "
+                        f"{rect2_name}: {overlap_ratio:.2f}"
+                    )
+
 
 def _calculate_overlap_area(rect1, rect2):
     """Calculate overlap area between two rectangles"""
@@ -158,6 +167,7 @@ def _calculate_overlap_area(rect1, rect2):
 
     return overlap_w * overlap_h
 
+
 def test_layout_version_consistency():
     """Test that layout version information is consistent across files"""
 
@@ -168,18 +178,20 @@ def test_layout_version_consistency():
     generated_files = [
         "firmware/arduino/src/ui_generated.h",
         "firmware/arduino/src/display_layout.h",
-        "web/sim/ui_generated.js"
+        "web/sim/ui_generated.js",
     ]
 
     for file_path in generated_files:
         full_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), file_path)
         if os.path.exists(full_path):
-            with open(full_path, 'r') as f:
+            with open(full_path, "r") as f:
                 content = f.read()
 
             # Version should be mentioned in generated files
-            assert spec_version in content or "ui-spec@1" in content, \
-                f"Version {spec_version} not found in {file_path}"
+            assert (
+                spec_version in content or "ui-spec@1" in content
+            ), f"Version {spec_version} not found in {file_path}"
+
 
 def test_icon_placement_constraints():
     """Test that weather icons fit in their designated rectangles"""
@@ -198,8 +210,10 @@ def test_icon_placement_constraints():
 
         # Should be square-ish (within 20% aspect ratio tolerance)
         aspect_ratio = w / h
-        assert 0.8 <= aspect_ratio <= 1.25, \
-            f"Weather icon aspect ratio {aspect_ratio} too distorted"
+        assert (
+            0.8 <= aspect_ratio <= 1.25
+        ), f"Weather icon aspect ratio {aspect_ratio} too distorted"
+
 
 def test_text_rect_sizing():
     """Test that text rectangles are appropriately sized for their content"""
@@ -219,10 +233,13 @@ def test_text_rect_sizing():
         if rect_name in rects:
             x, y, w, h = rects[rect_name]
 
-            assert w >= constraints["min_width"], \
-                f"Text rect {rect_name} too narrow: {w} < {constraints['min_width']}"
-            assert h >= constraints["min_height"], \
-                f"Text rect {rect_name} too short: {h} < {constraints['min_height']}"
+            assert (
+                w >= constraints["min_width"]
+            ), f"Text rect {rect_name} too narrow: {w} < {constraints['min_width']}"
+            assert (
+                h >= constraints["min_height"]
+            ), f"Text rect {rect_name} too short: {h} < {constraints['min_height']}"
+
 
 def test_partial_update_regions():
     """Test that partial update regions are properly defined"""
@@ -240,7 +257,7 @@ def test_partial_update_regions():
         "OUT_TEMP",
         "HEADER_TIME",
         "FOOTER_L",
-        "FOOTER_WEATHER"
+        "FOOTER_WEATHER",
     ]
 
     for rect_name in expected_partial_rects:
@@ -250,6 +267,7 @@ def test_partial_update_regions():
         ops = partial_regions[rect_name]
         assert len(ops) > 0, f"Partial region {rect_name} has no operations"
 
+
 def test_font_size_appropriateness():
     """Test that font sizes are appropriate for their rectangles"""
 
@@ -258,10 +276,10 @@ def test_font_size_appropriateness():
 
     # Font size to minimum rect height mapping
     font_constraints = {
-        "big": 20,      # Big font needs at least 20px height
-        "label": 10,    # Label font needs at least 10px height
-        "small": 8,     # Small font needs at least 8px height
-        "time": 10,     # Time font needs at least 10px height
+        "big": 20,  # Big font needs at least 20px height
+        "label": 10,  # Label font needs at least 10px height
+        "small": 8,  # Small font needs at least 8px height
+        "time": 10,  # Time font needs at least 10px height
     }
 
     # Check components that use specific fonts
@@ -277,9 +295,11 @@ def test_font_size_appropriateness():
                     min_height = font_constraints[font_name]
                     rect_height = rects[rect_name][3]  # height is 4th element
 
-                    assert rect_height >= min_height, \
-                        f"Rect {rect_name} height {rect_height} too small for " \
-                            f"{font_name} font (min {min_height})"
+                    assert rect_height >= min_height, (
+                        f"Rect {rect_name} height {rect_height} too small for "
+                        f"{font_name} font (min {min_height})"
+                    )
+
 
 def test_ui_spec_schema_completeness():
     """Test that UI spec contains all required schema elements"""
@@ -294,7 +314,7 @@ def test_ui_spec_schema_completeness():
         "iconMap",
         "components",
         "variants",
-        "defaultVariant"
+        "defaultVariant",
     ]
 
     for element in required_elements:
@@ -312,19 +332,22 @@ def test_ui_spec_schema_completeness():
     default_variant = ui_spec.get("defaultVariant")
     assert default_variant in variants, f"Default variant {default_variant} not in variants"
 
+
 def _load_ui_spec() -> Dict[str, Any]:
     """Load UI specification from config file"""
-    ui_spec_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), \
-                                 "config", "ui_spec.json")
+    ui_spec_path = os.path.join(
+        os.path.dirname(os.path.dirname(__file__)), "config", "ui_spec.json"
+    )
 
     if not os.path.exists(ui_spec_path):
         pytest.skip("UI spec file not found")
 
     try:
-        with open(ui_spec_path, 'r') as f:
+        with open(ui_spec_path, "r") as f:
             return json.load(f)
     except Exception as e:
         pytest.fail(f"Failed to load UI spec: {e}")
+
 
 def _generate_layout_header() -> str:
     """Generate layout header content (mock for testing)"""
@@ -337,11 +360,17 @@ def _generate_layout_header() -> str:
         gen_script = os.path.join(scripts_dir, "gen_layout_header.py")
 
         if os.path.exists(gen_script):
-            result = subprocess.run([
-                "python3", gen_script,
-                "--config", os.path.join(os.path.dirname(scripts_dir), \
-                                           "config", "display_geometry.json")
-            ], capture_output=True, text=True, cwd=scripts_dir)
+            result = subprocess.run(
+                [
+                    "python3",
+                    gen_script,
+                    "--config",
+                    os.path.join(os.path.dirname(scripts_dir), "config", "display_geometry.json"),
+                ],
+                capture_output=True,
+                text=True,
+                cwd=scripts_dir,
+            )
 
             if result.returncode == 0:
                 return result.stdout
@@ -365,6 +394,7 @@ def _generate_layout_header() -> str:
 #endif // DISPLAY_LAYOUT_H
 """
 
+
 def _generate_ui_components() -> str:
     """Generate UI components content (mock for testing)"""
     try:
@@ -373,9 +403,9 @@ def _generate_ui_components() -> str:
         gen_script = os.path.join(scripts_dir, "gen_ui.py")
 
         if os.path.exists(gen_script):
-            result = subprocess.run([
-                "python3", gen_script
-            ], capture_output=True, text=True, cwd=scripts_dir)
+            result = subprocess.run(
+                ["python3", gen_script], capture_output=True, text=True, cwd=scripts_dir
+            )
 
             if result.returncode == 0:
                 return result.stdout

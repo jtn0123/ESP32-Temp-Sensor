@@ -20,8 +20,8 @@ WEB_SIM_CONFIGS = {
             "battery_voltage": 3.85,
             "time_hhmm": "14:30",
             "room_name": "Office",
-            "fw_version": "1.0.0"
-        }
+            "fw_version": "1.0.0",
+        },
     },
     "extreme_values": {
         "width": 250,
@@ -38,8 +38,8 @@ WEB_SIM_CONFIGS = {
             "battery_voltage": 3.2,
             "time_hhmm": "23:59",
             "room_name": "Garage",
-            "fw_version": "dev"
-        }
+            "fw_version": "dev",
+        },
     },
     "empty_values": {
         "width": 250,
@@ -56,10 +56,11 @@ WEB_SIM_CONFIGS = {
             "battery_voltage": None,
             "time_hhmm": "12:00",
             "room_name": "Unknown",
-            "fw_version": None
-        }
-    }
+            "fw_version": None,
+        },
+    },
 }
+
 
 def test_web_simulator_launch():
     """Test that web simulator can be launched and accessed"""
@@ -75,6 +76,7 @@ def test_web_simulator_launch():
         file_path = os.path.join(web_dir, file)
         assert os.path.exists(file_path), f"Required web file missing: {file}"
 
+
 def test_web_simulator_data_loading():
     """Test that web simulator can load sample data"""
 
@@ -83,7 +85,7 @@ def test_web_simulator_data_loading():
 
     if os.path.exists(sample_data_path):
         try:
-            with open(sample_data_path, 'r') as f:
+            with open(sample_data_path, "r") as f:
                 sample_data = json.load(f)
 
             # Should have expected structure
@@ -101,6 +103,7 @@ def test_web_simulator_data_loading():
     else:
         pytest.skip("Sample data file not found")
 
+
 def test_ui_generated_js_validity():
     """Test that ui_generated.js is valid JavaScript"""
 
@@ -110,7 +113,7 @@ def test_ui_generated_js_validity():
     if not os.path.exists(ui_generated_path):
         pytest.skip("ui_generated.js not found")
 
-    with open(ui_generated_path, 'r') as f:
+    with open(ui_generated_path, "r") as f:
         js_content = f.read()
 
     # Should have basic JavaScript structure
@@ -118,9 +121,10 @@ def test_ui_generated_js_validity():
 
     # Should be valid JavaScript (basic syntax check)
     # This is a simple check - a real implementation would use a JS parser
-    assert js_content.count('{') == js_content.count('}'), "Unmatched braces in JS"
-    assert js_content.count('(') == js_content.count(')'), "Unmatched parentheses in JS"
-    assert js_content.count('[') == js_content.count(']'), "Unmatched brackets in JS"
+    assert js_content.count("{") == js_content.count("}"), "Unmatched braces in JS"
+    assert js_content.count("(") == js_content.count(")"), "Unmatched parentheses in JS"
+    assert js_content.count("[") == js_content.count("]"), "Unmatched brackets in JS"
+
 
 def test_web_simulator_geometry_consistency():
     """Test that web simulator uses consistent geometry with UI spec"""
@@ -131,7 +135,7 @@ def test_web_simulator_geometry_consistency():
     if not os.path.exists(ui_spec_path):
         pytest.skip("UI spec not found")
 
-    with open(ui_spec_path, 'r') as f:
+    with open(ui_spec_path, "r") as f:
         ui_spec = json.load(f)
 
     canvas = ui_spec.get("canvas", {})
@@ -141,12 +145,13 @@ def test_web_simulator_geometry_consistency():
     # Check that web sim references the correct dimensions
     sim_js_path = os.path.join(web_dir, "sim.js")
     if os.path.exists(sim_js_path):
-        with open(sim_js_path, 'r') as f:
+        with open(sim_js_path, "r") as f:
             sim_js = f.read()
 
         # Should reference the canvas dimensions
         assert str(expected_width) in sim_js, f"Canvas width {expected_width} not in sim.js"
         assert str(expected_height) in sim_js, f"Canvas height {expected_height} not in sim.js"
+
 
 def test_web_simulator_sample_data_completeness():
     """Test that sample data covers all UI components"""
@@ -158,10 +163,10 @@ def test_web_simulator_sample_data_completeness():
     if not os.path.exists(sample_data_path) or not os.path.exists(ui_spec_path):
         pytest.skip("Required files not found")
 
-    with open(sample_data_path, 'r') as f:
+    with open(sample_data_path, "r") as f:
         sample_data = json.load(f)
 
-    with open(ui_spec_path, 'r') as f:
+    with open(ui_spec_path, "r") as f:
         ui_spec = json.load(f)
 
     # Extract all data field references from UI spec
@@ -176,7 +181,8 @@ def test_web_simulator_sample_data_completeness():
                     text = op["text"]
                     if isinstance(text, str):
                         import re
-                        fields = re.findall(r'\{([^}]+)\}', text)
+
+                        fields = re.findall(r"\{([^}]+)\}", text)
                         referenced_fields.update(fields)
 
     # Sample data should cover all referenced fields
@@ -187,6 +193,7 @@ def test_web_simulator_sample_data_completeness():
     for field in essential_fields:
         assert field in sample_fields, f"Essential field {field} missing from sample data"
 
+
 def test_web_simulator_weather_icon_mapping():
     """Test that web simulator properly maps weather conditions to icons"""
 
@@ -196,7 +203,7 @@ def test_web_simulator_weather_icon_mapping():
     if not os.path.exists(sim_js_path):
         pytest.skip("sim.js not found")
 
-    with open(sim_js_path, 'r') as f:
+    with open(sim_js_path, "r") as f:
         sim_js = f.read()
 
     # Should have weather icon mapping logic
@@ -207,6 +214,7 @@ def test_web_simulator_weather_icon_mapping():
     for condition in common_conditions:
         assert condition in sim_js, f"Weather condition {condition} not handled in sim.js"
 
+
 def test_web_simulator_data_validation():
     """Test that web simulator validates input data correctly"""
 
@@ -216,7 +224,7 @@ def test_web_simulator_data_validation():
     if not os.path.exists(sim_js_path):
         pytest.skip("sim.js not found")
 
-    with open(sim_js_path, 'r') as f:
+    with open(sim_js_path, "r") as f:
         sim_js = f.read()
 
     # Should have some data validation logic
@@ -224,6 +232,7 @@ def test_web_simulator_data_validation():
     validation_found = any(indicator in sim_js for indicator in validation_indicators)
 
     assert validation_found, "No data validation logic found in sim.js"
+
 
 def test_web_simulator_responsive_design():
     """Test that web simulator is responsive and works at different sizes"""
@@ -234,14 +243,15 @@ def test_web_simulator_responsive_design():
     if not os.path.exists(index_path):
         pytest.skip("index.html not found")
 
-    with open(index_path, 'r') as f:
+    with open(index_path, "r") as f:
         html_content = f.read()
 
     # Should have viewport meta tag for responsive design
-    assert 'viewport' in html_content, "Missing viewport meta tag"
+    assert "viewport" in html_content, "Missing viewport meta tag"
 
     # Should have some CSS for responsive design
-    assert 'width:' in html_content or 'height:' in html_content, "No sizing CSS found"
+    assert "width:" in html_content or "height:" in html_content, "No sizing CSS found"
+
 
 def test_web_simulator_mqtt_integration():
     """Test that web simulator can integrate with MQTT data"""
@@ -252,7 +262,7 @@ def test_web_simulator_mqtt_integration():
     if not os.path.exists(sim_js_path):
         pytest.skip("sim.js not found")
 
-    with open(sim_js_path, 'r') as f:
+    with open(sim_js_path, "r") as f:
         sim_js = f.read()
 
     # Should have MQTT-related functionality or at least data update mechanisms
@@ -263,8 +273,10 @@ def test_web_simulator_mqtt_integration():
     if not mqtt_found:
         # At minimum should have data update mechanisms
         update_indicators = ["update", "refresh", "draw", "render"]
-        assert any(indicator in sim_js.lower() for indicator in update_indicators), \
-            "No data update mechanisms found in sim.js"
+        assert any(
+            indicator in sim_js.lower() for indicator in update_indicators
+        ), "No data update mechanisms found in sim.js"
+
 
 def test_web_simulator_performance_metrics():
     """Test that web simulator includes performance metrics"""
@@ -275,7 +287,7 @@ def test_web_simulator_performance_metrics():
     if not os.path.exists(sim_js_path):
         pytest.skip("sim.js not found")
 
-    with open(sim_js_path, 'r') as f:
+    with open(sim_js_path, "r") as f:
         sim_js = f.read()
 
     # Should have some performance-related code or metrics
@@ -286,8 +298,10 @@ def test_web_simulator_performance_metrics():
     if not perf_found:
         # At minimum should have some timing mechanisms
         time_indicators = ["Date", "setInterval", "setTimeout", "now"]
-        assert any(indicator in sim_js for indicator in time_indicators), \
-            "No timing mechanisms found in sim.js"
+        assert any(
+            indicator in sim_js for indicator in time_indicators
+        ), "No timing mechanisms found in sim.js"
+
 
 def test_web_simulator_accessibility():
     """Test that web simulator has basic accessibility features"""
@@ -298,19 +312,17 @@ def test_web_simulator_accessibility():
     if not os.path.exists(index_path):
         pytest.skip("index.html not found")
 
-    with open(index_path, 'r') as f:
+    with open(index_path, "r") as f:
         html_content = f.read()
 
     # Should have basic accessibility features
-    accessibility_features = [
-        'alt=', 'title=', 'role=', 'aria-',
-        'lang=', 'charset='
-    ]
+    accessibility_features = ["alt=", "title=", "role=", "aria-", "lang=", "charset="]
 
     # At least some accessibility features should be present
     accessibility_found = any(feature in html_content for feature in accessibility_features)
 
     assert accessibility_found, "No accessibility features found in HTML"
+
 
 def test_web_simulator_error_handling():
     """Test that web simulator handles errors gracefully"""
@@ -321,7 +333,7 @@ def test_web_simulator_error_handling():
     if not os.path.exists(sim_js_path):
         pytest.skip("sim.js not found")
 
-    with open(sim_js_path, 'r') as f:
+    with open(sim_js_path, "r") as f:
         sim_js = f.read()
 
     # Should have error handling mechanisms
@@ -329,6 +341,7 @@ def test_web_simulator_error_handling():
     error_handling_found = any(indicator in sim_js for indicator in error_indicators)
 
     assert error_handling_found, "No error handling found in sim.js"
+
 
 def test_web_simulator_data_persistence():
     """Test that web simulator can save/load state"""
@@ -339,7 +352,7 @@ def test_web_simulator_data_persistence():
     if not os.path.exists(sim_js_path):
         pytest.skip("sim.js not found")
 
-    with open(sim_js_path, 'r') as f:
+    with open(sim_js_path, "r") as f:
         sim_js = f.read()
 
     # Should have some persistence mechanism
@@ -350,8 +363,10 @@ def test_web_simulator_data_persistence():
     if not persistence_found:
         # At minimum should have data structures that could be persisted
         data_indicators = ["data", "state", "config", "settings"]
-        assert any(indicator in sim_js.lower() for indicator in data_indicators), \
-            "No data structures found for potential persistence"
+        assert any(
+            indicator in sim_js.lower() for indicator in data_indicators
+        ), "No data structures found for potential persistence"
+
 
 def test_web_simulator_visual_consistency():
     """Test that web simulator maintains visual consistency with firmware"""
@@ -362,7 +377,7 @@ def test_web_simulator_visual_consistency():
     if not os.path.exists(sim_js_path):
         pytest.skip("sim.js not found")
 
-    with open(sim_js_path, 'r') as f:
+    with open(sim_js_path, "r") as f:
         sim_js = f.read()
 
     # Should reference the same layout constants as firmware
@@ -370,6 +385,7 @@ def test_web_simulator_visual_consistency():
     layout_found = any(indicator in sim_js for indicator in layout_indicators)
 
     assert layout_found, "No layout constants found in sim.js"
+
 
 def test_web_simulator_export_functionality():
     """Test that web simulator can export data or screenshots"""
@@ -380,7 +396,7 @@ def test_web_simulator_export_functionality():
     if not os.path.exists(sim_js_path):
         pytest.skip("sim.js not found")
 
-    with open(sim_js_path, 'r') as f:
+    with open(sim_js_path, "r") as f:
         sim_js = f.read()
 
     # Should have export functionality
@@ -391,8 +407,10 @@ def test_web_simulator_export_functionality():
     if not export_found:
         # At minimum should have canvas manipulation
         canvas_indicators = ["canvas", "context", "getContext", "draw"]
-        assert any(indicator in sim_js.lower() for indicator in canvas_indicators), \
-            "No canvas manipulation found for potential export functionality"
+        assert any(
+            indicator in sim_js.lower() for indicator in canvas_indicators
+        ), "No canvas manipulation found for potential export functionality"
+
 
 def test_web_simulator_theme_support():
     """Test that web simulator supports theming or different display modes"""
@@ -404,10 +422,10 @@ def test_web_simulator_theme_support():
     if not os.path.exists(style_path) or not os.path.exists(index_path):
         pytest.skip("Style files not found")
 
-    with open(style_path, 'r') as f:
+    with open(style_path, "r") as f:
         css_content = f.read()
 
-    with open(index_path, 'r') as f:
+    with open(index_path, "r") as f:
         html_content = f.read()
 
     # Should have some styling

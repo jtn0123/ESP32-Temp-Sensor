@@ -34,6 +34,7 @@ except ImportError as e:
 @dataclass
 class VisualTestCase:
     """A visual test case with expected results"""
+
     name: str
     category: str
     data: Dict[str, Any]
@@ -57,12 +58,13 @@ class VisualRegressionTester:
             [sys.executable, "-m", "http.server", str(port), "--bind", "127.0.0.1"],
             cwd=str(self.web_root),
             stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL
+            stderr=subprocess.DEVNULL,
         )
 
     def _find_free_port(self) -> int:
         """Find an available port"""
         import socket
+
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             s.bind(("127.0.0.1", 0))
             return s.getsockname()[1]
@@ -70,10 +72,12 @@ class VisualRegressionTester:
     def capture_screenshot(self, page: Page, test_data: Dict[str, Any]) -> np.ndarray:
         """Capture screenshot with given test data"""
         # Apply test data
-        page.evaluate(f"""
+        page.evaluate(
+            f"""
             window.testData = {json.dumps(test_data)};
             if (window.draw) window.draw(window.testData);
-        """)
+        """
+        )
 
         # Wait for render
         page.wait_for_timeout(200)
@@ -93,6 +97,7 @@ class VisualRegressionTester:
 
         # Resize to 8x8 for DCT
         from PIL import Image
+
         img = Image.fromarray(gray.astype(np.uint8))
         img = img.resize((8, 8), Image.Resampling.LANCZOS)
 
@@ -102,7 +107,7 @@ class VisualRegressionTester:
         hash_bits = (pixels > avg).astype(int)
 
         # Convert to hex string
-        hash_str = ''.join(str(b) for b in hash_bits)
+        hash_str = "".join(str(b) for b in hash_bits)
         return hashlib.md5(hash_str.encode()).hexdigest()[:16]
 
     def compare_images(self, img1: np.ndarray, img2: np.ndarray) -> float:
@@ -123,7 +128,7 @@ class VisualRegressionTester:
         self, name: str, baseline: np.ndarray, current: np.ndarray, diff_pct: float
     ):
         """Save comparison images for debugging"""
-        comparison = Image.new('RGB', (250 * 3 + 20, 122))
+        comparison = Image.new("RGB", (250 * 3 + 20, 122))
 
         # Baseline
         comparison.paste(Image.fromarray(baseline), (0, 0))
@@ -134,7 +139,7 @@ class VisualRegressionTester:
         # Difference
         baseline_img = Image.fromarray(baseline)
         current_img = Image.fromarray(current)
-        diff_img = ImageChops.difference(baseline_img.convert('RGB'), current_img.convert('RGB'))
+        diff_img = ImageChops.difference(baseline_img.convert("RGB"), current_img.convert("RGB"))
         comparison.paste(diff_img, (520, 0))
 
         # Save with metadata
@@ -142,23 +147,14 @@ class VisualRegressionTester:
         comparison.save(output_path)
 
         # Also save metadata
-        metadata = {
-            "name": name,
-            "diff_percentage": diff_pct,
-            "timestamp": time.time()
-        }
+        metadata = {"name": name, "diff_percentage": diff_pct, "timestamp": time.time()}
         (self.output_dir / f"{name}_metadata.json").write_text(json.dumps(metadata, indent=2))
 
     def run_test_suite(self, test_cases: List[VisualTestCase]) -> Dict[str, Any]:
         """Run visual regression test suite"""
         port = self._find_free_port()
         server = self._start_server(port)
-        results = {
-            "passed": [],
-            "failed": [],
-            "new": [],
-            "total": len(test_cases)
-        }
+        results = {"passed": [], "failed": [], "new": [], "total": len(test_cases)}
 
         try:
             time.sleep(1)  # Let server start
@@ -185,11 +181,13 @@ class VisualRegressionTester:
                         if diff_pct <= test_case.max_diff_percentage:
                             results["passed"].append(test_case.name)
                         else:
-                            results["failed"].append({
-                                "name": test_case.name,
-                                "diff": diff_pct,
-                                "threshold": test_case.max_diff_percentage
-                            })
+                            results["failed"].append(
+                                {
+                                    "name": test_case.name,
+                                    "diff": diff_pct,
+                                    "threshold": test_case.max_diff_percentage,
+                                }
+                            )
                             self.save_comparison(test_case.name, baseline, current, diff_pct)
                     else:
                         # New test, save baseline
@@ -211,72 +209,75 @@ def get_weather_icon_tests() -> List[VisualTestCase]:
     return [
         VisualTestCase("icon_sunny", "weather", {"weather": "sunny", "outside_temp_f": "75"}),
         VisualTestCase(
-            "icon_partly_cloudy", "weather",
-            {"weather": "partly-cloudy", "outside_temp_f": "68"}
+            "icon_partly_cloudy", "weather", {"weather": "partly-cloudy", "outside_temp_f": "68"}
         ),
         VisualTestCase("icon_cloudy", "weather", {"weather": "cloudy", "outside_temp_f": "62"}),
         VisualTestCase("icon_rain", "weather", {"weather": "rain", "outside_temp_f": "55"}),
         VisualTestCase(
-            "icon_pouring", "weather",
-            {"weather": "pouring rain", "outside_temp_f": "50"}
+            "icon_pouring", "weather", {"weather": "pouring rain", "outside_temp_f": "50"}
         ),
         VisualTestCase(
-            "icon_thunderstorm", "weather",
-            {"weather": "thunderstorm", "outside_temp_f": "65"}
+            "icon_thunderstorm", "weather", {"weather": "thunderstorm", "outside_temp_f": "65"}
         ),
         VisualTestCase("icon_snow", "weather", {"weather": "snow", "outside_temp_f": "28"}),
         VisualTestCase("icon_fog", "weather", {"weather": "fog", "outside_temp_f": "45"}),
         VisualTestCase("icon_windy", "weather", {"weather": "windy", "wind_mph": "25"}),
         VisualTestCase("icon_night", "weather", {"weather": "clear-night", "outside_temp_f": "60"}),
-        VisualTestCase("icon_hail", "weather", {"weather": "hail", "outside_temp_f": "35"})
+        VisualTestCase("icon_hail", "weather", {"weather": "hail", "outside_temp_f": "35"}),
     ]
 
 
 def get_battery_state_tests() -> List[VisualTestCase]:
     """Test cases for battery states"""
     return [
-        VisualTestCase("battery_critical", "battery", {
-            "battery_percent": 5, "battery_voltage": 3.3
-        }),
+        VisualTestCase(
+            "battery_critical", "battery", {"battery_percent": 5, "battery_voltage": 3.3}
+        ),
         VisualTestCase("battery_low", "battery", {"battery_percent": 15, "battery_voltage": 3.5}),
-        VisualTestCase("battery_medium", "battery", {
-            "battery_percent": 50, "battery_voltage": 3.7
-        }),
+        VisualTestCase(
+            "battery_medium", "battery", {"battery_percent": 50, "battery_voltage": 3.7}
+        ),
         VisualTestCase("battery_high", "battery", {"battery_percent": 85, "battery_voltage": 4.0}),
         VisualTestCase("battery_full", "battery", {"battery_percent": 100, "battery_voltage": 4.2}),
-        VisualTestCase("battery_empty", "battery", {"battery_percent": 0, "battery_voltage": 3.0})
+        VisualTestCase("battery_empty", "battery", {"battery_percent": 0, "battery_voltage": 3.0}),
     ]
 
 
 def get_text_rendering_tests() -> List[VisualTestCase]:
     """Test cases for text rendering edge cases"""
     return [
-        VisualTestCase("text_overflow_room", "text", {
-            "room_name": "Very Long Conference Room Name That Should Be Truncated"
-        }),
+        VisualTestCase(
+            "text_overflow_room",
+            "text",
+            {"room_name": "Very Long Conference Room Name That Should Be Truncated"},
+        ),
         VisualTestCase("text_unicode", "text", {"room_name": "Café École 日本 🏠"}),
         VisualTestCase("text_special_chars", "text", {"room_name": "Lab #3 & Test @ 50%"}),
-        VisualTestCase("text_max_temp", "text", {
-            "inside_temp_f": "999.9", "outside_temp_f": "-99.9"
-        }),
+        VisualTestCase(
+            "text_max_temp", "text", {"inside_temp_f": "999.9", "outside_temp_f": "-99.9"}
+        ),
         VisualTestCase("text_max_pressure", "text", {"pressure_hpa": "9999.9"}),
-        VisualTestCase("text_long_weather", "text", {
-            "weather": "Heavy thunderstorms with torrential rain"
-        }),
-        VisualTestCase("text_all_fields", "text", {
-            "room_name": "Test Room",
-            "time_hhmm": "23:59",
-            "inside_temp_f": "72.5",
-            "inside_hum_pct": "100",
-            "pressure_hpa": "1013",
-            "co2_ppm": "9999",
-            "outside_temp_f": "68.4",
-            "outside_hum_pct": "100",
-            "wind_mph": "99.9",
-            "weather": "storm",
-            "battery_percent": "100",
-            "ip": "192.168.1.100"
-        })
+        VisualTestCase(
+            "text_long_weather", "text", {"weather": "Heavy thunderstorms with torrential rain"}
+        ),
+        VisualTestCase(
+            "text_all_fields",
+            "text",
+            {
+                "room_name": "Test Room",
+                "time_hhmm": "23:59",
+                "inside_temp_f": "72.5",
+                "inside_hum_pct": "100",
+                "pressure_hpa": "1013",
+                "co2_ppm": "9999",
+                "outside_temp_f": "68.4",
+                "outside_hum_pct": "100",
+                "wind_mph": "99.9",
+                "weather": "storm",
+                "battery_percent": "100",
+                "ip": "192.168.1.100",
+            },
+        ),
     ]
 
 
@@ -284,17 +285,28 @@ def get_missing_data_tests() -> List[VisualTestCase]:
     """Test cases for missing data scenarios"""
     return [
         VisualTestCase("missing_inside", "missing", {"inside_temp_f": "", "inside_hum_pct": ""}),
-        VisualTestCase("missing_outside", "missing", {
-            "outside_temp_f": "", "outside_hum_pct": "", "weather": ""
-        }),
-        VisualTestCase("missing_all", "missing", {
-            "inside_temp_f": "", "outside_temp_f": "",
-            "inside_hum_pct": "", "outside_hum_pct": "",
-            "weather": "", "ip": ""
-        }),
-        VisualTestCase("missing_partial", "missing", {
-            "inside_temp_f": "72", "inside_hum_pct": "", "pressure_hpa": ""
-        })
+        VisualTestCase(
+            "missing_outside",
+            "missing",
+            {"outside_temp_f": "", "outside_hum_pct": "", "weather": ""},
+        ),
+        VisualTestCase(
+            "missing_all",
+            "missing",
+            {
+                "inside_temp_f": "",
+                "outside_temp_f": "",
+                "inside_hum_pct": "",
+                "outside_hum_pct": "",
+                "weather": "",
+                "ip": "",
+            },
+        ),
+        VisualTestCase(
+            "missing_partial",
+            "missing",
+            {"inside_temp_f": "72", "inside_hum_pct": "", "pressure_hpa": ""},
+        ),
     ]
 
 
@@ -303,12 +315,16 @@ def get_alignment_tests() -> List[VisualTestCase]:
     return [
         VisualTestCase("align_baseline", "alignment", {}),  # Default layout
         VisualTestCase("align_minimal", "alignment", {"room_name": "A", "time_hhmm": "1:00"}),
-        VisualTestCase("align_maximal", "alignment", {
-            "room_name": "Maximum Length Room Name Here",
-            "time_hhmm": "23:59",
-            "inside_temp_f": "999.9",
-            "outside_temp_f": "999.9"
-        })
+        VisualTestCase(
+            "align_maximal",
+            "alignment",
+            {
+                "room_name": "Maximum Length Room Name Here",
+                "time_hhmm": "23:59",
+                "inside_temp_f": "999.9",
+                "outside_temp_f": "999.9",
+            },
+        ),
     ]
 
 
@@ -326,8 +342,9 @@ def test_weather_icons(tester):
 
     # Report results
     if results["failed"]:
-        failures = "\n".join([f"  - {f['name']}: {f['diff']:.2f}% > {f['threshold']}%"
-                             for f in results["failed"]])
+        failures = "\n".join(
+            [f"  - {f['name']}: {f['diff']:.2f}% > {f['threshold']}%" for f in results["failed"]]
+        )
         pytest.fail(f"Visual regression failures:\n{failures}")
 
     # New baselines are okay
@@ -386,11 +403,11 @@ def test_ui_alignment(tester):
 def test_comprehensive_suite(tester):
     """Run comprehensive visual regression suite"""
     all_tests = (
-        get_weather_icon_tests() +
-        get_battery_state_tests() +
-        get_text_rendering_tests() +
-        get_missing_data_tests() +
-        get_alignment_tests()
+        get_weather_icon_tests()
+        + get_battery_state_tests()
+        + get_text_rendering_tests()
+        + get_missing_data_tests()
+        + get_alignment_tests()
     )
 
     results = tester.run_test_suite(all_tests)
@@ -402,10 +419,8 @@ def test_comprehensive_suite(tester):
         "failed": len(results["failed"]),
         "new": len(results["new"]),
         "pass_rate": (
-            (len(results["passed"]) / results["total"] * 100)
-            if results["total"] > 0
-            else 0
-        )
+            (len(results["passed"]) / results["total"] * 100) if results["total"] > 0 else 0
+        ),
     }
 
     print("\nVisual Regression Report:")

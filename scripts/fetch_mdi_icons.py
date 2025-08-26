@@ -2,9 +2,7 @@
 import os
 import urllib.request
 
-BASE = (
-    "https://raw.githubusercontent.com/Templarian/MaterialDesign-SVG/master/svg"
-)
+BASE = "https://raw.githubusercontent.com/Templarian/MaterialDesign-SVG/master/svg"
 
 ICONS = [
     # Weather

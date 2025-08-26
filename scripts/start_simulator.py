@@ -18,10 +18,11 @@ import webbrowser
 def find_free_port():
     """Find an available port to use."""
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        s.bind(('', 0))
+        s.bind(("", 0))
         s.listen(1)
         port = s.getsockname()[1]
     return port
+
 
 def start_server(port, directory):
     """Start the HTTP server in the specified directory."""
@@ -29,9 +30,10 @@ def start_server(port, directory):
 
     class QuietHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
         """Custom handler to reduce console output."""
+
         def log_message(self, format, *args):
             # Only log errors, not successful requests
-            if args[1] != '200':
+            if args[1] != "200":
                 super().log_message(format, *args)
 
     with socketserver.TCPServer(("", port), QuietHTTPRequestHandler) as httpd:
@@ -44,6 +46,7 @@ def start_server(port, directory):
         except KeyboardInterrupt:
             print("\n\n✅ Server stopped")
             sys.exit(0)
+
 
 def main():
     # Get the repository root
@@ -60,6 +63,7 @@ def main():
 
     # Optional: Auto-open browser after a short delay
     if "--no-browser" not in sys.argv:
+
         def open_browser():
             time.sleep(1)  # Give server time to start
             webbrowser.open(f"http://localhost:{port}/index.html")
@@ -75,6 +79,7 @@ def main():
     except Exception as e:
         print(f"❌ Error starting server: {e}")
         sys.exit(1)
+
 
 if __name__ == "__main__":
     main()

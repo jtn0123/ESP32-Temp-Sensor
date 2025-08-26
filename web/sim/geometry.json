@@ -11,15 +11,15 @@
     "HEADER_VERSION": [172, 2, 72, 14],
     "HEADER_TIME_CENTER": [100, 2, 50, 14],
     "INSIDE_TEMP": [6, 36, 118, 28],
-    "INSIDE_RH": [6, 66, 118, 14],
-    "INSIDE_ROW2": [6, 78, 118, 12],
+    "INSIDE_HUMIDITY": [6, 66, 118, 14],
+    "INSIDE_PRESSURE": [6, 78, 118, 12],
     "OUT_TEMP": [129, 36, 94, 28],
     "WEATHER_ICON": [170, 90, 28, 32],
     "OUT_WEATHER": [131, 68, 44, 12],
     "OUT_PRESSURE": [177, 68, 64, 12],
     "OUT_HUMIDITY": [131, 78, 44, 12],
     "OUT_WIND": [177, 78, 44, 12],
-    "FOOTER_L": [6, 90, 160, 32],
+    "FOOTER_STATUS": [6, 90, 160, 32],
     "FOOTER_WEATHER": [200, 90, 44, 32]
   }
 }

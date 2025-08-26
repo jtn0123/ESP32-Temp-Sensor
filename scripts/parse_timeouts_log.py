@@ -65,7 +65,7 @@ def main() -> None:
         print(out)
     finally:
         try:
-            lines.close()  # type: ignore[attr-defined]
+            lines.close()
         except Exception:
             pass
 

@@ -3,7 +3,7 @@ import argparse
 import sys
 
 try:
-    import paho.mqtt.client as mqtt  # type: ignore
+    import paho.mqtt.client as mqtt
 except Exception as e:  # pragma: no cover - dependency not installed
     print(f"paho-mqtt missing: {e}")
     sys.exit(2)

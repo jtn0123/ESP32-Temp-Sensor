@@ -18,7 +18,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 def test_validation_engine_import():
     """Test that the validation engine can be imported"""
-    from ui_validation_engine import UIValidationEngine, ValidationSeverity, ValidationType
+    from scripts.ui_validation_engine import UIValidationEngine, ValidationSeverity, ValidationType
 
     assert UIValidationEngine is not None
     assert ValidationSeverity.CRITICAL.value == "critical"
@@ -27,7 +27,7 @@ def test_validation_engine_import():
 
 def test_validation_engine_initialization():
     """Test validation engine initialization"""
-    from ui_validation_engine import UIValidationEngine
+    from scripts.ui_validation_engine import UIValidationEngine
 
     engine = UIValidationEngine()
     assert engine.web_root is not None
@@ -37,15 +37,13 @@ def test_validation_engine_initialization():
 
 def test_text_overflow_detection():
     """Test that text overflow is properly detected"""
-    from ui_validation_engine import RegionValidation, UIValidationEngine
+    from scripts.ui_validation_engine import RegionValidation, UIValidationEngine
 
     UIValidationEngine()
 
     # Create a test region with small bounds
     region = RegionValidation(
-        name="TEST_REGION",
-        rect=(0, 0, 50, 12),  # Small width
-        category="label"
+        name="TEST_REGION", rect=(0, 0, 50, 12), category="label"  # Small width
     )
 
     # Mock page evaluation would detect overflow for long text
@@ -56,22 +54,16 @@ def test_text_overflow_detection():
 
 def test_collision_detection():
     """Test that region collisions are detected"""
-    from ui_validation_engine import RegionValidation, UIValidationEngine
+    from scripts.ui_validation_engine import RegionValidation, UIValidationEngine
 
     engine = UIValidationEngine()
 
     # Create overlapping regions
     regions = {
-        "REGION1": RegionValidation(
-            name="REGION1",
-            rect=(10, 10, 100, 50),
-            category="temp"
-        ),
+        "REGION1": RegionValidation(name="REGION1", rect=(10, 10, 100, 50), category="temp"),
         "REGION2": RegionValidation(
-            name="REGION2",
-            rect=(50, 30, 100, 50),  # Overlaps with REGION1
-            category="temp"
-        )
+            name="REGION2", rect=(50, 30, 100, 50), category="temp"  # Overlaps with REGION1
+        ),
     }
 
     issues = engine.validate_collisions(regions)
@@ -86,22 +78,18 @@ def test_collision_detection():
 
 def test_alignment_validation():
     """Test that alignment issues are detected"""
-    from ui_validation_engine import RegionValidation, UIValidationEngine
+    from scripts.ui_validation_engine import RegionValidation, UIValidationEngine
 
     engine = UIValidationEngine()
 
     # Create misaligned inside regions
     regions = {
         "INSIDE_TEMP": RegionValidation(
-            name="INSIDE_TEMP",
-            rect=(10, 20, 100, 30),
-            category="temp"
+            name="INSIDE_TEMP", rect=(10, 20, 100, 30), category="temp"
         ),
         "INSIDE_RH": RegionValidation(
-            name="INSIDE_RH",
-            rect=(15, 55, 100, 15),  # Different x position
-            category="label"
-        )
+            name="INSIDE_RH", rect=(15, 55, 100, 15), category="label"  # Different x position
+        ),
     }
 
     issues = engine.validate_alignment(regions)
@@ -113,16 +101,14 @@ def test_alignment_validation():
 
 def test_font_size_validation():
     """Test that font size issues are detected"""
-    from ui_validation_engine import RegionValidation, UIValidationEngine
+    from scripts.ui_validation_engine import RegionValidation, UIValidationEngine
 
     engine = UIValidationEngine()
 
     # Create region too small for expected font
     regions = {
         "INSIDE_TEMP": RegionValidation(
-            name="INSIDE_TEMP",
-            rect=(10, 20, 100, 10),  # Too short for 22px font
-            category="temp"
+            name="INSIDE_TEMP", rect=(10, 20, 100, 10), category="temp"  # Too short for 22px font
         )
     }
 
@@ -138,7 +124,8 @@ def test_font_size_validation():
 def test_bounds_validation():
     """Test that content bounds issues are detected"""
     import numpy as np
-    from ui_validation_engine import RegionValidation, UIValidationEngine
+
+    from scripts.ui_validation_engine import RegionValidation, UIValidationEngine
 
     engine = UIValidationEngine()
 
@@ -146,11 +133,7 @@ def test_bounds_validation():
     img = np.ones((122, 250, 3), dtype=np.uint8) * 255  # White background
 
     # Add content that touches the edge of a region
-    region = RegionValidation(
-        name="TEST_REGION",
-        rect=(10, 10, 50, 30),
-        category="label"
-    )
+    region = RegionValidation(name="TEST_REGION", rect=(10, 10, 50, 30), category="label")
 
     # Draw black pixels at the edge
     img[10:15, 10:12] = 0  # Content at left edge
@@ -167,7 +150,7 @@ def test_validation_report_generation():
     """Test that validation reports are generated correctly"""
     from datetime import datetime
 
-    from ui_validation_engine import (
+    from scripts.ui_validation_engine import (
         UIValidationEngine,
         ValidationIssue,
         ValidationReport,
@@ -188,27 +171,22 @@ def test_validation_report_generation():
                 issue_type=ValidationType.TEXT_OVERFLOW,
                 severity=ValidationSeverity.ERROR,
                 region="OUT_ROW1_L",
-                description="Text overflows by 15px"
+                description="Text overflows by 15px",
             ),
             ValidationIssue(
                 issue_type=ValidationType.COLLISION,
                 severity=ValidationSeverity.WARNING,
                 region="REGION1,REGION2",
-                description="Regions overlap by 20%"
-            )
+                description="Regions overlap by 20%",
+            ),
         ],
         summary={
             "total_issues": 2,
-            "by_severity": {
-                "critical": 0,
-                "error": 1,
-                "warning": 1,
-                "info": 0
-            },
+            "by_severity": {"critical": 0, "error": 1, "warning": 1, "info": 0},
             "regions_with_issues": 2,
-            "clean_regions": 8
+            "clean_regions": 8,
         },
-        screenshots={}
+        screenshots={},
     )
 
     # Generate report text
@@ -224,7 +202,7 @@ def test_validation_report_generation():
 
 def test_known_ui_issues():
     """Test that known UI issues from screenshots are detected"""
-    from ui_validation_engine import UIValidationEngine
+    from scripts.ui_validation_engine import UIValidationEngine
 
     engine = UIValidationEngine()
 
@@ -251,15 +229,20 @@ def test_ui_spec_regions_validated():
     ui_spec = json.loads(ui_spec_path.read_text())
     rects = ui_spec.get("rects", {})
 
-    from ui_validation_engine import UIValidationEngine
+    from scripts.ui_validation_engine import UIValidationEngine
+
     engine = UIValidationEngine()
 
     # Verify all important regions have validation patterns
     important_regions = [
-        "HEADER_NAME", "HEADER_TIME",
-        "INSIDE_TEMP", "OUT_TEMP",
-        "INSIDE_RH", "STATUS",
-        "OUT_ROW1_L", "OUT_ROW1_R"
+        "HEADER_NAME",
+        "HEADER_TIME",
+        "INSIDE_TEMP",
+        "OUT_TEMP",
+        "INSIDE_RH",
+        "STATUS",
+        "OUT_ROW1_L",
+        "OUT_ROW1_R",
     ]
 
     for region in important_regions:
@@ -280,9 +263,7 @@ def test_validation_cli():
 
     # Test help output
     result = subprocess.run(
-        [sys.executable, str(script_path), "--help"],
-        capture_output=True,
-        text=True
+        [sys.executable, str(script_path), "--help"], capture_output=True, text=True
     )
 
     assert result.returncode == 0
@@ -301,7 +282,7 @@ def test_visual_layout_analyzer_integration():
 
     # Import and verify compatibility
     sys.path.insert(0, str(ROOT / "scripts"))
-    from visual_layout_analyzer import LayoutIssue, VisualLayoutAnalyzer
+    from scripts.visual_layout_analyzer import LayoutIssue, VisualLayoutAnalyzer
 
     VisualLayoutAnalyzer()
 

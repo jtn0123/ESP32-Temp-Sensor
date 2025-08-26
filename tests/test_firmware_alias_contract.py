@@ -22,5 +22,3 @@ def test_alias_subscriptions_and_callbacks_present():
     assert 'ends_with(topic, "/temp_f")' in txt
     assert 'ends_with(topic, "/condition")' in txt
     assert 'ends_with(topic, "/condition_code")' in txt
-
-

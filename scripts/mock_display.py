@@ -124,7 +124,7 @@ def draw_weather_icon(draw: ImageDraw.ImageDraw, box: tuple[int, int, int, int],
         for i in range(3):
             draw.line((x0 + 2, y0 + 8 + i * 6, x1 - 2, y0 + 8 + i * 6), fill=0, width=1)
     else:
-        draw.rectangle([(x0, y0), (x1, y1)], outline=0, width=1)
+        draw.rectangle(((x0, y0), (x1, y1)), outline=0, width=1)
 
 
 def draw_layout(draw: ImageDraw.ImageDraw, data: dict):
@@ -155,7 +155,7 @@ def draw_layout(draw: ImageDraw.ImageDraw, data: dict):
     R("STATUS", (6, 112, 6 + 238, 112 + 10))
 
     # Frame and header
-    draw.rectangle([(0, 0), (WIDTH - 1, HEIGHT - 1)], outline=0, width=1)
+    draw.rectangle(((0, 0), (WIDTH - 1, HEIGHT - 1)), outline=0, width=1)
     font_hdr = load_font(12)
     # Header room name inside HEADER_NAME rect with 1px inset like sim text op
     draw.text(
@@ -267,16 +267,16 @@ def draw_layout(draw: ImageDraw.ImageDraw, data: dict):
         left_box_w = 24
     # Draw filled rect inside icon box to guarantee black pixels
     draw.rectangle(
-        [
+        (
             (bar_x + 2, bar_y + 2),
             (bar_x + 2 + max(8, min(left_box_w, icon_w - 4)), bar_y + 2 + max(8, icon_h - 6)),
-        ],
+        ),
         fill=0,
     )
     # Simplified icon strokes
     # Use stroke-only rectangle as in sim before specific details
     draw.rectangle(
-        [(start_x + 2, bar_y + 6), (start_x + icon_w - 2, bar_y + icon_h - 2)], outline=0, width=1
+        ((start_x + 2, bar_y + 6), (start_x + icon_w - 2, bar_y + icon_h - 2)), outline=0, width=1
     )
     if any(k in cond_lower for k in ["rain"]):
         # diagonal raindrops
@@ -307,11 +307,11 @@ def draw_layout(draw: ImageDraw.ImageDraw, data: dict):
     # Battery glyph (x=8,y=92 with +4 offset in sim => y=96 effective)
     pct = int(str(data.get("percent", "76")))
     bx, by, bw, bh = 8, 96, 13, 7
-    draw.rectangle([(bx, by), (bx + bw, by + bh)], outline=0, width=1)
-    draw.rectangle([(bx + bw, by + 2), (bx + bw + 2, by + 6)], fill=0)
+    draw.rectangle(((bx, by), (bx + bw, by + bh)), outline=0, width=1)
+    draw.rectangle(((bx + bw, by + 2), (bx + bw + 2, by + 6)), fill=0)
     fillw = max(0, min(bw - 2, int((bw - 2) * (pct / 100))))
     if fillw > 0:
-        draw.rectangle([(bx + 1, by + 1), (bx + 1 + fillw, by + bh - 1)], fill=0)
+        draw.rectangle(((bx + 1, by + 1), (bx + 1 + fillw, by + bh - 1)), fill=0)
     # Left text above the split line
     left = f"Batt {data.get('voltage','4.01')}V {pct}%"
     draw.text((26, 90), left, font=font_sm, fill=0)

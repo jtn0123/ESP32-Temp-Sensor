@@ -13,7 +13,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 def test_internal_helper_rect_detection():
     """Test that internal helper rectangles are correctly identified"""
-    from ui_validation_engine import UIValidationEngine
+    from scripts.ui_validation_engine import UIValidationEngine
 
     engine = UIValidationEngine()
 
@@ -33,38 +33,31 @@ def test_internal_helper_rect_detection():
 
 def test_validation_excludes_internal_rects():
     """Test that validation doesn't process internal helper rectangles"""
-    from ui_validation_engine import RegionValidation, UIValidationEngine
+    from scripts.ui_validation_engine import RegionValidation, UIValidationEngine
 
     engine = UIValidationEngine()
 
     # Create a mix of regular and internal regions
     test_regions = {
         "HEADER_NAME": RegionValidation(
-            name="HEADER_NAME",
-            rect=(10, 10, 100, 20),
-            category="header"
+            name="HEADER_NAME", rect=(10, 10, 100, 20), category="header"
         ),
         "INSIDE_TEMP": RegionValidation(
-            name="INSIDE_TEMP",
-            rect=(10, 40, 100, 30),
-            category="temp"
+            name="INSIDE_TEMP", rect=(10, 40, 100, 30), category="temp"
         ),
         # These should NOT be included in collision checks
         "INSIDE_TEMP_INNER": RegionValidation(
-            name="INSIDE_TEMP_INNER",
-            rect=(15, 45, 90, 20),
-            category="temp"
+            name="INSIDE_TEMP_INNER", rect=(15, 45, 90, 20), category="temp"
         ),
         "INSIDE_TEMP_BADGE": RegionValidation(
-            name="INSIDE_TEMP_BADGE",
-            rect=(95, 45, 10, 10),
-            category="temp"
+            name="INSIDE_TEMP_BADGE", rect=(95, 45, 10, 10), category="temp"
         ),
     }
 
     # Filter out internal rects as the validation engine should
     filtered_regions = {
-        name: region for name, region in test_regions.items()
+        name: region
+        for name, region in test_regions.items()
         if not engine._is_internal_helper_rect(name)
     }
 
@@ -87,7 +80,7 @@ def test_validation_excludes_internal_rects():
 
 def test_allowed_overlaps_excludes_internal():
     """Test that allowed overlaps list properly handles internal regions"""
-    from ui_validation_engine import RegionValidation, UIValidationEngine
+    from scripts.ui_validation_engine import RegionValidation, UIValidationEngine
 
     engine = UIValidationEngine()
 
@@ -97,19 +90,15 @@ def test_allowed_overlaps_excludes_internal():
     # Create regions that would overlap
     regions = {
         "INSIDE_TEMP": RegionValidation(
-            name="INSIDE_TEMP",
-            rect=(10, 40, 100, 30),
-            category="temp"
+            name="INSIDE_TEMP", rect=(10, 40, 100, 30), category="temp"
         ),
         "FOOTER_WEATHER": RegionValidation(
-            name="FOOTER_WEATHER",
-            rect=(120, 90, 50, 20),
-            category="footer"
+            name="FOOTER_WEATHER", rect=(120, 90, 50, 20), category="footer"
         ),
         "WEATHER_ICON": RegionValidation(
             name="WEATHER_ICON",
             rect=(115, 85, 30, 30),  # Overlaps with FOOTER_WEATHER
-            category="other"
+            category="other",
         ),
     }
 
@@ -118,8 +107,7 @@ def test_allowed_overlaps_excludes_internal():
 
     # FOOTER_WEATHER and WEATHER_ICON overlap is allowed, so should not be reported
     weather_footer_issues = [
-        i for i in issues
-        if ("FOOTER_WEATHER" in i.region and "WEATHER_ICON" in i.region)
+        i for i in issues if ("FOOTER_WEATHER" in i.region and "WEATHER_ICON" in i.region)
     ]
 
     # This overlap should be allowed (it's in the allowed list)
@@ -130,4 +118,5 @@ def test_allowed_overlaps_excludes_internal():
 
 if __name__ == "__main__":
     import pytest
+
     pytest.main([__file__, "-v"])

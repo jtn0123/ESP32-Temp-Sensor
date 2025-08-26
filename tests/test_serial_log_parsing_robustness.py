@@ -7,6 +7,7 @@ import pytest
 ROOT = os.path.dirname(os.path.dirname(__file__))
 SCRIPTS_DIR = os.path.join(ROOT, "scripts")
 
+
 # Load parsing modules dynamically
 def _load_parsing_module(module_name: str):
     """Load a parsing module from the scripts directory"""
@@ -16,10 +17,12 @@ def _load_parsing_module(module_name: str):
         pytest.skip(f"Module {module_name}.py not found")
 
     import importlib.util
+
     spec = importlib.util.spec_from_file_location(module_name, module_path)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
+
 
 # Sample log lines that represent real device output
 SAMPLE_LOG_LINES = [
@@ -27,30 +30,25 @@ SAMPLE_LOG_LINES = [
     "[METRICS] Inside: 72.5°F 45% RH, Outside: 68.2°F 52% RH, Wind: 5.2 mph, Pressure: 1013.2 hPa",
     "[METRICS] Inside: 71.8°F 46% RH, Outside: 69.1°F 51% RH, Wind: 3.8 mph, Pressure: 1012.8 hPa",
     "[METRICS] Inside: 73.2°F 44% RH, Outside: 67.5°F 53% RH, Wind: 0.0 mph, Pressure: 1014.1 hPa",
-
     # Error conditions
     "[ERROR] Failed to read SHT40 sensor, using last value",
     "[ERROR] WiFi connection timeout after 10s",
     "[ERROR] MQTT publish failed for topic sensors/office/inside/temp",
     "[ERROR] Invalid pressure reading: 0 hPa",
-
     # Status lines
     "[STATUS] Battery: 3.85V (87%), Est. days: 145",
     "[STATUS] WiFi connected to MyNetwork (192.168.1.50)",
     "[STATUS] MQTT connected to 192.168.1.10:1883",
     "[STATUS] Wake count: 42, Next wake: 2h",
-
     # Debug lines
     "[DEBUG] Wake reason: RTC_TIMER",
     "[DEBUG] Connection time: 3.2s",
     "[DEBUG] MQTT publish time: 0.8s",
     "[DEBUG] Deep sleep time: 7170s",
-
     # Weather condition lines
     "[WEATHER] Condition: partly-cloudy, Code: 3",
     "[WEATHER] Condition: clear, Code: 0",
     "[WEATHER] Condition: rain, Code: 5",
-
     # Layout telemetry
     "[LAYOUT] Version: ui-spec@1, CRC: 0x1234, MD5: abc123def456",
     "[LAYOUT] Canvas: 250x122, Rects: 15",
@@ -63,30 +61,24 @@ MALFORMED_LOG_LINES = [
     "[METRICS] Inside:",
     "[STATUS] Battery:",
     "[ERROR]",
-
     # Corrupted data
     "[METRICS] Inside: 72.5°F 45% RH, Outside: corrupted°F 52% RH",
     "[METRICS] Inside: 72.5°F 45% RH, Outside: 68.2°F corrupted% RH",
     "[STATUS] Battery: corruptedV (87%)",
-
     # Invalid formats
     "[METRICS] Inside: 72.5F 45% RH",  # Missing ° symbol
-    "[METRICS] Inside: 72.5°F RH",     # Missing humidity value
-    "[STATUS] Battery: 3.85V 87%",     # Missing parentheses
-
+    "[METRICS] Inside: 72.5°F RH",  # Missing humidity value
+    "[STATUS] Battery: 3.85V 87%",  # Missing parentheses
     # Very long lines (potential buffer overflow)
     "[METRICS] " + "A" * 1000,
     "[ERROR] " + "B" * 1000,
-
     # Lines with special characters
     "[METRICS] Inside: 72.5°F 45% RH, Outside: 68.2°F 52% RH, Wind: 5.2 mph, "
     "Pressure: 1013.2 hPa \x00\x01\x02",
     "[STATUS] Battery: 3.85V (87%), Est. days: 145 \n\r\t",
-
     # Empty values
     "[METRICS] Inside: 72.5°F 45% RH, Outside: °F % RH, Wind: mph, Pressure: hPa",
     "[WEATHER] Condition: , Code: ",
-
     # Wrong data types
     "[METRICS] Inside: text°F text% RH",
     "[STATUS] Battery: textV (text%)",
@@ -100,18 +92,12 @@ EXPECTED_PARSED_DATA = {
         "outside_temp": 68.2,
         "outside_hum": 52,
         "wind": 5.2,
-        "pressure": 1013.2
+        "pressure": 1013.2,
     },
-    "battery_status": {
-        "voltage": 3.85,
-        "percent": 87,
-        "estimated_days": 145
-    },
-    "weather_condition": {
-        "condition": "partly-cloudy",
-        "code": 3
-    }
+    "battery_status": {"voltage": 3.85, "percent": 87, "estimated_days": 145},
+    "weather_condition": {"condition": "partly-cloudy", "code": 3},
 }
+
 
 def test_parse_awake_log_robustness():
     """Test parse_awake_log.py robustness with malformed input"""
@@ -152,6 +138,7 @@ def test_parse_awake_log_robustness():
             # Should handle exceptions gracefully for malformed input
             assert False, f"Parser crashed on malformed line: {line}, error: {e}"
 
+
 def test_parse_debug_json_robustness():
     """Test parse_debug_json.py robustness"""
 
@@ -172,8 +159,8 @@ def test_parse_debug_json_robustness():
     malformed_jsons = [
         '{"temp": 72.5, "humidity": ',  # Incomplete
         '{"temp": "text", "humidity": 45}',  # Wrong type
-        '{invalid json}',  # Invalid format
-        '',  # Empty
+        "{invalid json}",  # Invalid format
+        "",  # Empty
         '{"temp": 72.5, "humidity": 45',  # Missing closing brace
     ]
 
@@ -183,6 +170,7 @@ def test_parse_debug_json_robustness():
             # Should handle gracefully
         except Exception as e:
             assert False, f"Parser crashed on malformed JSON: {json_str}, error: {e}"
+
 
 def test_parse_offline_log_robustness():
     """Test parse_offline_log.py robustness"""
@@ -201,6 +189,7 @@ def test_parse_offline_log_robustness():
             # Should handle all line types gracefully
         except Exception as e:
             assert False, f"Parser crashed on line: {line}, error: {e}"
+
 
 def test_parse_wifi_log_robustness():
     """Test parse_wifi_log.py robustness"""
@@ -226,6 +215,7 @@ def test_parse_wifi_log_robustness():
         except Exception as e:
             assert False, f"Parser crashed on WiFi line: {line}, error: {e}"
 
+
 def test_parse_timeouts_log_robustness():
     """Test parse_timeouts_log.py robustness"""
 
@@ -240,7 +230,7 @@ def test_parse_timeouts_log_robustness():
         "[TIMEOUT] Sensor read timeout: 2s",
         "[TIMEOUT]",  # Empty
         "[TIMEOUT] WiFi connection timeout: text",  # Invalid number
-        "[TIMEOUT] WiFi connection timeout: -5s",   # Negative
+        "[TIMEOUT] WiFi connection timeout: -5s",  # Negative
     ]
 
     for line in timeout_lines:
@@ -249,6 +239,7 @@ def test_parse_timeouts_log_robustness():
             # Should handle gracefully
         except Exception as e:
             assert False, f"Parser crashed on timeout line: {line}, error: {e}"
+
 
 def test_metrics_extraction_comprehensive():
     """Test comprehensive metrics extraction from log lines"""
@@ -279,12 +270,13 @@ def test_metrics_extraction_comprehensive():
                 for match in matches:
                     try:
                         # Should be parseable as number
-                        if '.' in match:
+                        if "." in match:
                             float(match)
                         else:
                             int(match)
                     except ValueError:
                         assert False, f"Invalid numeric value in {pattern_name}: {match}"
+
 
 def test_error_handling_patterns():
     """Test that error patterns are correctly identified"""
@@ -312,6 +304,7 @@ def test_error_handling_patterns():
                 break
         assert matched, f"Error line not matched by any pattern: {line}"
 
+
 def test_log_line_classification():
     """Test that log lines are correctly classified by type"""
 
@@ -330,21 +323,23 @@ def test_log_line_classification():
             match = re.match(r"\[([A-Z]+)\]", line)
             if match:
                 actual_type = match.group(1)
-                assert actual_type == expected_type, \
-                    f"Wrong classification for {line}: expected {expected_type}, got {actual_type}"
+                assert (
+                    actual_type == expected_type
+                ), f"Wrong classification for {line}: expected {expected_type}, got {actual_type}"
+
 
 def test_numeric_value_validation():
     """Test that numeric values in logs are within reasonable ranges"""
 
     # Define reasonable ranges for sensor values
     value_ranges = {
-        "temperature": (-50, 150),      # °F
-        "humidity": (0, 100),           # %
-        "pressure": (0, 1200),          # hPa (allow 0 for error conditions)
-        "wind": (0, 200),              # mph
-        "voltage": (2.5, 4.5),         # V
-        "battery_percent": (0, 100),    # %
-        "estimated_days": (1, 1000),   # days
+        "temperature": (-50, 150),  # °F
+        "humidity": (0, 100),  # %
+        "pressure": (0, 1200),  # hPa (allow 0 for error conditions)
+        "wind": (0, 200),  # mph
+        "voltage": (2.5, 4.5),  # V
+        "battery_percent": (0, 100),  # %
+        "estimated_days": (1, 1000),  # days
     }
 
     for line in SAMPLE_LOG_LINES:
@@ -368,16 +363,19 @@ def test_numeric_value_validation():
 
             for match in matches:
                 try:
-                    if '.' in match:
+                    if "." in match:
                         value = float(match)
                     else:
                         value = int(match)
 
-                    assert min_val <= value <= max_val, \
-                        "Value {} for {} out of range [{}, {}] in line: {}".format(
-                            value, value_type, min_val, max_val, line)
+                    assert (
+                        min_val <= value <= max_val
+                    ), "Value {} for {} out of range [{}, {}] in line: {}".format(
+                        value, value_type, min_val, max_val, line
+                    )
                 except ValueError:
                     assert False, f"Invalid numeric format: {match} in line: {line}"
+
 
 def test_log_parsing_performance():
     """Test that log parsing doesn't have performance issues"""
@@ -404,6 +402,7 @@ def test_log_parsing_performance():
     except Exception:
         pytest.skip("parse_awake_log.py not available for performance test")
 
+
 def test_malformed_input_graceful_handling():
     """Test that malformed input is handled gracefully without crashes"""
 
@@ -428,8 +427,9 @@ def test_malformed_input_graceful_handling():
             except Exception as e:
                 # If it crashes, the error should be meaningful
                 assert "NoneType" not in str(e), f"Parser should handle None input better: {e}"
-                assert "string" in str(e).lower() or "parse" in str(e).lower(), \
-                    f"Unexpected error type for malformed input: {e}"
+                assert (
+                    "string" in str(e).lower() or "parse" in str(e).lower()
+                ), f"Unexpected error type for malformed input: {e}"
 
     except Exception:
         pytest.skip("parse_awake_log.py not available for malformed input test")

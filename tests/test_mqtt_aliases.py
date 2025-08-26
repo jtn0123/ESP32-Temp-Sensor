@@ -63,5 +63,3 @@ def test_retained_alias_topics_deliver_on_fresh_subscriber(mosquitto_broker):
 
     sub.disconnect()
     pub.disconnect()
-
-

@@ -27,13 +27,9 @@ def generate_header(data: Dict[str, Any]) -> str:
     rects: Dict[str, List[int]] = data.get("rects", {})
     w = int(canvas.get("w", 250))
     h = int(canvas.get("h", 122))
-    digest = hashlib.md5(
-        json.dumps(data, sort_keys=True).encode("utf-8")
-    ).hexdigest()
+    digest = hashlib.md5(json.dumps(data, sort_keys=True).encode("utf-8")).hexdigest()
     # Compute a small CRC32 over the canonical canvas+rects object for parity checks
-    crc_obj = json.dumps(
-        {"canvas": canvas, "rects": rects}, sort_keys=True
-    ).encode("utf-8")
+    crc_obj = json.dumps({"canvas": canvas, "rects": rects}, sort_keys=True).encode("utf-8")
     layout_crc = zlib.crc32(crc_obj) & 0xFFFFFFFF
     # Prefer explicit layout_version key, else fall back to generic version or 1
     layout_version = int(data.get("layout_version", data.get("version", 1)))

@@ -6,8 +6,8 @@
   let HEADER_VERSION = [172,  2,  72, 14];
   let HEADER_TIME_CENTER = [100,  2,  50, 14];
   let INSIDE_TEMP = [  6, 36, 118, 28];
-  let INSIDE_RH   = [  6, 66, 118, 14];
-  let INSIDE_ROW2 = [  6, 82, 118, 12];
+  let INSIDE_HUMIDITY = [  6, 66, 118, 14];
+  let INSIDE_PRESSURE = [  6, 82, 118, 12];
   let OUT_TEMP    = [131, 36,  90, 28];
   // Place icon higher so tests sampling around y=30 see non-white pixels
   let WEATHER_ICON = [210, 22,  28, 28];
@@ -151,8 +151,8 @@
       'OUT_TEMP_BADGE,OUT_TEMP',
       'FOOTER_WEATHER,WEATHER_ICON',
       'WEATHER_ICON,FOOTER_WEATHER',
-      'FOOTER_L,INSIDE_ROW2',
-      'INSIDE_ROW2,FOOTER_L'
+      'FOOTER_STATUS,INSIDE_PRESSURE',
+      'INSIDE_PRESSURE,FOOTER_STATUS'
     ]);
     
     // Region importance weights for severity calculation
@@ -160,10 +160,10 @@
       'INSIDE_TEMP': 10,
       'OUT_TEMP': 10,
       'HEADER_NAME': 8,
-      'INSIDE_RH': 7,
+      'INSIDE_HUMIDITY': 7,
       'OUT_WEATHER': 6,
       'OUT_HUMIDITY': 6,
-      'FOOTER_L': 5,
+      'FOOTER_STATUS': 5,
       'FOOTER_WEATHER': 5
     };
     
@@ -337,7 +337,7 @@
         issues.push({
           type: 'data_out_of_range',
           severity: 'error',
-          region: 'INSIDE_RH',
+          region: 'INSIDE_HUMIDITY',
           description: `Humidity ${hum}% is outside valid range (0-100%)`,
           suggestion: 'Humidity must be between 0 and 100%'
         });
@@ -351,7 +351,7 @@
         issues.push({
           type: 'data_out_of_range',
           severity: 'warning',
-          region: 'FOOTER_L',
+          region: 'FOOTER_STATUS',
           description: `Battery ${batt}% is outside valid range`,
           suggestion: 'Battery percentage must be 0-100%'
         });
@@ -365,7 +365,7 @@
         issues.push({
           type: 'data_out_of_range',
           severity: 'warning',
-          region: 'INSIDE_ROW2',
+          region: 'INSIDE_PRESSURE',
           description: `Pressure ${pressure} hPa is unusual (typical: 950-1050 hPa)`,
           suggestion: 'Verify barometer reading'
         });
@@ -405,9 +405,9 @@
     const issues = [];
     const alignmentGroups = [
       ['INSIDE_TEMP', 'OUT_TEMP'],
-      ['INSIDE_RH', 'OUT_HUMIDITY'],
+      ['INSIDE_HUMIDITY', 'OUT_HUMIDITY'],
       ['HEADER_NAME', 'HEADER_VERSION'],
-      ['FOOTER_L', 'FOOTER_WEATHER']
+      ['FOOTER_STATUS', 'FOOTER_WEATHER']
     ];
     
     for (const group of alignmentGroups) {
@@ -507,7 +507,7 @@
     const usesCenteredHeader = variant.includes('centered'); // header_centered variant uses HEADER_TIME_CENTER
     
     const expectedContent = new Set([
-      'HEADER_NAME', 'HEADER_VERSION', 'HEADER_TIME_CENTER', 'INSIDE_TEMP', 'INSIDE_RH', 'OUT_TEMP'
+      'HEADER_NAME', 'HEADER_VERSION', 'HEADER_TIME_CENTER', 'INSIDE_TEMP', 'INSIDE_HUMIDITY', 'OUT_TEMP'
     ]);
     
     // Add v2 expected content
@@ -515,13 +515,13 @@
     expectedContent.add('HEADER_VERSION');
     expectedContent.add('HEADER_TIME_CENTER');
     expectedContent.add('INSIDE_TEMP');
-    expectedContent.add('INSIDE_RH');
-    expectedContent.add('INSIDE_ROW2'); // Pressure in v2
+    expectedContent.add('INSIDE_HUMIDITY');
+    expectedContent.add('INSIDE_PRESSURE'); // Pressure in v2
     expectedContent.add('OUT_TEMP');
     // Don't expect outside metric regions as they are optional based on data availability
     // expectedContent.add('OUT_HUMIDITY');
     // expectedContent.add('OUT_WIND');
-    expectedContent.add('FOOTER_L'); // v2 uses FOOTER_L for battery/IP
+    expectedContent.add('FOOTER_STATUS'); // v2 uses FOOTER_STATUS for battery/IP
     expectedContent.add('FOOTER_WEATHER'); // v2 uses FOOTER_WEATHER for weather icon
     
     for (const regionName of expectedContent) {
@@ -747,8 +747,8 @@
           HEADER_VERSION = R.HEADER_VERSION || HEADER_VERSION;
           HEADER_TIME_CENTER = R.HEADER_TIME_CENTER || HEADER_TIME_CENTER;
           INSIDE_TEMP = R.INSIDE_TEMP || INSIDE_TEMP;
-          INSIDE_RH   = R.INSIDE_RH   || INSIDE_RH;
-          INSIDE_ROW2 = R.INSIDE_ROW2 || INSIDE_ROW2;
+          INSIDE_HUMIDITY   = R.INSIDE_HUMIDITY   || INSIDE_HUMIDITY;
+          INSIDE_PRESSURE = R.INSIDE_PRESSURE || INSIDE_PRESSURE;
           OUT_TEMP    = R.OUT_TEMP    || OUT_TEMP;
           WEATHER_ICON = R.WEATHER_ICON || WEATHER_ICON;
           // Use new meaningful names
@@ -773,8 +773,8 @@
           HEADER_VERSION = R.HEADER_VERSION || HEADER_VERSION;
           HEADER_TIME_CENTER = R.HEADER_TIME_CENTER || HEADER_TIME_CENTER;
           INSIDE_TEMP = R.INSIDE_TEMP || INSIDE_TEMP;
-          INSIDE_RH   = R.INSIDE_RH   || INSIDE_RH;
-          INSIDE_ROW2 = R.INSIDE_ROW2 || INSIDE_ROW2;
+          INSIDE_HUMIDITY   = R.INSIDE_HUMIDITY   || INSIDE_HUMIDITY;
+          INSIDE_PRESSURE = R.INSIDE_PRESSURE || INSIDE_PRESSURE;
           OUT_TEMP    = R.OUT_TEMP    || OUT_TEMP;
           WEATHER_ICON = R.WEATHER_ICON || WEATHER_ICON;
           // Use new meaningful names
@@ -911,7 +911,7 @@
     if (/_LABEL_BOX$/.test(n)) return 'label';
     if (n === 'WEATHER_ICON') return 'label';
     if (n.startsWith('OUT_')) return 'temp';
-    if (/_TEMP(|_INNER|_BADGE)?$/.test(n) || n === 'INSIDE_RH' || n === 'INSIDE_ROW2') return 'temp';
+    if (/_TEMP(|_INNER|_BADGE)?$/.test(n) || n === 'INSIDE_HUMIDITY' || n === 'INSIDE_PRESSURE') return 'temp';
     return 'temp';
   }
 
@@ -1101,7 +1101,7 @@
                 if (s.startsWith('Batt ')){
                   window.__layoutMetrics.statusLeft.line1Y = y;
                   // approximate group bounds: from battery x (set in batteryGlyph) to end of string
-                  const leftCol = rects.FOOTER_L || [6,90,160,32];
+                  const leftCol = rects.FOOTER_STATUS || [6,90,160,32];
                   window.__layoutMetrics.statusLeft.left = leftCol[0];
                   window.__layoutMetrics.statusLeft.right = leftCol[0] + leftCol[2];
                   const textW = ctx.measureText(s).width;
@@ -1151,7 +1151,7 @@
                 // Export metrics even for absolute-positioned footer rows
                 if (s.startsWith('Batt ') || s.includes('%')){
                   window.__layoutMetrics.statusLeft.line1Y = y;
-                  const leftCol = rects.FOOTER_L || [6,90,160,32];
+                  const leftCol = rects.FOOTER_STATUS || [6,90,160,32];
                   window.__layoutMetrics.statusLeft.left = leftCol[0];
                   window.__layoutMetrics.statusLeft.right = leftCol[0] + leftCol[2];
                   const textW = ctx.measureText(s).width;
@@ -1418,9 +1418,9 @@
                   fontSize: 0,
                   actualBounds: { x, y, width: bw + 2, height: bh }
                 };
-                // Also mark FOOTER_L as having content since battery is part of it
-                if (!renderedContent['FOOTER_L']) {
-                  renderedContent['FOOTER_L'] = {
+                // Also mark FOOTER_STATUS as having content since battery is part of it
+                if (!renderedContent['FOOTER_STATUS']) {
+                  renderedContent['FOOTER_STATUS'] = {
                     text: 'battery_area',
                     fontSize: 0,
                     actualBounds: { x, y, width: bw + 2, height: bh }
@@ -1796,8 +1796,8 @@
           // Construct a v2 spec by cloning UI_SPEC and snapping rects + fonts
           const base = JSON.parse(JSON.stringify(window.UI_SPEC || {}));
           if (!base.rects) base.rects = {};
-          // Preserve INSIDE_ROW2 from original spec if it exists
-          const originalINSIDE_ROW2 = base.rects.INSIDE_ROW2;
+          // Preserve INSIDE_PRESSURE from original spec if it exists
+          const originalINSIDE_PRESSURE = base.rects.INSIDE_PRESSURE;
           // Define a clean 4px-grid layout with 12px outer padding and 4px gutters
           const OUTER = 12;
           const DIV_X = 128; // vertical divider aligned to grid
@@ -1825,8 +1825,8 @@
           const innerH = TEMP_H - 16;
           base.rects.INSIDE_TEMP_INNER = [LEFT_X + 4, innerY, LEFT_W - 28, innerH];
           base.rects.INSIDE_TEMP_BADGE = [LEFT_X + LEFT_W - 20, innerY, 16, 12];
-          base.rects.INSIDE_RH   = [LEFT_X, ROW1_Y, LEFT_W, ROW_H];
-          base.rects.INSIDE_ROW2 = [LEFT_X, ROW2_Y, LEFT_W, ROW_H];  // Pressure row in v2
+          base.rects.INSIDE_HUMIDITY   = [LEFT_X, ROW1_Y, LEFT_W, ROW_H];
+          base.rects.INSIDE_PRESSURE = [LEFT_X, ROW2_Y, LEFT_W, ROW_H];  // Pressure row in v2
 
           base.rects.OUT_TEMP    = [RIGHT_X, TEMP_Y, RIGHT_W, TEMP_H];
           base.rects.OUT_LABEL_BOX = [RIGHT_X, TEMP_Y + 2, RIGHT_W, 12];
@@ -1842,7 +1842,7 @@
           base.rects.WEATHER_ICON = [RIGHT_X + 4, iconY, 20, iconH];
 
           // Footer columns align exactly to the column widths
-          base.rects.FOOTER_L    = [LEFT_X, FOOTER_Y, LEFT_W, FOOTER_H];
+          base.rects.FOOTER_STATUS    = [LEFT_X, FOOTER_Y, LEFT_W, FOOTER_H];
           base.rects.FOOTER_WEATHER    = [RIGHT_X, FOOTER_Y, RIGHT_W, FOOTER_H];
 
           // Adjust chrome lines to match grid

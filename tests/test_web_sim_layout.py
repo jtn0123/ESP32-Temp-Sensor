@@ -59,7 +59,7 @@ def _save_artifacts(page, name: str = "sim") -> None:
     reason="playwright not installed",
 )
 def test_layout_centering_and_clipping():
-    from playwright.sync_api import sync_playwright  # type: ignore
+    from playwright.sync_api import sync_playwright
 
     web_root = os.path.join(os.path.dirname(os.path.dirname(__file__)), "web", "sim")
     port = _find_free_port()
@@ -167,7 +167,7 @@ def test_layout_centering_and_clipping():
     reason="playwright not installed",
 )
 def test_web_sim_backend_integration_full_reload():
-    from playwright.sync_api import sync_playwright  # type: ignore
+    from playwright.sync_api import sync_playwright
 
     web_root = os.path.join(os.path.dirname(os.path.dirname(__file__)), "web", "sim")
     port = _find_free_port()
@@ -256,7 +256,7 @@ def test_web_sim_backend_integration_full_reload():
     reason="playwright not installed",
 )
 def test_web_sim_partial_refresh_only_updates_header_time():
-    from playwright.sync_api import sync_playwright  # type: ignore
+    from playwright.sync_api import sync_playwright
 
     web_root = os.path.join(os.path.dirname(os.path.dirname(__file__)), "web", "sim")
     port = _find_free_port()

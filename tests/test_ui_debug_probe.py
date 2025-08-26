@@ -65,5 +65,3 @@ def test_device_ui_debug_reflects_outdoor_aliases(mosquitto_broker):
 
     sub.disconnect()
     pub.disconnect()
-
-

@@ -39,14 +39,16 @@ except ImportError as e:
 
 class ValidationSeverity(Enum):
     """Severity levels for validation issues"""
+
     CRITICAL = "critical"  # Must fix - breaks display
-    ERROR = "error"        # Should fix - visible issues
-    WARNING = "warning"    # Consider fixing - minor issues
-    INFO = "info"          # FYI - potential improvements
+    ERROR = "error"  # Should fix - visible issues
+    WARNING = "warning"  # Consider fixing - minor issues
+    INFO = "info"  # FYI - potential improvements
 
 
 class ValidationType(Enum):
     """Types of validation issues"""
+
     TEXT_OVERFLOW = "text_overflow"
     COLLISION = "collision"
     MISALIGNMENT = "misalignment"
@@ -60,6 +62,7 @@ class ValidationType(Enum):
 @dataclass
 class ValidationIssue:
     """A single validation issue"""
+
     issue_type: ValidationType
     severity: ValidationSeverity
     region: str
@@ -73,6 +76,7 @@ class ValidationIssue:
 @dataclass
 class RegionValidation:
     """Validation results for a single region"""
+
     name: str
     rect: Tuple[int, int, int, int]  # x, y, w, h
     category: str
@@ -86,6 +90,7 @@ class RegionValidation:
 @dataclass
 class ValidationReport:
     """Complete validation report"""
+
     timestamp: str
     variant: str
     total_regions: int
@@ -120,50 +125,50 @@ class UIValidationEngine:
                 "max_chars": 20,
                 "expected_pattern": r"^[A-Za-z0-9 \-]+$",
                 "font_size": 14,
-                "single_line": True
+                "single_line": True,
             },
             "HEADER_TIME": {
                 "max_chars": 8,
                 "expected_pattern": r"^\d{1,2}:\d{2}(am|pm)?$",
                 "font_size": 11,
-                "single_line": True
+                "single_line": True,
             },
             "INSIDE_TEMP": {
                 "max_chars": 7,
                 "expected_pattern": r"^-?\d{1,3}\.?\d?°?[FC]?$",
                 "font_size": 22,
-                "single_line": True
+                "single_line": True,
             },
             "OUT_TEMP": {
                 "max_chars": 7,
                 "expected_pattern": r"^-?\d{1,3}\.?\d?°?[FC]?$",
                 "font_size": 22,
-                "single_line": True
+                "single_line": True,
             },
             "INSIDE_RH": {
                 "max_chars": 10,
                 "expected_pattern": r"^\d{1,3}%( RH)?$",
                 "font_size": 11,
-                "single_line": True
+                "single_line": True,
             },
             "STATUS": {
                 "max_chars": 40,
                 "expected_pattern": r".*",
                 "font_size": 10,
-                "single_line": True
+                "single_line": True,
             },
             "OUT_ROW1_L": {
                 "max_chars": 10,
                 "expected_pattern": r"^\d{1,4}\.?\d?\s*(hPa|mb|%)?$",
                 "font_size": 11,
-                "single_line": True
+                "single_line": True,
             },
             "OUT_ROW1_R": {
                 "max_chars": 12,
                 "expected_pattern": r"^\d{1,3}\.?\d?\s*mph$",
                 "font_size": 11,
-                "single_line": True
-            }
+                "single_line": True,
+            },
         }
 
     def validate_text_overflow(self, page, region: RegionValidation) -> List[ValidationIssue]:
@@ -202,56 +207,69 @@ class UIValidationEngine:
             """
             metrics = page.evaluate(script)
 
-            if metrics and metrics.get('text'):
-                text_width = metrics['textWidth']
-                text_height = metrics['textHeight']
-                rect_width = metrics['rectWidth']
-                rect_height = metrics['rectHeight']
+            if metrics and metrics.get("text"):
+                text_width = metrics["textWidth"]
+                text_height = metrics["textHeight"]
+                rect_width = metrics["rectWidth"]
+                rect_height = metrics["rectHeight"]
 
                 # Check horizontal overflow
                 if text_width > rect_width:
                     overflow_px = text_width - rect_width
                     overflow_pct = (overflow_px / rect_width) * 100
 
-                    severity = (ValidationSeverity.CRITICAL if overflow_pct > 50 else
-                               ValidationSeverity.ERROR if overflow_pct > 20 else
-                               ValidationSeverity.WARNING)
+                    severity = (
+                        ValidationSeverity.CRITICAL
+                        if overflow_pct > 50
+                        else (
+                            ValidationSeverity.ERROR
+                            if overflow_pct > 20
+                            else ValidationSeverity.WARNING
+                        )
+                    )
 
-                    issues.append(ValidationIssue(
-                        issue_type=ValidationType.TEXT_OVERFLOW,
-                        severity=severity,
-                        region=region.name,
-                        description=(
-                            f"Text overflows horizontally by {overflow_px:.1f}px "
-                            f"({overflow_pct:.1f}%)"
-                        ),
-                        coordinates=region.rect,
-                        actual_value=f"{text_width:.1f}px",
-                        expected_value=f"<={rect_width}px"
-                    ))
+                    issues.append(
+                        ValidationIssue(
+                            issue_type=ValidationType.TEXT_OVERFLOW,
+                            severity=severity,
+                            region=region.name,
+                            description=(
+                                f"Text overflows horizontally by {overflow_px:.1f}px "
+                                f"({overflow_pct:.1f}%)"
+                            ),
+                            coordinates=region.rect,
+                            actual_value=f"{text_width:.1f}px",
+                            expected_value=f"<={rect_width}px",
+                        )
+                    )
 
                 # Check vertical overflow
                 if text_height > rect_height:
                     overflow_px = text_height - rect_height
                     overflow_pct = (overflow_px / rect_height) * 100
 
-                    severity = (ValidationSeverity.ERROR if overflow_pct > 50 else
-                               ValidationSeverity.WARNING)
+                    severity = (
+                        ValidationSeverity.ERROR
+                        if overflow_pct > 50
+                        else ValidationSeverity.WARNING
+                    )
 
-                    issues.append(ValidationIssue(
-                        issue_type=ValidationType.TEXT_OVERFLOW,
-                        severity=severity,
-                        region=region.name,
-                        description=(
-                            f"Text overflows vertically by {overflow_px:.1f}px "
-                            f"({overflow_pct:.1f}%)"
-                        ),
-                        coordinates=region.rect,
-                        actual_value=f"{text_height:.1f}px",
-                        expected_value=f"<={rect_height}px"
-                    ))
+                    issues.append(
+                        ValidationIssue(
+                            issue_type=ValidationType.TEXT_OVERFLOW,
+                            severity=severity,
+                            region=region.name,
+                            description=(
+                                f"Text overflows vertically by {overflow_px:.1f}px "
+                                f"({overflow_pct:.1f}%)"
+                            ),
+                            coordinates=region.rect,
+                            actual_value=f"{text_height:.1f}px",
+                            expected_value=f"<={rect_height}px",
+                        )
+                    )
 
-                region.text_content = metrics.get('text', '')
+                region.text_content = metrics.get("text", "")
                 region.font_metrics = metrics
 
         except Exception as e:
@@ -267,7 +285,7 @@ class UIValidationEngine:
         x, y, w, h = region.rect
 
         # Extract region from image
-        region_img = img[y:y+h, x:x+w]
+        region_img = img[y : y + h, x : x + w]
 
         # Convert to grayscale and find content pixels
         gray = np.dot(region_img[..., :3], [0.2126, 0.7152, 0.0722])
@@ -286,40 +304,48 @@ class UIValidationEngine:
             edge_threshold = 2  # pixels
 
             if min_row < edge_threshold:
-                issues.append(ValidationIssue(
-                    issue_type=ValidationType.CONTENT_CLIPPED,
-                    severity=ValidationSeverity.ERROR,
-                    region=region.name,
-                    description="Content appears clipped at top edge",
-                    coordinates=(x + min_col, y + min_row, content_width, content_height)
-                ))
+                issues.append(
+                    ValidationIssue(
+                        issue_type=ValidationType.CONTENT_CLIPPED,
+                        severity=ValidationSeverity.ERROR,
+                        region=region.name,
+                        description="Content appears clipped at top edge",
+                        coordinates=(x + min_col, y + min_row, content_width, content_height),
+                    )
+                )
 
             if max_row >= h - edge_threshold:
-                issues.append(ValidationIssue(
-                    issue_type=ValidationType.CONTENT_CLIPPED,
-                    severity=ValidationSeverity.ERROR,
-                    region=region.name,
-                    description="Content appears clipped at bottom edge",
-                    coordinates=(x + min_col, y + min_row, content_width, content_height)
-                ))
+                issues.append(
+                    ValidationIssue(
+                        issue_type=ValidationType.CONTENT_CLIPPED,
+                        severity=ValidationSeverity.ERROR,
+                        region=region.name,
+                        description="Content appears clipped at bottom edge",
+                        coordinates=(x + min_col, y + min_row, content_width, content_height),
+                    )
+                )
 
             if min_col < edge_threshold:
-                issues.append(ValidationIssue(
-                    issue_type=ValidationType.CONTENT_CLIPPED,
-                    severity=ValidationSeverity.ERROR,
-                    region=region.name,
-                    description="Content appears clipped at left edge",
-                    coordinates=(x + min_col, y + min_row, content_width, content_height)
-                ))
+                issues.append(
+                    ValidationIssue(
+                        issue_type=ValidationType.CONTENT_CLIPPED,
+                        severity=ValidationSeverity.ERROR,
+                        region=region.name,
+                        description="Content appears clipped at left edge",
+                        coordinates=(x + min_col, y + min_row, content_width, content_height),
+                    )
+                )
 
             if max_col >= w - edge_threshold:
-                issues.append(ValidationIssue(
-                    issue_type=ValidationType.CONTENT_CLIPPED,
-                    severity=ValidationSeverity.ERROR,
-                    region=region.name,
-                    description="Content appears clipped at right edge",
-                    coordinates=(x + min_col, y + min_row, content_width, content_height)
-                ))
+                issues.append(
+                    ValidationIssue(
+                        issue_type=ValidationType.CONTENT_CLIPPED,
+                        severity=ValidationSeverity.ERROR,
+                        region=region.name,
+                        description="Content appears clipped at right edge",
+                        coordinates=(x + min_col, y + min_row, content_width, content_height),
+                    )
+                )
 
             # Store actual content bounds
             region.content_bounds = (x + min_col, y + min_row, content_width, content_height)
@@ -341,7 +367,7 @@ class UIValidationEngine:
         # Check all pairs of regions
         region_list = list(regions.values())
         for i, region1 in enumerate(region_list):
-            for region2 in region_list[i+1:]:
+            for region2 in region_list[i + 1 :]:
                 x1, y1, w1, h1 = region1.rect
                 x2, y2, w2, h2 = region2.rect
 
@@ -391,15 +417,17 @@ class UIValidationEngine:
                             f"{region1.name} and {region2.name}"
                         )
 
-                    issues.append(ValidationIssue(
-                        issue_type=ValidationType.COLLISION,
-                        severity=severity,
-                        region=f"{region1.name},{region2.name}",
-                        description=desc,
-                        coordinates=(max(x1, x2), max(y1, y2), overlap_x, overlap_y),
-                        actual_value=f"{overlap_area}px²",
-                        expected_value="0px²"
-                    ))
+                    issues.append(
+                        ValidationIssue(
+                            issue_type=ValidationType.COLLISION,
+                            severity=severity,
+                            region=f"{region1.name},{region2.name}",
+                            description=desc,
+                            coordinates=(max(x1, x2), max(y1, y2), overlap_x, overlap_y),
+                            actual_value=f"{overlap_area}px²",
+                            expected_value="0px²",
+                        )
+                    )
 
         return issues
 
@@ -412,17 +440,19 @@ class UIValidationEngine:
         if len(inside_regions) >= 2:
             x_positions = {r.rect[0] for r in inside_regions}
             if len(x_positions) > 1:
-                issues.append(ValidationIssue(
-                    issue_type=ValidationType.MISALIGNMENT,
-                    severity=ValidationSeverity.WARNING,
-                    region=",".join([r.name for r in inside_regions]),
-                    description=(
-                        f"Inside elements not left-aligned: x positions "
-                        f"{sorted(x_positions)}"
-                    ),
-                    actual_value=str(sorted(x_positions)),
-                    expected_value=str(min(x_positions))
-                ))
+                issues.append(
+                    ValidationIssue(
+                        issue_type=ValidationType.MISALIGNMENT,
+                        severity=ValidationSeverity.WARNING,
+                        region=",".join([r.name for r in inside_regions]),
+                        description=(
+                            f"Inside elements not left-aligned: x positions "
+                            f"{sorted(x_positions)}"
+                        ),
+                        actual_value=str(sorted(x_positions)),
+                        expected_value=str(min(x_positions)),
+                    )
+                )
 
         # Check row alignment
         for prefix in ["OUT_ROW1_", "OUT_ROW2_"]:
@@ -430,31 +460,35 @@ class UIValidationEngine:
             if len(row_regions) >= 2:
                 y_positions = {r.rect[1] for r in row_regions}
                 if len(y_positions) > 1 and max(y_positions) - min(y_positions) > 1:
-                    issues.append(ValidationIssue(
-                        issue_type=ValidationType.MISALIGNMENT,
-                        severity=ValidationSeverity.WARNING,
-                        region=",".join([r.name for r in row_regions]),
-                        description=(
-                            f"Row elements not horizontally aligned: y positions "
-                            f"{sorted(y_positions)}"
-                        ),
-                        actual_value=str(sorted(y_positions)),
-                        expected_value=str(min(y_positions))
-                    ))
+                    issues.append(
+                        ValidationIssue(
+                            issue_type=ValidationType.MISALIGNMENT,
+                            severity=ValidationSeverity.WARNING,
+                            region=",".join([r.name for r in row_regions]),
+                            description=(
+                                f"Row elements not horizontally aligned: y positions "
+                                f"{sorted(y_positions)}"
+                            ),
+                            actual_value=str(sorted(y_positions)),
+                            expected_value=str(min(y_positions)),
+                        )
+                    )
 
         # Check 4-pixel grid alignment for v2 layouts
         for region in regions.values():
             x, y, w, h = region.rect
             if x % 4 != 0 or y % 4 != 0:
-                issues.append(ValidationIssue(
-                    issue_type=ValidationType.MISALIGNMENT,
-                    severity=ValidationSeverity.INFO,
-                    region=region.name,
-                    description=f"Position ({x},{y}) not aligned to 4px grid",
-                    coordinates=region.rect,
-                    actual_value=f"({x},{y})",
-                    expected_value="4px multiples"
-                ))
+                issues.append(
+                    ValidationIssue(
+                        issue_type=ValidationType.MISALIGNMENT,
+                        severity=ValidationSeverity.INFO,
+                        region=region.name,
+                        description=f"Position ({x},{y}) not aligned to 4px grid",
+                        coordinates=region.rect,
+                        actual_value=f"({x},{y})",
+                        expected_value="4px multiples",
+                    )
+                )
 
         return issues
 
@@ -472,15 +506,17 @@ class UIValidationEngine:
                 actual_height = region.rect[3]
 
                 if actual_height < min_height:
-                    issues.append(ValidationIssue(
-                        issue_type=ValidationType.FONT_SIZE,
-                        severity=ValidationSeverity.ERROR,
-                        region=region.name,
-                        description=f"Region too small for {expected_font}px font",
-                        coordinates=region.rect,
-                        actual_value=f"{actual_height}px height",
-                        expected_value=f">={min_height:.1f}px height"
-                    ))
+                    issues.append(
+                        ValidationIssue(
+                            issue_type=ValidationType.FONT_SIZE,
+                            severity=ValidationSeverity.ERROR,
+                            region=region.name,
+                            description=f"Region too small for {expected_font}px font",
+                            coordinates=region.rect,
+                            actual_value=f"{actual_height}px height",
+                            expected_value=f">={min_height:.1f}px height",
+                        )
+                    )
 
         return issues
 
@@ -488,16 +524,23 @@ class UIValidationEngine:
         """Start local HTTP server for web simulator"""
         return subprocess.Popen(
             [
-                sys.executable, "-m", "http.server", str(port),
-                "--bind", "127.0.0.1", "-d", self.web_root
+                sys.executable,
+                "-m",
+                "http.server",
+                str(port),
+                "--bind",
+                "127.0.0.1",
+                "-d",
+                self.web_root,
             ],
             stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL
+            stderr=subprocess.DEVNULL,
         )
 
     def _find_free_port(self) -> int:
         """Find an available port"""
         import socket
+
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             s.bind(("127.0.0.1", 0))
             return s.getsockname()[1]
@@ -508,9 +551,9 @@ class UIValidationEngine:
         img = Image.open(io.BytesIO(screenshot_bytes)).convert("RGB")
         return np.array(img)
 
-    def run_validation(self,
-                      test_scenarios: Optional[List[Dict[str, Any]]] = None,
-                      variant: str = "v2_grid") -> ValidationReport:
+    def run_validation(
+        self, test_scenarios: Optional[List[Dict[str, Any]]] = None, variant: str = "v2_grid"
+    ) -> ValidationReport:
         """Run complete validation suite"""
 
         from datetime import datetime
@@ -528,8 +571,8 @@ class UIValidationEngine:
                         "inside_rh": "47%",
                         "outside_rh": "1013 hPa",  # This was causing overflow
                         "wind": "12.5 mph",
-                        "condition": "cloudy"
-                    }
+                        "condition": "cloudy",
+                    },
                 },
                 {
                     "name": "extreme_values",
@@ -541,16 +584,16 @@ class UIValidationEngine:
                         "inside_rh": "100%",
                         "outside_rh": "9999 hPa",
                         "wind": "999.9 mph",
-                        "condition": "thunderstorm"
-                    }
-                }
+                        "condition": "thunderstorm",
+                    },
+                },
             ]
 
         port = self._find_free_port()
         server = self._start_http_server(port)
 
         all_issues = []
-        all_regions = {}
+        all_regions: Dict[str, RegionValidation] = {}
         screenshots = {}
 
         try:
@@ -569,10 +612,12 @@ class UIValidationEngine:
                         page.wait_for_timeout(300)
 
                         # Inject test data
-                        page.evaluate(f"""
+                        page.evaluate(
+                            f"""
                         window.testData = {json.dumps(scenario['data'])};
                         if (window.draw) window.draw();
-                        """)
+                        """
+                        )
                     else:
                         page.goto(url, wait_until="load")
 
@@ -580,7 +625,7 @@ class UIValidationEngine:
 
                     # Capture screenshot
                     screenshot = self.capture_screenshot(page)
-                    screenshots[scenario['name']] = screenshot
+                    screenshots[scenario["name"]] = screenshot
 
                     # Get regions from UI spec, filtering out internal helper rectangles
                     regions = {}
@@ -590,9 +635,7 @@ class UIValidationEngine:
                             if self._is_internal_helper_rect(name):
                                 continue
                             regions[name] = RegionValidation(
-                                name=name,
-                                rect=tuple(rect),
-                                category=self._categorize_region(name)
+                                name=name, rect=tuple(rect), category=self._categorize_region(name)
                             )
 
                     # Run all validations
@@ -621,9 +664,8 @@ class UIValidationEngine:
 
                     # Merge regions
                     for name, region in regions.items():
-                        if (
-                            name not in all_regions or
-                            len(region.issues) > len(all_regions[name].issues)
+                        if name not in all_regions or len(region.issues) > len(
+                            all_regions[name].issues
                         ):
                             all_regions[name] = region
 
@@ -637,25 +679,24 @@ class UIValidationEngine:
         summary = {
             "total_issues": len(all_issues),
             "by_severity": {
-                ValidationSeverity.CRITICAL.value: len([
-                    i for i in all_issues if i.severity == ValidationSeverity.CRITICAL
-                ]),
-                ValidationSeverity.ERROR.value: len([
-                    i for i in all_issues if i.severity == ValidationSeverity.ERROR
-                ]),
-                ValidationSeverity.WARNING.value: len([
-                    i for i in all_issues if i.severity == ValidationSeverity.WARNING
-                ]),
-                ValidationSeverity.INFO.value: len([
-                    i for i in all_issues if i.severity == ValidationSeverity.INFO
-                ])
+                ValidationSeverity.CRITICAL.value: len(
+                    [i for i in all_issues if i.severity == ValidationSeverity.CRITICAL]
+                ),
+                ValidationSeverity.ERROR.value: len(
+                    [i for i in all_issues if i.severity == ValidationSeverity.ERROR]
+                ),
+                ValidationSeverity.WARNING.value: len(
+                    [i for i in all_issues if i.severity == ValidationSeverity.WARNING]
+                ),
+                ValidationSeverity.INFO.value: len(
+                    [i for i in all_issues if i.severity == ValidationSeverity.INFO]
+                ),
             },
             "by_type": {
-                t.value: len([i for i in all_issues if i.issue_type == t])
-                for t in ValidationType
+                t.value: len([i for i in all_issues if i.issue_type == t]) for t in ValidationType
             },
             "regions_with_issues": len([r for r in all_regions.values() if r.issues]),
-            "clean_regions": len([r for r in all_regions.values() if not r.issues])
+            "clean_regions": len([r for r in all_regions.values() if not r.issues]),
         }
 
         return ValidationReport(
@@ -665,12 +706,12 @@ class UIValidationEngine:
             regions=all_regions,
             issues=all_issues,
             summary=summary,
-            screenshots=screenshots
+            screenshots=screenshots,
         )
 
     def _is_internal_helper_rect(self, name: str) -> bool:
         """Check if a rectangle is an internal helper (not a real display region)"""
-        return '_INNER' in name or '_BADGE' in name or 'LABEL_BOX' in name
+        return "_INNER" in name or "_BADGE" in name or "LABEL_BOX" in name
 
     def _categorize_region(self, name: str) -> str:
         """Categorize a region by its name"""
@@ -705,29 +746,34 @@ class UIValidationEngine:
             "",
             f"Regions with Issues: {validation.summary['regions_with_issues']}",
             f"Clean Regions: {validation.summary['clean_regions']}",
-            ""
+            "",
         ]
 
         if validation.issues:
-            lines.extend([
-                "ISSUES BY SEVERITY",
-                "-" * 40,
-            ])
+            lines.extend(
+                [
+                    "ISSUES BY SEVERITY",
+                    "-" * 40,
+                ]
+            )
 
-            for severity in [ValidationSeverity.CRITICAL, ValidationSeverity.ERROR,
-                           ValidationSeverity.WARNING, ValidationSeverity.INFO]:
+            for severity in [
+                ValidationSeverity.CRITICAL,
+                ValidationSeverity.ERROR,
+                ValidationSeverity.WARNING,
+                ValidationSeverity.INFO,
+            ]:
                 severity_issues = [i for i in validation.issues if i.severity == severity]
                 if severity_issues:
                     icon = {
                         ValidationSeverity.CRITICAL: "🔴",
                         ValidationSeverity.ERROR: "🟠",
                         ValidationSeverity.WARNING: "🟡",
-                        ValidationSeverity.INFO: "ℹ️"
+                        ValidationSeverity.INFO: "ℹ️",
                     }[severity]
 
                     lines.append(
-                        f"\n{icon} {severity.value.upper()} "
-                        f"({len(severity_issues)} issues):"
+                        f"\n{icon} {severity.value.upper()} " f"({len(severity_issues)} issues):"
                     )
                     for issue in severity_issues[:10]:  # Limit to first 10 of each type
                         lines.append(f"  • [{issue.region}] {issue.description}")
@@ -737,11 +783,13 @@ class UIValidationEngine:
                                 f"Expected: {issue.expected_value}"
                             )
 
-        lines.extend([
-            "",
-            "REGION DETAILS",
-            "-" * 40,
-        ])
+        lines.extend(
+            [
+                "",
+                "REGION DETAILS",
+                "-" * 40,
+            ]
+        )
 
         for region in validation.regions.values():
             if region.issues:
@@ -776,10 +824,10 @@ class UIValidationEngine:
                     "region": i.region,
                     "description": i.description,
                     "actual": i.actual_value,
-                    "expected": i.expected_value
+                    "expected": i.expected_value,
                 }
                 for i in validation.issues
-            ]
+            ],
         }
         (report_dir / "report.json").write_text(json.dumps(report_json, indent=2))
 
@@ -810,14 +858,14 @@ class UIValidationEngine:
                     overlay = Image.new("RGBA", img.size, (0, 0, 0, 0))
                     overlay_draw = ImageDraw.Draw(overlay)
                     overlay_draw.rectangle(
-                        [x, y, x + w - 1, y + h - 1],
+                        (x, y, x + w - 1, y + h - 1),
                         fill=color,
                         outline=color[:3] + (255,),
-                        width=2
+                        width=2,
                     )
-                    annotated = Image.alpha_composite(
-                        annotated.convert("RGBA"), overlay
-                    ).convert("RGB")
+                    annotated = Image.alpha_composite(annotated.convert("RGBA"), overlay).convert(
+                        "RGB"
+                    )
 
             # Save both versions
             img.save(report_dir / f"{name}_original.png")
@@ -836,8 +884,9 @@ def main():
     parser.add_argument("--variant", default="v2_grid", help="Layout variant to test")
     parser.add_argument("--scenario", help="Test scenario JSON file")
     parser.add_argument("--save", action="store_true", help="Save report to disk")
-    parser.add_argument("--fail-on-critical", action="store_true",
-                       help="Exit with error if critical issues found")
+    parser.add_argument(
+        "--fail-on-critical", action="store_true", help="Exit with error if critical issues found"
+    )
 
     args = parser.parse_args()
 
