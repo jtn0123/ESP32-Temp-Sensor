@@ -2088,7 +2088,7 @@ void setup() {
              ms_boot_to_wifi, ms_wifi_to_mqtt, ms_sensor_read,
              ms_publish, sleep_scheduled_ms, deep_sleep_us,
              reset_reason_str(esp_reset_reason()),
-             wakeup_cause_str(esp_sleep_get_wakeup_cause()),
+             wakeup_cause_str(esp_sleep_get_wakeup_cause()));
     net_publish_debug_json(dbg, false);
     // Publish layout identity for quick visual parity checks in dashboards
     net_publish_layout_identity();
