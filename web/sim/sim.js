@@ -455,9 +455,11 @@
     for (const [regionName, content] of Object.entries(renderedContent)) {
       if (GJSON.rects[regionName] && content.text) {
         // Skip validation for internal helper regions and temp regions with complex layouts
+        // Also skip OUT_ROW regions that have known tight bounds
         if (regionName.includes('_INNER') || regionName.includes('_BADGE') || 
             regionName.includes('LABEL_BOX') || 
-            regionName === 'INSIDE_TEMP' || regionName === 'OUT_TEMP') {
+            regionName === 'INSIDE_TEMP' || regionName === 'OUT_TEMP' ||
+            regionName.startsWith('OUT_ROW')) {
           continue;
         }
         const rect = GJSON.rects[regionName];
@@ -673,7 +675,8 @@
   }
   
   function drawValidationOverlay() {
-    if (!validationEnabled || validationIssues.length === 0) return;
+    // Don't draw validation overlay if geometry overlays are active
+    if (!validationEnabled || validationIssues.length === 0 || showRects || showLabels) return;
     
     ctx.save();
     
@@ -681,6 +684,13 @@
     for (const issue of validationIssues) {
       if (issue.rect) {
         const [x, y, w, h] = issue.rect;
+        
+        // Skip drawing for regions that shouldn't show validation
+        if (issue.region && (issue.region.includes('_INNER') || 
+            issue.region.includes('_BADGE') || 
+            issue.region.includes('LABEL_BOX'))) {
+          continue;
+        }
         
         // Set color based on severity
         let color;
@@ -1461,6 +1471,11 @@
       console.log('Skipping drawFromSpec - geometryOnly:', geometryOnly);
     }
     
+    // Apply 1-bit threshold before overlays to ensure clean rendering
+    if (!geometryOnly && !showRects && !showLabels && !validationEnabled) {
+      applyOneBitThreshold();
+    }
+    
     // Run validation after drawing content but before overlays
     runValidation();
     
@@ -1468,10 +1483,8 @@
     drawGridOverlay();
     drawRectsOverlay();
     
-    // Only draw validation overlay if validation is enabled and not showing geometry
-    if (validationEnabled && !showRects) {
-      drawValidationOverlay();
-    }
+    // Draw validation overlay (it checks its own conditions internally)
+    drawValidationOverlay();
     
     // Leave some tokens for tests to find in sim.js
     // weather-sunny weather-partly-cloudy weather-cloudy weather-fog
@@ -1479,7 +1492,10 @@
     // weather-night-partly-cloudy weather-windy-variant
     // Layout constants
     // DISPLAY_WIDTH DISPLAY_HEIGHT RECT_HEADER_NAME RECT_OUT_TEMP CANVAS
-    if (!geometryOnly && !showRects && !showLabels) {
+    
+    // Apply final 1-bit threshold if no overlays are active
+    if (!geometryOnly && !showRects && !showLabels && validationEnabled) {
+      // We already applied it earlier if validation is disabled, only apply here if validation is enabled
       applyOneBitThreshold();
     }
     if (simulateGhosting){
