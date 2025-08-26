@@ -43,6 +43,10 @@ firmware/arduino/src/generated_config.h
 # Golden test artifacts that may be generated locally per Pillow major version
 tests/golden_default_pil*.md5
 
+# Visual test artifacts
+tests/visual_baselines/
+tests/visual_output/
+
 # Claude.md project-specific instructions
 CLAUDE.md
 

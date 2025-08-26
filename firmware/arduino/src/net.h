@@ -162,6 +162,36 @@ inline bool ends_with(const char* s, const char* suffix) {
   return strcmp(s + (ls - lf), suffix) == 0;
 }
 
+// Map common weather condition codes to condition strings
+inline const char* map_condition_code_to_str(int code) {
+  switch (code) {
+    case 0:
+    case 1:
+      return "clear";
+    case 2:
+      return "part";
+    case 3:
+    case 4:
+      return "cloud";
+    case 5:
+    case 6:
+    case 8:
+      return "rain";
+    case 7:
+      return "snow";
+    case 9:
+      return "thunder";
+    case 45:
+    case 48:
+    case 49:
+    case 50:
+    case 51:
+      return "fog";
+    default:
+      return "clear";
+  }
+}
+
 // -------------------- Time sync (SNTP) --------------------
 #ifndef TIME_FRESH_EPOCH_MIN
 #define TIME_FRESH_EPOCH_MIN 1609459200UL // 2021-01-01,
@@ -377,6 +407,25 @@ inline void mqtt_callback(char* topic, uint8_t* payload, unsigned int length) {
         net_publish_battery(bs.voltage, bs.percent);
       }
     }
+    return;
+  }
+  // Alias topics for compatibility with UI/debug tools
+  if (ends_with(topic, "/temp_f")) {
+    float tf = atof(val);
+    g_outside.temperatureC = (tf - 32.0f) * (5.0f / 9.0f);
+    g_outside.validTemp = isfinite(g_outside.temperatureC);
+    return;
+  } else if (ends_with(topic, "/condition")) {
+    strncpy(g_outside.weather, val, sizeof(g_outside.weather) - 1);
+    g_outside.weather[sizeof(g_outside.weather) - 1] = '\0';
+    g_outside.validWeather = g_outside.weather[0] != '\0';
+    return;
+  } else if (ends_with(topic, "/condition_code")) {
+    int code = atoi(val);
+    const char* cond = map_condition_code_to_str(code);
+    strncpy(g_outside.weather, cond, sizeof(g_outside.weather) - 1);
+    g_outside.weather[sizeof(g_outside.weather) - 1] = '\0';
+    g_outside.validWeather = g_outside.weather[0] != '\0';
     return;
   }
   if (ends_with(topic, "/temp")) {
@@ -779,9 +828,12 @@ inline void ensure_mqtt_connected() {
       Serial.printf("MQTT: subscribed %s\n", topic);
     };
     sub("/temp");
+    sub("/temp_f");
     sub("/hum");
     sub("/rh");
     sub("/weather");
+    sub("/condition");
+    sub("/condition_code");
     sub("/wind");
     sub("/wind_mps");
     sub("/wind_mph");

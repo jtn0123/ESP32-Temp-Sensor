@@ -34,10 +34,11 @@ except Exception as e:  # pragma: no cover
 
 @dataclass
 class LayoutIssue:
-    issue_type: str  # 'overlap', 'gap', 'misalignment', 'overflow'
-    severity: str  # 'critical', 'warning', 'info'
-    regions: List[str]
-    description: str
+    # Defaults provided so tests can introspect class attributes directly
+    issue_type: str = ""  # 'overlap', 'gap', 'misalignment', 'overflow'
+    severity: str = ""  # 'critical', 'warning', 'info'
+    regions: List[str] = None  # type: ignore[assignment]
+    description: str = ""
     coordinates: Optional[Tuple[int, int, int, int]] = None  # x,y,w,h
 
 

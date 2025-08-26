@@ -512,6 +512,15 @@
     document.getElementById('perfReset')?.addEventListener('click', () => {
       perfMetrics.renderTimes = [];
       perfMetrics.frameCount = 0;
+      perfMetrics.fps = 0;
+      perfMetrics.avgRenderTime = 0;
+      perfMetrics.lastFrameTime = performance.now();
+      const fpsEl = document.getElementById('debugFPS');
+      const renderEl = document.getElementById('debugRenderTime');
+      const countEl = document.getElementById('debugFrameCount');
+      if (fpsEl) fpsEl.textContent = '0';
+      if (renderEl) renderEl.textContent = '0';
+      if (countEl) countEl.textContent = '0';
       debugLog('Performance metrics reset', 'info');
     });
     

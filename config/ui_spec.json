@@ -96,8 +96,10 @@
       "OUT_HUMIDITY": ["text"],
       "OUT_WIND": ["text"],
       "HEADER_TIME_CENTER": ["textCenteredIn"],
+      "HEADER_TIME": ["textCenteredIn"],
       "HEADER_VERSION": ["text"],
       "FOOTER_STATUS": ["batteryGlyph", "text", "text", "text"],
+      "FOOTER_L": ["text"],
       "FOOTER_WEATHER": ["textCenteredIn"]
     }
   }

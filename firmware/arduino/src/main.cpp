@@ -29,16 +29,17 @@
 
 // Constant aliases for backward compatibility
 // Map old names to new arrays from display_layout.h
-#define HEADER_TIME RECT_HEADER_TIME_CENTER
-#define HEADER_CENTER RECT_HEADER_TIME_CENTER
+#define HEADER_TIME HEADER_TIME_CENTER
+#define HEADER_CENTER HEADER_TIME_CENTER
 #define INSIDE_RH INSIDE_HUMIDITY  // Backward compat
 #define OUT_ICON WEATHER_ICON      // Map to WEATHER_ICON from display_layout.h
 #define OUT_ROW1_L OUT_WEATHER     // Map to OUT_WEATHER from display_layout.h
 #define OUT_ROW1_R OUT_PRESSURE    // Map to OUT_PRESSURE from display_layout.h
 #define OUT_ROW2_L OUT_HUMIDITY    // Map to OUT_HUMIDITY from display_layout.h
 #define OUT_ROW2_R OUT_WIND        // Map to OUT_WIND from display_layout.h
-#define FOOTER_L RECT_FOOTER_STATUS     // Backward compat
-#define STATUS_ RECT_FOOTER_STATUS      // Map to FOOTER_STATUS (no separate region)
+#define FOOTER_L FOOTER_STATUS     // Backward compat
+#define FOOTER_WEATHER FOOTER_WEATHER
+#define STATUS_ FOOTER_STATUS      // Map to FOOTER_STATUS (no separate region)
 
 // Forward declaration for status pixel tick used in pump_network_ms
 #if USE_STATUS_PIXEL
@@ -1272,7 +1273,7 @@ static void draw_values(const char* in_temp_f, const char* in_rh, const char* ou
 
   // Inside RH
   display.setTextSize(1);
-  display.setCursor(INSIDE_RH[0], INSIDE_RH[1] + TOP_Y_OFFSET);
+  display.setCursor(INSIDE_HUMIDITY[0], INSIDE_HUMIDITY[1] + TOP_Y_OFFSET);
   display.print(in_rh);
   display.print("% RH");
 
@@ -1475,12 +1476,12 @@ static void full_refresh() {
     // Inside RH
     display.setTextSize(1);
     display.setTextColor(GxEPD_BLACK);
-    display.setCursor(INSIDE_RH[0], INSIDE_RH[1] + TOP_Y_OFFSET);
+    display.setCursor(INSIDE_HUMIDITY[0], INSIDE_HUMIDITY[1] + TOP_Y_OFFSET);
     display.print(in_rh);
     display.print("% RH");
 
     // Clear the legacy top-right icon region; the icon is now footer-only
-    display.fillRect(OUT_ICON[0], OUT_ICON[1] + TOP_Y_OFFSET, OUT_ICON[2], OUT_ICON[3],
+    display.fillRect(WEATHER_ICON[0], WEATHER_ICON[1] + TOP_Y_OFFSET, WEATHER_ICON[2], WEATHER_ICON[3],
                      GxEPD_WHITE);
     // Track last icon id using OpenWeather hints when available for consistency
     if (o.validWeather) {
@@ -1496,14 +1497,14 @@ static void full_refresh() {
     if (have_out_rh) {
       display.setTextSize(1);
       display.setTextColor(GxEPD_BLACK);
-      display.setCursor(OUT_ROW2_L[0], OUT_ROW2_L[1] + TOP_Y_OFFSET);
+      display.setCursor(OUT_HUMIDITY[0], OUT_HUMIDITY[1] + TOP_Y_OFFSET);
       display.print(out_rh);
       display.print("% RH");
     }
     if (have_ws) {
       display.setTextSize(1);
       display.setTextColor(GxEPD_BLACK);
-      display.setCursor(OUT_ROW2_R[0], OUT_ROW2_R[1] + TOP_Y_OFFSET);
+      display.setCursor(OUT_WIND[0], OUT_WIND[1] + TOP_Y_OFFSET);
       display.print(ws);
     }
 
@@ -1654,8 +1655,8 @@ static void partial_update_outside_temp(const char* out_temp_f, char trend) {
 }
 
 static void partial_update_outside_rh(const char* out_rh) {
-  int rect[4] = {OUT_ROW2_L[0], static_cast<int16_t>(OUT_ROW2_L[1] + TOP_Y_OFFSET), OUT_ROW2_L[2],
-                 OUT_ROW2_L[3]};
+  int rect[4] = {OUT_HUMIDITY[0], static_cast<int16_t>(OUT_HUMIDITY[1] + TOP_Y_OFFSET), OUT_HUMIDITY[2],
+                 OUT_HUMIDITY[3]};
   draw_in_region(rect, [&](int16_t x, int16_t y, int16_t w, int16_t h) {
     display.setTextColor(GxEPD_BLACK);
     display.setTextSize(1);
@@ -1678,8 +1679,8 @@ static void partial_update_inside_rh(const char* in_rh) {
 }
 
 static void partial_update_weather_icon(const char* weather) {
-  int rect[4] = {OUT_ICON[0], static_cast<int16_t>(OUT_ICON[1] + TOP_Y_OFFSET), OUT_ICON[2],
-                 OUT_ICON[3]};
+  int rect[4] = {WEATHER_ICON[0], static_cast<int16_t>(WEATHER_ICON[1] + TOP_Y_OFFSET), WEATHER_ICON[2],
+                 WEATHER_ICON[3]};
   draw_in_region(rect, [&](int16_t xx, int16_t yy, int16_t ww, int16_t hh) {
     draw_weather_icon_region_at(xx, yy, ww, hh, weather);
   });
