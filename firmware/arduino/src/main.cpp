@@ -469,8 +469,10 @@ static inline void net_publish_layout_identity() {
   char topic[128];
   snprintf(topic, sizeof(topic), "%s/layout", MQTT_PUB_BASE);
   char payload[96];
-  snprintf(payload, sizeof(payload), "{\"layout_version\":%u,\"layout_crc\":\"0x%08X\"}",
-           static_cast<unsigned>(LAYOUT_VERSION), static_cast<unsigned>(LAYOUT_CRC));
+  snprintf(payload, sizeof(payload),
+           "{\"layout_version\":%u,\"layout_crc\":\"0x%08X\"}",
+           static_cast<unsigned>(LAYOUT_VERSION),
+           static_cast<unsigned>(LAYOUT_CRC));
   g_mqtt.publish(topic, payload, true);
 }
 #if USE_DISPLAY
@@ -573,7 +575,8 @@ static void pump_network_ms(uint32_t duration_ms) {
 #endif
 #endif
 
-static Adafruit_NeoPixel s_statusPixel(1, STATUS_PIXEL_PIN, NEO_GRB + NEO_KHZ800);
+static Adafruit_NeoPixel s_statusPixel(1, STATUS_PIXEL_PIN,
+                                       NEO_GRB + NEO_KHZ800);
 static uint32_t s_lastPixelMs = 0;
 static uint8_t s_hue = 0;
 static uint8_t s_breath = 0;  // brightness phase for subtle breathing
@@ -2474,10 +2477,11 @@ void setup() {
     Serial.println("DBG: before metrics json");
     InsideReadings latest = read_inside_sensors();
     emit_metrics_json(latest.temperatureC,
-                       latest.humidityPct,
-                       latest.pressureHPa);
+                      latest.humidityPct,
+                      latest.pressureHPa);
     Serial.println("DBG: after metrics json");
-    Serial.printf("RTC wake count: %u\n", static_cast<unsigned>(rtc_wake_count));
+    Serial.printf("RTC wake count: %u\n",
+                   static_cast<unsigned>(rtc_wake_count));
   }
 
   // Publish a concise timeout summary JSON if MQTT is connected
@@ -2492,7 +2496,8 @@ void setup() {
     Serial.println("DBG: after timeout summary json");
   }
   // Also emit a compact timeouts mask on USB
-  Serial.printf("Timeouts mask: 0x%02X\n", static_cast<unsigned>(s_timeouts_mask));
+  Serial.printf("Timeouts mask: 0x%02X\n",
+                 static_cast<unsigned>(s_timeouts_mask));
   partial_counter++;
   // Persist partial refresh cadence so it survives reset
   g_prefs.putUShort("pcount", partial_counter);
