@@ -998,7 +998,7 @@ static inline void draw_temp_number_and_units(const int r[4],
     int16_t rx = x + (w - tw) / 2;
     int16_t by = y + h - 4;
     display.setCursor(rx, by);
-    display.print(temp_f);
+    display.print(t);
   });
 
   // Draw degree symbol and F in small font inside the units sub-rect
@@ -1137,7 +1137,7 @@ static void draw_header_time(const char* time_str) {
   // Draw centered time within HEADER_CENTER box to avoid overlapping the
   // version
   int rect2[4] =
-      {HEADER_CENTER[0], static_cast<int16_t>(HEADER_CENTER[1] + TOP_Y_OFFSET),;
+      {HEADER_CENTER[0], static_cast<int16_t>(HEADER_CENTER[1] + TOP_Y_OFFSET),
                   HEADER_CENTER[2], HEADER_CENTER[3]};
   draw_in_region(rect2, [&](int16_t xx, int16_t yy, int16_t ww, int16_t hh) {
     display.setTextColor(GxEPD_BLACK);  // comment spacing fix
@@ -1294,7 +1294,7 @@ static void draw_values(const char* in_temp_f, const char* in_rh,
   // Inside temp: numeric right-aligned, units drawn separately
   {
     int rect[4] =
-        {INSIDE_TEMP[0], static_cast<int16_t>(INSIDE_TEMP[1] + TOP_Y_OFFSET),;
+        {INSIDE_TEMP[0], static_cast<int16_t>(INSIDE_TEMP[1] + TOP_Y_OFFSET),
                    INSIDE_TEMP[2], INSIDE_TEMP[3]};
     draw_temp_number_and_units(rect, in_temp_f);
   }
@@ -1310,7 +1310,7 @@ static void draw_values(const char* in_temp_f, const char* in_rh,
   // Outside temp: numeric right-aligned, units drawn separately
   {
     int rect[4] =
-        {OUT_TEMP[0], static_cast<int16_t>(OUT_TEMP[1] + TOP_Y_OFFSET),;
+        {OUT_TEMP[0], static_cast<int16_t>(OUT_TEMP[1] + TOP_Y_OFFSET),
                                                       OUT_TEMP[2],
                    OUT_TEMP[3]};
     draw_temp_number_and_units(rect, out_temp_f);
@@ -1376,11 +1376,13 @@ static IconId map_weather_to_icon(const char* w) {
   if (s == "weather-night-partly-cloudy")
     return ICON_WEATHER_NIGHT_PARTLY_CLOUDY;
   if (s.indexOf("storm") >=
-      0 || s.indexOf("thunder") >= 0 || s.indexOf("lightning") >= 0);
+      0 || s.indexOf("thunder") >= 0 || s.indexOf("lightning") >= 0) {
     return ICON_WEATHER_LIGHTNING;
+  }
   if (s.indexOf("pour") >=
-      0 || s.indexOf("rain") >= 0 || s.indexOf("shower") >= 0);
+      0 || s.indexOf("rain") >= 0 || s.indexOf("shower") >= 0) {
     return ICON_WEATHER_POURING;
+  }
   if (s.indexOf("snow") >= 0)
     return ICON_WEATHER_SNOWY;
   if (s.indexOf("fog") >= 0 || s.indexOf("mist") >= 0 || s.indexOf("haze") >= 0)
@@ -1535,7 +1537,8 @@ static void full_refresh() {
     draw_static_chrome();
     // Inside temp
     draw_temp_number_and_units_direct(INSIDE_TEMP[0],
-                                      static_cast<int16_t>(INSIDE_TEMP[1] + TOP_Y_OFFSET),
+                                      static_cast<int16_t>(
+                                          INSIDE_TEMP[1] + TOP_Y_OFFSET),
                                       INSIDE_TEMP[2], INSIDE_TEMP[3], in_temp);
     // Inside RH
     display.setTextSize(1);
@@ -1545,8 +1548,8 @@ static void full_refresh() {
     display.print("% RH");
 
     // Clear the legacy top-right icon region; the icon is now footer-only
-    display.fillRect(OUT_ICON[0], OUT_ICON[1] + TOP_Y_OFFSET, OUT_ICON[2], OUT_ICON[3],
-                     GxEPD_WHITE);
+    display.fillRect(OUT_ICON[0], OUT_ICON[1] + TOP_Y_OFFSET,
+                     OUT_ICON[2], OUT_ICON[3], GxEPD_WHITE);
     // Track last icon id using OpenWeather hints when available for consistency
     if (o.validWeatherIcon || o.validWeatherId) {
       last_icon_id = static_cast<int32_t>(map_openweather_to_icon(o));
@@ -1556,7 +1559,8 @@ static void full_refresh() {
     // Outside condition text removed from middle; only show condition in footer
     // Outside temp
     draw_temp_number_and_units_direct(OUT_TEMP[0],
-                                       static_cast<int16_t>(OUT_TEMP[1] + TOP_Y_OFFSET),
+                                      static_cast<int16_t>(
+                                          OUT_TEMP[1] + TOP_Y_OFFSET),
                                       OUT_TEMP[2], OUT_TEMP[3], out_temp);
     // Outside RH and wind
     if (have_out_rh) {
@@ -1627,10 +1631,11 @@ static void full_refresh() {
         // small icon on the left, word to the right
         int16_t ix = x + 2;
         int16_t iy = static_cast<int16_t>(y + (h - ICON_H) / 2);
-        IconId icon_id =
-            (o.validWeatherIcon || o.validWeatherId)
-                ? map_openweather_to_icon(o)
-                : (o.validWeather ? map_weather_to_icon(o.weather) : (IconId)last_icon_id);
+        IconId icon_id = (o.validWeatherIcon || o.validWeatherId)
+                           ? map_openweather_to_icon(o)
+                           : (o.validWeather
+                              ? map_weather_to_icon(o.weather)
+                              : (IconId)last_icon_id);
         draw_icon(display, ix, iy, icon_id, GxEPD_BLACK);
         display.setTextColor(GxEPD_BLACK);
         display.setTextSize(1);
@@ -1644,7 +1649,7 @@ static void full_refresh() {
         snprintf(sig, sizeof(sig), "I%d|%s", static_cast<int>(icon_id),
                  (o.validWeather || o.validWeatherDesc) ? sc : "");
         last_footer_weather_crc =
-            fast_crc32(reinterpret_cast<const uint8_t*>(sig),;
+            fast_crc32(reinterpret_cast<const uint8_t*>(sig),
       }
     }
   } while (display.nextPage());
@@ -1811,7 +1816,8 @@ static void partial_update_outside_hilo(float highC, float lowC) {
 }
 
 // Footer-only weather updater using the same geometry as full renders
-static void partial_update_footer_weather_from_outside(const OutsideReadings& o) {
+static void partial_update_footer_weather_from_outside(
+    const OutsideReadings& o) {
   draw_in_region(FOOTER_WEATHER,
                   [&](int16_t x,
                   int16_t y,

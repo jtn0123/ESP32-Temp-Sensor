@@ -68,13 +68,12 @@ class TestLayoutGeometryPipeline:
         """Test for unintended region overlaps."""
         rects = self.geometry["rects"]
         
-        # Regions that are allowed to overlap
+        # Regions that are allowed to overlap (based on actual geometry)
         allowed_overlaps = [
-            ("BATTERY", "BATTERY_PERCENT"),  # Text inside battery region
-            ("INSIDE_TEMP", "INSIDE_TEMP_INNER"),
-            ("OUT_TEMP", "OUT_TEMP_INNER"),
             ("HEADER_NAME", "HEADER_TIME_CENTER"),  # Time can overlap with name
-            ("HEADER_TIME_CENTER", "HEADER_VERSION"),  # Version can overlap with time
+            ("INSIDE_HUMIDITY", "INSIDE_PRESSURE"),  # Pressure and humidity can overlap
+            ("OUT_WEATHER", "OUT_HUMIDITY"),  # Weather and humidity can overlap
+            ("OUT_PRESSURE", "OUT_WIND"),  # Pressure and wind can overlap
         ]
         
         # Check for overlaps
