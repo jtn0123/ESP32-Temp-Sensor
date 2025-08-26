@@ -81,10 +81,8 @@ static inline void draw_in_region(const int rect[4], DrawFnFwd drawFn);
 static inline int16_t text_width_default_font(const char* s,
                                              uint8_t size);
 // Forward decls used by spec renderer implemented earlier in the file
-static inline void draw_temp_number_and_units(const int rect[4],
-static void make_short_condition_cstr(const char* weather,
-                                       char* out,
-// Remove duplicate non-inline declaration to avoid separate symbol
+static inline void draw_temp_number_and_units(const int rect[4], const char* temp_f);
+static void make_short_condition_cstr(const char* weather, char* out, size_t out_size);
 #if USE_UI_SPEC
 // Minimal spec interpreter (full-window only) for variant rendering
 static void draw_from_spec_full(uint8_t variantId);
@@ -988,12 +986,8 @@ static inline void draw_right_aligned_text_in_rect(
   });
 }
 
-static inline void draw_temp_number_and_units(
-    num_rect,
-    [&](int16_t x,
-    int16_t y,
-    int16_t w,
-    int16_t h) {
+static inline void draw_temp_number_and_units(const int num_rect[4], const char* temp_f) {
+  const int* units_rect = num_rect;  // For now, use same rect for units
   draw_in_region(num_rect, [&](int16_t x, int16_t y, int16_t w, int16_t h) {
     display.setTextColor(GxEPD_BLACK);
     display.setTextSize(2);
@@ -1324,6 +1318,8 @@ static IconId map_weather_to_icon(const char* w) {
   String s(w);
   s.toLowerCase();
   // First handle Home Assistant recommended values exactly
+
+  // 
   // https://developers.home-assistant.io/docs/core/entity/weather/#recommended-values-for-state-and-condition
   if (s == "clear-night")
     return ICON_WEATHER_NIGHT;
@@ -1814,7 +1810,8 @@ static void partial_update_footer_weather_from_outside(const OutsideReadings& o)
       icon_id = map_weather_to_icon(o.weather);
     else
       icon_id =
-          (last_icon_id >= 0) ? static_cast<IconId>(last_icon_id) : ICON_WEATHER_SUNNY;
+          (last_icon_id >=
+              0) ? static_cast<IconId>(last_icon_id) : ICON_WEATHER_SUNNY;
     draw_icon(display, ix, iy, icon_id, GxEPD_BLACK);
     // Short condition text to the right of the icon
     char sc[24];

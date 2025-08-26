@@ -43,7 +43,7 @@ class TestUIValidationEdgeCases:
         # Regions that should be excluded from collision detection
         exclusion_patterns = ["_INNER", "_BADGE", "_ICON", "_LABEL"]
         
-        regions = self.geometry["regions"]
+        rects = self.geometry["rects"]
         collisions = []
         
         for name1, r1 in regions.items():
