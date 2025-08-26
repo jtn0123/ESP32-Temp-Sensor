@@ -415,6 +415,64 @@ RTC_DATA_ATTR static float last_published_inside_rh = NAN;
 RTC_DATA_ATTR static float last_published_inside_pressureHPa = NAN;
 RTC_DATA_ATTR static uint32_t last_status_crc = 0;
 RTC_DATA_ATTR static float last_inside_rh = NAN;
+
+// Timeout tracking
+static uint32_t s_timeouts_mask = 0;
+
+// Timeout bit constants
+#define TIMEOUT_BIT_SENSOR 1
+#define TIMEOUT_BIT_FETCH 2
+#define TIMEOUT_BIT_DISPLAY 4
+#define TIMEOUT_BIT_PUBLISH 8
+
+// Layout version for device identity
+#ifndef LAYOUT_VERSION
+#define LAYOUT_VERSION 1
+#endif
+#ifndef LAYOUT_CRC
+#define LAYOUT_CRC 0x08C0813Au
+#endif
+
+// Threshold constants for change detection
+#ifndef THRESH_TEMP_C_FROM_F
+#define THRESH_TEMP_C_FROM_F 0.5f
+#endif
+#ifndef THRESH_RH
+#define THRESH_RH 1.0f
+#endif
+#ifndef THRESH_PRESS_HPA
+#define THRESH_PRESS_HPA 1.0f
+#endif
+
+// Missing function implementations
+static inline void nvs_end_cache() {
+  // Note: g_prefs is declared later in the file, so we can't access it here
+  // This function needs to be moved or g_prefs needs to be made accessible
+}
+
+// Forward declarations for functions used by print_boot_diagnostics
+static const char* reset_reason_str(esp_reset_reason_t r);
+static const char* wakeup_cause_str(esp_sleep_wakeup_cause_t c);
+
+
+
+static inline void net_time_hhmm(char* out, size_t out_size) {
+  if (!out || out_size == 0) return;
+  time_t now = time(nullptr);
+  struct tm tm_now;
+  localtime_r(&now, &tm_now);
+  snprintf(out, out_size, "%02d:%02d", tm_now.tm_hour, tm_now.tm_min);
+}
+
+static inline void net_publish_layout_identity() {
+  if (!g_mqtt.connected()) return;
+  char topic[128];
+  snprintf(topic, sizeof(topic), "%s/layout", MQTT_PUB_BASE);
+  char payload[96];
+  snprintf(payload, sizeof(payload), "{\"layout_version\":%u,\"layout_crc\":\"0x%08X\"}",
+           static_cast<unsigned>(LAYOUT_VERSION), static_cast<unsigned>(LAYOUT_CRC));
+  g_mqtt.publish(topic, payload, true);
+}
 #if USE_DISPLAY
 // Ensure the very first wake after flashing or power-on does a full render
 RTC_DATA_ATTR static bool needs_full_on_boot = true;
@@ -457,17 +515,17 @@ static inline void nvs_load_cache_if_unset() {
   g_full_only_mode = g_prefs.getUChar("full_only", 0) != 0;
   // Remove legacy ui_variant preference; single UI variant remains
 }
-static inline void nvs_store_float(
-    key,
-    ) {
-static inline void nvs_store_uint(
-    const char* key,
-    uint32_t v) {
+static inline void nvs_store_float(const char* key, float v) {
+  g_prefs.putFloat(key, v);
+}
+static inline void nvs_store_uint(const char* key, uint32_t v) {
+  g_prefs.putUInt(key, v);
+}
 static inline void print_boot_diagnostics() {
   Serial.printf("Reset: %s, Wake: %s\n", reset_reason_str(esp_reset_reason()),
                 wakeup_cause_str(esp_sleep_get_wakeup_cause()));
   Serial.printf("Heap: free=%u min=%u\n",
-                 static_cast<unsigned>(esp_get_free_heap_size()),
+                static_cast<unsigned>(esp_get_free_heap_size()),
                 static_cast<unsigned>(esp_get_minimum_free_heap_size()));
 }
 
@@ -515,8 +573,7 @@ static void pump_network_ms(uint32_t duration_ms) {
 #endif
 #endif
 
-static Adafruit_NeoPixel s_statusPixel(1,
-                                        STATUS_PIXEL_PIN,
+static Adafruit_NeoPixel s_statusPixel(1, STATUS_PIXEL_PIN, NEO_GRB + NEO_KHZ800);
 static uint32_t s_lastPixelMs = 0;
 static uint8_t s_hue = 0;
 static uint8_t s_breath = 0;  // brightness phase for subtle breathing
@@ -582,6 +639,7 @@ static void emit_metrics_json(float tempC, float rhPct, float pressHPa) {
     snprintf(crcbuf,
               sizeof(crcbuf),
               "0x%08X",
+              static_cast<unsigned>(LAYOUT_CRC));
     Serial.print(crcbuf);
   }
   Serial.print("\"");
@@ -714,6 +772,7 @@ static void handle_serial_command_line(const String& line) {
     InsideReadings latest = read_inside_sensors();
     emit_metrics_json(latest.temperatureC,
                        latest.humidityPct,
+                       latest.pressureHPa);
     return;
   }
   if (op == "ptest") {
@@ -1901,12 +1960,12 @@ void setup() {
   Serial.println(F("ESP32 eInk Room Node boot"));
   print_boot_diagnostics();
   // Increment RTC wake counter on any reset except true power-on
-  if (esp_reset_reason() =
-      = ESP_RST_DEEPSLEEP || esp_reset_reason() == ESP_RST_SW ||;
-      esp_reset_reason() =
-          = ESP_RST_WDT || esp_reset_reason() == ESP_RST_PANIC ||;
-      esp_reset_reason() =
-          = ESP_RST_BROWNOUT || esp_reset_reason() == ESP_RST_TASK_WDT ||;
+  if (esp_reset_reason() == ESP_RST_DEEPSLEEP ||
+      esp_reset_reason() == ESP_RST_SW ||
+      esp_reset_reason() == ESP_RST_WDT ||
+      esp_reset_reason() == ESP_RST_PANIC ||
+      esp_reset_reason() == ESP_RST_BROWNOUT ||
+      esp_reset_reason() == ESP_RST_TASK_WDT ||
       esp_reset_reason() == ESP_RST_INT_WDT) {
     rtc_wake_count++;
   } else {
@@ -1934,6 +1993,7 @@ void setup() {
   Serial.printf("EINK %dx%d (rotation=%d)\n",
                  display.width(),
                  display.height(),
+                 display.getRotation());
 #endif
   nvs_begin_cache();
   nvs_load_cache_if_unset();
@@ -2026,8 +2086,8 @@ void setup() {
              "\"reset_reason\":\"%s\",\"wakeup_cause\":\"%s\","
              "\"rtc_wake_count\":%u}",
              ms_boot_to_wifi, ms_wifi_to_mqtt, ms_sensor_read,
-             ms_publish, sleep_scheduled_ms,
-             deep_sleep_us, reset_reason_str(esp_reset_reason()),
+             ms_publish, sleep_scheduled_ms, deep_sleep_us,
+             reset_reason_str(esp_reset_reason()),
              wakeup_cause_str(esp_sleep_get_wakeup_cause()),
     net_publish_debug_json(dbg, false);
     // Publish layout identity for quick visual parity checks in dashboards
@@ -2350,6 +2410,7 @@ void setup() {
     s_timeouts_mask |= TIMEOUT_BIT_SENSOR;
     Serial.printf("Timeout: sensor read exceeded budget ms=%u budget=%u\n",
                   static_cast<unsigned>(sens2_ms),
+                  static_cast<unsigned>(SENSOR_PHASE_TIMEOUT_MS));
   }
   uint32_t publish_phase_start = millis();
   bool publish_any = false;
@@ -2414,8 +2475,9 @@ void setup() {
     InsideReadings latest = read_inside_sensors();
     emit_metrics_json(latest.temperatureC,
                        latest.humidityPct,
+                       latest.pressureHPa);
     Serial.println("DBG: after metrics json");
-    Serial.printf("RTC wake count: %u\n",
+    Serial.printf("RTC wake count: %u\n", static_cast<unsigned>(rtc_wake_count));
   }
 
   // Publish a concise timeout summary JSON if MQTT is connected
@@ -2430,8 +2492,7 @@ void setup() {
     Serial.println("DBG: after timeout summary json");
   }
   // Also emit a compact timeouts mask on USB
-  Serial.printf("Timeouts mask: 0x%02X\n",
-
+  Serial.printf("Timeouts mask: 0x%02X\n", static_cast<unsigned>(s_timeouts_mask));
   partial_counter++;
   // Persist partial refresh cadence so it survives reset
   g_prefs.putUShort("pcount", partial_counter);
@@ -2479,6 +2540,7 @@ void setup() {
       InsideReadings latest = read_inside_sensors();
       emit_metrics_json(latest.temperatureC,
                          latest.humidityPct,
+                         latest.pressureHPa);
       last_metrics = millis();
     }
 #if USE_DISPLAY
