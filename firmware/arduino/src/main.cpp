@@ -2025,9 +2025,8 @@ void setup() {
              "\"sleep_scheduled_ms\":%u,\"deep_sleep_us\":%u,"
              "\"reset_reason\":\"%s\",\"wakeup_cause\":\"%s\","
              "\"rtc_wake_count\":%u}",
-                          ms_boot_to_wifi,
-                 ms_wifi_to_mqtt, ms_sensor_read, ms_publish,
-                 sleep_scheduled_ms,
+             ms_boot_to_wifi, ms_wifi_to_mqtt, ms_sensor_read,
+             ms_publish, sleep_scheduled_ms,
              deep_sleep_us, reset_reason_str(esp_reset_reason()),
              wakeup_cause_str(esp_sleep_get_wakeup_cause()),
     net_publish_debug_json(dbg, false);
@@ -2038,9 +2037,10 @@ void setup() {
   // Allow retained MQTT to arrive quickly for outside readings (bounded)
   static bool g_outside_warned = false;
   uint32_t fetch_start_ms = millis();
-  bool outside_before =
-      net_get_outside().validTemp || net_get_outside().validHum ||
-      net_get_outside().validWeather || net_get_outside().validWind;
+  bool outside_before = net_get_outside().validTemp ||
+                        net_get_outside().validHum ||
+                        net_get_outside().validWeather ||
+                        net_get_outside().validWind;
   Serial.println("DBG: start fetch retained");
   // Actively wait until any outside retained value arrives or timeout
   {
@@ -2054,18 +2054,17 @@ void setup() {
     }
   }
   uint32_t ms_fetch = static_cast<uint32_t>(millis() - fetch_start_ms);
-  Serial.printf("DBG: after fetch retained ms=%u\n",
-                static_cast<unsigned>(ms_fetch));
-  bool outside_after =
-      net_get_outside().validTemp || net_get_outside().validHum ||
-      net_get_outside().validWeather || net_get_outside().validWind;
-  if (ms_fetch >=
-      static_cast<uint32_t>(FETCH_RETAINED_TIMEOUT_MS) && !outside_after &&
-      !outside_before && !g_outside_warned) {
+  Serial.printf("DBG: after fetch retained ms=%u\n", ms_fetch);
+  bool outside_after = net_get_outside().validTemp ||
+                       net_get_outside().validHum ||
+                       net_get_outside().validWeather ||
+                       net_get_outside().validWind;
+  if (ms_fetch >= static_cast<uint32_t>(FETCH_RETAINED_TIMEOUT_MS) &&
+      !outside_after && !outside_before && !g_outside_warned) {
     s_timeouts_mask |= TIMEOUT_BIT_FETCH;
     g_outside_warned = true;  // only warn once until outside data later appears
-        Serial.printf("Note: no outside retained data yet (waited %u ms). "
-                      "Continuing...\n",
+    Serial.printf("Note: no outside retained data yet (waited %u ms). "
+                  "Continuing...\n",
   }
 
   // Publish a retained UI-debug snapshot so tests/diagnostics can assert what
@@ -2076,22 +2075,20 @@ void setup() {
     char buf[320];
     char hhmm_dbg[8];
     net_time_hhmm(hhmm_dbg, sizeof(hhmm_dbg));
-    float tempF =
-        (o.validTemp &&
-         isfinite(o.temperatureC)) ?
-         (o.temperatureC * 9.0f / 5.0f + 32.0f) : NAN;
+    float tempF = (o.validTemp && isfinite(o.temperatureC))
+                   ? (o.temperatureC * 9.0f / 5.0f + 32.0f)
+                   : NAN;
     const char* w = (o.validWeather && o.weather[0]) ? o.weather : NULL;
     const char* wd =
         (o.validWeatherDesc && o.weatherDesc[0]) ? o.weatherDesc : NULL;
     const char* wi =
         (o.validWeatherIcon && o.weatherIcon[0]) ? o.weatherIcon : NULL;
     // Include time used for header to aid troubleshooting
-    snprintf(
-        buf, sizeof(buf),
-        "{\"event\":\"ui_debug\",\"time\":\"%s\","
-        "\"outside\":{\"tempF\":%s,\"rhPct\":%s,"
-        "\"windMps\":%s,\"weather\":%s,\"weatherId\":%d,"
-        "\"weatherDesc\":%s,\"weatherIcon\":%s}}",
+    snprintf(buf, sizeof(buf),
+             "{\"event\":\"ui_debug\",\"time\":\"%s\","
+             "\"outside\":{\"tempF\":%s,\"rhPct\":%s,\"windMps\":%s,"
+             "\"weather\":%s,\"weatherId\":%d,\"weatherDesc\":%s,"
+             "\"weatherIcon\":%s}}",
         hhmm_dbg, (isfinite(tempF) ? String(tempF, 1).c_str() : "null"),
         (o.validHum && isfinite(o.humidityPct) ? String(o.humidityPct,
           0).c_str() : "null"),
@@ -2351,8 +2348,7 @@ void setup() {
   uint32_t sens2_ms = static_cast<uint32_t>(millis() - sens2_start);
   if (sens2_ms > static_cast<uint32_t>(SENSOR_PHASE_TIMEOUT_MS)) {
     s_timeouts_mask |= TIMEOUT_BIT_SENSOR;
-    Serial.printf("Timeout: sensor read exceeded budget ms=%u "
-                  "budget=%u\n",
+    Serial.printf("Timeout: sensor read exceeded budget ms=%u budget=%u\n",
                   static_cast<unsigned>(sens2_ms),
   }
   uint32_t publish_phase_start = millis();
@@ -2360,10 +2356,10 @@ void setup() {
   if (isfinite(r.temperatureC) && isfinite(r.humidityPct)) {
     bool temp_changed = (!isfinite(last_published_inside_tempC)) ||
                          fabsf(r.temperatureC - last_published_inside_tempC) >=
-                         THRESH_TEMP_C_FROM_F;
+                             THRESH_TEMP_C_FROM_F;
     bool rh_changed = (!isfinite(last_published_inside_rh)) ||
-                       fabsf(r.humidityPct - last_published_inside_rh) >=
-                       THRESH_RH;
+                      fabsf(r.humidityPct - last_published_inside_rh) >=
+                          THRESH_RH;
     if (temp_changed || rh_changed) {
       net_publish_inside(r.temperatureC, r.humidityPct);
       publish_any = true;
@@ -2374,9 +2370,9 @@ void setup() {
     }
   }
   if (isfinite(r.pressureHPa)) {
+    float diff = fabsf(r.pressureHPa - last_published_inside_pressureHPa);
     bool p_changed = (!isfinite(last_published_inside_pressureHPa)) ||
-                                          fabsf(r.pressureHPa -
-                         last_published_inside_pressureHPa) >= THRESH_PRESS_HPA;
+                     (diff >= THRESH_PRESS_HPA);
     if (p_changed) {
       net_publish_pressure(r.pressureHPa);
       publish_any = true;
