@@ -1,21 +1,23 @@
 (function(){
   console.log('IIFE starting...');
   let WIDTH = 250, HEIGHT = 122;
-  // Rectangles use [x, y, w, h]
+  // Rectangles use [x, y, w, h] - from display_geometry.json
   let HEADER_NAME = [  6,  2, 160, 14];
   let HEADER_VERSION = [172,  2,  72, 14];
   let HEADER_TIME_CENTER = [100,  2,  50, 14];
   let INSIDE_TEMP = [  6, 36, 118, 28];
   let INSIDE_HUMIDITY = [  6, 66, 118, 14];
-  let INSIDE_PRESSURE = [  6, 82, 118, 12];
-  let OUT_TEMP    = [131, 36,  90, 28];
-  // Place icon higher so tests sampling around y=30 see non-white pixels
-  let WEATHER_ICON = [210, 22,  28, 28];
+  let INSIDE_PRESSURE = [  6, 78, 118, 12];
+  let OUT_TEMP    = [129, 36,  94, 28];
+  let WEATHER_ICON = [168, 90,  30, 32];
   // Outside metric regions with meaningful names
   let OUT_WEATHER  = [131, 68,  44, 12]; // Weather description
   let OUT_PRESSURE = [177, 68,  64, 12]; // Outside pressure
   let OUT_HUMIDITY = [131, 78,  44, 12]; // Outside humidity
   let OUT_WIND     = [177, 78,  44, 12]; // Wind speed
+  // Footer regions
+  let FOOTER_STATUS = [  6, 90, 160, 32];
+  let FOOTER_WEATHER = [200, 90,  44, 32];
 
   let canvas = null;
   let ctx = null;

@@ -62,8 +62,8 @@ def test_web_sim_basic_pixels():
             assert (r, g, b) == (0, 0, 0)
 
             # In split3 layout, a horizontal rule above the status stack
-            # is drawn around y≈92
-            r, g, b, a = _canvas_rgba(page, 5, 92)
+            # is drawn at y=84 (6 pixels above footer at y=90)
+            r, g, b, a = _canvas_rgba(page, 5, 84)
             assert (r, g, b) == (0, 0, 0)
 
             # Bottom-right weather area (split3) should contain some non-white pixels
