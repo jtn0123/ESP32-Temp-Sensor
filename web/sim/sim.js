@@ -454,8 +454,10 @@
     // Check rendered content for overflow and incomplete data
     for (const [regionName, content] of Object.entries(renderedContent)) {
       if (GJSON.rects[regionName] && content.text) {
-        // Skip validation for regions handled by tempGroupCentered (they have complex layouts)
-        if (regionName === 'INSIDE_TEMP' || regionName === 'OUT_TEMP') {
+        // Skip validation for internal helper regions and temp regions with complex layouts
+        if (regionName.includes('_INNER') || regionName.includes('_BADGE') || 
+            regionName.includes('LABEL_BOX') || 
+            regionName === 'INSIDE_TEMP' || regionName === 'OUT_TEMP') {
           continue;
         }
         const rect = GJSON.rects[regionName];
@@ -976,7 +978,7 @@
     pendingDraw = requestAnimationFrame(()=>{ pendingDraw = 0; draw({}); });
   }
 
-  function text(x,y,str,size=10,weight='normal',regionName){
+  function text(x,y,str,size=10,weight='normal',regionName=null){
     ctx.fillStyle = '#000';
     ctx.font = `${weight} ${size}px ${FONT_STACK}`;
     ctx.textBaseline = 'top';
@@ -1213,12 +1215,12 @@
               const unitsW = badge ? badge[2] : 14;
               const tw = ctx.measureText(s).width;
               const totalW = Math.min(Math.max(0,areaW-2), tw + unitsW);
-              const left = areaX + Math.max(0, Math.floor((areaW - totalW)/2));
+              const left = Math.round(areaX + Math.max(0, Math.floor((areaW - totalW)/2)));
               // Center text vertically in the area
               const areaH = area[3] || 28;
-              const yTop = areaY + Math.max(0, Math.floor((areaH - fontSize) / 2));
-              // Don't track validation for tempGroupCentered - it uses complex layout
-              text(left, yTop, s, fontSize, 'bold', null);
+              const yTop = Math.round(areaY + Math.max(0, Math.floor((areaH - fontSize) / 2)));
+              // Don't track region for tempGroupCentered - it has complex layout
+              text(left, yTop, s, fontSize, 'bold');
               if (badge){
                 // Don't draw border around badge - just the text
                 text(badge[0] + 2, badge[1] + Math.max(0, Math.floor((badge[3]-10)/2)), '°F', 10);
@@ -1458,12 +1460,18 @@
     } else {
       console.log('Skipping drawFromSpec - geometryOnly:', geometryOnly);
     }
+    
+    // Run validation after drawing content but before overlays
+    runValidation();
+    
+    // Draw overlays only if enabled
     drawGridOverlay();
     drawRectsOverlay();
     
-    // Run validation after drawing
-    runValidation();
-    drawValidationOverlay();
+    // Only draw validation overlay if validation is enabled and not showing geometry
+    if (validationEnabled && !showRects) {
+      drawValidationOverlay();
+    }
     
     // Leave some tokens for tests to find in sim.js
     // weather-sunny weather-partly-cloudy weather-cloudy weather-fog

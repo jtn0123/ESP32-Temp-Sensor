@@ -127,7 +127,9 @@ class VisualLayoutAnalyzer:
         over = Image.open(io.BytesIO(over_png)).convert("RGB")
         return np.array(base), np.array(over), rects
 
-    def analyze_coverage(self, img: np.ndarray, rects: Dict[str, List[int]]) -> Dict[str, RegionAnalysis]:
+    def analyze_coverage(
+        self, img: np.ndarray, rects: Dict[str, List[int]]
+    ) -> Dict[str, RegionAnalysis]:
         H, W = img.shape[0], img.shape[1]
         # Convert to grayscale and threshold
         gray = (
@@ -153,7 +155,9 @@ class VisualLayoutAnalyzer:
             out[name] = RegionAnalysis(name, (x,y,w,h), self._categorize(name), cov, bounds, [])
         return out
 
-    def detect_empty_blocks(self, analyses: Dict[str, RegionAnalysis], variant: str) -> List[LayoutIssue]:
+    def detect_empty_blocks(
+        self, analyses: Dict[str, RegionAnalysis], variant: str
+    ) -> List[LayoutIssue]:
         issues: List[LayoutIssue] = []
         expected_content_regions: Dict[str, Dict[str, str]] = {
             'v2_grid': {
@@ -171,7 +175,10 @@ class VisualLayoutAnalyzer:
         min_cov = {'header': 1.0, 'temp': 15.0, 'label': 8.0, 'footer': 3.0, 'other': 2.0}
         for name, hint in expected.items():
             if name not in analyses:
-                issues.append(LayoutIssue('missing_region', 'critical', [name], f"Expected region {name} ({hint}) not found in {variant}"))
+                issues.append(LayoutIssue(
+                    'missing_region', 'critical', [name],
+                    f"Expected region {name} ({hint}) not found in {variant}"
+                ))
                 continue
             a = analyses[name]
             thr = min_cov.get(a.category, 2.0)
@@ -182,10 +189,17 @@ class VisualLayoutAnalyzer:
                     sev = 'warning'
                 else:
                     sev = 'info'
-                issues.append(LayoutIssue('empty_content', sev, [name], f"{name} appears empty: {a.pixel_coverage:.1f}% (< {thr}%) for {hint}", a.rect))
+                issues.append(LayoutIssue(
+                    'empty_content', sev, [name],
+                    f"{name} appears empty: {a.pixel_coverage:.1f}% "
+                    f"(< {thr}%) for {hint}", a.rect
+                ))
         return issues
 
-    def generate_enhanced_text_report(self, variant: str, analyses: Dict[str, RegionAnalysis], issues: List[LayoutIssue]) -> str:
+    def generate_enhanced_text_report(
+        self, variant: str, analyses: Dict[str, RegionAnalysis],
+        issues: List[LayoutIssue]
+    ) -> str:
         lines: List[str] = [
             f"Enhanced Visual Layout Analysis - {variant.upper()}",
             "=" * 60,
@@ -208,16 +222,31 @@ class VisualLayoutAnalyzer:
         for cat, arr in cats.items():
             avg_cov = sum(x.pixel_coverage for x in arr)/len(arr)
             empty = len([x for x in arr if x.pixel_coverage < 2.0])
-            lines.append(f"• {cat.title()}: {len(arr)} regions, avg {avg_cov:.1f}% coverage, {empty} empty")
+            lines.append(
+                f"• {cat.title()}: {len(arr)} regions, "
+                f"avg {avg_cov:.1f}% coverage, {empty} empty"
+            )
         return "\n".join(lines)
 
-    def _generate_variant_summary(self, analyses: Dict[str, RegionAnalysis], issues: List[LayoutIssue]) -> Dict[str, object]:
+    def _generate_variant_summary(
+        self, analyses: Dict[str, RegionAnalysis],
+        issues: List[LayoutIssue]
+    ) -> Dict[str, object]:
         crit = [i for i in issues if i.severity == 'critical']
         warn = [i for i in issues if i.severity == 'warning']
-        # Count empty regions via reported issues (critical/warning), rather than raw pixel threshold
-        empty_issue_count = len([i for i in issues if i.issue_type == 'empty_content' and i.severity in ('critical','warning')])
-        bounds_ok = len([a for a in analyses.values() if (a.rect[0]+a.rect[2] <= 250 and a.rect[1]+a.rect[3] <= 122)])
-        avg_cov = (sum(a.pixel_coverage for a in analyses.values())/len(analyses)) if analyses else 0.0
+        # Count empty regions via reported issues (critical/warning),
+        # rather than raw pixel threshold
+        empty_issue_count = len([
+            i for i in issues
+            if i.issue_type == 'empty_content' and i.severity in ('critical','warning')
+        ])
+        bounds_ok = len([
+            a for a in analyses.values()
+            if (a.rect[0]+a.rect[2] <= 250 and a.rect[1]+a.rect[3] <= 122)
+        ])
+        avg_cov = (
+            sum(a.pixel_coverage for a in analyses.values())/len(analyses)
+        ) if analyses else 0.0
         return {
             'total_regions': len(analyses),
             'total_issues': len(issues),

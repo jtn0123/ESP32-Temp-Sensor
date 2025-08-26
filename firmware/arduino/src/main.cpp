@@ -410,9 +410,9 @@ RTC_DATA_ATTR static float last_inside_rh = NAN;
 RTC_DATA_ATTR static bool needs_full_on_boot = true;
 #endif
 #ifdef FORCE_FULL_ONLY
-static bool g_full_only_mode = true; // compile-time force full refresh only
+static bool g_full_only_mode = true;  // compile-time force full refresh only
 #else
-static bool g_full_only_mode = false; // when true, always do full refresh
+static bool g_full_only_mode = false;  // when true, always do full refresh
                                       // (debug)
 #endif
 
@@ -451,7 +451,7 @@ static inline void nvs_store_int(const char* key, int32_t v) { g_prefs.putInt(ke
 static inline void nvs_store_uint(const char* key, uint32_t v) { g_prefs.putUInt(key, v); }
 
 static constexpr float THRESH_TEMP_F = 0.2f;                        // redraw/publish threshold in F
-static constexpr float THRESH_TEMP_C_FROM_F = THRESH_TEMP_F / 1.8f; // ~0.111C
+static constexpr float THRESH_TEMP_C_FROM_F = THRESH_TEMP_F / 1.8f;  // ~0.111C
 static constexpr float THRESH_RH = 1.0f;                            // percent
 static constexpr float THRESH_PRESS_HPA = 0.5f;                     // hPa
 
@@ -521,7 +521,7 @@ static void pump_network_ms(uint32_t duration_ms) {
 static Adafruit_NeoPixel s_statusPixel(1, STATUS_PIXEL_PIN, NEO_GRB + NEO_KHZ800);
 static uint32_t s_lastPixelMs = 0;
 static uint8_t s_hue = 0;
-static uint8_t s_breath = 0; // brightness phase for subtle breathing
+static uint8_t s_breath = 0;  // brightness phase for subtle breathing
 
 static uint32_t color_wheel(uint8_t pos) {
   pos = 255 - pos;
@@ -550,7 +550,7 @@ static inline void status_pixel_off() {
 static inline void status_pixel_tick() {
   uint32_t now = millis();
   if (now - s_lastPixelMs < 40)
-    return; // slower update for smooth, slow cycle
+    return;  // slower update for smooth, slow cycle
   s_lastPixelMs = now;
   s_hue++;
   s_breath++;
@@ -942,7 +942,7 @@ static inline void draw_in_region(const int rect[4],
   // panels
   // to avoid controller rejects or missing updates on unaligned windows.
   int16_t ax = x & ~0x07;
-  int16_t ar = x + w; // right edge (exclusive)
+  int16_t ar = x + w;  // right edge (exclusive)
   int16_t aw = static_cast<int16_t>(((ar - ax) + 7) & ~0x07);
   display.setPartialWindow(ax, y, aw, h);
   display.firstPage();
@@ -973,7 +973,7 @@ static inline void draw_right_aligned_text_in_rect(const int rect[4], const char
 static inline void draw_temp_number_and_units(const int rect[4], const char* temp_f) {
   // Reserve a small units strip on the right so units do not shift as number
   // width changes
-  const int16_t units_w = 14; // pixels
+  const int16_t units_w = 14;  // pixels
   int num_rect[4] = {rect[0], rect[1], rect[2] - units_w, rect[3]};
   int units_rect[4] = {rect[0] + rect[2] - units_w, rect[1], units_w, rect[3]};
 
@@ -1109,11 +1109,11 @@ static void draw_header_time(const char* time_str) {
   int rect2[4] = {HEADER_CENTER[0], static_cast<int16_t>(HEADER_CENTER[1] + TOP_Y_OFFSET),
                   HEADER_CENTER[2], HEADER_CENTER[3]};
   draw_in_region(rect2, [&](int16_t xx, int16_t yy, int16_t ww, int16_t hh) {
-    display.setTextColor(GxEPD_BLACK); // comment spacing fix
+    display.setTextColor(GxEPD_BLACK);  // comment spacing fix
     display.setTextSize(1);
     int16_t tw = text_width_default_font(time_str, 1);
     int16_t rx = static_cast<int16_t>(xx + (ww - tw) / 2);
-    int16_t by = yy + hh - 3; // baseline nudge up to align with room name
+    int16_t by = yy + hh - 3;  // baseline nudge up to align with room name
     display.setCursor(rx, by);
     display.print(time_str);
   });
@@ -1271,15 +1271,15 @@ static IconId map_weather_to_icon(const char* w) {
   if (s == "cloudy")
     return ICON_WEATHER_CLOUDY;
   if (s == "exceptional")
-    return ICON_WEATHER_CLOUDY; // generic fallback
+    return ICON_WEATHER_CLOUDY;  // generic fallback
   if (s == "fog")
     return ICON_WEATHER_FOG;
   if (s == "hail")
-    return ICON_WEATHER_SNOWY; // approximate
+    return ICON_WEATHER_SNOWY;  // approximate
   if (s == "lightning")
     return ICON_WEATHER_LIGHTNING;
   if (s == "lightning-rainy")
-    return ICON_WEATHER_LIGHTNING; // prefer lightning cue
+    return ICON_WEATHER_LIGHTNING;  // prefer lightning cue
   if (s == "partlycloudy")
     return ICON_WEATHER_PARTLY_CLOUDY;
   if (s == "pouring")
@@ -1289,11 +1289,11 @@ static IconId map_weather_to_icon(const char* w) {
   if (s == "snowy")
     return ICON_WEATHER_SNOWY;
   if (s == "snowy-rainy")
-    return ICON_WEATHER_SNOWY; // approximate
+    return ICON_WEATHER_SNOWY;  // approximate
   if (s == "sunny")
     return ICON_WEATHER_SUNNY;
   if (s == "windy" || s == "windy-variant")
-    return ICON_WEATHER_CLOUDY; // approximate
+    return ICON_WEATHER_CLOUDY;  // approximate
   // Also accept explicit MDI icon names if passed through
   if (s == "weather-sunny")
     return ICON_WEATHER_SUNNY;
@@ -1362,25 +1362,25 @@ static IconId map_openweather_to_icon(const OutsideReadings& o) {
     int gid = o.weatherId / 100;
     switch (gid) {
     case 2:
-      return ICON_WEATHER_LIGHTNING; // Thunderstorm
+      return ICON_WEATHER_LIGHTNING;  // Thunderstorm
     case 3:
-      return ICON_WEATHER_POURING; // Drizzle
+      return ICON_WEATHER_POURING;  // Drizzle
     case 5: {
       if (o.weatherId == 511)
-        return ICON_WEATHER_SNOWY; // Freezing rain
-      return ICON_WEATHER_POURING; // Rain
+        return ICON_WEATHER_SNOWY;  // Freezing rain
+      return ICON_WEATHER_POURING;  // Rain
     }
     case 6:
-      return ICON_WEATHER_SNOWY; // Snow
+      return ICON_WEATHER_SNOWY;  // Snow
     case 7:
-      return ICON_WEATHER_FOG; // Atmosphere
+      return ICON_WEATHER_FOG;  // Atmosphere
     case 8: {
       if (o.weatherId == 800)
-        return ICON_WEATHER_SUNNY; // Clear
+        return ICON_WEATHER_SUNNY;  // Clear
       if (o.weatherId == 801)
-        return ICON_WEATHER_PARTLY_CLOUDY; // Few clouds
+        return ICON_WEATHER_PARTLY_CLOUDY;  // Few clouds
       // 802..804
-      return ICON_WEATHER_CLOUDY; // Scattered/Broken/Overcast
+      return ICON_WEATHER_CLOUDY;  // Scattered/Broken/Overcast
     }
     default:
       break;
@@ -1750,7 +1750,7 @@ static void partial_update_footer_weather_from_outside(const OutsideReadings& o)
     }
   });
 }
-#endif // USE_DISPLAY
+#endif  // USE_DISPLAY
 
 #if USE_DISPLAY && DEV_NO_SLEEP
 // Periodic UI updater for always-on display build. Applies partial redraws when
@@ -1788,7 +1788,7 @@ static void dev_display_tick() {
     }
   }
 }
-#endif // USE_DISPLAY && DEV_NO_SLEEP
+#endif  // USE_DISPLAY && DEV_NO_SLEEP
 
 void setup() {
   int64_t t0_us = esp_timer_get_time();
@@ -1819,11 +1819,11 @@ void setup() {
 #if USE_DISPLAY
 #ifdef EINK_EN_PIN
   pinMode(EINK_EN_PIN, OUTPUT);
-  digitalWrite(EINK_EN_PIN, HIGH); // enable panel power if gated
+  digitalWrite(EINK_EN_PIN, HIGH);  // enable panel power if gated
   delay(10);
 #endif
   display.init(0);
-  display.setRotation(1); // landscape 250x122 coordinate system
+  display.setRotation(1);  // landscape 250x122 coordinate system
   Serial.printf("EINK %dx%d (rotation=%d)\n", display.width(), display.height(), 1);
 #endif
   nvs_begin_cache();
@@ -1856,7 +1856,7 @@ void setup() {
     if (reset_reason_is_crash(rr)) {
       net_publish_last_crash(reset_reason_str(rr));
     } else {
-      net_publish_last_crash(nullptr); // clear retained key
+      net_publish_last_crash(nullptr);  // clear retained key
     }
   }
 
@@ -1942,7 +1942,7 @@ void setup() {
   if (ms_fetch >= static_cast<uint32_t>(FETCH_RETAINED_TIMEOUT_MS) && !outside_after &&
       !outside_before && !g_outside_warned) {
     s_timeouts_mask |= TIMEOUT_BIT_FETCH;
-    g_outside_warned = true; // only warn once until outside data later appears
+    g_outside_warned = true;  // only warn once until outside data later appears
     Serial.printf("Note: no outside retained data yet (waited %u ms). Continuing...\n", ms_fetch);
   }
 
@@ -1994,7 +1994,7 @@ void setup() {
     }
     uint32_t stored = g_prefs.getUInt("fw_crc", 0);
     if (stored != g_fw_crc) {
-      do_full = true; // force at least one full render after new firmware
+      do_full = true;  // force at least one full render after new firmware
       g_prefs.putUInt("fw_crc", g_fw_crc);
       partial_counter = 0;
     }
@@ -2011,7 +2011,7 @@ void setup() {
     Serial.println("DBG: full_refresh start");
     full_refresh();
     Serial.println("DBG: full_refresh done");
-    needs_full_on_boot = false; // one clean full render completed
+    needs_full_on_boot = false;  // one clean full render completed
   } else {
     // For simplicity and stability, prefer full refreshes over partials
     Serial.println("DBG: full_only branch (no partial draw)");
@@ -2331,7 +2331,7 @@ void setup() {
     if (last_full_ms == 0)
       last_full_ms = millis();
 #endif
-    if (millis() - last_full_ms > 60000u) { // every 60 seconds
+    if (millis() - last_full_ms > 60000u) {  // every 60 seconds
       Serial.println("DBG: periodic full_refresh (DEV_NO_SLEEP, full-only)");
       full_refresh();
       last_full_ms = millis();
