@@ -35,22 +35,18 @@ class TestWebSimDataTransforms:
         console.log(JSON.stringify(result));
         """
 
-        result = subprocess.run(
-            ["node", "-e", js_code],
-            capture_output=True,
-            text=True
-        )
+        result = subprocess.run(["node", "-e", js_code], capture_output=True, text=True)
         return json.loads(result.stdout) if result.stdout else None
 
     def test_temperature_formatting_edge_cases(self):
         """Test temperature display formatting for overflow scenarios."""
         test_cases = [
-            (99.9, "99.9"),   # Fits in 4 chars
-            (100.0, "100"),   # Needs truncation
-            (-9.9, "-9.9"),   # Negative single digit
-            (-10.0, "-10"),   # Negative double digit
-            (999.9, "999"),   # Extreme high
-            (-99.9, "-99"),   # Extreme low
+            (99.9, "99.9"),  # Fits in 4 chars
+            (100.0, "100"),  # Needs truncation
+            (-9.9, "-9.9"),  # Negative single digit
+            (-10.0, "-10"),  # Negative double digit
+            (999.9, "999"),  # Extreme high
+            (-99.9, "-99"),  # Extreme low
         ]
 
         for temp, expected in test_cases:
@@ -61,16 +57,16 @@ class TestWebSimDataTransforms:
         """Test pressure formatting for display width constraints."""
         test_cases = [
             (1013.25, "1013 hPa"),  # Standard pressure
-            (999.0, "999 hPa"),     # Low pressure
-            (1030.0, "1030 hPa"),   # High pressure
-            (850.5, "851 hPa"),     # Mountain pressure
+            (999.0, "999 hPa"),  # Low pressure
+            (1030.0, "1030 hPa"),  # High pressure
+            (850.5, "851 hPa"),  # Mountain pressure
         ]
 
         for pressure, expected in test_cases:
             # Test that formatting fits in expected width
-            assert len(expected) <= 8, (
-                f"Pressure {pressure} formatted as '{expected}' exceeds display width"
-            )
+            assert (
+                len(expected) <= 8
+            ), f"Pressure {pressure} formatted as '{expected}' exceeds display width"
 
     def test_humidity_percentage_display(self):
         """Test humidity percentage formatting."""
@@ -88,10 +84,10 @@ class TestWebSimDataTransforms:
     def test_wind_speed_conversions(self):
         """Test wind speed unit conversions."""
         test_cases = [
-            (0, 0),        # Calm
-            (1.0, 2.24),   # 1 m/s = 2.24 mph
+            (0, 0),  # Calm
+            (1.0, 2.24),  # 1 m/s = 2.24 mph
             (10.0, 22.4),  # 10 m/s = 22.4 mph
-            (50.0, 112),   # Storm
+            (50.0, 112),  # Storm
         ]
 
         for ms, mph in test_cases:
@@ -101,13 +97,13 @@ class TestWebSimDataTransforms:
     def test_battery_voltage_to_percentage(self):
         """Test battery voltage to percentage calculation."""
         test_cases = [
-            (4.2, 100),   # Full charge
-            (4.0, 90),    # High
-            (3.7, 50),    # Medium
-            (3.5, 10),    # Low
-            (3.3, 0),     # Empty
-            (5.0, 100),   # Charging/USB
-            (0.0, -1),    # Unknown
+            (4.2, 100),  # Full charge
+            (4.0, 90),  # High
+            (3.7, 50),  # Medium
+            (3.5, 10),  # Low
+            (3.3, 0),  # Empty
+            (5.0, 100),  # Charging/USB
+            (0.0, -1),  # Unknown
         ]
 
         for voltage, expected_pct in test_cases:
@@ -120,7 +116,7 @@ class TestWebSimDataTransforms:
             ("00:00", "12:00 AM"),  # Midnight
             ("12:00", "12:00 PM"),  # Noon
             ("23:59", "11:59 PM"),  # End of day
-            ("", "--:--"),          # Missing time
+            ("", "--:--"),  # Missing time
         ]
 
         for time24, expected12 in test_cases:
@@ -129,12 +125,12 @@ class TestWebSimDataTransforms:
     def test_co2_value_formatting(self):
         """Test CO2 value display formatting."""
         test_cases = [
-            (400, "400"),     # Outdoor level
-            (1000, "1000"),   # Indoor acceptable
-            (2000, "2000"),   # Poor air quality
-            (9999, "9999"),   # Max 4-digit
-            (10000, ">9999"), # Overflow
-            (0, "--"),        # Missing/invalid
+            (400, "400"),  # Outdoor level
+            (1000, "1000"),  # Indoor acceptable
+            (2000, "2000"),  # Poor air quality
+            (9999, "9999"),  # Max 4-digit
+            (10000, ">9999"),  # Overflow
+            (0, "--"),  # Missing/invalid
         ]
 
         for co2, expected in test_cases:

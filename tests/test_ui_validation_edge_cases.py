@@ -7,6 +7,7 @@ import sys
 # Add scripts directory to path
 sys.path.insert(0, str(Path(__file__).parent.parent / "scripts"))
 
+
 class TestUIValidationEdgeCases:
     """Test complex edge cases in UI validation logic."""
 
@@ -24,9 +25,9 @@ class TestUIValidationEdgeCases:
         test_cases = [
             # (text, font_size, region_width, is_bold, should_overflow)
             ("100.0°F", 32, 150, False, False),  # Normal font fits
-            ("100.0°F", 32, 150, True, True),    # Bold font overflows
+            ("100.0°F", 32, 150, True, True),  # Bold font overflows
             ("1013 hPa", 16, 90, False, False),  # Normal pressure fits
-            ("1013 hPa", 16, 80, True, True),    # Bold pressure overflows
+            ("1013 hPa", 16, 80, True, True),  # Bold pressure overflows
         ]
 
         for text, size, width, is_bold, should_overflow in test_cases:
@@ -72,33 +73,28 @@ class TestUIValidationEdgeCases:
         ]
 
         for collision in collisions:
-            assert (collision in expected_collisions or
-                    (collision[1], collision[0]) in expected_collisions), (
-                f"Unexpected collision: {collision}"
-            )
+            assert (
+                collision in expected_collisions
+                or (collision[1], collision[0]) in expected_collisions
+            ), f"Unexpected collision: {collision}"
 
     def regions_overlap(self, r1, r2):
         """Check if two regions overlap."""
         # Rects are [x, y, w, h] lists
         x1, y1, w1, h1 = r1
         x2, y2, w2, h2 = r2
-        return not (
-            x1 + w1 <= x2 or
-            x2 + w2 <= x1 or
-            y1 + h1 <= y2 or
-            y2 + h2 <= y1
-        )
+        return not (x1 + w1 <= x2 or x2 + w2 <= x1 or y1 + h1 <= y2 or y2 + h2 <= y1)
 
     def test_empty_region_detection(self):
         """Test detection of empty regions with various content."""
         test_cases = [
-            ("", True),           # Empty string
-            (" ", True),          # Single space
-            ("  \t\n", True),    # Whitespace only
-            ("--", False),        # Placeholder
-            ("0", False),         # Zero value
-            ("N/A", False),       # Not available
-            (None, True),         # Null value
+            ("", True),  # Empty string
+            (" ", True),  # Single space
+            ("  \t\n", True),  # Whitespace only
+            ("--", False),  # Placeholder
+            ("0", False),  # Zero value
+            ("N/A", False),  # Not available
+            (None, True),  # Null value
         ]
 
         for content, is_empty in test_cases:
@@ -109,8 +105,8 @@ class TestUIValidationEdgeCases:
         """Test text exactly at region boundaries."""
         test_cases = [
             # (text, x, y, width, height, should_fit)
-            ("Edge", 0, 0, 40, 20, True),        # Top-left corner
-            ("Edge", 211, 103, 40, 20, False),   # Beyond display (250x122)
+            ("Edge", 0, 0, 40, 20, True),  # Top-left corner
+            ("Edge", 211, 103, 40, 20, False),  # Beyond display (250x122)
             ("Long text here", 200, 60, 50, 20, False),  # Text too wide
         ]
 
@@ -119,10 +115,11 @@ class TestUIValidationEdgeCases:
 
         for text, x, y, width, height, should_fit in test_cases:
             fits = (
-                x >= 0 and y >= 0 and
-                x + width <= display_width and
-                y + height <= display_height and
-                len(text) * 8 <= width  # Approximate char width
+                x >= 0
+                and y >= 0
+                and x + width <= display_width
+                and y + height <= display_height
+                and len(text) * 8 <= width  # Approximate char width
             )
 
             assert fits == should_fit, f"Boundary check failed for '{text}' at ({x},{y})"
@@ -134,20 +131,20 @@ class TestUIValidationEdgeCases:
             {"x": 10, "y": -10, "width": 50, "height": 20},  # Negative y
             {"x": 10, "y": 10, "width": -50, "height": 20},  # Negative width
             {"x": 10, "y": 10, "width": 50, "height": -20},  # Negative height
-            {"x": 10, "y": 10, "width": 0, "height": 20},    # Zero width
-            {"x": 10, "y": 10, "width": 50, "height": 0},    # Zero height
+            {"x": 10, "y": 10, "width": 0, "height": 20},  # Zero width
+            {"x": 10, "y": 10, "width": 50, "height": 0},  # Zero height
             {"x": 260, "y": 10, "width": 50, "height": 20},  # Beyond display (250 width)
             {"x": 10, "y": 130, "width": 50, "height": 20},  # Beyond display (122 height)
         ]
 
         for region in malformed_cases:
             is_valid = (
-                region["x"] >= 0 and
-                region["y"] >= 0 and
-                region["width"] > 0 and
-                region["height"] > 0 and
-                region["x"] + region["width"] <= 250 and
-                region["y"] + region["height"] <= 122
+                region["x"] >= 0
+                and region["y"] >= 0
+                and region["width"] > 0
+                and region["height"] > 0
+                and region["x"] + region["width"] <= 250
+                and region["y"] + region["height"] <= 122
             )
 
             assert not is_valid, f"Malformed region should be invalid: {region}"
@@ -155,8 +152,8 @@ class TestUIValidationEdgeCases:
     def test_text_centering_calculations(self):
         """Test text centering within regions."""
         test_cases = [
-            ("Center", 100, 50),   # Region width, expected x offset
-            ("A", 100, 50),        # Single char
+            ("Center", 100, 50),  # Region width, expected x offset
+            ("A", 100, 50),  # Single char
             ("Very long text", 50, 25),  # Text wider than region
         ]
 
@@ -171,11 +168,11 @@ class TestUIValidationEdgeCases:
     def test_validation_severity_levels(self):
         """Test that validation issues have correct severity levels."""
         severity_tests = [
-            ("text_overflow", "error"),        # Text overflow is error
-            ("region_collision", "error"),     # Collision is error
-            ("empty_region", "warning"),       # Empty is warning
-            ("alignment_issue", "warning"),    # Alignment is warning
-            ("missing_data", "info"),         # Missing data is info
+            ("text_overflow", "error"),  # Text overflow is error
+            ("region_collision", "error"),  # Collision is error
+            ("empty_region", "warning"),  # Empty is warning
+            ("alignment_issue", "warning"),  # Alignment is warning
+            ("missing_data", "info"),  # Missing data is info
         ]
 
         severities = {
@@ -204,9 +201,9 @@ class TestUIValidationEdgeCases:
         assert len(issues) == 3
 
         # Should prioritize by severity
-        sorted_issues = sorted(issues, key=lambda x:
-            0 if x["type"] == "collision" else
-            1 if x["type"] == "overflow" else 2
+        sorted_issues = sorted(
+            issues,
+            key=lambda x: 0 if x["type"] == "collision" else 1 if x["type"] == "overflow" else 2,
         )
 
         assert sorted_issues[0]["type"] == "collision"  # Highest priority

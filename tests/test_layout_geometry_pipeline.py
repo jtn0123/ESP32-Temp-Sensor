@@ -39,10 +39,16 @@ class TestLayoutGeometryPipeline:
 
         # Check critical regions exist
         critical_regions = [
-            "HEADER_NAME", "HEADER_TIME_CENTER", "HEADER_VERSION",
-            "INSIDE_TEMP", "INSIDE_HUMIDITY",
-            "OUT_TEMP", "OUT_HUMIDITY", "OUT_WEATHER",
-            "FOOTER_STATUS", "FOOTER_WEATHER"
+            "HEADER_NAME",
+            "HEADER_TIME_CENTER",
+            "HEADER_VERSION",
+            "INSIDE_TEMP",
+            "INSIDE_HUMIDITY",
+            "OUT_TEMP",
+            "OUT_HUMIDITY",
+            "OUT_WEATHER",
+            "FOOTER_STATUS",
+            "FOOTER_WEATHER",
         ]
 
         rects = self.geometry["rects"]
@@ -79,7 +85,7 @@ class TestLayoutGeometryPipeline:
         # Check for overlaps
         rect_names = list(rects.keys())
         for i, name1 in enumerate(rect_names):
-            for name2 in rect_names[i+1:]:
+            for name2 in rect_names[i + 1 :]:
                 if (name1, name2) in allowed_overlaps or (name2, name1) in allowed_overlaps:
                     continue
 
@@ -92,12 +98,7 @@ class TestLayoutGeometryPipeline:
                 x2, y2, w2, h2 = r2
 
                 # Check for overlap
-                overlap = not (
-                    x1 + w1 <= x2 or
-                    x2 + w2 <= x1 or
-                    y1 + h1 <= y2 or
-                    y2 + h2 <= y1
-                )
+                overlap = not (x1 + w1 <= x2 or x2 + w2 <= x1 or y1 + h1 <= y2 or y2 + h2 <= y1)
 
                 assert not overlap, f"Regions {name1} and {name2} overlap"
 
@@ -106,9 +107,7 @@ class TestLayoutGeometryPipeline:
         # Create test geometry
         test_geometry = {
             "metadata": {"width": 296, "height": 128},
-            "regions": {
-                "TEST": {"x": 10, "y": 20, "width": 30, "height": 40}
-            }
+            "regions": {"TEST": {"x": 10, "y": 20, "width": 30, "height": 40}},
         }
 
         # Calculate CRC multiple times
@@ -163,17 +162,16 @@ class TestLayoutGeometryPipeline:
 
         for name, expected_size in expected_sizes.items():
             if name in fonts:
-                assert fonts[name] == expected_size, (
-                    f"Font {name} should be {expected_size}, got {fonts[name]}"
-                )
+                assert (
+                    fonts[name] == expected_size
+                ), f"Font {name} should be {expected_size}, got {fonts[name]}"
 
     def test_geometry_version_tracking(self):
         """Test that geometry version is properly tracked."""
         # Check for version or CRC in the geometry
-        assert ("layout_version" in self.geometry or
-                "layout_crc" in self.geometry), (
-            "Geometry should have version or CRC tracking"
-        )
+        assert (
+            "layout_version" in self.geometry or "layout_crc" in self.geometry
+        ), "Geometry should have version or CRC tracking"
 
         # If CRC exists, should be valid hex
         if "layout_crc" in self.geometry:

@@ -22,7 +22,7 @@ class TestCppJsParity:
             content = self.display_layout_h.read_text()
 
             # Extract #define constants
-            for match in re.finditer(r'#define\s+(\w+)\s+(\d+)', content):
+            for match in re.finditer(r"#define\s+(\w+)\s+(\d+)", content):
                 name, value = match.groups()
                 constants[name] = int(value)
 
@@ -36,7 +36,7 @@ class TestCppJsParity:
             content = self.sim_js.read_text()
 
             # Extract const definitions
-            for match in re.finditer(r'const\s+(\w+)\s*=\s*(\d+);', content):
+            for match in re.finditer(r"const\s+(\w+)\s*=\s*(\d+);", content):
                 name, value = match.groups()
                 constants[name] = int(value)
 
@@ -49,11 +49,16 @@ class TestCppJsParity:
 
         # Key regions that must match
         critical_regions = [
-            'HEADER_NAME_X', 'HEADER_NAME_Y',
-            'INSIDE_TEMP_X', 'INSIDE_TEMP_Y',
-            'OUT_TEMP_X', 'OUT_TEMP_Y',
-            'BATTERY_X', 'BATTERY_Y',
-            'SIZE_BIG', 'SIZE_SMALL'
+            "HEADER_NAME_X",
+            "HEADER_NAME_Y",
+            "INSIDE_TEMP_X",
+            "INSIDE_TEMP_Y",
+            "OUT_TEMP_X",
+            "OUT_TEMP_Y",
+            "BATTERY_X",
+            "BATTERY_Y",
+            "SIZE_BIG",
+            "SIZE_SMALL",
         ]
 
         for region in critical_regions:
@@ -144,9 +149,9 @@ class TestCppJsParity:
             cpp_size = self.get_cpp_font_size(size_name)
             js_size = self.get_js_font_size(size_name)
 
-            assert cpp_size == js_size, (
-                f"Font size '{size_name}' mismatch: C++={cpp_size}, JS={js_size}"
-            )
+            assert (
+                cpp_size == js_size
+            ), f"Font size '{size_name}' mismatch: C++={cpp_size}, JS={js_size}"
 
     def get_cpp_font_size(self, size_name):
         """Get font size from C++ definitions."""
@@ -174,9 +179,9 @@ class TestCppJsParity:
             cpp_icon = self.get_cpp_battery_icon(percentage)
             js_icon = self.get_js_battery_icon(percentage)
 
-            assert cpp_icon == js_icon, (
-                f"Battery icon mismatch at {percentage}%: C++={cpp_icon}, JS={js_icon}"
-            )
+            assert (
+                cpp_icon == js_icon
+            ), f"Battery icon mismatch at {percentage}%: C++={cpp_icon}, JS={js_icon}"
 
     def get_cpp_battery_icon(self, percentage):
         """Get battery icon from C++ logic."""
@@ -221,11 +226,12 @@ class TestCppJsParity:
 
         # Would need to compile and run C++ CRC function
         # For now, verify Python CRC is consistent
-        assert python_crc == self.calculate_python_crc(test_data), (
-            "CRC calculation not deterministic"
-        )
+        assert python_crc == self.calculate_python_crc(
+            test_data
+        ), "CRC calculation not deterministic"
 
     def calculate_python_crc(self, data):
         """Calculate CRC32 in Python."""
         import zlib
+
         return zlib.crc32(data) & 0xFFFFFFFF

@@ -190,8 +190,7 @@ inline BatteryStatus read_battery_status() {
       a = m;
       m = t;
     }
-    float v = (m / static_cast<float>(ADC_MAX_COUNTS)) * ADC_REF_V *
-               VBAT_DIVIDER;
+    float v = (m / static_cast<float>(ADC_MAX_COUNTS)) * ADC_REF_V * VBAT_DIVIDER;
     b.voltage = v;
   }
   // Rough SOC estimate from voltage (linear placeholder 3.3V→0%, 4.2V→100%)
@@ -209,14 +208,12 @@ inline BatteryStatus read_battery_status() {
   // Average current ~ (active_current * active_fraction +
   //                     sleep_current * sleep_fraction)
   float active_fraction =
-      static_cast<float>(ACTIVE_SECONDS) /
-      static_cast<float>(WAKE_INTERVAL_SEC);
+      static_cast<float>(ACTIVE_SECONDS) / static_cast<float>(WAKE_INTERVAL_SEC);
   if (active_fraction < 0)
     active_fraction = 0;
   if (active_fraction > 1)
     active_fraction = 1;
-  float avg_mA = ACTIVE_CURRENT_MA * active_fraction +
-                  SLEEP_CURRENT_MA * (1.0f - active_fraction);
+  float avg_mA = ACTIVE_CURRENT_MA * active_fraction + SLEEP_CURRENT_MA * (1.0f - active_fraction);
 
   // Attempt fuel-gauge TTE via MAX17048 charge rate (percent per hour).
   // When discharging, chargeRate() is negative. TTE_hours ≈ percent /
@@ -225,8 +222,8 @@ inline BatteryStatus read_battery_status() {
 #if USE_MAX17048
   if (g_maxfg_initialized) {
     float crate_pct_per_hr = g_maxfg.chargeRate();
-    if (isfinite(crate_pct_per_hr) && crate_pct_per_hr < -0.01f &&
-        b.percent >= 0 && b.percent <= 100) {
+    if (isfinite(crate_pct_per_hr) && crate_pct_per_hr < -0.01f && b.percent >= 0 &&
+        b.percent <= 100) {
       float hours = static_cast<float>(b.percent) / (-crate_pct_per_hr);
       if (isfinite(hours) && hours > 0) {
         b.estimatedDays = static_cast<int>(hours / 24.0f + 0.5f);
@@ -241,8 +238,7 @@ inline BatteryStatus read_battery_status() {
       // Percent-based remaining capacity
       float remaining_mAh = BATTERY_CAPACITY_MAH;
       if (b.percent >= 0 && b.percent <= 100) {
-        remaining_mAh = BATTERY_CAPACITY_MAH *
-                         (static_cast<float>(b.percent) / 100.0f);
+        remaining_mAh = BATTERY_CAPACITY_MAH * (static_cast<float>(b.percent) / 100.0f);
       }
       float hours = remaining_mAh / avg_mA;
       b.estimatedDays = static_cast<int>(hours / 24.0f + 0.5f);

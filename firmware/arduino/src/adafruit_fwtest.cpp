@@ -26,7 +26,7 @@ void setup() {
   Serial.println("Adafruit FeatherWingTest (SSD1680) start");
 
   display.begin();
-  display.setRotation(1);  // landscape 250x122
+  display.setRotation(1); // landscape 250x122
 
   display.clearBuffer();
   display.fillScreen(EPD_WHITE);

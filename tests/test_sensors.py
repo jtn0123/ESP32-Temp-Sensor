@@ -15,7 +15,7 @@ class TestI2CBusRecovery:
 
     def test_i2c_bus_recovery_when_sda_stuck_low(self):
         """Test that bus recovery is attempted when SDA is stuck low."""
-        with patch('serial.Serial') as mock_serial:
+        with patch("serial.Serial") as mock_serial:
             mock_port = Mock()
             mock_serial.return_value = mock_port
 
@@ -26,15 +26,15 @@ class TestI2CBusRecovery:
             # Simulate recovery sequence
             recovery_pulses = []
             for i in range(9):
-                recovery_pulses.append(('SCL', 'LOW'))
-                recovery_pulses.append(('SCL', 'HIGH'))
+                recovery_pulses.append(("SCL", "LOW"))
+                recovery_pulses.append(("SCL", "HIGH"))
 
             assert len(recovery_pulses) == 18
             assert sda_states[-1] == 1  # SDA recovered
 
     def test_i2c_bus_recovery_timeout(self):
         """Test that bus recovery gives up after max attempts."""
-        with patch('serial.Serial') as mock_serial:
+        with patch("serial.Serial") as mock_serial:
             mock_port = Mock()
             mock_serial.return_value = mock_port
 
@@ -47,7 +47,7 @@ class TestI2CBusRecovery:
 
     def test_i2c_bus_normal_operation_no_recovery(self):
         """Test that recovery is not attempted when bus is normal."""
-        with patch('serial.Serial') as mock_serial:
+        with patch("serial.Serial") as mock_serial:
             mock_port = Mock()
             mock_serial.return_value = mock_port
 
@@ -91,15 +91,15 @@ class TestBME280Initialization:
     def test_bme280_forced_mode_configuration(self):
         """Test BME280 is configured for forced mode (low power)."""
         config = {
-            'mode': 'MODE_FORCED',
-            'temp_sampling': 'SAMPLING_X1',
-            'pressure_sampling': 'SAMPLING_X1',
-            'humidity_sampling': 'SAMPLING_X1',
-            'filter': 'FILTER_OFF'
+            "mode": "MODE_FORCED",
+            "temp_sampling": "SAMPLING_X1",
+            "pressure_sampling": "SAMPLING_X1",
+            "humidity_sampling": "SAMPLING_X1",
+            "filter": "FILTER_OFF",
         }
 
-        assert config['mode'] == 'MODE_FORCED'
-        assert config['filter'] == 'FILTER_OFF'
+        assert config["mode"] == "MODE_FORCED"
+        assert config["filter"] == "FILTER_OFF"
 
 
 class TestSensorReading:
@@ -107,45 +107,33 @@ class TestSensorReading:
 
     def test_sensor_reading_success(self):
         """Test successful sensor reading returns valid data."""
-        readings = {
-            'temperature': 22.5,
-            'humidity': 45.0,
-            'pressure': 1013.25
-        }
+        readings = {"temperature": 22.5, "humidity": 45.0, "pressure": 1013.25}
 
-        assert 15.0 <= readings['temperature'] <= 35.0
-        assert 0.0 <= readings['humidity'] <= 100.0
-        assert 900.0 <= readings['pressure'] <= 1100.0
+        assert 15.0 <= readings["temperature"] <= 35.0
+        assert 0.0 <= readings["humidity"] <= 100.0
+        assert 900.0 <= readings["pressure"] <= 1100.0
 
     def test_sensor_reading_returns_nan_on_failure(self):
         """Test that NaN is returned when sensor reading fails."""
         import math
 
         # Simulate sensor failure
-        readings = {
-            'temperature': float('nan'),
-            'humidity': float('nan'),
-            'pressure': float('nan')
-        }
+        readings = {"temperature": float("nan"), "humidity": float("nan"), "pressure": float("nan")}
 
-        assert math.isnan(readings['temperature'])
-        assert math.isnan(readings['humidity'])
-        assert math.isnan(readings['pressure'])
+        assert math.isnan(readings["temperature"])
+        assert math.isnan(readings["humidity"])
+        assert math.isnan(readings["pressure"])
 
     def test_sensor_reading_partial_failure(self):
         """Test handling when only some sensor values fail."""
         import math
 
         # Temperature works, humidity fails
-        readings = {
-            'temperature': 23.5,
-            'humidity': float('nan'),
-            'pressure': 1015.0
-        }
+        readings = {"temperature": 23.5, "humidity": float("nan"), "pressure": 1015.0}
 
-        assert readings['temperature'] == 23.5
-        assert math.isnan(readings['humidity'])
-        assert readings['pressure'] == 1015.0
+        assert readings["temperature"] == 23.5
+        assert math.isnan(readings["humidity"])
+        assert readings["pressure"] == 1015.0
 
     def test_forced_measurement_trigger(self):
         """Test that forced measurement is triggered before reading."""
@@ -241,14 +229,14 @@ class TestSensorPowerManagement:
 
     def test_sensor_power_on_before_read(self):
         """Test that sensor power is enabled before reading."""
-        power_state = 'OFF'
+        power_state = "OFF"
 
         def power_on():
             nonlocal power_state
-            power_state = 'ON'
+            power_state = "ON"
 
         def read_sensor():
-            assert power_state == 'ON'
+            assert power_state == "ON"
             return 22.5
 
         power_on()
@@ -257,11 +245,11 @@ class TestSensorPowerManagement:
 
     def test_sensor_power_off_after_read(self):
         """Test that sensor power is disabled after reading."""
-        power_state = 'ON'
+        power_state = "ON"
 
         def power_off():
             nonlocal power_state
-            power_state = 'OFF'
+            power_state = "OFF"
 
         def read_and_power_down():
             temp = 22.5
@@ -269,7 +257,7 @@ class TestSensorPowerManagement:
             return temp
 
         temp = read_and_power_down()
-        assert power_state == 'OFF'
+        assert power_state == "OFF"
         assert temp == 22.5
 
 
@@ -279,7 +267,7 @@ class TestSensorDataValidation:
     def test_temperature_range_validation(self):
         """Test temperature values are within reasonable range."""
         valid_temps = [15.0, 22.5, 30.0, 35.0]
-        invalid_temps = [-100.0, 150.0, float('inf')]
+        invalid_temps = [-100.0, 150.0, float("inf")]
 
         for temp in valid_temps:
             assert -40.0 <= temp <= 85.0
@@ -290,7 +278,7 @@ class TestSensorDataValidation:
     def test_humidity_range_validation(self):
         """Test humidity values are 0-100%."""
         valid_humidity = [0.0, 25.0, 50.0, 75.0, 100.0]
-        invalid_humidity = [-10.0, 150.0, float('inf')]
+        invalid_humidity = [-10.0, 150.0, float("inf")]
 
         for h in valid_humidity:
             assert 0.0 <= h <= 100.0
@@ -301,7 +289,7 @@ class TestSensorDataValidation:
     def test_pressure_range_validation(self):
         """Test pressure values are within atmospheric range."""
         valid_pressure = [900.0, 1013.25, 1100.0]
-        invalid_pressure = [0.0, 2000.0, float('inf')]
+        invalid_pressure = [0.0, 2000.0, float("inf")]
 
         for p in valid_pressure:
             assert 800.0 <= p <= 1200.0
@@ -335,5 +323,5 @@ class TestMultipleSensorSupport:
         assert 0x62 in mock_i2c.scan.return_value
 
 
-if __name__ == '__main__':
-    pytest.main([__file__, '-v'])
+if __name__ == "__main__":
+    pytest.main([__file__, "-v"])

@@ -45,14 +45,14 @@ class TestMAX17048FuelGauge:
     def test_max17048_quickstart_on_cold_boot(self):
         """Test quickstart is triggered only on power-on reset."""
         reset_reasons = {
-            'ESP_RST_POWERON': True,  # Should quickstart
-            'ESP_RST_DEEPSLEEP': False,  # Should not quickstart
-            'ESP_RST_SW': False,  # Should not quickstart
-            'ESP_RST_PANIC': False,  # Should not quickstart
+            "ESP_RST_POWERON": True,  # Should quickstart
+            "ESP_RST_DEEPSLEEP": False,  # Should not quickstart
+            "ESP_RST_SW": False,  # Should not quickstart
+            "ESP_RST_PANIC": False,  # Should not quickstart
         }
 
         for reason, should_quickstart in reset_reasons.items():
-            if reason == 'ESP_RST_POWERON':
+            if reason == "ESP_RST_POWERON":
                 assert should_quickstart
             else:
                 assert not should_quickstart
@@ -60,9 +60,9 @@ class TestMAX17048FuelGauge:
     def test_max17048_voltage_reading(self):
         """Test battery voltage reading accuracy."""
         test_voltages = [
-            (3.3, 'low'),
-            (3.7, 'nominal'),
-            (4.2, 'full'),
+            (3.3, "low"),
+            (3.7, "nominal"),
+            (4.2, "full"),
         ]
 
         for voltage, state in test_voltages:
@@ -102,13 +102,13 @@ class TestLC709203FFuelGauge:
     def test_lc709203f_battery_profile_configuration(self):
         """Test battery profile configuration for LC709203F."""
         battery_profiles = {
-            'LiPo_1S': 0x00,
-            'LiPo_2S': 0x01,
-            'LiFePO4': 0x02,
+            "LiPo_1S": 0x00,
+            "LiPo_2S": 0x01,
+            "LiFePO4": 0x02,
         }
 
         # Default should be LiPo_1S
-        default_profile = battery_profiles['LiPo_1S']
+        default_profile = battery_profiles["LiPo_1S"]
         assert default_profile == 0x00
 
 
@@ -164,9 +164,9 @@ class TestPowerRailControl:
     def test_i2c_power_rail_control(self):
         """Test I2C power rail enable/disable."""
         power_states = {
-            'PIN_I2C_POWER': False,
-            'I2C_POWER': False,
-            'TFT_I2C_POWER': False,
+            "PIN_I2C_POWER": False,
+            "I2C_POWER": False,
+            "TFT_I2C_POWER": False,
         }
 
         def enable_i2c_power():
@@ -206,14 +206,14 @@ class TestPowerRailControl:
         sequence = []
 
         def power_sequence():
-            sequence.append('enable_3v3')
+            sequence.append("enable_3v3")
             time.sleep(0.001)  # Stabilization delay
-            sequence.append('enable_i2c')
+            sequence.append("enable_i2c")
             time.sleep(0.001)
-            sequence.append('init_sensors')
+            sequence.append("init_sensors")
 
         power_sequence()
-        assert sequence == ['enable_3v3', 'enable_i2c', 'init_sensors']
+        assert sequence == ["enable_3v3", "enable_i2c", "init_sensors"]
 
 
 class TestDeepSleepConfiguration:
@@ -222,9 +222,9 @@ class TestDeepSleepConfiguration:
     def test_deep_sleep_wake_timer_configuration(self):
         """Test RTC timer wake source configuration."""
         wake_intervals = {
-            'WAKE_INTERVAL_1H': 3600,
-            'WAKE_INTERVAL_2H': 7200,
-            'WAKE_INTERVAL_4H': 14400,
+            "WAKE_INTERVAL_1H": 3600,
+            "WAKE_INTERVAL_2H": 7200,
+            "WAKE_INTERVAL_4H": 14400,
         }
 
         for name, seconds in wake_intervals.items():
@@ -243,15 +243,15 @@ class TestDeepSleepConfiguration:
         wake_sequence = []
 
         def wake_stub():
-            wake_sequence.append('wake_stub')
+            wake_sequence.append("wake_stub")
 
         def app_main():
-            wake_sequence.append('app_main')
+            wake_sequence.append("app_main")
 
         wake_stub()
         app_main()
 
-        assert wake_sequence == ['wake_stub', 'app_main']
+        assert wake_sequence == ["wake_stub", "app_main"]
 
 
 class TestBatteryVoltageToPercentage:
@@ -285,6 +285,7 @@ class TestBatteryVoltageToPercentage:
 
     def test_voltage_interpolation(self):
         """Test interpolation between discharge curve points."""
+
         def interpolate(v, curve):
             # Simple linear interpolation
             for i in range(len(curve) - 1):
@@ -307,35 +308,36 @@ class TestPowerOnReset:
     def test_reset_reason_detection(self):
         """Test different reset reason detection."""
         reset_reasons = [
-            'ESP_RST_UNKNOWN',
-            'ESP_RST_POWERON',
-            'ESP_RST_EXT',
-            'ESP_RST_SW',
-            'ESP_RST_PANIC',
-            'ESP_RST_INT_WDT',
-            'ESP_RST_TASK_WDT',
-            'ESP_RST_WDT',
-            'ESP_RST_DEEPSLEEP',
-            'ESP_RST_BROWNOUT',
-            'ESP_RST_SDIO',
+            "ESP_RST_UNKNOWN",
+            "ESP_RST_POWERON",
+            "ESP_RST_EXT",
+            "ESP_RST_SW",
+            "ESP_RST_PANIC",
+            "ESP_RST_INT_WDT",
+            "ESP_RST_TASK_WDT",
+            "ESP_RST_WDT",
+            "ESP_RST_DEEPSLEEP",
+            "ESP_RST_BROWNOUT",
+            "ESP_RST_SDIO",
         ]
 
         for reason in reset_reasons:
-            assert reason.startswith('ESP_RST_')
+            assert reason.startswith("ESP_RST_")
 
     def test_cold_boot_vs_wake_behavior(self):
         """Test different behavior for cold boot vs wake from sleep."""
-        def get_boot_behavior(reset_reason):
-            if reset_reason == 'ESP_RST_POWERON':
-                return 'full_init'
-            elif reset_reason == 'ESP_RST_DEEPSLEEP':
-                return 'quick_resume'
-            else:
-                return 'error_recovery'
 
-        assert get_boot_behavior('ESP_RST_POWERON') == 'full_init'
-        assert get_boot_behavior('ESP_RST_DEEPSLEEP') == 'quick_resume'
-        assert get_boot_behavior('ESP_RST_PANIC') == 'error_recovery'
+        def get_boot_behavior(reset_reason):
+            if reset_reason == "ESP_RST_POWERON":
+                return "full_init"
+            elif reset_reason == "ESP_RST_DEEPSLEEP":
+                return "quick_resume"
+            else:
+                return "error_recovery"
+
+        assert get_boot_behavior("ESP_RST_POWERON") == "full_init"
+        assert get_boot_behavior("ESP_RST_DEEPSLEEP") == "quick_resume"
+        assert get_boot_behavior("ESP_RST_PANIC") == "error_recovery"
 
 
 class TestPowerOptimization:
@@ -344,36 +346,36 @@ class TestPowerOptimization:
     def test_wifi_power_save_mode(self):
         """Test WiFi power save mode configuration."""
         power_modes = {
-            'WIFI_PS_NONE': 'always_on',
-            'WIFI_PS_MIN_MODEM': 'modem_sleep',
-            'WIFI_PS_MAX_MODEM': 'max_modem_sleep',
+            "WIFI_PS_NONE": "always_on",
+            "WIFI_PS_MIN_MODEM": "modem_sleep",
+            "WIFI_PS_MAX_MODEM": "max_modem_sleep",
         }
 
         # Should use MAX_MODEM for battery operation
-        battery_mode = 'WIFI_PS_MAX_MODEM'
+        battery_mode = "WIFI_PS_MAX_MODEM"
         assert battery_mode in power_modes
 
     def test_cpu_frequency_scaling(self):
         """Test CPU frequency scaling for power optimization."""
         frequencies = {
-            'normal': 240,  # MHz
-            'power_save': 80,  # MHz
-            'ultra_low': 40,  # MHz
+            "normal": 240,  # MHz
+            "power_save": 80,  # MHz
+            "ultra_low": 40,  # MHz
         }
 
         # Should scale down during idle
-        assert frequencies['ultra_low'] < frequencies['normal']
+        assert frequencies["ultra_low"] < frequencies["normal"]
 
     def test_peripheral_clock_gating(self):
         """Test peripheral clock gating when unused."""
         peripherals = {
-            'UART': False,
-            'SPI': False,
-            'I2C': True,  # Needed for sensors
-            'ADC': True,  # Needed for battery
-            'DAC': False,
-            'RMT': False,
-            'LEDC': False,
+            "UART": False,
+            "SPI": False,
+            "I2C": True,  # Needed for sensors
+            "ADC": True,  # Needed for battery
+            "DAC": False,
+            "RMT": False,
+            "LEDC": False,
         }
 
         # Only needed peripherals should be enabled
@@ -416,5 +418,5 @@ class TestBatteryCalibration:
             assert abs(correction - expected_correction) < 0.01
 
 
-if __name__ == '__main__':
-    pytest.main([__file__, '-v'])
+if __name__ == "__main__":
+    pytest.main([__file__, "-v"])
