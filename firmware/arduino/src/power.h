@@ -71,7 +71,8 @@ inline BatteryStatus read_battery_status() {
 #if USE_MAX17048
   static bool s_maxfg_attempted = false;
   if (!g_maxfg_initialized && !s_maxfg_attempted) {
-// Ensure I2C is initialized on the configured pins and clock before talking to MAX17048
+// Ensure I2C is initialized on the configured pins and clock before
+// talking to MAX17048
 // Some ESP32-S2 Feather variants gate I2C power; turn it on if available
 #ifdef PIN_I2C_POWER
     pinMode(PIN_I2C_POWER, OUTPUT);
@@ -189,7 +190,8 @@ inline BatteryStatus read_battery_status() {
       a = m;
       m = t;
     }
-    float v = (m / static_cast<float>(ADC_MAX_COUNTS)) * ADC_REF_V * VBAT_DIVIDER;
+    float v = (m / static_cast<float>(ADC_MAX_COUNTS)) * ADC_REF_V *
+               VBAT_DIVIDER;
     b.voltage = v;
   }
   // Rough SOC estimate from voltage (linear placeholder 3.3V→0%, 4.2V→100%)
@@ -202,18 +204,22 @@ inline BatteryStatus read_battery_status() {
     b.percent = static_cast<int>(pct * 100.0f + 0.5f);
   }
   // Days estimate based on current remaining charge (if percent known).
-  // Prefer fuel-gauge time-to-empty when available; else use percent-based average-current model.
-  // Average current ~ (active_current * active_fraction + sleep_current * sleep_fraction)
+  // Prefer fuel-gauge time-to-empty when available; else use percent-based
+  // average-current model.
+  // Average current ~ (active_current * active_fraction +
+  //                     sleep_current * sleep_fraction)
   float active_fraction =
       static_cast<float>(ACTIVE_SECONDS) / static_cast<float>(WAKE_INTERVAL_SEC);
   if (active_fraction < 0)
     active_fraction = 0;
   if (active_fraction > 1)
     active_fraction = 1;
-  float avg_mA = ACTIVE_CURRENT_MA * active_fraction + SLEEP_CURRENT_MA * (1.0f - active_fraction);
+  float avg_mA = ACTIVE_CURRENT_MA * active_fraction +
+                  SLEEP_CURRENT_MA * (1.0f - active_fraction);
 
   // Attempt fuel-gauge TTE via MAX17048 charge rate (percent per hour).
-  // When discharging, chargeRate() is negative. TTE_hours ≈ percent / (-crate_pct_per_hr).
+  // When discharging, chargeRate() is negative. TTE_hours ≈ percent /
+  // (-crate_pct_per_hr).
   bool used_tte = false;
 #if USE_MAX17048
   if (g_maxfg_initialized) {

@@ -523,7 +523,8 @@
     // expectedContent.add('OUT_HUMIDITY');
     // expectedContent.add('OUT_WIND');
     expectedContent.add('FOOTER_STATUS'); // v2 uses FOOTER_STATUS for battery/IP
-    expectedContent.add('FOOTER_WEATHER'); // v2 uses FOOTER_WEATHER for weather icon
+    expectedContent.add('FOOTER_WEATHER'); // v2 uses FOOTER_WEATHER for weather text
+    expectedContent.add('WEATHER_ICON'); // v2 uses WEATHER_ICON for weather icon
     
     for (const regionName of expectedContent) {
       if (!renderedContent[regionName] && GJSON.rects[regionName]) {
@@ -1850,14 +1851,14 @@
           base.rects.OUT_PRESSURE = [RIGHT_X + 50, ROW1_Y, 54, ROW_H];
           base.rects.OUT_HUMIDITY = [RIGHT_X, ROW2_Y, 48, ROW_H];
           base.rects.OUT_WIND     = [RIGHT_X + 52, ROW2_Y, 48, ROW_H];
-          // Tuck icon fully within FOOTER_WEATHER box with margin; adapt height to footer
-          const iconH = Math.min(18, Math.max(12, FOOTER_H - 4));
-          const iconY = FOOTER_Y + Math.max(1, Math.floor((FOOTER_H - iconH)/2));
-          base.rects.WEATHER_ICON = [RIGHT_X + 4, iconY, 20, iconH];
+          // Weather icon is separate from FOOTER_WEATHER - positioned to the left of it
+          // Use positions from display_geometry.json: WEATHER_ICON at [168, 90, 30, 32]
+          base.rects.WEATHER_ICON = [168, 90, 30, 32];
 
-          // Footer columns align exactly to the column widths
+          // Footer columns - FOOTER_STATUS on left, FOOTER_WEATHER on right (after icon)
           base.rects.FOOTER_STATUS    = [LEFT_X, FOOTER_Y, LEFT_W, FOOTER_H];
-          base.rects.FOOTER_WEATHER    = [RIGHT_X, FOOTER_Y, RIGHT_W, FOOTER_H];
+          // FOOTER_WEATHER starts after the weather icon with a gap
+          base.rects.FOOTER_WEATHER    = [200, 90, 44, 32];
 
           // Adjust chrome lines to match grid
           if (base.components && Array.isArray(base.components.chrome)){

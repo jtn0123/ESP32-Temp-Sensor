@@ -32,7 +32,7 @@ enum FontId {
     FONT__COUNT,
 };
 
-enum Align { ALIGN_LEFT=0, ALIGN_RIGHT=1, ALIGN_CENTER=2 };
+enum Align { ALIGN_LEFT = 0, ALIGN_RIGHT = 1, ALIGN_CENTER = 2 };
 
 enum UiOpKind {
     OP_BATTERYGLYPH,
@@ -45,7 +45,18 @@ enum UiOpKind {
     OP_TIMERIGHT,
 };
 
-struct UiOpHeader { uint8_t kind; uint8_t rect; uint8_t font; uint8_t align; int16_t p0; int16_t p1; int16_t p2; int16_t p3; const char* s0; const char* s1; };
+struct UiOpHeader {
+    uint8_t kind;
+    uint8_t rect;
+    uint8_t font;
+    uint8_t align;
+    int16_t p0;
+    int16_t p1;
+    int16_t p2;
+    int16_t p3;
+    const char* s0;
+    const char* s1;
+};
 
 static constexpr const char* kVariantNames[] = {
     "v2",
