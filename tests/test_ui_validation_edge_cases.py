@@ -105,7 +105,7 @@ class TestUIValidationEdgeCases:
         test_cases = [
             # (text, x, y, width, height, should_fit)
             ("Edge", 0, 0, 40, 20, True),        # Top-left corner
-            ("Edge", 210, 102, 40, 20, False),   # Beyond display (250x122)
+            ("Edge", 211, 103, 40, 20, False),   # Beyond display (250x122)
             ("Long text here", 200, 60, 50, 20, False),  # Text too wide
         ]
         
