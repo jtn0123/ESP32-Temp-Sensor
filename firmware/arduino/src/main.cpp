@@ -38,7 +38,8 @@
 #define OUT_ROW2_L OUT_HUMIDITY  // Map to OUT_HUMIDITY from display_layout.h
 #define OUT_ROW2_R OUT_WIND  // Map to OUT_WIND from display_layout.h
 #define FOOTER_L FOOTER_STATUS  // Backward compat
-#define STATUS_ FOOTER_STATUS  // Map to FOOTER_STATUS as there's no separate STATUS region
+#define STATUS_ FOOTER_STATUS  // Map to FOOTER_STATUS as there's no separate STATUS
+// region
 
 // Forward declaration for status pixel tick used in pump_network_ms
 #if USE_STATUS_PIXEL
@@ -246,7 +247,7 @@ static void draw_from_spec_full_impl(uint8_t variantId) {
         }
         display.setTextColor(GxEPD_BLACK);
         display.setTextSize(1);
-        if (r && tx == 0 && (op.align == ALIGN_RIGHT 
+        if (r && tx == 0 && (op.align == ALIGN_RIGHT
             || op.align == ALIGN_CENTER)) {
           int16_t tw = text_width_default_font(out.c_str(), 1);
           tx = r[0] + 1;
@@ -266,8 +267,8 @@ static void draw_from_spec_full_impl(uint8_t variantId) {
         int16_t tw = text_width_default_font(hhmm, 1);
         int16_t rx =
             static_cast<int16_t>(HEADER_TIME[0] + HEADER_TIME[2] - 2 - tw)
-        int16_t by =
-            static_cast<int16_t>(HEADER_TIME[1] + TOP_Y_OFFSET + HEADER_TIME[3] - 2)
+        int16_t by = static_cast<int16_t>(
+            HEADER_TIME[1] + TOP_Y_OFFSET + HEADER_TIME[3] - 2)
         display.setTextColor(GxEPD_BLACK);
         display.setTextSize(1);
         display.setCursor(rx, by);
@@ -381,7 +382,8 @@ static void draw_from_spec_full_impl(uint8_t variantId) {
                           2,
                           3,
                          GxEPD_BLACK);
-        int16_t fillw = static_cast<int16_t>(((bw - 2) * (bs.percent / 100.0f) + 0.5f));
+        int16_t fillw = static_cast<int16_t>(
+            ((bw - 2) * (bs.percent / 100.0f) + 0.5f));
         if (fillw > 0)
           display.fillRect(static_cast<int16_t>(bx + 1),
                             static_cast<int16_t>(by + 1),
@@ -459,9 +461,9 @@ static inline void nvs_store_float(const char* key,
                                     float v) { g_prefs.putFloat(key,
 static inline void nvs_store_int(const char* key,
                                   int32_t v) { g_prefs.putInt(key,
-static inline void nvs_store_uint(const char* key,
-                                   uint32_t v) { g_prefs.putUInt(key,
-static constexpr float THRESH_TEMP_F = 0.2f;                        // redraw/publish threshold in F
+static inline void nvs_store_uint(const char* key, uint32_t v) {
+    g_prefs.putUInt(key,
+static constexpr float THRESH_TEMP_F = 0.2f;  // redraw/publish threshold in F
 static constexpr float THRESH_TEMP_C_FROM_F = THRESH_TEMP_F / 1.8f;  // ~0.111C
 static constexpr float THRESH_RH = 1.0f;                            // percent
 static constexpr float THRESH_PRESS_HPA = 0.5f;                     // hPa
@@ -568,10 +570,12 @@ static inline void status_pixel_tick() {
   s_hue++;
   s_breath++;
   // Triangle wave 0..127..0 mapped to brightness range
-  uint8_t amp = (s_breath < 128) ? s_breath : static_cast<uint8_t>(255 - s_breath);
+  uint8_t amp = (s_breath < 128) ? s_breath
+                                  : static_cast<uint8_t>(255 - s_breath);
   const uint8_t minB = 8;
   const uint8_t maxB = 64;
-  uint8_t level = static_cast<uint8_t>(minB + (static_cast<uint16_t>(amp) * (maxB - minB) / 127));
+  uint8_t level = static_cast<uint8_t>(
+      minB + (static_cast<uint16_t>(amp) * (maxB - minB) / 127));
   // Occasional brief flash for a bit of flair
   if ((s_hue & 0x3F) == 0)
     level = maxB;
@@ -716,9 +720,9 @@ static void handle_serial_command_line(const String& line) {
     char ip_c[32];
     net_ip_cstr(ip_c, sizeof(ip_c));
     BatteryStatus bs = read_battery_status();
-    Serial.printf("status ip=%s wifi=%s mqtt=%s v=%.2f pct=%d partial=%u\n", ip_c,
-                  net_wifi_is_connected() ? "up" : "down",
-                                         net_mqtt_is_connected() ? "up" : "down",
+    Serial.printf("status ip=%s wifi=%s mqtt=%s v=%.2f pct=%d partial=%u\n",
+                  ip_c, net_wifi_is_connected() ? "up" : "down",
+                  net_mqtt_is_connected() ? "up" : "down",
                   static_cast<double>(bs.voltage), bs.percent,
                   static_cast<unsigned>(partial_counter));
     return;
@@ -937,7 +941,8 @@ static void draw_static_chrome() {
   display.setCursor(131, 22 + TOP_Y_OFFSET);
   display.print(F("OUTSIDE"));
   // Top-right version string within HEADER_TIME box
-  display.setCursor(HEADER_TIME[0] + HEADER_TIME[2] - 2 - text_width_default_font("v",
+  display.setCursor(HEADER_TIME[0] + HEADER_TIME[2] - 2
+                    - text_width_default_font("v",
                         text_width_default_font(FW_VERSION, 1),
                     HEADER_TIME[1] + TOP_Y_OFFSET + HEADER_TIME[3] - 8);
   display.print(F("v"));
@@ -1035,8 +1040,10 @@ static inline void draw_temp_number_and_units_direct(int16_t x, int16_t y, int16
   int16_t x1, y1;
   uint16_t bw, bh;
   display.getTextBounds(temp_f, 0, 0, &x1, &y1, &bw, &bh);
-  int16_t targetX = static_cast<int16_t>(x + (w - units_w - static_cast<int16_t>(bw)) / 2);
-  int16_t targetY = static_cast<int16_t>(y + (h - static_cast<int16_t>(bh)) / 2);
+  int16_t targetX =
+      static_cast<int16_t>(x + (w - units_w - static_cast<int16_t>(bw)) / 2);
+  int16_t targetY =
+      static_cast<int16_t>(y + (h - static_cast<int16_t>(bh)) / 2);
   int16_t baseX = static_cast<int16_t>(targetX - x1);
   int16_t baseY = static_cast<int16_t>(targetY - y1);
   display.setCursor(baseX, baseY);
@@ -1154,7 +1161,8 @@ static void draw_header_time(const char* time_str) {
 
 static inline void draw_header_time_direct(const char* time_str) {
   int16_t tw = text_width_default_font(time_str, 1);
-  int16_t rx = static_cast<int16_t>(HEADER_CENTER[0] + (HEADER_CENTER[2] - tw) / 2);
+  int16_t rx =
+      static_cast<int16_t>(HEADER_CENTER[0] + (HEADER_CENTER[2] - tw) / 2);
   int16_t by =
       static_cast<int16_t>(HEADER_CENTER[1] + TOP_Y_OFFSET + HEADER_CENTER[3] - 6)
   display.setTextColor(GxEPD_BLACK);
@@ -1182,7 +1190,8 @@ static void draw_status_line(const BatteryStatus& bs, const char* ip_cstr) {
                         2,
                         3,
                        GxEPD_BLACK);
-      int16_t fillw = static_cast<int16_t>(((bw - 2) * (bs.percent / 100.0f) + 0.5f));
+      int16_t fillw =
+          static_cast<int16_t>(((bw - 2) * (bs.percent / 100.0f) + 0.5f));
       if (fillw > 0)
         display.fillRect(static_cast<int16_t>(bx + 1),
                           static_cast<int16_t>(by + 1),
@@ -1232,7 +1241,8 @@ static inline void draw_status_line_direct(const BatteryStatus& bs,
                       2,
                       3,
                      GxEPD_BLACK);
-    int16_t fillw = static_cast<int16_t>(((bw2 - 2) * (bs.percent / 100.0f) + 0.5f));
+    int16_t fillw =
+        static_cast<int16_t>(((bw2 - 2) * (bs.percent / 100.0f) + 0.5f));
     if (fillw > 0)
       display.fillRect(static_cast<int16_t>(bx + 1),
                         static_cast<int16_t>(by + 1),
@@ -1608,7 +1618,7 @@ static void full_refresh() {
       int16_t y = FOOTER_WEATHER[1];
       int16_t w = FOOTER_WEATHER[2];
       int16_t h = FOOTER_WEATHER[3];
-      if (o.validWeather || o.validWeatherId || o.validWeatherIcon 
+      if (o.validWeather || o.validWeatherId || o.validWeatherIcon
           || last_icon_id >= 0) {
         char sc[24];
         if (o.validWeatherDesc && o.weatherDesc[0])
@@ -1810,7 +1820,8 @@ static void partial_update_footer_weather_from_outside(const OutsideReadings& o)
     else if (o.validWeather)
       icon_id = map_weather_to_icon(o.weather);
     else
-      icon_id = (last_icon_id >= 0) ? static_cast<IconId>(last_icon_id) : ICON_WEATHER_SUNNY;
+      icon_id =
+          (last_icon_id >= 0) ? static_cast<IconId>(last_icon_id) : ICON_WEATHER_SUNNY;
     draw_icon(display, ix, iy, icon_id, GxEPD_BLACK);
     // Short condition text to the right of the icon
     char sc[24];
@@ -1947,7 +1958,8 @@ void setup() {
   InsideReadings _sensor_probe = read_inside_sensors();
   (void)_sensor_probe;
   int64_t t3_us = esp_timer_get_time();
-  uint32_t dbg_ms_sensor = static_cast<uint32_t>((t3_us - t_sense_start_us) / 1000);
+  uint32_t dbg_ms_sensor =
+      static_cast<uint32_t>((t3_us - t_sense_start_us) / 1000);
   if (dbg_ms_sensor > static_cast<uint32_t>(SENSOR_PHASE_TIMEOUT_MS)) {
     s_timeouts_mask |= TIMEOUT_BIT_SENSOR;
     Serial.printf("Timeout: sensor read exceeded budget ms=%u budget=%u\n",
@@ -1985,7 +1997,8 @@ void setup() {
     // Measure publish time using a non-retained probe topic
     int64_t pub_probe_start_us = esp_timer_get_time();
     net_publish_debug_probe("1", false);
-    uint32_t ms_publish = static_cast<uint32_t>((esp_timer_get_time() - pub_probe_start_us) / 1000);
+    uint32_t ms_publish =
+        static_cast<uint32_t>((esp_timer_get_time() - pub_probe_start_us) / 1000);
     // Publish diagnostics: WiFi RSSI and publish latency
     net_publish_wifi_rssi(WiFi.RSSI());
     net_publish_publish_latency_ms(ms_publish);
@@ -2010,7 +2023,8 @@ void setup() {
   Serial.println("DBG: start fetch retained");
   // Actively wait until any outside retained value arrives or timeout
   {
-    uint32_t deadline = millis() + static_cast<uint32_t>(FETCH_RETAINED_TIMEOUT_MS);
+    uint32_t deadline =
+        millis() + static_cast<uint32_t>(FETCH_RETAINED_TIMEOUT_MS);
     while (!(net_get_outside().validTemp || net_get_outside().validHum ||
              net_get_outside().validWeather || net_get_outside().validWind) &&
            millis() < deadline) {
@@ -2026,7 +2040,7 @@ void setup() {
       !outside_before && !g_outside_warned) {
     s_timeouts_mask |= TIMEOUT_BIT_FETCH;
     g_outside_warned = true;  // only warn once until outside data later appears
-    Serial.printf("Note: no outside retained data yet (waited %u ms). Continuing...\n",
+        Serial.printf("Note: no outside retained data yet (waited %u ms). Continuing...\n",
   }
 
   // Publish a retained UI-debug snapshot so tests/diagnostics can assert what
@@ -2040,8 +2054,10 @@ void setup() {
     float tempF =
         (o.validTemp && isfinite(o.temperatureC)) ? (o.temperatureC * 9.0f / 5.0f + 32.0f) : NAN;
     const char* w = (o.validWeather && o.weather[0]) ? o.weather : NULL;
-    const char* wd = (o.validWeatherDesc && o.weatherDesc[0]) ? o.weatherDesc : NULL;
-    const char* wi = (o.validWeatherIcon && o.weatherIcon[0]) ? o.weatherIcon : NULL;
+    const char* wd =
+        (o.validWeatherDesc && o.weatherDesc[0]) ? o.weatherDesc : NULL;
+    const char* wi =
+        (o.validWeatherIcon && o.weatherIcon[0]) ? o.weatherIcon : NULL;
     // Include time used for header to aid troubleshooting
     snprintf(
         buf, sizeof(buf),
@@ -2093,7 +2109,8 @@ void setup() {
   uint32_t display_phase_start = millis();
 // Establish a soft deadline visible to drawing helpers
 #ifdef DISPLAY_PHASE_TIMEOUT_MS
-  g_display_deadline_ms = display_phase_start + static_cast<uint32_t>(DISPLAY_PHASE_TIMEOUT_MS);
+  g_display_deadline_ms =
+      display_phase_start + static_cast<uint32_t>(DISPLAY_PHASE_TIMEOUT_MS);
 #endif
   if (do_full) {
     Serial.println("DBG: full_refresh start");
@@ -2116,7 +2133,7 @@ void setup() {
     if (sens2_ms > static_cast<uint32_t>(SENSOR_PHASE_TIMEOUT_MS)) {
       s_timeouts_mask |= TIMEOUT_BIT_SENSOR;
 
-      Serial.printf("Timeout: sensor read (secondary) exceeded budget ms=%u budget=%u\n",
+            Serial.printf("Timeout: sensor read (secondary) exceeded budget ms=%u budget=%u\n",
                      sens2_ms,
                     static_cast<unsigned>(SENSOR_PHASE_TIMEOUT_MS));
     }
@@ -2129,7 +2146,8 @@ void setup() {
       snprintf(in_temp, sizeof(in_temp), "--");
     }
     char trend_in = '0';
-    float now_in_f = isfinite(r.temperatureC) ? (r.temperatureC * 9.0f / 5.0f + 32.0f) : NAN;
+    float now_in_f =
+        isfinite(r.temperatureC) ? (r.temperatureC * 9.0f / 5.0f + 32.0f) : NAN;
     if (isfinite(now_in_f) && isfinite(last_inside_f)) {
       float d = now_in_f - last_inside_f;
       if (d >= THRESH_TEMP_F)
@@ -2349,7 +2367,7 @@ void setup() {
   }
   uint32_t ms_publish_phase =
       publish_any ? static_cast<uint32_t>(millis() - publish_phase_start) : 0;
-  if (publish_any 
+  if (publish_any
       && ms_publish_phase > static_cast<uint32_t>(PUBLISH_PHASE_TIMEOUT_MS)) {
     s_timeouts_mask |= TIMEOUT_BIT_PUBLISH;
     Serial.printf("Timeout: publish exceeded budget ms=%u budget=%u\n",
@@ -2401,7 +2419,7 @@ void setup() {
       changed_at_ms = millis();
     }
     // Wait a short window to coalesce multiple retained/alias updates
-    if (pending_outside_refresh 
+    if (pending_outside_refresh
         && (millis() - changed_at_ms) > MQTT_OUTSIDE_DEBOUNCE_MS) {
       Serial.println("DBG: debounced MQTT outside change -> full_refresh");
       full_refresh();
