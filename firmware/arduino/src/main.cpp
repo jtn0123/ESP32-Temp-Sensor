@@ -246,7 +246,8 @@ static void draw_from_spec_full_impl(uint8_t variantId) {
         }
         display.setTextColor(GxEPD_BLACK);
         display.setTextSize(1);
-        if (r && tx == 0 && (op.align == ALIGN_RIGHT || op.align == ALIGN_CENTER)) {
+        if (r && tx == 0 && (op.align == ALIGN_RIGHT 
+            || op.align == ALIGN_CENTER)) {
           int16_t tw = text_width_default_font(out.c_str(), 1);
           tx = r[0] + 1;
           if (op.align == ALIGN_RIGHT)
@@ -263,8 +264,10 @@ static void draw_from_spec_full_impl(uint8_t variantId) {
         char hhmm[8];
         net_time_hhmm(hhmm, sizeof(hhmm));
         int16_t tw = text_width_default_font(hhmm, 1);
-        int16_t rx = static_cast<int16_t>(HEADER_TIME[0] + HEADER_TIME[2] - 2 - tw);
-        int16_t by = static_cast<int16_t>(HEADER_TIME[1] + TOP_Y_OFFSET + HEADER_TIME[3] - 2);
+        int16_t rx =
+            static_cast<int16_t>(HEADER_TIME[0] + HEADER_TIME[2] - 2 - tw)
+        int16_t by =
+            static_cast<int16_t>(HEADER_TIME[1] + TOP_Y_OFFSET + HEADER_TIME[3] - 2)
         display.setTextColor(GxEPD_BLACK);
         display.setTextSize(1);
         display.setCursor(rx, by);
@@ -1152,7 +1155,8 @@ static void draw_header_time(const char* time_str) {
 static inline void draw_header_time_direct(const char* time_str) {
   int16_t tw = text_width_default_font(time_str, 1);
   int16_t rx = static_cast<int16_t>(HEADER_CENTER[0] + (HEADER_CENTER[2] - tw) / 2);
-  int16_t by = static_cast<int16_t>(HEADER_CENTER[1] + TOP_Y_OFFSET + HEADER_CENTER[3] - 6);
+  int16_t by =
+      static_cast<int16_t>(HEADER_CENTER[1] + TOP_Y_OFFSET + HEADER_CENTER[3] - 6)
   display.setTextColor(GxEPD_BLACK);
   display.setTextSize(1);
   display.setCursor(rx, by);
@@ -1382,7 +1386,8 @@ static IconId map_weather_to_icon(const char* w) {
   return ICON_WEATHER_SUNNY;
 }
 
-// Map OpenWeather primary item (id/icon) to our icon set; fallback to string mapping
+// Map OpenWeather primary item (id/icon) to our icon set; fallback to string
+// mapping
 static IconId map_openweather_to_icon(const OutsideReadings& o) {
   // Prefer explicit icon code when provided (e.g., "10n") for day/night
   if (o.validWeatherIcon && o.weatherIcon[0]) {
@@ -1442,7 +1447,8 @@ static IconId map_openweather_to_icon(const OutsideReadings& o) {
   return map_weather_to_icon(o.weather);
 }
 
-// Draw weather icon region using OutsideReadings object (prefer OpenWeather hints)
+// Draw weather icon region using OutsideReadings object (prefer OpenWeather
+// hints)
 static void draw_weather_icon_region_at_from_outside(int16_t x, int16_t y, int16_t w, int16_t h,
                                                      const OutsideReadings& o) {
   display.fillRect(x, y, w, h, GxEPD_WHITE);
@@ -1602,7 +1608,8 @@ static void full_refresh() {
       int16_t y = FOOTER_WEATHER[1];
       int16_t w = FOOTER_WEATHER[2];
       int16_t h = FOOTER_WEATHER[3];
-      if (o.validWeather || o.validWeatherId || o.validWeatherIcon || last_icon_id >= 0) {
+      if (o.validWeather || o.validWeatherId || o.validWeatherIcon 
+          || last_icon_id >= 0) {
         char sc[24];
         if (o.validWeatherDesc && o.weatherDesc[0])
           make_short_condition_cstr(o.weatherDesc, sc, sizeof(sc));
@@ -1622,7 +1629,8 @@ static void full_refresh() {
                           static_cast<int16_t>(y + h / 2 + 2));
         if (o.validWeather || o.validWeatherDesc)
           display.print(sc);
-        // Update footer weather CRC cache for always-on parity immediately after a full render
+        // Update footer weather CRC cache for always-on parity immediately
+        // after a full render
         char sig[64];
         snprintf(sig, sizeof(sig), "I%d|%s", static_cast<int>(icon_id),
                  (o.validWeather || o.validWeatherDesc) ? sc : "");
@@ -1827,13 +1835,15 @@ static void partial_update_footer_weather_from_outside(const OutsideReadings& o)
 // outside MQTT values change beyond thresholds. Also refreshes header time and
 // status line opportunistically.
 static void dev_display_tick() {
-  // Full-screen refresh policy: if any outside MQTT value changed, redraw entire screen
+  // Full-screen refresh policy: if any outside MQTT value changed, redraw
+  // entire screen
   if (net_consume_outside_dirty()) {
     full_refresh();
     return;
   }
 
-  // Even with full-refresh-on-change, keep header time and status fresh opportunistically
+  // Even with full-refresh-on-change, keep header time and status fresh
+  // opportunistically
   {
     static char s_last_hhmm[8] = {0};
     char hhmm[8];
@@ -2019,7 +2029,8 @@ void setup() {
     Serial.printf("Note: no outside retained data yet (waited %u ms). Continuing...\n",
   }
 
-  // Publish a retained UI-debug snapshot so tests/diagnostics can assert what the device believes
+  // Publish a retained UI-debug snapshot so tests/diagnostics can assert what
+  // the device believes
   // is displayed for the OUTSIDE and footer weather blocks.
   if (net_mqtt_is_connected()) {
     OutsideReadings o = net_get_outside();
@@ -2060,7 +2071,8 @@ void setup() {
   bool do_full = false;
   static uint32_t g_fw_crc = 0;
   if (g_fw_crc == 0) {
-    // Derive a simple firmware identity at runtime from constants to detect reflash
+    // Derive a simple firmware identity at runtime from constants to detect
+    // reflash
     // This avoids a stale partial counter blocking any draw after flashing.
     g_fw_crc = 1469598103u;
     const char* id = FW_VERSION;
@@ -2213,7 +2225,8 @@ void setup() {
                          static_cast<int32_t>(id),
     last_icon_id,
                                   [&]() {
-                                    if (o.validWeatherIcon || o.validWeatherId) {
+                                    if (o.validWeatherIcon 
+                                        || o.validWeatherId) {
                                       int rect_tmp[4] = { OUT_ICON[0],
     static_cast<int16_t>(OUT_ICON[1] + TOP_Y_OFFSET),
                           OUT_ICON[2],
@@ -2228,7 +2241,8 @@ void setup() {
                                   });
       nvs_store_int("icon", last_icon_id);
       char sc[24];
-      if (o.validWeatherDesc && o.weatherDesc[0]) make_short_condition_cstr(o.weatherDesc,
+      if (o.validWeatherDesc 
+          && o.weatherDesc[0]) make_short_condition_cstr(o.weatherDesc,
            sc,
     sizeof(sc)); else make_short_condition_cstr(o.weather, sc, sizeof(sc));
       partial_update_outside_condition(sc);
@@ -2257,7 +2271,8 @@ void setup() {
     }
     uint32_t ms_publish_phase =
         publish_any ? static_cast<uint32_t>(millis() - publish_phase_start) : 0;
-    if (publish_any && ms_publish_phase > static_cast<uint32_t>(PUBLISH_PHASE_TIMEOUT_MS)) {
+    if (publish_any 
+        && ms_publish_phase > static_cast<uint32_t>(PUBLISH_PHASE_TIMEOUT_MS)) {
       s_timeouts_mask |= TIMEOUT_BIT_PUBLISH;
       Serial.printf("Timeout: publish exceeded budget ms=%u budget=%u\n",
                     static_cast<unsigned>(ms_publish_phase),
@@ -2334,7 +2349,8 @@ void setup() {
   }
   uint32_t ms_publish_phase =
       publish_any ? static_cast<uint32_t>(millis() - publish_phase_start) : 0;
-  if (publish_any && ms_publish_phase > static_cast<uint32_t>(PUBLISH_PHASE_TIMEOUT_MS)) {
+  if (publish_any 
+      && ms_publish_phase > static_cast<uint32_t>(PUBLISH_PHASE_TIMEOUT_MS)) {
     s_timeouts_mask |= TIMEOUT_BIT_PUBLISH;
     Serial.printf("Timeout: publish exceeded budget ms=%u budget=%u\n",
                   static_cast<unsigned>(ms_publish_phase),
@@ -2385,7 +2401,8 @@ void setup() {
       changed_at_ms = millis();
     }
     // Wait a short window to coalesce multiple retained/alias updates
-    if (pending_outside_refresh && (millis() - changed_at_ms) > MQTT_OUTSIDE_DEBOUNCE_MS) {
+    if (pending_outside_refresh 
+        && (millis() - changed_at_ms) > MQTT_OUTSIDE_DEBOUNCE_MS) {
       Serial.println("DBG: debounced MQTT outside change -> full_refresh");
       full_refresh();
       pending_outside_refresh = false;
@@ -2415,7 +2432,8 @@ void setup() {
       last_metrics = millis();
     }
 #if USE_DISPLAY
-    // Full-only: no partials in always-on mode. Just do periodic full refreshes.
+    // Full-only: no partials in always-on mode. Just do periodic full
+    // refreshes.
     static uint32_t last_full_ms = 0;
     // If a refresh just happened due to MQTT dirty flag above, align timer
 #if USE_DISPLAY

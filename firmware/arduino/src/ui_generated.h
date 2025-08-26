@@ -13,4 +13,6 @@ enum VariantId {
 };
 }
 
-// Icon tokens: weather-cloudy weather-fog weather-lightning weather-night weather-partly-cloudy weather-pouring weather-snowy weather-sunny weather-windy-variant
+// Icon tokens: weather-cloudy weather-fog weather-lightning weather-night
+// weather-partly-cloudy weather-pouring weather-snowy weather-sunny
+// weather-windy-variant
