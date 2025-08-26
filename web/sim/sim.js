@@ -1332,7 +1332,7 @@
               // Also guarantee non-white pixels in the left portion of the bar for tests
               // by drawing a small filled rect whose width varies by condition.
               const iconCx = startX + iconW/2;
-              const iconCy = barY + barH/2;
+              const iconCy = (op.rect === 'WEATHER_ICON' ? startY : barY) + iconH/2;
               ctx.strokeStyle = '#000'; ctx.fillStyle = '#000';
               const moon = String(data.moon_phase||'');
               const condLower = String((data.weather||'')).toLowerCase();
@@ -1831,9 +1831,10 @@
           // Label band sits inside the temp box at its top edge (12px tall)
           base.rects.INSIDE_LABEL_BOX = [LEFT_X, TEMP_Y + 2, LEFT_W, 12];
           // Inner number area leaves room for the label band and a small badge on the right
-          const innerY = TEMP_Y + 14;
-          // Increase height to accommodate font size (was TEMP_H - 16 = 12px, now 18px)
-          const innerH = 18;
+          // Adjust innerY to give more vertical space (was TEMP_Y + 14, now +12)
+          const innerY = TEMP_Y + 12;
+          // Increase height to accommodate 26px font size (was 12px, now full remaining space)
+          const innerH = TEMP_H - 12;
           // Increase width to accommodate temperature values with units (was -28, now -20)
           base.rects.INSIDE_TEMP_INNER = [LEFT_X + 4, innerY, LEFT_W - 20, innerH];
           base.rects.INSIDE_TEMP_BADGE = [LEFT_X + LEFT_W - 16, innerY, 12, 12];
@@ -1875,7 +1876,7 @@
           // Adjust fonts: big:26, label:12, small:10, time:10
           if (!base.fonts) base.fonts = {};
           if (!base.fonts.tokens) base.fonts.tokens = {};
-          base.fonts.tokens.big = { px: 26, weight: 'bold' };
+          base.fonts.tokens.big = { px: 22, weight: 'bold' };
           base.fonts.tokens.label = { px: 12, weight: 'bold' };
           base.fonts.tokens.small = { px: 10 };
           base.fonts.tokens.time = { px: 10 };
