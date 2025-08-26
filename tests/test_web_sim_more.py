@@ -40,12 +40,15 @@ _TIME_METRICS_JS = (
     "() => {\n"
     "  const c=document.getElementById('epd');\n"
     "  const ctx=c.getContext('2d');\n"
-    "  const R=(window.GJSON && window.GJSON.rects)||null;\n"
-    "  const rt = R ? R.HEADER_TIME : [172,2,72,14];\n"
-    "  const t = (window.lastData && window.lastData.time) || '10:32';\n"
+    "  const spec = window.UI_SPEC || {};\n"
+    "  const R = spec.rects || {};\n"
+    "  // Use HEADER_TIME_CENTER for centered time display\n"
+    "  const rt = R.HEADER_TIME_CENTER || [100,2,50,14];\n"
+    "  const t = (window.lastData && window.lastData.time_hhmm) || '10:32';\n"
     '  ctx.font = \'11px Menlo, Consolas, "DM Mono", "Roboto Mono", monospace\';\n'
     "  const tw = ctx.measureText(t).width;\n"
-    "  const timeX = rt[0] + rt[2] - 2 - tw;\n"
+    "  // For centered text, calculate center position\n"
+    "  const timeX = rt[0] + (rt[2] - tw) / 2;\n"
     "  return {x: timeX, y: rt[1]+1, w: tw, rt};\n"
     "}"
 )
@@ -169,7 +172,7 @@ def test_header_time_right_aligned_and_name_truncated():
 
             payload = {
                 "room_name": "Extremely Long Room Name That Should Truncate",
-                "time": "23:59",
+                "time_hhmm": "23:59",
             }
 
             def handle_route(route):

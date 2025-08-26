@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Test Divider</title>
+  </head>
+  <body>
+    <canvas id="epd" width="250" height="122"></canvas>
+    <div id="output"></div>
+    <script src="ui_generated.js"></script>
+    <script src="sim.js"></script>
+    <script>
+      window.addEventListener('load', () => {
+        // Give it time to load and draw
+        setTimeout(() => {
+          const canvas = document.getElementById('epd');
+          const ctx = canvas.getContext('2d');
+          
+          // Check pixels at x=125
+          const output = document.getElementById('output');
+          let html = '<h3>Pixels at x=125:</h3>';
+          
+          for (let y of [18, 60, 121]) {
+            const pixel = ctx.getImageData(125, y, 1, 1).data;
+            const r = pixel[0], g = pixel[1], b = pixel[2];
+            const color = (r === 0 && g === 0 && b === 0) ? 'BLACK' : 'WHITE';
+            html += `<p>y=${y}: rgb(${r},${g},${b}) = ${color}</p>`;
+          }
+          
+          // Also check what's at x=124 and x=126
+          html += '<h3>Adjacent pixels:</h3>';
+          for (let x of [124, 125, 126]) {
+            const pixel = ctx.getImageData(x, 60, 1, 1).data;
+            const r = pixel[0], g = pixel[1], b = pixel[2];
+            const color = (r === 0 && g === 0 && b === 0) ? 'BLACK' : 'WHITE';
+            html += `<p>x=${x}, y=60: rgb(${r},${g},${b}) = ${color}</p>`;
+          }
+          
+          output.innerHTML = html;
+        }, 500);
+      });
+    </script>
+  </body>
+</html>
