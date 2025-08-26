@@ -350,7 +350,7 @@
     
     // These regions exist in geometry but aren't used in v2
     // Note: HEADER_TIME_CENTER is now used for time display when header_centered component is active
-    const v2SpecificUnused = ['OUT_ROW1_L', 'OUT_ROW1_R'];
+    const v2SpecificUnused = ['OUT_ROW1_R'];
     
     // Check for regions defined but not used in current variant
     const allDefinedRegions = Object.keys(GJSON.rects || {});

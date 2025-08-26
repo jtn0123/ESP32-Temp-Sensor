@@ -42,6 +42,7 @@ const UiOpHeader kOps_outside[] = {
     { OP_LABELCENTERED, 12, 1, 2, 22, 0, 0, 0, "OUTSIDE", NULL },
     { OP_TEMPGROUPCENTERED, 12, 0, 2, 0, 0, 0, 0, "outside_temp_f", NULL },
     { OP_ICONIN, 13, 0, 0, 0, 0, 0, 0, "weather", NULL },
+    { OP_TEXT, 8, 2, 0, 0, 0, 0, 0, "{weather_short}", NULL },
     { OP_TEXT, 10, 2, 0, 0, 0, 0, 0, "{outside_hum_pct}% RH", NULL },
     { OP_TEXT, 11, 2, 0, 0, 0, 0, 0, "{wind_mps->mph:.1f} mph", NULL },
 };

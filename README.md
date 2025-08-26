@@ -214,6 +214,12 @@ open out/display_mock.png  # macOS
 - Web Canvas simulator: Interactive page with advanced debugging tools.
 
 ```bash
+# Automatic port selection (recommended)
+python3 scripts/start_simulator.py
+# or
+./scripts/start_simulator.sh
+
+# Manual start on specific port
 cd web/sim
 python3 -m http.server 8080
 # open http://localhost:8080/index.html in your browser

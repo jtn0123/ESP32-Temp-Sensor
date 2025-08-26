@@ -62,9 +62,9 @@ static constexpr int kComponent_chrome_opcount = 6;
 static constexpr int kComponent_header_centered_opcount = 4;
 static constexpr int kComponent_header_opcount = 3;
 static constexpr int kComponent_inside_opcount = 4;
-static constexpr int kComponent_outside_opcount = 5;
+static constexpr int kComponent_outside_opcount = 6;
 static constexpr int kComponent_footer_split_opcount = 5;
-static constexpr int kTotalOpCount = 27;
+static constexpr int kTotalOpCount = 28;
 
 struct ComponentOps { const UiOpHeader* ops; int count; const char* name; };
 extern const ComponentOps kVariant_v2_ops[];
