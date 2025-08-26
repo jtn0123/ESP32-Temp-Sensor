@@ -28,23 +28,24 @@
 #include "sensors.h"
 
 // Constant aliases for backward compatibility
-#define HEADER_TIME RECT_HEADER_TIME
-#define HEADER_CENTER RECT_HEADER_CENTER
-#define INSIDE_TEMP RECT_INSIDE_TEMP
-#define INSIDE_HUMIDITY RECT_INSIDE_HUMIDITY
-#define INSIDE_RH RECT_INSIDE_HUMIDITY  // Backward compat
-#define INSIDE_PRESSURE RECT_INSIDE_PRESSURE
-#define INSIDE_TIME RECT_INSIDE_TIME
-#define OUT_TEMP RECT_OUT_TEMP
-#define OUT_ICON RECT_OUT_ICON
-#define OUT_ROW1_L RECT_OUT_ROW1_L
-#define OUT_ROW1_R RECT_OUT_ROW1_R
-#define OUT_ROW2_L RECT_OUT_ROW2_L
-#define OUT_ROW2_R RECT_OUT_ROW2_R
-#define FOOTER_STATUS RECT_FOOTER_STATUS
-#define FOOTER_L RECT_FOOTER_STATUS  // Backward compat
-#define FOOTER_WEATHER RECT_FOOTER_WEATHER
-#define STATUS_ RECT_STATUS_
+// Note: These map to the actual arrays from display_layout.h, not the enums from ui_ops_generated.h
+#define HEADER_TIME ::HEADER_TIME_CENTER
+#define HEADER_CENTER ::HEADER_TIME_CENTER
+#define INSIDE_TEMP ::INSIDE_TEMP
+#define INSIDE_HUMIDITY ::INSIDE_HUMIDITY
+#define INSIDE_RH ::INSIDE_HUMIDITY  // Backward compat
+#define INSIDE_PRESSURE ::INSIDE_PRESSURE
+// #define INSIDE_TIME RECT_INSIDE_TIME  // No INSIDE_TIME region in current layout
+#define OUT_TEMP ::OUT_TEMP
+#define OUT_ICON ::WEATHER_ICON  // Map to WEATHER_ICON from display_layout.h
+#define OUT_ROW1_L ::OUT_WEATHER  // Map to OUT_WEATHER from display_layout.h
+#define OUT_ROW1_R ::OUT_PRESSURE  // Map to OUT_PRESSURE from display_layout.h  
+#define OUT_ROW2_L ::OUT_HUMIDITY  // Map to OUT_HUMIDITY from display_layout.h
+#define OUT_ROW2_R ::OUT_WIND  // Map to OUT_WIND from display_layout.h
+#define FOOTER_STATUS ::FOOTER_STATUS
+#define FOOTER_L ::FOOTER_STATUS  // Backward compat
+#define FOOTER_WEATHER ::FOOTER_WEATHER  // Use FOOTER_WEATHER from display_layout.h
+#define STATUS_ ::FOOTER_STATUS  // Map to FOOTER_STATUS as there's no separate STATUS region
 
 // Forward declaration for status pixel tick used in pump_network_ms
 #if USE_STATUS_PIXEL
@@ -1488,13 +1489,13 @@ static void full_refresh() {
       display.print(ws);
     }
 
-    // Inside pressure (barometer) in the spare INSIDE_TIME line
+    // Inside pressure (barometer) - now using INSIDE_PRESSURE region
     if (isfinite(r.pressureHPa)) {
       char pstr[24];
       snprintf(pstr, sizeof(pstr), "%.1f hPa", r.pressureHPa);
       display.setTextSize(1);
       display.setTextColor(GxEPD_BLACK);
-      display.setCursor(INSIDE_TIME[0], INSIDE_TIME[1] + TOP_Y_OFFSET);
+      display.setCursor(INSIDE_PRESSURE[0], INSIDE_PRESSURE[1] + TOP_Y_OFFSET);
       display.print(pstr);
     }
 

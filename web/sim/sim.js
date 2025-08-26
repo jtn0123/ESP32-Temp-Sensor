@@ -454,12 +454,13 @@
     // Check rendered content for overflow and incomplete data
     for (const [regionName, content] of Object.entries(renderedContent)) {
       if (GJSON.rects[regionName] && content.text) {
-        // Skip validation for internal helper regions and temp regions with complex layouts
-        // Also skip outside metric regions that have known tight bounds
-        if (regionName.includes('_INNER') || regionName.includes('_BADGE') || 
-            regionName.includes('LABEL_BOX') || 
-            regionName === 'INSIDE_TEMP' || regionName === 'OUT_TEMP' ||
-            regionName === 'OUT_WEATHER' || regionName === 'OUT_PRESSURE' ||
+        // Skip validation for internal helper regions but validate the actual temp inner regions
+        // Skip badge and label box regions as they're internal helpers
+        if (regionName.includes('_BADGE') || regionName.includes('LABEL_BOX')) {
+          continue;
+        }
+        // Skip outside metric regions that have known tight bounds (but not temp regions)
+        if (regionName === 'OUT_WEATHER' || regionName === 'OUT_PRESSURE' ||
             regionName === 'OUT_HUMIDITY' || regionName === 'OUT_WIND') {
           continue;
         }
@@ -1247,8 +1248,9 @@
               // Center text vertically in the area
               const areaH = area[3] || 28;
               const yTop = Math.round(areaY + Math.max(0, Math.floor((areaH - fontSize) / 2)));
-              // Don't track region for tempGroupCentered - it has complex layout
-              text(left, yTop, s, fontSize, 'bold');
+              // Track the inner region for validation
+              const innerRegion = inner ? (op.rect === 'INSIDE_TEMP' ? 'INSIDE_TEMP_INNER' : 'OUT_TEMP_INNER') : op.rect;
+              text(left, yTop, s, fontSize, 'bold', innerRegion);
               if (badge){
                 // Don't draw border around badge - just the text
                 text(badge[0] + 2, badge[1] + Math.max(0, Math.floor((badge[3]-10)/2)), '°F', 10);
@@ -1830,16 +1832,19 @@
           base.rects.INSIDE_LABEL_BOX = [LEFT_X, TEMP_Y + 2, LEFT_W, 12];
           // Inner number area leaves room for the label band and a small badge on the right
           const innerY = TEMP_Y + 14;
-          const innerH = TEMP_H - 16;
-          base.rects.INSIDE_TEMP_INNER = [LEFT_X + 4, innerY, LEFT_W - 28, innerH];
-          base.rects.INSIDE_TEMP_BADGE = [LEFT_X + LEFT_W - 20, innerY, 16, 12];
+          // Increase height to accommodate font size (was TEMP_H - 16 = 12px, now 18px)
+          const innerH = 18;
+          // Increase width to accommodate temperature values with units (was -28, now -20)
+          base.rects.INSIDE_TEMP_INNER = [LEFT_X + 4, innerY, LEFT_W - 20, innerH];
+          base.rects.INSIDE_TEMP_BADGE = [LEFT_X + LEFT_W - 16, innerY, 12, 12];
           base.rects.INSIDE_HUMIDITY   = [LEFT_X, ROW1_Y, LEFT_W, ROW_H];
           base.rects.INSIDE_PRESSURE = [LEFT_X, ROW2_Y, LEFT_W, ROW_H];  // Pressure row in v2
 
           base.rects.OUT_TEMP    = [RIGHT_X, TEMP_Y, RIGHT_W, TEMP_H];
           base.rects.OUT_LABEL_BOX = [RIGHT_X, TEMP_Y + 2, RIGHT_W, 12];
-          base.rects.OUT_TEMP_INNER = [RIGHT_X + 4, innerY, RIGHT_W - 28, innerH];
-          base.rects.OUT_TEMP_BADGE = [RIGHT_X + RIGHT_W - 20, innerY, 16, 12];
+          // Increase width to accommodate temperature values with units (was -28, now -20)
+          base.rects.OUT_TEMP_INNER = [RIGHT_X + 4, innerY, RIGHT_W - 20, innerH];
+          base.rects.OUT_TEMP_BADGE = [RIGHT_X + RIGHT_W - 16, innerY, 12, 12];
           base.rects.OUT_WEATHER  = [RIGHT_X, ROW1_Y, 48, ROW_H];
           base.rects.OUT_PRESSURE = [RIGHT_X + 50, ROW1_Y, 54, ROW_H];
           base.rects.OUT_HUMIDITY = [RIGHT_X, ROW2_Y, 48, ROW_H];
