@@ -38,6 +38,7 @@ inline void net_publish_pressure(float pressureHPa);
 inline void net_publish_battery(float voltage, int percent);
 inline void net_publish_wifi_rssi(int rssiDbm);
 inline void net_publish_publish_latency_ms(uint32_t publishLatencyMs);
+inline void net_publish_diagnostic_mode(bool active);
 
 struct OutsideReadings {
   float temperatureC = NAN;
@@ -60,6 +61,10 @@ static OutsideReadings g_outside;
 static char g_client_id[40];
 static Preferences g_net_prefs;
 static Preferences g_offline_prefs;
+
+// Diagnostic mode command flag (checked by main.cpp)
+static bool g_diagnostic_mode_requested = false;
+static bool g_diagnostic_mode_request_value = false;
 
 #ifndef WIFI_CONNECT_TIMEOUT_MS
 #define WIFI_CONNECT_TIMEOUT_MS 6000
@@ -452,6 +457,26 @@ inline void mqtt_callback(char* topic, uint8_t* payload, unsigned int length) {
     g_outside.lowTempC = atof(val);
     g_outside.validLow = isfinite(g_outside.lowTempC);
   }
+  
+  // Handle diagnostic command topics
+  if (ends_with(topic, "/command/diagnostic_mode")) {
+    // Set flag for main.cpp to handle
+    if (strcmp(val, "on") == 0 || strcmp(val, "1") == 0 || strcmp(val, "true") == 0) {
+      g_diagnostic_mode_requested = true;
+      g_diagnostic_mode_request_value = true;
+      Serial.println("DIAG: Diagnostic mode activation requested via MQTT");
+    } else if (strcmp(val, "off") == 0 || strcmp(val, "0") == 0 || strcmp(val, "false") == 0) {
+      g_diagnostic_mode_requested = true;
+      g_diagnostic_mode_request_value = false;
+      Serial.println("DIAG: Diagnostic mode deactivation requested via MQTT");
+    }
+  } else if (ends_with(topic, "/command/reset")) {
+    if (strcmp(val, "1") == 0 || strcmp(val, "true") == 0) {
+      Serial.println("DIAG: Soft reset requested via MQTT");
+      delay(100);
+      ESP.restart();
+    }
+  }
 }
 
 // Provisioning helper implementations (enabled via USE_WIFI_PROVISIONING)
@@ -841,6 +866,16 @@ inline void ensure_mqtt_connected() {
     sub("/hi");
     sub("/low");
     sub("/lo");
+    
+    // Subscribe to diagnostic command topics
+    snprintf(topic, sizeof(topic), "%s/command/diagnostic_mode", MQTT_PUB_BASE);
+    g_mqtt.subscribe(topic);
+    Serial.printf("MQTT: subscribed %s\n", topic);
+    
+    snprintf(topic, sizeof(topic), "%s/command/reset", MQTT_PUB_BASE);
+    g_mqtt.subscribe(topic);
+    Serial.printf("MQTT: subscribed %s\n", topic);
+    
     // Subscribe to Home Assistant birth topic for rediscovery on HA restarts
     g_mqtt.subscribe("homeassistant/status");
     Serial.printf("MQTT: subscribed %s\n", "homeassistant/status");
@@ -1019,6 +1054,83 @@ inline void net_publish_debug_probe(const char* payload, bool retain = false) {
   g_mqtt.publish(topic, payload, retain);
 }
 
+// Publish boot reason to MQTT (retained for persistence)
+inline void net_publish_boot_reason(const char* reason) {
+  if (!g_mqtt.connected() || !reason)
+    return;
+  char topic[128];
+  snprintf(topic, sizeof(topic), "%s/diagnostics/boot_reason", MQTT_PUB_BASE);
+  g_mqtt.publish(topic, reason, true);
+}
+
+// Publish boot count (total boots since power cycle)
+inline void net_publish_boot_count(uint32_t count) {
+  if (!g_mqtt.connected())
+    return;
+  char topic[128];
+  char payload[16];
+  snprintf(topic, sizeof(topic), "%s/diagnostics/boot_count", MQTT_PUB_BASE);
+  snprintf(payload, sizeof(payload), "%u", static_cast<unsigned>(count));
+  g_mqtt.publish(topic, payload, true);
+}
+
+// Publish crash count (abnormal resets)
+inline void net_publish_crash_count(uint32_t count) {
+  if (!g_mqtt.connected())
+    return;
+  char topic[128];
+  char payload[16];
+  snprintf(topic, sizeof(topic), "%s/diagnostics/crash_count", MQTT_PUB_BASE);
+  snprintf(payload, sizeof(payload), "%u", static_cast<unsigned>(count));
+  g_mqtt.publish(topic, payload, true);
+}
+
+// Publish cumulative uptime in seconds
+inline void net_publish_uptime(uint32_t uptime_sec) {
+  if (!g_mqtt.connected())
+    return;
+  char topic[128];
+  char payload[16];
+  snprintf(topic, sizeof(topic), "%s/diagnostics/uptime", MQTT_PUB_BASE);
+  snprintf(payload, sizeof(payload), "%u", static_cast<unsigned>(uptime_sec));
+  g_mqtt.publish(topic, payload, true);
+}
+
+// Publish memory diagnostics as JSON
+inline void net_publish_memory_diagnostics(uint32_t free_heap, uint32_t min_heap, 
+                                           uint32_t largest_block, float fragmentation) {
+  if (!g_mqtt.connected())
+    return;
+  char topic[128];
+  char payload[256];
+  snprintf(topic, sizeof(topic), "%s/diagnostics/memory", MQTT_PUB_BASE);
+  snprintf(payload, sizeof(payload), 
+           "{\"free_heap\":%u,\"min_heap\":%u,\"largest_block\":%u,\"fragmentation\":%.1f}",
+           static_cast<unsigned>(free_heap), static_cast<unsigned>(min_heap),
+           static_cast<unsigned>(largest_block), fragmentation);
+  g_mqtt.publish(topic, payload, true);
+}
+
+// Publish diagnostic mode status
+inline void net_publish_diagnostic_mode(bool active) {
+  if (!g_mqtt.connected())
+    return;
+  char topic[128];
+  snprintf(topic, sizeof(topic), "%s/diagnostics/diagnostic_mode", MQTT_PUB_BASE);
+  g_mqtt.publish(topic, active ? "active" : "inactive", true);
+}
+
+// Publish wake count
+inline void net_publish_wake_count(uint32_t count) {
+  if (!g_mqtt.connected())
+    return;
+  char topic[128];
+  char payload[16];
+  snprintf(topic, sizeof(topic), "%s/diagnostics/wake_count", MQTT_PUB_BASE);
+  snprintf(payload, sizeof(payload), "%u", static_cast<unsigned>(count));
+  g_mqtt.publish(topic, payload, true);
+}
+
 // Publish Home Assistant MQTT Discovery configs for inside temperature and
 // humidity
 inline void net_publish_ha_discovery() {
@@ -1080,11 +1192,29 @@ inline void net_publish_ha_discovery() {
   // Additional diagnostics published each wake
   pub_disc("wifi_rssi", "WiFi RSSI", "dBm", "signal_strength", "wifi/rssi");
   pub_disc("publish_ms", "Publish Latency", "ms", "duration", "debug/publish_ms");
+  
+  // New diagnostic entities
+  pub_disc("boot_reason", "Boot Reason", "", "None", "diagnostics/boot_reason");
+  pub_disc("boot_count", "Boot Count", "", "None", "diagnostics/boot_count");
+  pub_disc("crash_count", "Crash Count", "", "None", "diagnostics/crash_count");
+  pub_disc("uptime", "Cumulative Uptime", "s", "duration", "diagnostics/uptime");
+  pub_disc("wake_count", "Wake Count", "", "None", "diagnostics/wake_count");
+  pub_disc("diagnostic_mode", "Diagnostic Mode", "", "None", "diagnostics/diagnostic_mode");
 }
 
 inline bool net_wifi_is_connected() { return WiFi.isConnected(); }
 
 inline bool net_mqtt_is_connected() { return g_mqtt.connected(); }
+
+// Check if diagnostic mode change was requested via MQTT
+inline bool net_check_diagnostic_mode_request(bool& value) {
+  if (g_diagnostic_mode_requested) {
+    value = g_diagnostic_mode_request_value;
+    g_diagnostic_mode_requested = false;  // Clear the flag
+    return true;
+  }
+  return false;
+}
 
 inline void net_prepare_for_sleep() {
   // Publish availability offline and disconnect cleanly before deep sleep

@@ -1,6 +1,7 @@
 // full_refresh_v2 moved below includes and constants
 #include <esp_system.h>
 #include <esp_timer.h>
+#include <esp_heap_caps.h>
 #include <cstdio>
 
 // Copyright 2024 Justin
@@ -411,6 +412,26 @@ RTC_DATA_ATTR static float last_published_inside_pressureHPa = NAN;
 RTC_DATA_ATTR static uint32_t last_status_crc = 0;
 RTC_DATA_ATTR static float last_inside_rh = NAN;
 
+// Diagnostic counters (persist across deep sleep)
+RTC_DATA_ATTR static uint32_t rtc_boot_count = 0;           // Total boots since power-on
+RTC_DATA_ATTR static uint32_t rtc_crash_count = 0;          // Count of abnormal resets
+RTC_DATA_ATTR static uint32_t rtc_cumulative_uptime_sec = 0; // Total awake time in seconds
+RTC_DATA_ATTR static uint32_t rtc_last_boot_timestamp = 0;   // Timestamp of last boot
+RTC_DATA_ATTR static esp_reset_reason_t rtc_last_reset_reason = ESP_RST_UNKNOWN;
+
+// Diagnostic mode state
+static bool g_diagnostic_mode = false;
+static uint32_t g_diagnostic_last_publish_ms = 0;
+static const uint32_t DIAGNOSTIC_PUBLISH_INTERVAL_MS = 10000; // 10 seconds
+
+// Memory monitoring structure
+struct MemoryDiagnostics {
+  uint32_t free_heap;
+  uint32_t min_free_heap;
+  uint32_t largest_free_block;
+  float fragmentation_pct;
+};
+
 // Timeout tracking
 static uint32_t s_timeouts_mask = 0;
 
@@ -695,6 +716,55 @@ static inline bool reset_reason_is_crash(esp_reset_reason_t r) {
   }
 }
 
+// Memory diagnostic functions
+static MemoryDiagnostics get_memory_diagnostics() {
+  MemoryDiagnostics diag;
+  diag.free_heap = esp_get_free_heap_size();
+  diag.min_free_heap = esp_get_minimum_free_heap_size();
+  
+  // Get largest free block using heap_caps API for more accuracy
+  diag.largest_free_block = heap_caps_get_largest_free_block(MALLOC_CAP_DEFAULT);
+  
+  // Calculate fragmentation percentage
+  if (diag.free_heap > 0 && diag.largest_free_block > 0) {
+    diag.fragmentation_pct = ((float)(diag.free_heap - diag.largest_free_block) / 
+                              (float)diag.free_heap) * 100.0f;
+  } else {
+    diag.fragmentation_pct = 0.0f;
+  }
+  
+  return diag;
+}
+
+// Check if diagnostic mode should be activated based on rapid resets
+static bool check_rapid_reset_diagnostic_trigger() {
+  // Check if we've had 3+ resets within 10 seconds
+  uint32_t now = static_cast<uint32_t>(time(nullptr));
+  
+  // If time is not synced, use millis-based detection
+  if (now < 1609459200UL) {  // Before 2021
+    return false;  // Can't detect rapid resets without proper time
+  }
+  
+  if (rtc_boot_count >= 3 && rtc_last_boot_timestamp > 0) {
+    uint32_t time_since_last_boot = now - rtc_last_boot_timestamp;
+    if (time_since_last_boot <= 10) {
+      return true;  // 3+ boots within 10 seconds
+    }
+  }
+  return false;
+}
+
+// Wrapper for deep sleep that tracks uptime
+static void go_deep_sleep_with_tracking(uint32_t seconds) {
+  // Update cumulative uptime before sleeping
+  uint32_t awake_time_sec = millis() / 1000;
+  rtc_cumulative_uptime_sec += awake_time_sec;
+  
+  // Call the original deep sleep function
+  go_deep_sleep_seconds(seconds);
+}
+
 static const char* wakeup_cause_str(esp_sleep_wakeup_cause_t c) {
   switch (c) {
     case ESP_SLEEP_WAKEUP_UNDEFINED:
@@ -862,7 +932,7 @@ static void handle_serial_command_line(const String& line) {
     }
     // Cleanly disconnect and power down radios before sleeping
     net_prepare_for_sleep();
-    go_deep_sleep_seconds(sec);
+    go_deep_sleep_with_tracking(sec);
     return;
   }
   if (op == "reboot" || op == "reset") {
@@ -1870,6 +1940,35 @@ void setup() {
   Serial.println("DBG: skipping pre-publish full draw (single full later)");
 #endif
 
+  // Update diagnostic counters based on reset reason
+  esp_reset_reason_t current_reset_reason = esp_reset_reason();
+  rtc_last_reset_reason = current_reset_reason;
+  
+  // Update boot and crash counters
+  if (current_reset_reason == ESP_RST_POWERON) {
+    // Power-on reset: clear all counters
+    rtc_boot_count = 1;
+    rtc_crash_count = 0;
+    rtc_cumulative_uptime_sec = 0;
+  } else {
+    // Any other reset: increment boot count
+    rtc_boot_count++;
+    
+    // Increment crash count for abnormal resets
+    if (reset_reason_is_crash(current_reset_reason)) {
+      rtc_crash_count++;
+    }
+  }
+  
+  // Check for diagnostic mode triggers
+  if (check_rapid_reset_diagnostic_trigger()) {
+    g_diagnostic_mode = true;
+    Serial.println("DIAG: Entering diagnostic mode (rapid reset detected)");
+  }
+  
+  // Update boot timestamp for rapid reset detection
+  rtc_last_boot_timestamp = static_cast<uint32_t>(time(nullptr));
+  
   // Crash safety: on panic/WDT/brownout reboot, publish retained last_crash;
   // clear it on clean runs
   if (net_mqtt_is_connected()) {
@@ -1879,6 +1978,21 @@ void setup() {
     } else {
       net_publish_last_crash(nullptr);  // clear retained key
     }
+    
+    // Publish diagnostic information
+    net_publish_boot_reason(reset_reason_str(current_reset_reason));
+    net_publish_boot_count(rtc_boot_count);
+    net_publish_crash_count(rtc_crash_count);
+    net_publish_wake_count(rtc_wake_count);
+    net_publish_uptime(rtc_cumulative_uptime_sec);
+    
+    // Publish memory diagnostics
+    MemoryDiagnostics mem_diag = get_memory_diagnostics();
+    net_publish_memory_diagnostics(mem_diag.free_heap, mem_diag.min_free_heap,
+                                   mem_diag.largest_free_block, mem_diag.fragmentation_pct);
+    
+    // Publish diagnostic mode status
+    net_publish_diagnostic_mode(g_diagnostic_mode);
   }
 
   // Measure sensor read duration (first read post-boot)
@@ -2383,6 +2497,12 @@ void setup() {
     delay(50);
   }
 #else
+  // Skip deep sleep if in diagnostic mode
+  if (g_diagnostic_mode) {
+    Serial.println("DIAG: Staying awake in diagnostic mode");
+    return;  // Exit setup, continue to loop
+  }
+  
 #if DEV_CYCLE_MODE
   Serial.printf("Dev cycle: sleeping for %us\n",
   nvs_end_cache();
@@ -2407,7 +2527,7 @@ void setup() {
     net_publish_status(hb, true);
   }
   net_prepare_for_sleep();
-  go_deep_sleep_seconds(DEV_SLEEP_SEC);
+  go_deep_sleep_with_tracking(DEV_SLEEP_SEC);
 #else
   Serial.printf("Sleeping for %us\n", static_cast<unsigned>(WAKE_INTERVAL_SEC));
 #if USE_DISPLAY
@@ -2433,12 +2553,96 @@ void setup() {
     net_publish_status(hb, true);
   }
   net_prepare_for_sleep();
-  go_deep_sleep_seconds(WAKE_INTERVAL_SEC);
+  go_deep_sleep_with_tracking(WAKE_INTERVAL_SEC);
 #endif
 #endif
 }
 
 void loop() {
-  // not used; we deep-sleep from setup
-  delay(1000);
+  // Check for MQTT diagnostic mode commands
+  bool diag_mode_value;
+  if (net_check_diagnostic_mode_request(diag_mode_value)) {
+    g_diagnostic_mode = diag_mode_value;
+    net_publish_diagnostic_mode(g_diagnostic_mode);
+    Serial.printf("DIAG: Mode changed to %s via MQTT\n", g_diagnostic_mode ? "active" : "inactive");
+  }
+  
+  // In diagnostic mode, stay awake and publish diagnostics periodically
+  if (g_diagnostic_mode) {
+    // Keep network alive
+    net_loop();
+    
+    // Publish diagnostics every DIAGNOSTIC_PUBLISH_INTERVAL_MS
+    if (millis() - g_diagnostic_last_publish_ms >= DIAGNOSTIC_PUBLISH_INTERVAL_MS) {
+      g_diagnostic_last_publish_ms = millis();
+      
+      if (net_mqtt_is_connected()) {
+        Serial.println("DIAG: Publishing diagnostic data");
+        
+        // Update and publish memory diagnostics
+        MemoryDiagnostics mem_diag = get_memory_diagnostics();
+        net_publish_memory_diagnostics(mem_diag.free_heap, mem_diag.min_free_heap,
+                                       mem_diag.largest_free_block, mem_diag.fragmentation_pct);
+        
+        // Update uptime
+        uint32_t current_uptime = rtc_cumulative_uptime_sec + (millis() / 1000);
+        net_publish_uptime(current_uptime);
+        
+        // Publish other diagnostic info
+        net_publish_wake_count(rtc_wake_count);
+        net_publish_wifi_rssi(WiFi.RSSI());
+        
+        // Publish detailed diagnostic JSON
+        char diag_json[512];
+        snprintf(diag_json, sizeof(diag_json),
+                 "{\"diag_mode\":true,\"free_heap\":%u,\"min_heap\":%u,"
+                 "\"fragmentation\":%.1f,\"rssi\":%d,\"uptime\":%u,"
+                 "\"boot_count\":%u,\"crash_count\":%u,\"wake_count\":%u}",
+                 mem_diag.free_heap, mem_diag.min_free_heap, mem_diag.fragmentation_pct,
+                 WiFi.RSSI(), current_uptime, rtc_boot_count, rtc_crash_count, rtc_wake_count);
+        net_publish_debug_json(diag_json, false);
+        
+        // Log to serial
+        Serial.printf("DIAG: Heap: free=%u min=%u frag=%.1f%%\n",
+                      mem_diag.free_heap, mem_diag.min_free_heap, mem_diag.fragmentation_pct);
+      }
+    }
+    
+    // Handle serial commands for diagnostic mode
+    if (Serial.available()) {
+      String cmd = Serial.readStringUntil('\n');
+      cmd.trim();
+      
+      if (cmd == "normal" || cmd == "exit") {
+        Serial.println("DIAG: Exiting diagnostic mode");
+        g_diagnostic_mode = false;
+        net_publish_diagnostic_mode(false);
+      } else if (cmd == "memtest") {
+        Serial.println("DIAG: Running memory test");
+        MemoryDiagnostics mem = get_memory_diagnostics();
+        Serial.printf("  Free: %u bytes\n", mem.free_heap);
+        Serial.printf("  Min:  %u bytes\n", mem.min_free_heap);
+        Serial.printf("  Largest block: %u bytes\n", mem.largest_free_block);
+        Serial.printf("  Fragmentation: %.1f%%\n", mem.fragmentation_pct);
+      } else if (cmd == "sensortest") {
+        Serial.println("DIAG: Testing sensors");
+        InsideReadings ir = read_inside_sensors();
+        Serial.printf("  Temp: %.2f°C\n", ir.temperatureC);
+        Serial.printf("  Humidity: %.1f%%\n", ir.humidityPct);
+        Serial.printf("  Pressure: %.1f hPa\n", ir.pressureHPa);
+      } else if (cmd == "wifitest") {
+        Serial.println("DIAG: WiFi scan");
+        int n = WiFi.scanNetworks();
+        Serial.printf("  Found %d networks\n", n);
+        for (int i = 0; i < n && i < 10; i++) {
+          Serial.printf("  %d: %s (%d dBm)\n", i+1, WiFi.SSID(i).c_str(), WiFi.RSSI(i));
+        }
+      }
+    }
+    
+    delay(100);
+  } else {
+    // Normal mode: deep sleep from setup, shouldn't reach here
+    delay(1000);
+  }
 }
