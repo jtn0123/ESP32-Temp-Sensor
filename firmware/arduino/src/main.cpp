@@ -27,6 +27,10 @@
 #include "net.h"
 #include "power.h"
 #include "sensors.h"
+#include "system_manager.h"
+#if USE_DISPLAY
+#include "display_manager.h"
+#endif
 
 // Constant aliases for backward compatibility
 // Map old names to new arrays from display_layout.h with RECT_ prefix
@@ -64,35 +68,16 @@ static inline void status_pixel_tick();
 static void dev_display_tick();
 #endif
 
+// Most display functions are now declared in display_manager.h
+// No need to redeclare them here since they're implemented in this file
 #if USE_DISPLAY
-static void full_refresh();
-static void smoke_full_window_test();
-// Forward decls for per-region test commands
-static void partial_update_inside_temp(const char* in_temp_f, char trend);
-static void partial_update_inside_rh(const char* in_rh);
-static void partial_update_outside_temp(const char* out_temp_f, char trend);
-static void partial_update_outside_rh(const char* out_rh);
-static void partial_update_outside_wind(const char* wind_str);
-static void partial_update_outside_condition(const char* short_condition);
-static void partial_update_weather_icon(const char* weather);
-// New helpers: prefer OpenWeather fields (id/icon/desc) when available
-static void partial_update_weather_icon_from_outside(const OutsideReadings& o);
-static void draw_weather_icon_region_at(int16_t x, int16_t y, int16_t w, int16_t h,
-                                        const char* weather);
-static void draw_weather_icon_region_at_from_outside(int16_t x, int16_t y, int16_t w, int16_t h,
-                                                     const OutsideReadings& o);
-// Footer-only weather updater to keep geometry consistent with full renders
-static void partial_update_footer_weather_from_outside(const OutsideReadings& o);
-static void draw_header_time(const char* time_str);
 // Accessor to avoid forward reference ordering issues
-static inline float get_last_outside_f();
+// Implemented below, declared in display_manager.h
 static bool maybe_redraw_status(const BatteryStatus& bs, const char* ip_cstr, const int rect[4]);
 template <typename DrawFnFwd>
 static inline void draw_in_region(const int rect[4], DrawFnFwd drawFn);
-static inline int16_t text_width_default_font(const char* s, uint8_t size);
 // Forward decls used by spec renderer implemented earlier in the file
 static inline void draw_temp_number_and_units(const int r[4], const char* t);
-static void make_short_condition_cstr(const char* w, char* out, size_t sz);
 #if USE_UI_SPEC
 // Minimal spec interpreter (full-window only) for variant rendering
 static void draw_from_spec_full(uint8_t variantId);
@@ -307,9 +292,8 @@ static void draw_from_spec_full_impl(uint8_t variantId) {
           } else if (r == OUT_TEMP) {
             OutsideReadings orr = net_get_outside();
             if (orr.validTemp && isfinite(orr.temperatureC)) {
-            snprintf(temp_buf,
-                      sizeof(temp_buf),
-                      "%.1f",
+              float tempF = orr.temperatureC * 9.0f / 5.0f + 32.0f;
+              snprintf(temp_buf, sizeof(temp_buf), "%.1f", tempF);
             } else if (isfinite(get_last_outside_f())) {
               snprintf(temp_buf, sizeof(temp_buf), "%.1f", get_last_outside_f());
             } else {
@@ -396,11 +380,10 @@ static void draw_from_spec_full_impl(uint8_t variantId) {
 #endif  // USE_DISPLAY
 
 RTC_DATA_ATTR static uint16_t partial_counter = 0;
-// Track number of wakes from deep sleep (monotonic until power loss)
-RTC_DATA_ATTR static uint32_t rtc_wake_count = 0;
+// Wake count now managed by system_manager
 RTC_DATA_ATTR static float last_inside_f = NAN;
 RTC_DATA_ATTR static float last_outside_f = NAN;
-static inline float get_last_outside_f() { return last_outside_f; }
+float get_last_outside_f() { return last_outside_f; }
 RTC_DATA_ATTR static float last_outside_rh = NAN;
 RTC_DATA_ATTR static int32_t last_icon_id = -1;
 // Track last rendered footer weather (icon + short text) to avoid
@@ -425,12 +408,7 @@ static uint32_t g_diagnostic_last_publish_ms = 0;
 static const uint32_t DIAGNOSTIC_PUBLISH_INTERVAL_MS = 10000; // 10 seconds
 
 // Memory monitoring structure
-struct MemoryDiagnostics {
-  uint32_t free_heap;
-  uint32_t min_free_heap;
-  uint32_t largest_free_block;
-  float fragmentation_pct;
-};
+// MemoryDiagnostics struct moved to system_manager.h
 
 // Timeout tracking
 static uint32_t s_timeouts_mask = 0;
@@ -461,12 +439,10 @@ static uint32_t s_timeouts_mask = 0;
 #endif
 
 // Missing function implementations
-static inline void nvs_end_cache() {
-  // Note: g_prefs is declared later in the file, so we can't access it here
-  // This function needs to be moved or g_prefs needs to be made accessible
-}
+// Moved to system_manager
 
 // Forward declarations for functions used by print_boot_diagnostics
+float get_last_outside_f();  // Forward declaration
 static const char* reset_reason_str(esp_reset_reason_t r);
 static const char* wakeup_cause_str(esp_sleep_wakeup_cause_t c);
 
@@ -480,14 +456,14 @@ static inline void net_time_hhmm(char* out, size_t out_size) {
 }
 
 static inline void net_publish_layout_identity() {
-  if (!g_mqtt.connected())
+  if (!mqtt_is_connected())
     return;
   char topic[128];
   snprintf(topic, sizeof(topic), "%s/layout", MQTT_PUB_BASE);
   char payload[96];
   snprintf(payload, sizeof(payload), "{\"layout_version\":%u,\"layout_crc\":\"0x%08X\"}",
            static_cast<unsigned>(LAYOUT_VERSION), static_cast<unsigned>(LAYOUT_CRC));
-  g_mqtt.publish(topic, payload, true);
+  mqtt_publish_raw(topic, payload, true);
 }
 #if USE_DISPLAY
 // Ensure the very first wake after flashing or power-on does a full render
@@ -500,43 +476,40 @@ static bool g_full_only_mode = false;  // when true, always do full refresh
                                        // (debug)
 #endif
 
-static Preferences g_prefs;
+// Preferences object now managed in system_manager
 
-static inline void nvs_begin_cache() { g_prefs.begin("cache", false); }
-static inline void nvs_load_cache_if_unset() {
+// Implementation of NVS cache loading - uses RTC variables local to main.cpp
+void nvs_load_cache_if_unset() {
+  nvs_begin_cache();
+  
   if (!isfinite(last_inside_f))
-    last_inside_f = g_prefs.getFloat("li_f", NAN);
+    last_inside_f = nvs_load_float("li_f", NAN);
   if (!isfinite(last_inside_rh))
-    last_inside_rh = g_prefs.getFloat("li_rh", NAN);
+    last_inside_rh = nvs_load_float("li_rh", NAN);
   if (!isfinite(last_outside_f))
-    last_outside_f = g_prefs.getFloat("lo_f", NAN);
+    last_outside_f = nvs_load_float("lo_f", NAN);
   if (!isfinite(last_outside_rh))
-    last_outside_rh = g_prefs.getFloat("lo_rh", NAN);
+    last_outside_rh = nvs_load_float("lo_rh", NAN);
   if (last_icon_id < 0)
-    last_icon_id = static_cast<int32_t>(g_prefs.getInt("icon", -1));
+    last_icon_id = static_cast<int32_t>(nvs_load_uint("icon", -1));
   if (last_status_crc == 0)
-    last_status_crc = g_prefs.getUInt("st_crc", 0);
+    last_status_crc = nvs_load_uint("st_crc", 0);
   if (!isfinite(last_published_inside_tempC))
-    last_published_inside_tempC = g_prefs.getFloat("pi_t", NAN);
+    last_published_inside_tempC = nvs_load_float("pi_t", NAN);
   if (!isfinite(last_published_inside_rh))
-    last_published_inside_rh = g_prefs.getFloat("pi_rh", NAN);
+    last_published_inside_rh = nvs_load_float("pi_rh", NAN);
   if (!isfinite(last_published_inside_pressureHPa))
-    last_published_inside_pressureHPa = g_prefs.getFloat("pi_p", NAN);
-  uint16_t pc = g_prefs.getUShort("pcount", 0);
+    last_published_inside_pressureHPa = nvs_load_float("pi_p", NAN);
+  uint16_t pc = nvs_load_ushort("pcount", 0);
   if (pc > 0)
     partial_counter = pc;
   // Load render mode (0=partial, 1=full-only)
-  g_full_only_mode = g_prefs.getUChar("full_only", 0) != 0;
+  g_full_only_mode = nvs_load_uchar("full_only", 0) != 0;
+  
+  nvs_end_cache();
   // Remove legacy ui_variant preference; single UI variant remains
 }
-static inline void nvs_store_float(const char* key, float v) { g_prefs.putFloat(key, v); }
-static inline void nvs_store_uint(const char* key, uint32_t v) { g_prefs.putUInt(key, v); }
-static inline void print_boot_diagnostics() {
-  Serial.printf("Reset: %s, Wake: %s\n", reset_reason_str(esp_reset_reason()),
-                wakeup_cause_str(esp_sleep_get_wakeup_cause()));
-  Serial.printf("Heap: free=%u min=%u\n", static_cast<unsigned>(esp_get_free_heap_size()),
-                static_cast<unsigned>(esp_get_minimum_free_heap_size()));
-}
+// print_boot_diagnostics now in system_manager
 
 #if USE_DISPLAY
 // Shared soft deadline used by display drawing helpers to avoid long loops
@@ -703,38 +676,7 @@ static const char* reset_reason_str(esp_reset_reason_t r) {
   }
 }
 
-static inline bool reset_reason_is_crash(esp_reset_reason_t r) {
-  switch (r) {
-    case ESP_RST_PANIC:
-    case ESP_RST_INT_WDT:
-    case ESP_RST_TASK_WDT:
-    case ESP_RST_WDT:
-    case ESP_RST_BROWNOUT:
-      return true;
-    default:
-      return false;
-  }
-}
 
-// Memory diagnostic functions
-static MemoryDiagnostics get_memory_diagnostics() {
-  MemoryDiagnostics diag;
-  diag.free_heap = esp_get_free_heap_size();
-  diag.min_free_heap = esp_get_minimum_free_heap_size();
-  
-  // Get largest free block using heap_caps API for more accuracy
-  diag.largest_free_block = heap_caps_get_largest_free_block(MALLOC_CAP_DEFAULT);
-  
-  // Calculate fragmentation percentage
-  if (diag.free_heap > 0 && diag.largest_free_block > 0) {
-    diag.fragmentation_pct = ((float)(diag.free_heap - diag.largest_free_block) / 
-                              (float)diag.free_heap) * 100.0f;
-  } else {
-    diag.fragmentation_pct = 0.0f;
-  }
-  
-  return diag;
-}
 
 // Check if diagnostic mode should be activated based on rapid resets
 static bool check_rapid_reset_diagnostic_trigger() {
@@ -755,15 +697,6 @@ static bool check_rapid_reset_diagnostic_trigger() {
   return false;
 }
 
-// Wrapper for deep sleep that tracks uptime
-static void go_deep_sleep_with_tracking(uint32_t seconds) {
-  // Update cumulative uptime before sleeping
-  uint32_t awake_time_sec = millis() / 1000;
-  rtc_cumulative_uptime_sec += awake_time_sec;
-  
-  // Call the original deep sleep function
-  go_deep_sleep_seconds(seconds);
-}
 
 static const char* wakeup_cause_str(esp_sleep_wakeup_cause_t c) {
   switch (c) {
@@ -792,257 +725,14 @@ static const char* wakeup_cause_str(esp_sleep_wakeup_cause_t c) {
   }
 }
 
-static void handle_serial_command_line(const String& line) {
-  String cmd = line;
-  cmd.trim();
-  if (cmd.length() == 0)
-    return;
-  // Split first token
-  int sp = cmd.indexOf(' ');
-  String op = sp >= 0 ? cmd.substring(0, sp) : cmd;
-  String args = sp >= 0 ? cmd.substring(sp + 1) : String();
-  op.toLowerCase();
-  if (op == "help" || op == "h" || op == "?") {
-    Serial.print(F("Commands: help | status | metrics | sleep <sec> | "));
-    Serial.print(F("reboot | wifi | mqtt | pub <tempF> <rh%> | "));
-    Serial.print(F("mode <full|partial> | "));
-    Serial.println(
-        F("ptest <inside_temp|inside_rh|outside_temp|outside_rh|"
-          "wind|condition|icon|status|header_time>"));
-    return;
-  }
-  if (op == "status") {
-    char ip_c[32];
-    net_ip_cstr(ip_c, sizeof(ip_c));
-    BatteryStatus bs = read_battery_status();
-    Serial.printf("status ip=%s wifi=%s mqtt=%s v=%.2f pct=%d partial=%u\n", ip_c,
-                  net_wifi_is_connected() ? "up" : "down", net_mqtt_is_connected() ? "up" : "down",
-                  static_cast<double>(bs.voltage), bs.percent,
-                  static_cast<unsigned>(partial_counter));
-    return;
-  }
-  if (op == "metrics") {
-    InsideReadings latest = read_inside_sensors();
-    emit_metrics_json(latest.temperatureC, latest.humidityPct, latest.pressureHPa);
-    return;
-  }
-  if (op == "ptest") {
-#if USE_DISPLAY
-    String which = args;
-    which.toLowerCase();
-    if (which == "inside_temp") {
-      partial_update_inside_temp("72.0", '0');
-      Serial.println(F("ptest: inside_temp done"));
-    } else if (which == "inside_rh") {
-      partial_update_inside_rh("45");
-      Serial.println(F("ptest: inside_rh done"));
-    } else if (which == "outside_temp") {
-      partial_update_outside_temp("68.5", '0');
-      Serial.println(F("ptest: outside_temp done"));
-    } else if (which == "outside_rh") {
-      partial_update_outside_rh("38");
-      Serial.println(F("ptest: outside_rh done"));
-    } else if (which == "wind") {
-      partial_update_outside_wind("4.5 mph");
-      Serial.println(F("ptest: wind done"));
-    } else if (which == "condition") {
-      partial_update_outside_condition("Cloudy");
-      Serial.println(F("ptest: condition done"));
-    } else if (which == "icon") {
-      partial_update_weather_icon("cloudy");
-      Serial.println(F("ptest: icon done"));
-    } else if (which == "status") {
-      // Simple status line: just IP ... to verify region
-      char ip_c[32];
-      net_ip_cstr(ip_c, sizeof(ip_c));
-      draw_in_region(STATUS_, [&](int16_t xx, int16_t yy, int16_t, int16_t hh) {
-        display.setTextColor(GxEPD_BLACK);
-        display.setTextSize(1);
-        display.setCursor(xx + 2, yy + hh - 4);
-        display.print("IP ");
-        display.print(ip_c);
-      });
-      Serial.println(F("ptest: status done"));
-    } else if (which == "header_time") {
-      // Draw a test time string in header time region
-      draw_in_region(HEADER_TIME, [&](int16_t xx, int16_t yy, int16_t ww, int16_t hh) {
-        display.setTextColor(GxEPD_BLACK);
-        display.setTextSize(1);
-        int16_t rx = xx + ww - 2 - text_width_default_font("10:32", 1);
-        int16_t by = yy + hh - 2;
-        display.setCursor(rx, by);
-        display.print("10:32");
-      });
-      Serial.println(F("ptest: header_time done"));
-    } else {
-      Serial.println(F("Usage: ptest <inside_temp|inside_rh|outside_temp|"));
-      Serial.println(F("outside_rh|wind|condition|icon|status|header_time>"));
-    }
-#else
-    Serial.println(F("Display disabled in this build"));
-#endif
-    return;
-  }
-  if (op == "refresh") {
-#if USE_DISPLAY
-    Serial.println(F("Display: forced full refresh"));
-    // Single UI variant (v1)
-    full_refresh();
-#else
-    Serial.println(F("Display disabled in this build"));
-#endif
-    return;
-  }
-  if (op == "smoke") {
-#if USE_DISPLAY
-    Serial.println(F("Display: full-window smoke test"));
-    smoke_full_window_test();
-#else
-    Serial.println(F("Display disabled in this build"));
-#endif
-    return;
-  }
-  if (op == "sleep") {
-    uint32_t sec = args.toInt();
-    if (sec == 0) {
-      Serial.println(F("ERR sleep: provide seconds > 0"));
-      return;
-    }
-    Serial.printf("Sleeping for %us\n", static_cast<unsigned>(sec));
-    nvs_end_cache();
-#if USE_STATUS_PIXEL
-    status_pixel_off();
-#endif
-    // Optionally gate off display/sensor rails if defined
-#if defined(EINK_EN_PIN)
-    pinMode(EINK_EN_PIN, OUTPUT);
-    digitalWrite(EINK_EN_PIN, LOW);
-    delay(5);
-#endif
-#ifdef SENSORS_EN_PIN
-    pinMode(SENSORS_EN_PIN, OUTPUT);
-    digitalWrite(SENSORS_EN_PIN, LOW);
-    delay(5);
-#endif
-    // Publish a retained heartbeat indicating planned sleep
-    {
-      char hb[96];
-      snprintf(hb, sizeof(hb), "sleeping=1 sec=%u", static_cast<unsigned>(sec));
-      net_publish_status(hb, true);
-    }
-    // Cleanly disconnect and power down radios before sleeping
-    net_prepare_for_sleep();
-    go_deep_sleep_with_tracking(sec);
-    return;
-  }
-  if (op == "reboot" || op == "reset") {
-    Serial.println(F("Rebooting..."));
-    delay(50);
-    ESP.restart();
-    return;
-  }
-  if (op == "wifi") {
-    Serial.println(F("WiFi: reconnecting..."));
-    WiFi.disconnect(true, true);
-    delay(100);
-    ensure_wifi_connected();
-    return;
-  }
-  if (op == "wificlear") {
-    Serial.println(F("WiFi: clearing provisioned credentials and "));
-    Serial.println(F("rebooting..."));
-    bool ok = net_wifi_clear_provisioning();
-    Serial.printf("WiFi: clear %s\n", ok ? "ok" : "failed");
-    delay(50);
-    ESP.restart();
-    return;
-  }
-  if (op == "mqtt") {
-    Serial.println(F("MQTT: reconnecting..."));
-    ensure_mqtt_connected();
-    return;
-  }
-  if (op == "mode") {
-    if (args == "full") {
-      g_full_only_mode = true;
-      g_prefs.putUChar("full_only", 1);
-      Serial.println(F("Mode set: full-only"));
-    } else if (args == "partial") {
-      g_full_only_mode = false;
-      g_prefs.putUChar("full_only", 0);
-      Serial.println(F("Mode set: partial+periodic full"));
-    } else {
-      Serial.println(F("Usage: mode <full|partial>"));
-    }
-    return;
-  }
-  // 'ui' command removed; only one UI variant is supported now
-  if (op == "pub") {
-    // pub <tempF> <rh%>
-    float tf = NAN, rh = NAN;
-    int sp2 = args.indexOf(' ');
-    if (sp2 > 0) {
-      tf = args.substring(0, sp2).toFloat();
-      rh = args.substring(sp2 + 1).toFloat();
-    }
-    if (!isfinite(tf) || !isfinite(rh)) {
-      Serial.println(F("ERR pub: usage pub <tempF> <rh%>"));
-      return;
-    }
-    float tc = (tf - 32.0f) * (5.0f / 9.0f);
-    net_publish_inside(tc, rh);
-    Serial.printf("Published inside tempC=%.2f rh=%.0f\n", tc, rh);
-    return;
-  }
-  Serial.println(F("ERR: unknown command (try 'help')"));
-}
+
+// Moved to display_manager.cpp
+
+// Moved to display_manager.cpp
 
 #if USE_DISPLAY
-static void draw_static_chrome() {
-  // Frame and header linework
-  display.fillScreen(GxEPD_WHITE);
-  // Draw outer border flush to panel extents
-  display.drawRect(0, 0, EINK_WIDTH, EINK_HEIGHT, GxEPD_BLACK);
-  // Header underline aligned with simulator and other draw paths
-  display.drawLine(1, 22 + TOP_Y_OFFSET, EINK_WIDTH - 2, 22 + TOP_Y_OFFSET, GxEPD_BLACK);
-  // Extend the center divider to the bottom frame to match the simulator
-  display.drawLine(125, 18 + TOP_Y_OFFSET, 125, EINK_HEIGHT - 2, GxEPD_BLACK);
-  // Single header underline between header and content
-  display.drawLine(1, 16 + TOP_Y_OFFSET, EINK_WIDTH - 2, 16 + TOP_Y_OFFSET, GxEPD_BLACK);
-  // Horizontal rule for footer region (drawn at top edge of footer)
-  display.drawLine(1, FOOTER_L[1], EINK_WIDTH - 2, FOOTER_L[1], GxEPD_BLACK);
-
-  // Header: room name left, time will be drawn separately
-  display.setTextColor(GxEPD_BLACK);
-  display.setTextSize(1);
-  display.setCursor(6, 13 + TOP_Y_OFFSET + HEADER_NAME_Y_ADJ);
-  display.print(ROOM_NAME);
-
-  // Section labels: left 'INSIDE', right 'OUTSIDE'; top-right also shows
-  // version
-  display.setCursor(6, 22 + TOP_Y_OFFSET);
-  display.print(F("INSIDE"));
-  display.setCursor(131, 22 + TOP_Y_OFFSET);
-  display.print(F("OUTSIDE"));
-  // Top-right version string within HEADER_TIME box
-  String version_str = String("v") + FW_VERSION;
-  display.setCursor(
-      HEADER_TIME[0] + HEADER_TIME[2] - 2 - text_width_default_font(version_str.c_str(), 1),
-      HEADER_TIME[1] + TOP_Y_OFFSET + HEADER_TIME[3] - 8);
-  display.print(F("v"));
-  display.print(FW_VERSION);
-  // Center time will be drawn later in draw_header_time(_direct)
-}
-
-static inline int16_t text_width_default_font(const char* s, uint8_t size) {
-  // Default 5x7 font is 6 px advance per char at size 1
-  int16_t count = 0;
-  for (const char* p = s; *p; ++p) count++;
-  return count * 6 * size;
-}
-
 // Forward declaration for status drawing used by maybe_redraw_status
-static void draw_status_line(const BatteryStatus& bs, const char* ip_cstr);
+void draw_status_line(const BatteryStatus& bs, const char* ip_cstr);
 
 template <typename DrawFn>
 static inline void draw_in_region(const int rect[4],
@@ -1190,30 +880,9 @@ static inline bool maybe_redraw_status(const BatteryStatus& bs, const char* ip_c
   return false;
 }
 
-static void make_short_condition_cstr(const char* weather, char* out, size_t out_size) {
-  if (!out || out_size == 0)
-    return;
-  out[0] = '\0';
-  if (!weather)
-    return;
-  // Skip leading spaces
-  const char* p = weather;
-  while (*p == ' ' || *p == '\t') p++;
-  // Copy until next separator or end
-  size_t i = 0;
-  while (*p && i < out_size - 1) {
-    char c = *p;
-    // Treat common separators and hyphen as delimiters so HA values like
-    // "clear-night" or "snowy-rainy" shorten to a single word.
-    if (c == ' ' || c == '\t' || c == ',' || c == ';' || c == ':' || c == '/' || c == '-')
-      break;
-    out[i++] = c;
-    p++;
-  }
-  out[i] = '\0';
-}
+// Moved to display_manager.cpp
 
-static void draw_header_time(const char* time_str) {
+void draw_header_time(const char* time_str) {
   // Draw centered time within HEADER_CENTER box
   // to avoid overlapping the version
   int rect2[4] = {HEADER_CENTER[0], static_cast<int16_t>(HEADER_CENTER[1] + TOP_Y_OFFSET),
@@ -1229,17 +898,9 @@ static void draw_header_time(const char* time_str) {
   });
 }
 
-static inline void draw_header_time_direct(const char* time_str) {
-  int16_t tw = text_width_default_font(time_str, 1);
-  int16_t rx = static_cast<int16_t>(HEADER_CENTER[0] + (HEADER_CENTER[2] - tw) / 2);
-  int16_t by = static_cast<int16_t>(HEADER_CENTER[1] + TOP_Y_OFFSET + HEADER_CENTER[3] - 6);
-  display.setTextColor(GxEPD_BLACK);
-  display.setTextSize(1);
-  display.setCursor(rx, by);
-  display.print(time_str);
-}
+// Moved to display_manager.cpp
 
-static void draw_status_line(const BatteryStatus& bs, const char* ip_cstr) {
+void draw_status_line(const BatteryStatus& bs, const char* ip_cstr) {
   // Render stacked footer content inside
   // FOOTER_L (battery lines + centered IP)
   draw_in_region(FOOTER_L, [&](int16_t x, int16_t y, int16_t w, int16_t h) {
@@ -1285,64 +946,10 @@ static void draw_status_line(const BatteryStatus& bs, const char* ip_cstr) {
   });
 }
 
-static inline void draw_status_line_direct(const BatteryStatus& bs, const char* ip_cstr) {
-  int16_t xx = STATUS_[0];
-  int16_t yy = static_cast<int16_t>(STATUS_[1] + STATUS_Y_ADJ);
-  int16_t ww = STATUS_[2];
-  int16_t hh = STATUS_[3];
-  display.setTextColor(GxEPD_BLACK);
-  display.setTextSize(1);
-  int16_t cx = static_cast<int16_t>(xx + 2);
-  int16_t cy = static_cast<int16_t>(yy + hh - 4);
-  if (bs.percent >= 0) {
-    int16_t bx = cx;
-    int16_t by = static_cast<int16_t>(yy + 1);
-    int16_t bw2 = 13;
-    int16_t bh2 = 7;
-    display.drawRect(bx, by, bw2, bh2, GxEPD_BLACK);
-    display.fillRect(static_cast<int16_t>(bx + bw2), static_cast<int16_t>(by + 2), 2, 3,
-                     GxEPD_BLACK);
-    int16_t fillw = static_cast<int16_t>(((bw2 - 2) * (bs.percent / 100.0f) + 0.5f));
-    if (fillw > 0)
-      display.fillRect(static_cast<int16_t>(bx + 1), static_cast<int16_t>(by + 1), fillw,
-                       static_cast<int16_t>(bh2 - 2), GxEPD_BLACK);
-    cx = static_cast<int16_t>(cx + bw2 + 6);
-  }
-  char right[48];
-  snprintf(right, sizeof(right), "IP %s", ip_cstr);
-  int16_t bx, by2;
-  uint16_t bw3, bh3;
-  display.getTextBounds(right, 0, 0, &bx, &by2, &bw3, &bh3);
-  int16_t rx = static_cast<int16_t>(xx + ww - 2 - static_cast<int16_t>(bw3));
-  char left_full[64];
-  char left_nobatt[64];
-  char left_tail[32];
-  snprintf(left_full, sizeof(left_full), "Batt %.2fV %d%% | ~%dd", bs.voltage, bs.percent,
-           bs.estimatedDays);
-  snprintf(left_nobatt, sizeof(left_nobatt), "%.2fV %d%% | ~%dd", bs.voltage, bs.percent,
-           bs.estimatedDays);
-  snprintf(left_tail, sizeof(left_tail), "%d%% | ~%dd", bs.percent, bs.estimatedDays);
-  int16_t available = static_cast<int16_t>(rx - cx - 2);
-  const char* to_print = left_full;
-  display.getTextBounds(to_print, 0, 0, &bx, &by2, &bw3, &bh3);
-  if (static_cast<int16_t>(bw3) > available) {
-    to_print = left_nobatt;
-    display.getTextBounds(to_print, 0, 0, &bx, &by2, &bw3, &bh3);
-  }
-  if (static_cast<int16_t>(bw3) > available) {
-    display.getTextBounds(left_tail, 0, 0, &bx, &by2, &bw3, &bh3);
-    if (static_cast<int16_t>(bw3) <= available) {
-      to_print = left_tail;
-    } else {
-      to_print = "";
-    }
-  }
-  display.setCursor(cx, cy);
-  display.print(to_print);
-  display.setCursor(rx, cy);
-  display.print(right);
-}
+// Moved to display_manager.cpp
+#endif // USE_DISPLAY guard for draw_in_region template and related functions
 
+#if USE_DISPLAY
 static void draw_values(const char* in_temp_f, const char* in_rh, const char* out_temp_f,
                         const char* out_rh, const char* time_str, const char* status) {
   display.setTextColor(GxEPD_BLACK);
@@ -1477,10 +1084,12 @@ static IconId map_openweather_to_icon(const OutsideReadings& o) {
   // Fallback: heuristics from free-form string
   return map_weather_to_icon(o.weather);
 }
+#endif // USE_DISPLAY
 
 // Draw weather icon region using OutsideReadings object (prefer OpenWeather
 // hints)
-static void draw_weather_icon_region_at_from_outside(int16_t x, int16_t y, int16_t w, int16_t h,
+#if USE_DISPLAY
+void draw_weather_icon_region_at_from_outside(int16_t x, int16_t y, int16_t w, int16_t h,
                                                      const OutsideReadings& o) {
   display.fillRect(x, y, w, h, GxEPD_WHITE);
   int16_t ix = static_cast<int16_t>(x + (w - ICON_W) / 2);
@@ -1489,7 +1098,7 @@ static void draw_weather_icon_region_at_from_outside(int16_t x, int16_t y, int16
   draw_icon(display, ix, iy, icon_id, GxEPD_BLACK);
 }
 
-static void draw_weather_icon_region_at(int16_t x, int16_t y, int16_t w, int16_t h,
+void draw_weather_icon_region_at(int16_t x, int16_t y, int16_t w, int16_t h,
                                         const char* weather) {
   display.fillRect(x, y, w, h, GxEPD_WHITE);
   int16_t ix = x + (w - ICON_W) / 2;
@@ -1497,7 +1106,7 @@ static void draw_weather_icon_region_at(int16_t x, int16_t y, int16_t w, int16_t
   draw_icon(display, ix, iy, map_weather_to_icon(weather), GxEPD_BLACK);
 }
 
-static void full_refresh() {
+void full_refresh() {
   // If UI spec is enabled, render using generated ops for variant v1
 #if USE_UI_SPEC
   display.setFullWindow();
@@ -1663,7 +1272,7 @@ static void full_refresh() {
   } while (display.nextPage());
 }
 
-static void smoke_full_window_test() {
+void smoke_full_window_test() {
   display.setFullWindow();
   uint32_t page_count = 0;
   display.firstPage();
@@ -1684,7 +1293,7 @@ static void smoke_full_window_test() {
 
 // Removed minimal debug full_refresh
 
-static void partial_update_inside_temp(const char* in_temp_f, char trend) {
+void partial_update_inside_temp(const char* in_temp_f, char trend) {
   int rect[4] = {INSIDE_TEMP[0], static_cast<int16_t>(INSIDE_TEMP[1] + TOP_Y_OFFSET),
                  INSIDE_TEMP[2], INSIDE_TEMP[3]};
   draw_in_region(rect, [&](int16_t x, int16_t y, int16_t w, int16_t h) {
@@ -1711,7 +1320,7 @@ static void partial_update_inside_temp(const char* in_temp_f, char trend) {
   });
 }
 
-static void partial_update_outside_temp(const char* out_temp_f, char trend) {
+void partial_update_outside_temp(const char* out_temp_f, char trend) {
   int rect[4] = {OUT_TEMP[0], static_cast<int16_t>(OUT_TEMP[1] + TOP_Y_OFFSET), OUT_TEMP[2],
                  OUT_TEMP[3]};
   draw_in_region(rect, [&](int16_t x, int16_t y, int16_t w, int16_t h) {
@@ -1736,7 +1345,7 @@ static void partial_update_outside_temp(const char* out_temp_f, char trend) {
   });
 }
 
-static void partial_update_outside_rh(const char* out_rh) {
+void partial_update_outside_rh(const char* out_rh) {
   int rect[4] = {OUT_HUMIDITY[0], static_cast<int16_t>(OUT_HUMIDITY[1] + TOP_Y_OFFSET), OUT_HUMIDITY[2],
                  OUT_HUMIDITY[3]};
   draw_in_region(rect, [&](int16_t x, int16_t y, int16_t w, int16_t h) {
@@ -1748,7 +1357,7 @@ static void partial_update_outside_rh(const char* out_rh) {
   });
 }
 
-static void partial_update_inside_rh(const char* in_rh) {
+void partial_update_inside_rh(const char* in_rh) {
   int rect[4] = {INSIDE_RH[0], static_cast<int16_t>(INSIDE_RH[1] + TOP_Y_OFFSET), INSIDE_RH[2],
                  INSIDE_RH[3]};
   draw_in_region(rect, [&](int16_t x, int16_t y, int16_t w, int16_t h) {
@@ -1760,7 +1369,7 @@ static void partial_update_inside_rh(const char* in_rh) {
   });
 }
 
-static void partial_update_weather_icon(const char* weather) {
+void partial_update_weather_icon(const char* weather) {
   int rect[4] = {WEATHER_ICON[0], static_cast<int16_t>(WEATHER_ICON[1] + TOP_Y_OFFSET), WEATHER_ICON[2],
                  WEATHER_ICON[3]};
   draw_in_region(rect, [&](int16_t xx, int16_t yy, int16_t ww, int16_t hh) {
@@ -1768,7 +1377,7 @@ static void partial_update_weather_icon(const char* weather) {
   });
 }
 
-static void partial_update_outside_wind(const char* wind_str) {
+void partial_update_outside_wind(const char* wind_str) {
   int rect[4] = {OUT_ROW2_R[0], static_cast<int16_t>(OUT_ROW2_R[1] + TOP_Y_OFFSET), OUT_ROW2_R[2],
                  OUT_ROW2_R[3]};
   draw_in_region(rect, [&](int16_t x, int16_t y, int16_t, int16_t) {
@@ -1779,7 +1388,7 @@ static void partial_update_outside_wind(const char* wind_str) {
   });
 }
 
-static void partial_update_outside_condition(const char* short_condition) {
+void partial_update_outside_condition(const char* short_condition) {
   int rect[4] = {OUT_ROW1_L[0], static_cast<int16_t>(OUT_ROW1_L[1] + TOP_Y_OFFSET), OUT_ROW1_L[2],
                  OUT_ROW1_L[3]};
   draw_in_region(rect, [&](int16_t x, int16_t y, int16_t, int16_t) {
@@ -1790,7 +1399,7 @@ static void partial_update_outside_condition(const char* short_condition) {
   });
 }
 
-static void partial_update_outside_hilo(float highC, float lowC) {
+void partial_update_outside_hilo(float highC, float lowC) {
   int rect[4] = {OUT_ROW2_R[0], static_cast<int16_t>(OUT_ROW2_R[1] + TOP_Y_OFFSET), OUT_ROW2_R[2],
                  OUT_ROW2_R[3]};
   draw_in_region(rect, [&](int16_t x, int16_t y, int16_t, int16_t) {
@@ -1808,7 +1417,7 @@ static void partial_update_outside_hilo(float highC, float lowC) {
 }
 
 // Footer-only weather updater using the same geometry as full renders
-static void partial_update_footer_weather_from_outside(const OutsideReadings& o) {
+void partial_update_footer_weather_from_outside(const OutsideReadings& o) {
   draw_in_region(FOOTER_WEATHER, [&](int16_t x, int16_t y, int16_t w, int16_t h) {
     display.fillRect(x, y, w, h, GxEPD_WHITE);
     // Icon at left
@@ -1838,7 +1447,7 @@ static void partial_update_footer_weather_from_outside(const OutsideReadings& o)
     }
   });
 }
-#endif  // USE_DISPLAY
+#endif // USE_DISPLAY
 
 #if USE_DISPLAY && DEV_NO_SLEEP
 // Periodic UI updater for always-on display build. Applies partial redraws when
@@ -1891,10 +1500,10 @@ void setup() {
       esp_reset_reason() == ESP_RST_WDT || esp_reset_reason() == ESP_RST_PANIC ||
       esp_reset_reason() == ESP_RST_BROWNOUT || esp_reset_reason() == ESP_RST_TASK_WDT ||
       esp_reset_reason() == ESP_RST_INT_WDT) {
-    rtc_wake_count++;
+    increment_wake_count();
   } else {
     // On power-on, reset counter to zero
-    rtc_wake_count = 0;
+    reset_wake_count();
   }
 
 #if USE_STATUS_PIXEL
@@ -1923,8 +1532,8 @@ void setup() {
 #if USE_DISPLAY
   if (needs_full_on_boot) {
     g_full_only_mode = true;
-    g_prefs.putUChar("full_only", 1);
-    g_prefs.putUShort("pcount", 0);
+    nvs_store_uchar("full_only", 1);
+    nvs_store_ushort("pcount", 0);
   }
 #endif
 
@@ -1983,7 +1592,7 @@ void setup() {
     net_publish_boot_reason(reset_reason_str(current_reset_reason));
     net_publish_boot_count(rtc_boot_count);
     net_publish_crash_count(rtc_crash_count);
-    net_publish_wake_count(rtc_wake_count);
+    net_publish_wake_count(get_wake_count());
     net_publish_uptime(rtc_cumulative_uptime_sec);
     
     // Publish memory diagnostics
@@ -2050,7 +1659,7 @@ void setup() {
              "\"rtc_wake_count\":%u}",
              ms_boot_to_wifi, ms_wifi_to_mqtt, ms_sensor_read, ms_publish, sleep_scheduled_ms,
              deep_sleep_us, reset_reason_str(esp_reset_reason()),
-             wakeup_cause_str(esp_sleep_get_wakeup_cause()));
+             wakeup_cause_str(esp_sleep_get_wakeup_cause()), get_wake_count());
     net_publish_debug_json(dbg, false);
     // Publish layout identity for quick visual parity checks in dashboards
     net_publish_layout_identity();
@@ -2135,10 +1744,10 @@ void setup() {
       g_fw_crc ^= static_cast<uint32_t>(*p);
       g_fw_crc *= 16777619u;
     }
-    uint32_t stored = g_prefs.getUInt("fw_crc", 0);
+    uint32_t stored = nvs_load_uint("fw_crc", 0);
     if (stored != g_fw_crc) {
       do_full = true;  // force at least one full render after new firmware
-      g_prefs.putUInt("fw_crc", g_fw_crc);
+      nvs_store_uint("fw_crc", g_fw_crc);
       partial_counter = 0;
     }
   }
@@ -2411,7 +2020,7 @@ void setup() {
     InsideReadings latest = read_inside_sensors();
     emit_metrics_json(latest.temperatureC, latest.humidityPct, latest.pressureHPa);
     Serial.println("DBG: after metrics json");
-    Serial.printf("RTC wake count: %u\n", static_cast<unsigned>(rtc_wake_count));
+    Serial.printf("RTC wake count: %u\n", static_cast<unsigned>(get_wake_count()));
   }
 
   // Publish a concise timeout summary JSON if MQTT is connected
@@ -2429,7 +2038,7 @@ void setup() {
   Serial.printf("Timeouts mask: 0x%02X\n", static_cast<unsigned>(s_timeouts_mask));
   partial_counter++;
   // Persist partial refresh cadence so it survives reset
-  g_prefs.putUShort("pcount", partial_counter);
+  nvs_store_ushort("pcount", partial_counter);
   // Log awake duration and planned sleep for diagnostics
   Serial.printf("Awake ms: %u\n", static_cast<unsigned>(millis()));
   Serial.println("DBG: end of setup (pre-sleep or stay-awake)");
@@ -2589,7 +2198,7 @@ void loop() {
         net_publish_uptime(current_uptime);
         
         // Publish other diagnostic info
-        net_publish_wake_count(rtc_wake_count);
+        net_publish_wake_count(get_wake_count());
         net_publish_wifi_rssi(WiFi.RSSI());
         
         // Publish detailed diagnostic JSON
@@ -2599,7 +2208,7 @@ void loop() {
                  "\"fragmentation\":%.1f,\"rssi\":%d,\"uptime\":%u,"
                  "\"boot_count\":%u,\"crash_count\":%u,\"wake_count\":%u}",
                  mem_diag.free_heap, mem_diag.min_free_heap, mem_diag.fragmentation_pct,
-                 WiFi.RSSI(), current_uptime, rtc_boot_count, rtc_crash_count, rtc_wake_count);
+                 WiFi.RSSI(), current_uptime, rtc_boot_count, rtc_crash_count, get_wake_count());
         net_publish_debug_json(diag_json, false);
         
         // Log to serial
