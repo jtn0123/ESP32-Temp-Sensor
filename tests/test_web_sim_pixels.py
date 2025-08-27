@@ -44,7 +44,8 @@ def test_web_sim_screenshot_matches_golden_with_tolerance(tmp_path):
         time.sleep(0.4)
         with sync_playwright() as p:
             browser = p.chromium.launch()
-            page = browser.new_page(viewport={"width": 250, "height": 122})
+            # Use larger viewport since we'll capture the canvas element directly
+            page = browser.new_page(viewport={"width": 800, "height": 600})
             page.goto(f"http://127.0.0.1:{port}/index.html", wait_until="load")
             page.wait_for_timeout(300)
 
@@ -71,8 +72,9 @@ def test_web_sim_screenshot_matches_golden_with_tolerance(tmp_path):
             page.reload(wait_until="load")
             page.wait_for_timeout(300)
 
-            # Capture canvas as PNG bytes
-            bytes_png = page.screenshot(clip={"x": 0, "y": 0, "width": 250, "height": 122})
+            # Capture canvas element directly (not the whole page)
+            canvas = page.locator("#epd")
+            bytes_png = canvas.screenshot()
 
             import PIL.Image
 

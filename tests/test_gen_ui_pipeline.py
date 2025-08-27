@@ -78,15 +78,27 @@ class TestUISpecStructure:
         if not spec:
             pytest.skip("UI spec not available")
         
-        # Check required top-level fields
-        assert 'version' in spec or 'operations' in spec, "Spec should have version or operations"
+        # Check required top-level fields (actual structure uses "schema" and "canvas")
+        assert 'schema' in spec or 'version' in spec or 'operations' in spec, "Spec should have schema, version or operations"
         
-        if 'display' in spec:
+        if 'canvas' in spec:
+            assert 'w' in spec['canvas'], "Canvas should have width (w)"
+            assert 'h' in spec['canvas'], "Canvas should have height (h)"
+        elif 'display' in spec:
             assert 'width' in spec['display'], "Display should have width"
             assert 'height' in spec['display'], "Display should have height"
         
         if 'operations' in spec:
             assert isinstance(spec['operations'], list), "Operations should be a list"
+        
+        # Check for expected sections in the current format
+        if 'schema' in spec:
+            # New format validation
+            assert 'canvas' in spec, "Spec should have canvas definition"
+            if 'fonts' in spec:
+                assert 'tokens' in spec['fonts'], "Fonts should have tokens"
+            if 'rects' in spec:
+                assert isinstance(spec['rects'], dict), "Rects should be a dictionary"
     
     def test_operation_types(self):
         """Test that all operation types are valid"""

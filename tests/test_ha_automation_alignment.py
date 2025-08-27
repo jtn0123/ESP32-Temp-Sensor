@@ -10,18 +10,14 @@ ROOT = os.path.dirname(os.path.dirname(__file__))
 
 
 def _try_yaml_lint() -> None:
-    # Basic syntax check using python -c to load YAML; avoids adding extra deps
-    p = subprocess.run(
-        [
-            "python3",
-            "-c",
-            ("import sys,yaml;" "yaml.safe_load(open(sys.argv[1],'r').read());" "print('OK')"),
-            os.path.join(ROOT, "homeassistant", "mqtt_outdoor_publish.yaml"),
-        ],
-        capture_output=True,
-        text=True,
-    )
-    assert p.returncode == 0, p.stdout + p.stderr
+    # Basic syntax check using yaml.safe_load; import directly since pyyaml is available
+    import yaml
+    yaml_path = os.path.join(ROOT, "homeassistant", "mqtt_outdoor_publish.yaml")
+    try:
+        with open(yaml_path, 'r') as f:
+            yaml.safe_load(f.read())
+    except Exception as e:
+        assert False, f"YAML syntax error in {yaml_path}: {e}"
 
 
 def _mqtt_host_port():

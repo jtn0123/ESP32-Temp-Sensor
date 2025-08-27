@@ -197,12 +197,21 @@ class TestScenarioExecution:
             }
         ]
         
+        # Map display field names to data field names
+        field_mapping = {
+            'temp': 'inside_temp',
+            'humidity': 'inside_humidity',
+            'pressure': 'pressure',
+            'out_temp': 'out_temp',
+            'out_humidity': 'out_humidity'
+        }
+        
         for test in missing_data_tests:
             for field, expected in test['expected_display'].items():
-                # Missing data should show placeholder
-                data_field = field.replace('_', '')
+                # Get the corresponding data field name
+                data_field = field_mapping.get(field, field)
                 if test['data'].get(data_field) is None:
-                    assert expected == '--', f"Missing {field} should show --"
+                    assert expected == '--', f"Missing {field} should show -- but got {expected}"
                 else:
                     # Has data, should show formatted value
                     assert expected != '--', f"{field} has data, should not show --"
@@ -212,25 +221,25 @@ class TestDataEditor:
     
     def test_data_editor_fields(self):
         """Test that all editable fields are present"""
-        # Check for common editable field concepts
-        field_concepts = [
-            'room',
-            'time', 
-            'version',
-            'temp',
-            'humidity',
-            'pressure',
-            'co2',
-            'wind',
+        # Check for actual field names used in the debug panel
+        field_names = [
+            'room_name',
+            'time_hhmm', 
+            'fw_version',
+            'inside_temp_f',
+            'inside_hum_pct',
+            'pressure_hpa',
+            'co2_ppm',
+            'wind_mph',
             'weather',
-            'battery'
+            'battery_percent'
         ]
         
         js_content = load_debug_panel_js()
         
-        for concept in field_concepts:
-            # Check field concept is referenced somewhere
-            assert concept.lower() in js_content.lower(), f"Field concept '{concept}' not found in panel"
+        for field_name in field_names:
+            # Check field name is referenced somewhere in the JavaScript
+            assert field_name.lower() in js_content.lower(), f"Field '{field_name}' not found in panel"
     
     def test_import_export_json(self):
         """Test JSON import/export functionality"""

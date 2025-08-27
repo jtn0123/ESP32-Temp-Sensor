@@ -219,23 +219,21 @@ console.log(JSON.stringify(result3));
         """Test that all display regions are properly defined"""
         js_content = load_sim_js()
         
-        # Extract region definitions from actual sim.js
+        # Load expected region definitions from the actual config file
+        import json
+        import os
+        config_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "config", "display_geometry.json")
+        with open(config_path, 'r') as f:
+            config = json.load(f)
+        
+        # Build expected regions from config
         regions = {
-            'WIDTH': 250,
-            'HEIGHT': 122,
-            'HEADER_NAME': [6, 2, 160, 14],
-            'HEADER_VERSION': [172, 2, 72, 14],
-            'HEADER_TIME_CENTER': [100, 2, 50, 14],
-            'INSIDE_TEMP': [6, 36, 118, 28],
-            'INSIDE_HUMIDITY': [6, 66, 118, 14],
-            'INSIDE_PRESSURE': [6, 78, 118, 12],
-            'OUT_TEMP': [129, 36, 94, 28],
-            'WEATHER_ICON': [210, 22, 28, 28],
-            'OUT_WEATHER': [131, 68, 44, 12],
-            'OUT_PRESSURE': [177, 68, 64, 12],
-            'OUT_HUMIDITY': [131, 78, 44, 12],
-            'OUT_WIND': [177, 78, 44, 12]
+            'WIDTH': config['canvas']['w'],
+            'HEIGHT': config['canvas']['h']
         }
+        # Add rectangle definitions
+        for rect_name, rect_values in config['rects'].items():
+            regions[rect_name] = rect_values
         
         for region_name, expected_value in regions.items():
             if region_name in ['WIDTH', 'HEIGHT']:
