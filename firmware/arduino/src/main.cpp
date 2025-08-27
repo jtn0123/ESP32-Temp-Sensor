@@ -28,18 +28,30 @@
 #include "sensors.h"
 
 // Constant aliases for backward compatibility
-// Map old names to new arrays from display_layout.h
-#define HEADER_TIME HEADER_TIME_CENTER
-#define HEADER_CENTER HEADER_TIME_CENTER
-#define INSIDE_RH INSIDE_HUMIDITY  // Backward compat
-#define OUT_ICON WEATHER_ICON      // Map to WEATHER_ICON from display_layout.h
-#define OUT_ROW1_L OUT_WEATHER     // Map to OUT_WEATHER from display_layout.h
-#define OUT_ROW1_R OUT_PRESSURE    // Map to OUT_PRESSURE from display_layout.h
-#define OUT_ROW2_L OUT_HUMIDITY    // Map to OUT_HUMIDITY from display_layout.h
-#define OUT_ROW2_R OUT_WIND        // Map to OUT_WIND from display_layout.h
-#define FOOTER_L FOOTER_STATUS     // Backward compat
-#define FOOTER_WEATHER FOOTER_WEATHER
-#define STATUS_ FOOTER_STATUS      // Map to FOOTER_STATUS (no separate region)
+// Map old names to new arrays from display_layout.h with RECT_ prefix
+#define HEADER_TIME RECT_HEADER_TIME_CENTER
+#define HEADER_CENTER RECT_HEADER_TIME_CENTER
+#define HEADER_TIME_CENTER RECT_HEADER_TIME_CENTER
+#define INSIDE_TEMP RECT_INSIDE_TEMP
+#define INSIDE_RH RECT_INSIDE_HUMIDITY
+#define INSIDE_HUMIDITY RECT_INSIDE_HUMIDITY
+#define INSIDE_PRESSURE RECT_INSIDE_PRESSURE
+#define INSIDE_ROW2_L RECT_INSIDE_PRESSURE
+#define OUT_TEMP RECT_OUT_TEMP
+#define OUT_WEATHER RECT_OUT_WEATHER
+#define OUT_ROW1_L RECT_OUT_WEATHER
+#define OUT_PRESSURE RECT_OUT_PRESSURE
+#define OUT_ROW1_R RECT_OUT_PRESSURE
+#define OUT_ICON RECT_WEATHER_ICON
+#define WEATHER_ICON RECT_WEATHER_ICON
+#define OUT_HUMIDITY RECT_OUT_HUMIDITY
+#define OUT_ROW2_L RECT_OUT_HUMIDITY
+#define OUT_WIND RECT_OUT_WIND
+#define OUT_ROW2_R RECT_OUT_WIND
+#define FOOTER_L RECT_FOOTER_STATUS
+#define FOOTER_STATUS RECT_FOOTER_STATUS
+#define STATUS_ RECT_FOOTER_STATUS
+#define FOOTER_WEATHER RECT_FOOTER_WEATHER
 
 // Forward declaration for status pixel tick used in pump_network_ms
 #if USE_STATUS_PIXEL
