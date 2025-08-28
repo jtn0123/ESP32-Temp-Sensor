@@ -36,6 +36,7 @@ inline void net_begin() {
   
   // Initialize modules
   mqtt_begin();
+  mqtt_set_client_id(g_client_id);
   ha_discovery_begin(g_client_id);
 }
 

@@ -8,7 +8,7 @@
 static WiFiClient g_wifi_client;
 static PubSubClient g_mqtt(g_wifi_client);
 static OutsideReadings g_outside;
-static char g_client_id[40];
+static char g_mqtt_client_id[40];  // Renamed to avoid conflict with net.h
 static Preferences g_mqtt_prefs;
 
 // Diagnostic mode flags
@@ -17,15 +17,12 @@ static bool g_diagnostic_mode_request_value = false;
 
 // Helper to build MQTT topic
 static String build_topic(const char* suffix) {
-  return String("espsensor/") + g_client_id + "/" + suffix;
+  return String("espsensor/") + g_mqtt_client_id + "/" + suffix;
 }
 
 void mqtt_begin() {
-  // Generate client ID from MAC address
-  uint8_t mac[6];
-  WiFi.macAddress(mac);
-  snprintf(g_client_id, sizeof(g_client_id), "%02x%02x%02x%02x%02x%02x",
-           mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+  // Client ID will be set externally via mqtt_set_client_id
+  // to avoid WiFi dependency in this module
   
   // Configure MQTT client
   g_mqtt.setBufferSize(MQTT_MAX_PACKET_SIZE);
@@ -56,9 +53,8 @@ void mqtt_loop() {
 }
 
 bool mqtt_connect() {
-  if (!WiFi.isConnected()) {
-    return false;
-  }
+  // Assume caller has already checked WiFi connectivity
+  // This removes WiFi dependency from mqtt module
   
   if (g_mqtt.connected()) {
     return true;
@@ -70,10 +66,10 @@ bool mqtt_connect() {
   // Connect with authentication if configured
   bool connected = false;
   #if defined(MQTT_USER) && defined(MQTT_PASS)
-  connected = g_mqtt.connect(g_client_id, MQTT_USER, MQTT_PASS,
+  connected = g_mqtt.connect(g_mqtt_client_id, MQTT_USER, MQTT_PASS,
                             lwt_topic.c_str(), 0, true, "offline");
   #else
-  connected = g_mqtt.connect(g_client_id, lwt_topic.c_str(), 0, true, "offline");
+  connected = g_mqtt.connect(g_mqtt_client_id, lwt_topic.c_str(), 0, true, "offline");
   #endif
   
   if (connected) {
@@ -98,6 +94,12 @@ void mqtt_disconnect() {
     String lwt_topic = build_topic("availability");
     g_mqtt.publish(lwt_topic.c_str(), "offline", true);
     g_mqtt.disconnect();
+  }
+}
+
+void mqtt_set_client_id(const char* client_id) {
+  if (client_id) {
+    snprintf(g_mqtt_client_id, sizeof(g_mqtt_client_id), "%s", client_id);
   }
 }
 
