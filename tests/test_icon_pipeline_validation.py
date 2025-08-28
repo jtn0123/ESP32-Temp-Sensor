@@ -133,7 +133,11 @@ def test_icon_crc_validation():
     if os.path.exists(crc_script):
         try:
             result = subprocess.run(
-                [sys.executable, crc_script], capture_output=True, text=True, cwd=scripts_dir, timeout=10
+                [sys.executable, crc_script],
+                capture_output=True,
+                text=True,
+                cwd=scripts_dir,
+                timeout=10,
             )
 
             assert result.returncode == 0, f"CRC validation failed: {result.stderr}"
@@ -212,7 +216,11 @@ def test_icon_conversion_pipeline():
 
             if result.returncode != 0:
                 # Check if it's missing dependencies or just missing input files
-                if "cairosvg" in result.stderr or "cairo" in result.stderr or "No module named" in result.stderr:
+                if (
+                    "cairosvg" in result.stderr
+                    or "cairo" in result.stderr
+                    or "No module named" in result.stderr
+                ):
                     pytest.skip(f"Icon conversion dependencies missing: {result.stderr}")
                 elif "not found" not in result.stderr.lower():
                     assert False, f"Icon conversion failed: {result.stderr}"
@@ -410,12 +418,20 @@ def test_icon_generation_determinism():
     try:
         # First run
         result1 = subprocess.run(
-            [sys.executable, gen_script], capture_output=True, text=True, cwd=scripts_dir, timeout=30
+            [sys.executable, gen_script],
+            capture_output=True,
+            text=True,
+            cwd=scripts_dir,
+            timeout=30,
         )
 
         # Second run
         result2 = subprocess.run(
-            [sys.executable, gen_script], capture_output=True, text=True, cwd=scripts_dir, timeout=30
+            [sys.executable, gen_script],
+            capture_output=True,
+            text=True,
+            cwd=scripts_dir,
+            timeout=30,
         )
 
         # Both should succeed, but skip if dependencies are missing
@@ -424,7 +440,7 @@ def test_icon_generation_determinism():
                 pytest.skip(f"Icon generation dependencies missing: {result1.stderr}")
             else:
                 assert False, f"First icon generation failed: {result1.stderr}"
-        
+
         if result2.returncode != 0:
             if "No module named 'PIL'" in result2.stderr or "cairosvg" in result2.stderr:
                 pytest.skip(f"Icon generation dependencies missing: {result2.stderr}")

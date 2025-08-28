@@ -15,15 +15,15 @@ from datetime import datetime
 
 # ANSI color codes
 class Colors:
-    RED = '\033[91m'
-    GREEN = '\033[92m'
-    YELLOW = '\033[93m'
-    BLUE = '\033[94m'
-    PURPLE = '\033[95m'
-    CYAN = '\033[96m'
-    WHITE = '\033[97m'
-    RESET = '\033[0m'
-    BOLD = '\033[1m'
+    RED = "\033[91m"
+    GREEN = "\033[92m"
+    YELLOW = "\033[93m"
+    BLUE = "\033[94m"
+    PURPLE = "\033[95m"
+    CYAN = "\033[96m"
+    WHITE = "\033[97m"
+    RESET = "\033[0m"
+    BOLD = "\033[1m"
 
 
 def find_usb_ports():
@@ -35,19 +35,19 @@ def find_usb_ports():
         "/dev/cu.usbserial*",
         "/dev/cu.usbmodem*",
     ]
-    
+
     exclude_patterns = ["Bluetooth", "bluetooth", "BT", "Wireless", "AirPod", "debug"]
-    
+
     ports = []
     for pattern in patterns:
         ports.extend(glob.glob(pattern))
-    
+
     # Filter out excluded patterns
     filtered = []
     for port in ports:
         if not any(exc in port for exc in exclude_patterns):
             filtered.append(port)
-    
+
     return sorted(set(filtered))
 
 
@@ -64,7 +64,7 @@ def colorize_line(line):
         return f"{Colors.GREEN}● {line}{Colors.RESET}"
     elif "[BOOT-5]" in line:
         return f"{Colors.PURPLE}● {line}{Colors.RESET}"
-    
+
     # NeoPixel status
     elif "[NEOPIXEL]" in line:
         if "Red" in line:
@@ -79,37 +79,37 @@ def colorize_line(line):
             return f"{Colors.PURPLE}◉ {line}{Colors.RESET}"
         else:
             return f"{Colors.CYAN}◉ {line}{Colors.RESET}"
-    
+
     # Display messages
     elif "[DISPLAY]" in line:
         return f"{Colors.CYAN}▢ {line}{Colors.RESET}"
-    
+
     # Errors and warnings
     elif "ERROR" in line or "FAIL" in line:
         return f"{Colors.RED}{Colors.BOLD}✗ {line}{Colors.RESET}"
     elif "WARNING" in line or "WARN" in line:
         return f"{Colors.YELLOW}⚠ {line}{Colors.RESET}"
-    
+
     # Success messages
     elif "SUCCESS" in line or "OK" in line or "✓" in line:
         return f"{Colors.GREEN}✓ {line}{Colors.RESET}"
-    
+
     # Version info
     elif "FW Version:" in line or "Version:" in line:
         return f"{Colors.BOLD}{line}{Colors.RESET}"
-    
+
     # ESP32 boot sequence header
     elif "=== ESP32 BOOT SEQUENCE ===" in line:
         return f"\n{Colors.BOLD}{Colors.CYAN}{line}{Colors.RESET}"
     elif "=== " in line and "===" in line:
         return f"{Colors.BOLD}{line}{Colors.RESET}"
-    
+
     # WiFi/MQTT status
     elif "WiFi connected" in line or "MQTT connected" in line:
         return f"{Colors.GREEN}⟲ {line}{Colors.RESET}"
     elif "WiFi disconnected" in line or "MQTT disconnected" in line:
         return f"{Colors.RED}⊗ {line}{Colors.RESET}"
-    
+
     # Default
     return line
 
@@ -125,44 +125,44 @@ def monitor_serial(port, baud=115200, save_file=None, highlight=True):
     print(f"\nPress Ctrl+C to exit")
     print("-" * 50)
     print()
-    
+
     log_file = None
     if save_file:
         try:
-            log_file = open(save_file, 'a')
+            log_file = open(save_file, "a")
             timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             log_file.write(f"\n\n=== Monitor session started: {timestamp} ===\n")
             log_file.flush()
         except Exception as e:
             print(f"Warning: Could not open log file: {e}")
             log_file = None
-    
+
     try:
         # Use PlatformIO's monitor which handles DTR/RTS correctly
         cmd = ["pio", "device", "monitor", "-p", port, "-b", str(baud), "--raw"]
-        
+
         proc = subprocess.Popen(
             cmd,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             universal_newlines=True,
-            bufsize=1
+            bufsize=1,
         )
-        
+
         for line in proc.stdout:
             line = line.rstrip()
-            
+
             # Apply highlighting if enabled
             display_line = colorize_line(line) if highlight else line
             print(display_line)
-            
+
             # Log raw line to file if enabled
             if log_file:
-                log_file.write(line + '\n')
+                log_file.write(line + "\n")
                 log_file.flush()
-        
+
         proc.wait()
-        
+
     except KeyboardInterrupt:
         print(f"\n{Colors.YELLOW}Monitor stopped by user{Colors.RESET}")
     except Exception as e:
@@ -194,37 +194,17 @@ Examples:
   %(prog)s --port /dev/tty.usbmodem01
   %(prog)s --save debug.log    # Log to file
   %(prog)s --no-color          # Plain text output
-"""
+""",
     )
-    
-    parser.add_argument(
-        "--port",
-        help="Serial port (auto-detect if not specified)"
-    )
-    parser.add_argument(
-        "--baud",
-        type=int,
-        default=115200,
-        help="Baud rate (default: 115200)"
-    )
-    parser.add_argument(
-        "--save",
-        metavar="FILE",
-        help="Save output to file"
-    )
-    parser.add_argument(
-        "--no-color",
-        action="store_true",
-        help="Disable colored output"
-    )
-    parser.add_argument(
-        "--list",
-        action="store_true",
-        help="List available ports and exit"
-    )
-    
+
+    parser.add_argument("--port", help="Serial port (auto-detect if not specified)")
+    parser.add_argument("--baud", type=int, default=115200, help="Baud rate (default: 115200)")
+    parser.add_argument("--save", metavar="FILE", help="Save output to file")
+    parser.add_argument("--no-color", action="store_true", help="Disable colored output")
+    parser.add_argument("--list", action="store_true", help="List available ports and exit")
+
     args = parser.parse_args()
-    
+
     # List ports if requested
     if args.list:
         ports = find_usb_ports()
@@ -235,7 +215,7 @@ Examples:
         else:
             print("No USB serial ports found")
         return 0
-    
+
     # Find or use specified port
     port = args.port
     if not port:
@@ -256,24 +236,19 @@ Examples:
                 print(f"  {i}. {p}")
             print("\nPlease specify with --port")
             return 1
-    
+
     # Check if port exists
     if not os.path.exists(port):
         print(f"{Colors.RED}Port {port} does not exist{Colors.RESET}")
         return 1
-    
+
     # Start monitoring
     try:
-        monitor_serial(
-            port,
-            baud=args.baud,
-            save_file=args.save,
-            highlight=not args.no_color
-        )
+        monitor_serial(port, baud=args.baud, save_file=args.save, highlight=not args.no_color)
     except Exception as e:
         print(f"{Colors.RED}Failed to monitor: {e}{Colors.RESET}")
         return 1
-    
+
     return 0
 
 

@@ -21,8 +21,10 @@ def test_alias_subscriptions_and_callbacks_present():
     # Callback checks - verify the callback handles these topics
     assert 'ends_with(topicStr, "/temp_f")' in txt, "Should handle temp_f in callback"
     assert 'ends_with(topicStr, "/condition")' in txt, "Should handle condition in callback"
-    assert 'ends_with(topicStr, "/condition_code")' in txt, "Should handle condition_code in callback"
-    
+    assert (
+        'ends_with(topicStr, "/condition_code")' in txt
+    ), "Should handle condition_code in callback"
+
     # Verify legacy topic support
     assert '"/temp"' in txt, "Should support legacy temp topic"
     assert '"/weather"' in txt, "Should support legacy weather topic"

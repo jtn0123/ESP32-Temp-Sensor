@@ -39,13 +39,15 @@ def test_center_divider_reaches_bottom():
             page = browser.new_page(viewport={"width": 250, "height": 122})
             page.goto(f"http://127.0.0.1:{port}/index.html", wait_until="load")
             page.wait_for_timeout(500)
-            
+
             # Ensure canvas is drawn by calling draw function
             # Disable 1-bit mode for testing to avoid threshold issues
             page.evaluate("window.oneBitMode = false")
-            page.evaluate("if (typeof window.draw === 'function') window.draw(window.DEFAULTS || {})")
+            page.evaluate(
+                "if (typeof window.draw === 'function') window.draw(window.DEFAULTS || {})"
+            )
             page.wait_for_timeout(100)
-            
+
             # Debug: check what's actually at x=125, y=60
             debug_js = """
                 () => {
@@ -82,7 +84,7 @@ def test_center_divider_reaches_bottom():
             """
             debug_result = page.evaluate(debug_js)
             print(f"Debug result: {debug_result}")
-            
+
             # Divider is drawn at x=125 from y=18 down to y=121
             for y in [18, 60, 121]:
                 js = (

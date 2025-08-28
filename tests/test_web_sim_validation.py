@@ -115,7 +115,9 @@ class TestWebSimValidation:
         # Check that expected empty regions are detected
         empty_regions = {i["region"] for i in empty_issues}
         assert "OUT_TEMP" in empty_regions, "Should detect empty outside temp"
-        assert "FOOTER_STATUS" in empty_regions or len(empty_regions) > 0, "Should detect empty regions"
+        assert (
+            "FOOTER_STATUS" in empty_regions or len(empty_regions) > 0
+        ), "Should detect empty regions"
 
     def test_bounds_exceeded_detection(self):
         """Test that content exceeding region bounds is detected."""
@@ -138,15 +140,15 @@ class TestWebSimValidation:
         """Test that region collisions are properly detected."""
         # Skip this test if collision detection is not implemented
         self.load_simulator()
-        
+
         # Check if collision detection exists
         has_detection = self.driver.execute_script(
             "return typeof window.detectRegionCollisions === 'function'"
         )
-        
+
         if not has_detection:
             pytest.skip("Collision detection not implemented")
-        
+
         # Temporarily modify allowed collisions to test detection
         script = """
         const oldAllowed = window.allowedCollisions;
@@ -156,7 +158,7 @@ class TestWebSimValidation:
         window.allowedCollisions = oldAllowed;  // Restore
         return issues;
         """
-        
+
         issues = self.driver.execute_script(script)
         collision_issues = [i for i in issues if i["type"] == "collision"]
         # If no collisions detected, that's okay - the layout might not have any
@@ -173,8 +175,7 @@ class TestWebSimValidation:
         badge_text = badge.text
         # Badge can show counts like "1 critical" or just status
         assert any(
-            status in badge_text.lower() 
-            for status in ["ok", "warning", "error", "critical"]
+            status in badge_text.lower() for status in ["ok", "warning", "error", "critical"]
         ), f"Badge should show valid status, got: {badge_text}"
 
         # Check results panel exists

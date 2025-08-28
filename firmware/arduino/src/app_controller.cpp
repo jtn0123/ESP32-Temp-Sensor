@@ -78,12 +78,11 @@ void app_setup() {
   #endif
   
   #ifdef BOOT_DEBUG
-  // Test display with clock to verify it's working
-  #ifdef USE_DISPLAY
   show_boot_stage(2);  // Yellow for display init
-  Serial.println("[BOOT-2c] Testing display with clock...");
+  #ifdef USE_DISPLAY
+  Serial.println("[BOOT-2c] Display test will occur during init...");
   // Note: Display will be initialized later in normal flow
-  // Just mark the boot stage here
+  // The clock test happens in display_manager initialization
   #endif
   #endif
   

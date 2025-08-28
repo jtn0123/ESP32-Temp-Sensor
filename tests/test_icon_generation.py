@@ -45,12 +45,12 @@ def test_icon_header_contains_required_icons_and_lengths():
         capture_output=True,
         text=True,
     )
-    
+
     # If icon conversion fails (e.g., missing cairo), that's OK - just verify existing header
     if r.returncode != 0:
         print(f"Warning: Icon conversion failed (missing dependencies?): {r.stderr}")
         print("Continuing with existing header file...")
-    
+
     # Verify the header file exists
     assert os.path.exists(HEADER), f"Icons header file not found: {HEADER}"
     with open(HEADER, "r") as f:

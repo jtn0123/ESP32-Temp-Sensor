@@ -33,38 +33,38 @@ def find_usb_ports():
     """Find USB serial ports, excluding Bluetooth ports."""
     # Common patterns for USB serial ports on different platforms
     patterns = [
-        "/dev/tty.usbmodem*",      # macOS USB
-        "/dev/ttyUSB*",            # Linux USB
-        "/dev/ttyACM*",            # Linux USB ACM
-        "/dev/cu.usbserial*",      # macOS USB serial
-        "/dev/cu.usbmodem*",       # macOS USB modem
+        "/dev/tty.usbmodem*",  # macOS USB
+        "/dev/ttyUSB*",  # Linux USB
+        "/dev/ttyACM*",  # Linux USB ACM
+        "/dev/cu.usbserial*",  # macOS USB serial
+        "/dev/cu.usbmodem*",  # macOS USB modem
     ]
-    
+
     # Patterns to exclude (Bluetooth and other non-USB)
     exclude_patterns = [
         "*Bluetooth*",
-        "*bluetooth*", 
+        "*bluetooth*",
         "*BT*",
         "*Wireless*",
         "*AirPod*",
         "*debug*",
     ]
-    
+
     ports = []
     for pattern in patterns:
         ports.extend(glob.glob(pattern))
-    
+
     # Filter out excluded patterns
     filtered_ports = []
     for port in ports:
         skip = False
         for exclude in exclude_patterns:
-            if exclude.replace('*', '') in port:
+            if exclude.replace("*", "") in port:
                 skip = True
                 break
         if not skip:
             filtered_ports.append(port)
-    
+
     return sorted(set(filtered_ports))  # Remove duplicates and sort
 
 
@@ -75,22 +75,22 @@ def wait_for_device(timeout=30):
     print("  1. Connect ESP32 via USB")
     print("  2. If device is stuck, hold BOOT button while connecting")
     print("")
-    
+
     start_time = time.time()
     spinner = ["|", "/", "-", "\\"]
     spin_idx = 0
-    
+
     while time.time() - start_time < timeout:
         ports = find_usb_ports()
         if ports:
             print(f"\n✓ Found device on {ports[0]}")
             return ports[0]
-        
+
         # Show spinner
         print(f"\r{spinner[spin_idx]} Waiting... ", end="", flush=True)
         spin_idx = (spin_idx + 1) % len(spinner)
         time.sleep(0.5)
-    
+
     print("\n✗ Timeout - no device found")
     return None
 
@@ -99,26 +99,22 @@ def erase_flash(port):
     """Erase flash memory (recovery mode)."""
     print("\n=== ERASING FLASH ===")
     print("This will completely erase the device...")
-    
+
     # Try multiple esptool locations
     esptool_commands = [
         ["python3", "-m", "esptool"],
         ["esptool.py"],
         ["~/.platformio/penv/bin/python", "-m", "esptool"],
     ]
-    
+
     for esptool in esptool_commands:
-        cmd = esptool + [
-            "--chip", "esp32s2",
-            "--port", port,
-            "erase_flash"
-        ]
-        
+        cmd = esptool + ["--chip", "esp32s2", "--port", port, "erase_flash"]
+
         result = run(cmd, check=False)
         if result == 0:
             print("✓ Flash erased successfully")
             return True
-    
+
     print("✗ Failed to erase flash")
     return False
 
@@ -126,19 +122,19 @@ def erase_flash(port):
 def bump_version():
     """Create an empty commit to generate a new version hash."""
     print("\n=== BUMPING VERSION ===")
-    
+
     # Get current version
     old_version = run_output(["git", "rev-parse", "--short", "HEAD"])
-    
+
     # Create empty commit
     result = run(["git", "commit", "--allow-empty", "-m", "Build version bump"], check=False)
     if result != 0:
         print("Warning: Could not create version bump commit")
         return None, None
-    
+
     # Get new version
     new_version = run_output(["git", "rev-parse", "--short", "HEAD"])
-    
+
     if old_version != new_version:
         print(f"✓ Version bumped: {old_version} → {new_version}")
         return old_version, new_version
@@ -170,7 +166,7 @@ def monitor_device(port):
     print(f"\n=== MONITORING {port} ===")
     print("Press Ctrl+C to exit")
     print("")
-    
+
     cmd = ["pio", "device", "monitor", "-p", port, "-b", "115200"]
     try:
         run(cmd, check=False)
@@ -188,75 +184,54 @@ Examples:
   %(prog)s --recover --wait                     # Recovery mode
   %(prog)s --bump-version                       # Flash with new version
   %(prog)s --list                               # List available ports
-"""
+""",
     )
-    
+
     # Port selection
+    parser.add_argument("--port", help="Serial port (auto-detect if not specified)")
     parser.add_argument(
-        "--port",
-        help="Serial port (auto-detect if not specified)"
+        "--list", action="store_true", help="List available USB serial ports and exit"
     )
-    parser.add_argument(
-        "--list",
-        action="store_true",
-        help="List available USB serial ports and exit"
-    )
-    parser.add_argument(
-        "--wait",
-        action="store_true",
-        help="Wait for device to appear"
-    )
-    
+    parser.add_argument("--wait", action="store_true", help="Wait for device to appear")
+
     # Build configuration
     parser.add_argument(
         "--env",
         choices=["display", "dev", "headless"],
         default="display",
-        help="Build environment: display (production), dev (debug), headless (no display)"
+        help="Build environment: display (production), dev (debug), headless (no display)",
     )
     parser.add_argument(
         "--mode",
         choices=["3m", "1h", "2h", "always"],
         default="1h",
-        help="Sleep mode: 3m, 1h (default), 2h, or always (no sleep)"
+        help="Sleep mode: 3m, 1h (default), 2h, or always (no sleep)",
     )
-    
+
     # Actions
+    parser.add_argument("--build-only", action="store_true", help="Only build, do not upload")
+    parser.add_argument("--recover", action="store_true", help="Recovery mode: erase and reflash")
     parser.add_argument(
-        "--build-only",
-        action="store_true",
-        help="Only build, do not upload"
+        "--monitor", action="store_true", help="Monitor serial output after flashing"
     )
     parser.add_argument(
-        "--recover",
-        action="store_true",
-        help="Recovery mode: erase and reflash"
+        "--bump-version", action="store_true", help="Create commit to bump version number"
     )
-    parser.add_argument(
-        "--monitor",
-        action="store_true",
-        help="Monitor serial output after flashing"
-    )
-    parser.add_argument(
-        "--bump-version",
-        action="store_true",
-        help="Create commit to bump version number"
-    )
-    
+
     args = parser.parse_args()
-    
+
     # Handle --list flag
     if args.list:
         list_ports_command()
         return 0
-    
+
     # Bump version if requested
     if args.bump_version:
         old_ver, new_ver = bump_version()
-    
+
     proj = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir))
     arduino_dir = os.path.join(proj, "firmware", "arduino")
-    
+
     # Choose PlatformIO environment based on --env
     if args.env == "dev":
         env = "dev_display"  # New development environment with debugging
@@ -264,7 +239,7 @@ Examples:
         env = "feather_esp32s2_headless"
     else:
         env = "feather_esp32s2_display_only"
-    
+
     # Build EXTRA_FLAGS to control sleep behavior
     extra_flags = []
     if args.mode == "always":
@@ -277,11 +252,11 @@ Examples:
             os.environ["WAKE_INTERVAL"] = "1h"
         elif args.mode == "2h":
             os.environ["WAKE_INTERVAL"] = "2h"
-    
+
     # Pass dynamic flags into PlatformIO via EXTRA_FLAGS
     if extra_flags:
         os.environ["EXTRA_FLAGS"] = " ".join(extra_flags)
-    
+
     # Find or wait for port
     port = args.port
     if not port:
@@ -305,7 +280,7 @@ Examples:
                     print(f"  {i}. {p}")
                 print("\nPlease specify which port to use with --port")
                 return 1
-    
+
     # Recovery mode: erase first
     if args.recover:
         if not erase_flash(port):
@@ -317,10 +292,10 @@ Examples:
             return 1
         print("\nFlash erased. Proceeding with upload...")
         time.sleep(2)
-    
+
     # Build command
     base = ["pio", "run", "-d", arduino_dir, "-e", env]
-    
+
     if args.build_only:
         result = run(base)
         if result == 0:
@@ -328,21 +303,21 @@ Examples:
             if args.bump_version:
                 print(f"Version: {new_ver}")
         return result
-    
+
     # Upload command
     upload = base + ["-t", "upload", "--upload-port", port]
-    
+
     print(f"\n=== FLASHING {env} to {port} ===")
-    if args.bump_version and 'new_ver' in locals():
+    if args.bump_version and "new_ver" in locals():
         print(f"Version: {old_ver} → {new_ver}")
     print(f"Mode: {args.mode}")
     print("")
-    
+
     result = run(upload, check=False)
-    
+
     if result == 0:
         print("\n✓ Upload successful!")
-        
+
         # Monitor if requested
         if args.monitor:
             time.sleep(2)  # Give device time to reset
@@ -353,7 +328,7 @@ Examples:
         print("1. Try --recover flag for recovery mode")
         print("2. Hold BOOT button while connecting USB")
         print("3. Check USB cable and connections")
-    
+
     return result
 
 

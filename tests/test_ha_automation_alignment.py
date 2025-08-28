@@ -12,9 +12,10 @@ ROOT = os.path.dirname(os.path.dirname(__file__))
 def _try_yaml_lint() -> None:
     # Basic syntax check using yaml.safe_load; import directly since pyyaml is available
     import yaml
+
     yaml_path = os.path.join(ROOT, "homeassistant", "mqtt_outdoor_publish.yaml")
     try:
-        with open(yaml_path, 'r') as f:
+        with open(yaml_path, "r") as f:
             yaml.safe_load(f.read())
     except Exception as e:
         assert False, f"YAML syntax error in {yaml_path}: {e}"
