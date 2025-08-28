@@ -26,6 +26,7 @@
 #include "icons.h"
 #include "ui_ops_generated.h"
 #include "ui_generated.h"
+using namespace ui;
 #endif
 #include "generated_config.h"
 #include "net.h"

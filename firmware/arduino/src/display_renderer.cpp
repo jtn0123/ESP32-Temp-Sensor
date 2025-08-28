@@ -11,6 +11,7 @@
 #include "ui_ops_generated.h"
 #if USE_UI_SPEC
 #include "ui_generated.h"
+using namespace ui;
 #endif
 #include "net.h"
 #include "metrics_diagnostics.h"
@@ -440,27 +441,26 @@ const int* rect_ptr_by_id(uint8_t rid) {
   switch (rid) {
     case ui::RECT_HEADER_NAME:
       return HEADER_NAME;
-    case ui::RECT_HEADER_TIME:
+    case ui::RECT_HEADER_TIME_CENTER:
       return HEADER_TIME_CENTER;
-    case ui::RECT_HEADER_CENTER:
-      return HEADER_TIME_CENTER;
+    // Legacy alias - RECT_HEADER_CENTER doesn't exist anymore
     case ui::RECT_INSIDE_TEMP:
       return INSIDE_TEMP;
-    case ui::RECT_INSIDE_RH:
+    case ui::RECT_INSIDE_HUMIDITY:
       return INSIDE_HUMIDITY;
-    case ui::RECT_INSIDE_TIME:
-      return INSIDE_PRESSURE;  // Assuming this maps to pressure
+    case ui::RECT_INSIDE_PRESSURE:
+      return INSIDE_PRESSURE;
     case ui::RECT_OUT_TEMP:
       return OUT_TEMP;
-    case ui::RECT_OUT_ICON:
+    case ui::RECT_WEATHER_ICON:
       return WEATHER_ICON;
-    case ui::RECT_OUT_ROW1_L:
+    case ui::RECT_OUT_WEATHER:
       return OUT_WEATHER;
-    case ui::RECT_OUT_ROW1_R:
+    case ui::RECT_OUT_PRESSURE:
       return OUT_PRESSURE;
-    case ui::RECT_OUT_ROW2_L:
+    case ui::RECT_OUT_HUMIDITY:
       return OUT_HUMIDITY;
-    case ui::RECT_OUT_ROW2_R:
+    case ui::RECT_OUT_WIND:
       return OUT_WIND;
     case ui::RECT_FOOTER_STATUS:
       return FOOTER_STATUS;

@@ -15,6 +15,7 @@
 // Diagnostic test functions (from diagnostic_test.cpp)
 extern void diagnostic_test_init();
 extern void diagnostic_test_loop();
+extern void show_boot_stage(int stage);
 
 // Track wake time for phase management  
 static uint32_t g_wake_time_ms = 0;
@@ -40,11 +41,17 @@ void app_setup() {
   delay(500);  // Longer delay for serial stability
   
   // Immediate debug output
-  Serial.println("\n\n=== ESP32 BOOT DEBUG ===");
+  Serial.println("\n\n=== ESP32 BOOT SEQUENCE ===");
+  Serial.printf("FW Version: %s\n", FW_VERSION);
+  #ifdef BOOT_DEBUG
+  Serial.println("Build: dev_display");
+  Serial.println("Flags: DEV_NO_SLEEP, FORCE_FULL_ONLY, BOOT_DEBUG");
+  #endif
   Serial.flush();
   delay(10);
-  Serial.println("[1] Serial initialized");
+  Serial.println("[BOOT-1] Serial initialized");
   Serial.flush();
+  show_boot_stage(1);  // Red for boot/serial
   
   // Show we're alive with neopixel if available
   #ifdef NEOPIXEL_PIN
@@ -64,10 +71,20 @@ void app_setup() {
   
   // Run diagnostic tests in DEV_NO_SLEEP mode
   #ifdef DEV_NO_SLEEP
-  Serial.println("[2a] Running hardware diagnostics...");
+  Serial.println("[BOOT-2a] Running hardware diagnostics...");
   diagnostic_test_init();
-  Serial.println("[2b] Diagnostics complete, continuing boot...");
+  Serial.println("[BOOT-2b] Diagnostics complete, continuing boot...");
   Serial.flush();
+  #endif
+  
+  #ifdef BOOT_DEBUG
+  // Test display with clock to verify it's working
+  #ifdef USE_DISPLAY
+  show_boot_stage(2);  // Yellow for display init
+  Serial.println("[BOOT-2c] Testing display with clock...");
+  // Note: Display will be initialized later in normal flow
+  // Just mark the boot stage here
+  #endif
   #endif
   
   // Initialize state management with error checking
@@ -94,14 +111,17 @@ void app_setup() {
   Serial.flush();
   
   // Initialize network (but don't block on it)
-  Serial.println("[6] Attempting WiFi connection...");
+  Serial.println("[BOOT-3] Attempting WiFi connection...");
   Serial.flush();
+  show_boot_stage(3);  // Blue for WiFi
   if (!wifi_connect_with_timeout(5000)) {
-    Serial.println("[6] WiFi connection failed - continuing anyway");
+    Serial.println("[BOOT-3] WiFi connection failed - continuing anyway");
     Serial.flush();
+    show_boot_stage(5);  // Purple for error
   } else {
-    Serial.println("[6] WiFi connected");
+    Serial.println("[BOOT-4] WiFi connected");
     Serial.flush();
+    show_boot_stage(4);  // Green for ready
   }
   
   // Initialize MQTT

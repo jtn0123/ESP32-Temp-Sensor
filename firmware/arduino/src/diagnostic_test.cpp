@@ -6,7 +6,47 @@
 
 #ifdef NEOPIXEL_PIN
 #include <Adafruit_NeoPixel.h>
-Adafruit_NeoPixel status_pixel(1, NEOPIXEL_PIN, NEO_GRB + NEO_KHZ800);
+static Adafruit_NeoPixel* g_status_pixel = nullptr;
+
+// Boot stage indicator - single color at a time
+void show_boot_stage(int stage) {
+  if (!g_status_pixel) {
+    g_status_pixel = new Adafruit_NeoPixel(1, NEOPIXEL_PIN, NEO_GRB + NEO_KHZ800);
+    g_status_pixel->begin();
+    g_status_pixel->setBrightness(50);  // Not too bright
+  }
+  
+  switch(stage) {
+    case 1:  // Boot/Serial
+      g_status_pixel->setPixelColor(0, 255, 0, 0);     // Red
+      Serial.println("[NEOPIXEL] Stage 1: Red (Boot/Serial)");
+      break;
+    case 2:  // Display init
+      g_status_pixel->setPixelColor(0, 255, 255, 0);   // Yellow
+      Serial.println("[NEOPIXEL] Stage 2: Yellow (Display)");
+      break;
+    case 3:  // WiFi connecting
+      g_status_pixel->setPixelColor(0, 0, 0, 255);     // Blue
+      Serial.println("[NEOPIXEL] Stage 3: Blue (WiFi)");
+      break;
+    case 4:  // Connected/Ready
+      g_status_pixel->setPixelColor(0, 0, 255, 0);     // Green
+      Serial.println("[NEOPIXEL] Stage 4: Green (Ready)");
+      break;
+    case 5:  // Error
+      g_status_pixel->setPixelColor(0, 255, 0, 255);   // Purple
+      Serial.println("[NEOPIXEL] Stage 5: Purple (Error)");
+      break;
+    default:
+      g_status_pixel->setPixelColor(0, 0, 0, 0);       // Off
+      break;
+  }
+  g_status_pixel->show();
+}
+#else
+void show_boot_stage(int stage) {
+  // No neopixel available
+}
 #endif
 
 void diagnostic_test_init() {
@@ -25,31 +65,34 @@ void diagnostic_test_init() {
   Serial.println("[DIAG] NeoPixel power enabled");
   #endif
   
-  status_pixel.begin();
-  status_pixel.setBrightness(50);
+  if (!g_status_pixel) {
+    g_status_pixel = new Adafruit_NeoPixel(1, NEOPIXEL_PIN, NEO_GRB + NEO_KHZ800);
+    g_status_pixel->begin();
+    g_status_pixel->setBrightness(50);
+  }
   
   // Flash R-G-B pattern
-  status_pixel.setPixelColor(0, status_pixel.Color(255, 0, 0)); // Red
-  status_pixel.show();
+  g_status_pixel->setPixelColor(0, g_status_pixel->Color(255, 0, 0)); // Red
+  g_status_pixel->show();
   Serial.println("[DIAG] NeoPixel: RED");
   Serial.flush();
   delay(500);
   
-  status_pixel.setPixelColor(0, status_pixel.Color(0, 255, 0)); // Green
-  status_pixel.show();
+  g_status_pixel->setPixelColor(0, g_status_pixel->Color(0, 255, 0)); // Green
+  g_status_pixel->show();
   Serial.println("[DIAG] NeoPixel: GREEN");
   Serial.flush();
   delay(500);
   
-  status_pixel.setPixelColor(0, status_pixel.Color(0, 0, 255)); // Blue
-  status_pixel.show();
+  g_status_pixel->setPixelColor(0, g_status_pixel->Color(0, 0, 255)); // Blue
+  g_status_pixel->show();
   Serial.println("[DIAG] NeoPixel: BLUE");
   Serial.flush();
   delay(500);
   
   // Leave it dim white
-  status_pixel.setPixelColor(0, status_pixel.Color(10, 10, 10));
-  status_pixel.show();
+  g_status_pixel->setPixelColor(0, g_status_pixel->Color(10, 10, 10));
+  g_status_pixel->show();
   Serial.println("[DIAG] NeoPixel: OK - Set to dim white");
   #else
   Serial.println("[DIAG] NeoPixel: NOT CONFIGURED");
@@ -143,18 +186,20 @@ void diagnostic_test_loop() {
     // Pulse neopixel
     #ifdef NEOPIXEL_PIN
     // Cycle through colors
-    switch(cycle % 3) {
-      case 0:
-        status_pixel.setPixelColor(0, status_pixel.Color(20, 0, 0)); // Dim red
-        break;
-      case 1:
-        status_pixel.setPixelColor(0, status_pixel.Color(0, 20, 0)); // Dim green
-        break;
-      case 2:
-        status_pixel.setPixelColor(0, status_pixel.Color(0, 0, 20)); // Dim blue
-        break;
+    if (g_status_pixel) {
+      switch(cycle % 3) {
+        case 0:
+          g_status_pixel->setPixelColor(0, g_status_pixel->Color(20, 0, 0)); // Dim red
+          break;
+        case 1:
+          g_status_pixel->setPixelColor(0, g_status_pixel->Color(0, 20, 0)); // Dim green
+          break;
+        case 2:
+          g_status_pixel->setPixelColor(0, g_status_pixel->Color(0, 0, 20)); // Dim blue
+          break;
+      }
+      g_status_pixel->show();
     }
-    status_pixel.show();
     #endif
     
     // Check memory
