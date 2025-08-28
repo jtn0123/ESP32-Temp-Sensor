@@ -6,11 +6,12 @@ Tests the transformation from UI specifications to C++ code.
 
 import json
 import os
+from pathlib import Path
 import re
 import subprocess
 import tempfile
-from pathlib import Path
-from typing import Dict, List, Any, Optional
+from typing import Any, Dict, List
+
 import pytest
 
 
@@ -214,7 +215,7 @@ class TestOperationTranslation:
             if op["type"] == "drawText":
                 params = op["params"]
                 generated = f'drawText("{params["text"]}", {params["x"]}, {params["y"]})'
-                assert expected in generated, f"Text operation should translate correctly"
+                assert expected in generated, "Text operation should translate correctly"
 
     def test_rect_operation_translation(self):
         """Test rectangle operations"""
@@ -240,7 +241,7 @@ class TestOperationTranslation:
                 generated = (
                     f'{func}({params["x"]}, {params["y"]}, {params["width"]}, {params["height"]})'
                 )
-                assert expected in generated, f"Rect operation should translate correctly"
+                assert expected in generated, "Rect operation should translate correctly"
 
     def test_conditional_operations(self):
         """Test conditional operation generation"""

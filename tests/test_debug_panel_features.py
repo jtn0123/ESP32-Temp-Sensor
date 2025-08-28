@@ -5,13 +5,12 @@ Tests the advanced debugging, testing scenarios, and visual regression capabilit
 """
 
 import json
-import os
+from pathlib import Path
 import re
 import time
-from pathlib import Path
-from typing import Dict, List, Any, Optional
+from typing import Any, Dict, List
+
 import pytest
-from unittest.mock import MagicMock, patch
 
 
 def load_debug_panel_js():

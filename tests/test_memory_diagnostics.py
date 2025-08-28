@@ -1,8 +1,9 @@
 """Unit tests for memory diagnostics and heap monitoring."""
 
 import json
+from unittest.mock import patch
+
 import pytest
-from unittest.mock import Mock, patch
 
 
 class TestMemoryDiagnostics:

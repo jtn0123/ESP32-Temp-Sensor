@@ -1,8 +1,8 @@
 """Unit tests for boot diagnostics and reset reason tracking."""
 
-import json
+from unittest.mock import patch
+
 import pytest
-from unittest.mock import Mock, patch, MagicMock
 
 
 class TestBootDiagnostics:

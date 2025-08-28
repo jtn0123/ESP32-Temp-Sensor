@@ -2,9 +2,8 @@
 
 import json
 import time
+
 import pytest
-from unittest.mock import Mock, patch, MagicMock
-import paho.mqtt.client as mqtt
 
 
 class TestDiagnosticsMQTTIntegration:

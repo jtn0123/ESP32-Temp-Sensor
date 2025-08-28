@@ -106,8 +106,16 @@ void app_setup() {
   Serial.println("[5] Initializing sensors...");
   Serial.flush();
   sensors_init_all();
-  Serial.println("[5] Sensors OK");
+  // Note: We continue even if some sensors fail
+  // The sensors module will handle individual failures
+  Serial.println("[5] Sensors initialized (check logs for any failures)");
   Serial.flush();
+  
+  #ifdef BOOT_DEBUG
+  // In debug mode, show memory status after sensor init
+  Serial.printf("[MEMORY] After sensors - Free heap: %u, Min free: %u\n", 
+                ESP.getFreeHeap(), ESP.getMinFreeHeap());
+  #endif
   
   // Initialize network (but don't block on it)
   Serial.println("[BOOT-3] Attempting WiFi connection...");

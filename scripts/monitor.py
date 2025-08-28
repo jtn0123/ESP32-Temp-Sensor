@@ -4,13 +4,11 @@ Consolidated serial monitoring script for ESP32.
 Provides colored output, auto-detection, and logging features.
 """
 import argparse
+from datetime import datetime
 import glob
 import os
-import re
 import subprocess
 import sys
-import time
-from datetime import datetime
 
 
 # ANSI color codes
@@ -122,7 +120,7 @@ def monitor_serial(port, baud=115200, save_file=None, highlight=True):
     if save_file:
         print(f"Logging to: {save_file}")
     print(f"Highlighting: {'ON' if highlight else 'OFF'}")
-    print(f"\nPress Ctrl+C to exit")
+    print("\nPress Ctrl+C to exit")
     print("-" * 50)
     print()
 

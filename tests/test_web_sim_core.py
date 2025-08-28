@@ -6,11 +6,12 @@ Tests the critical display rendering, validation, and transformation logic.
 
 import json
 import os
+from pathlib import Path
 import re
 import subprocess
 import tempfile
-from pathlib import Path
-from typing import Dict, List, Tuple, Any
+from typing import Dict
+
 import pytest
 
 
