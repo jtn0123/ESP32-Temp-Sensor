@@ -28,11 +28,8 @@ extern GxEPD2_BW<GxEPD2_213_GDEY0213B74, GxEPD2_213_GDEY0213B74::HEIGHT> display
 #define TOP_Y_OFFSET 4
 #define HEADER_NAME_Y_ADJ -8
 
-// Aliases for backward compatibility with old layout names
-#define HEADER_TIME RECT_HEADER_TIME_CENTER
-#define HEADER_CENTER RECT_HEADER_TIME_CENTER
-#define STATUS_ RECT_FOOTER_STATUS
-#define FOOTER_L RECT_FOOTER_STATUS
+// Note: Layout variables are generated without RECT_ prefix
+// Variables are defined in display_layout.h as HEADER_TIME_CENTER, FOOTER_STATUS_, etc.
 
 // Forward declaration for status pixel (if enabled)
 #if USE_STATUS_PIXEL
@@ -93,7 +90,7 @@ void draw_static_chrome() {
     // Single header underline between header and content
     display.drawLine(1, 16 + TOP_Y_OFFSET, EINK_WIDTH - 2, 16 + TOP_Y_OFFSET, GxEPD_BLACK);
     // Horizontal rule for footer region (drawn at top edge of footer)
-    display.drawLine(1, FOOTER_L[1], EINK_WIDTH - 2, FOOTER_L[1], GxEPD_BLACK);
+    display.drawLine(1, FOOTER_STATUS[1], EINK_WIDTH - 2, FOOTER_STATUS[1], GxEPD_BLACK);
 
     // Header: room name left, time will be drawn separately
     display.setTextColor(GxEPD_BLACK);
@@ -109,8 +106,8 @@ void draw_static_chrome() {
     // Top-right version string within HEADER_TIME box
     String version_str = String("v") + FW_VERSION;
     display.setCursor(
-        HEADER_TIME[0] + HEADER_TIME[2] - 2 - text_width_default_font(version_str.c_str(), 1),
-        HEADER_TIME[1] + TOP_Y_OFFSET + HEADER_TIME[3] - 8);
+        HEADER_TIME_CENTER[0] + HEADER_TIME_CENTER[2] - 2 - text_width_default_font(version_str.c_str(), 1),
+        HEADER_TIME_CENTER[1] + TOP_Y_OFFSET + HEADER_TIME_CENTER[3] - 8);
     display.print(F("v"));
     display.print(FW_VERSION);
     // Center time will be drawn later in draw_header_time(_direct)
@@ -121,8 +118,8 @@ void draw_static_chrome() {
 
 void draw_header_time_direct(const char* time_str) {
     int16_t tw = text_width_default_font(time_str, 1);
-    int16_t rx = static_cast<int16_t>(HEADER_CENTER[0] + (HEADER_CENTER[2] - tw) / 2);
-    int16_t by = static_cast<int16_t>(HEADER_CENTER[1] + TOP_Y_OFFSET + HEADER_CENTER[3] - 6);
+    int16_t rx = static_cast<int16_t>(HEADER_TIME_CENTER[0] + (HEADER_TIME_CENTER[2] - tw) / 2);
+    int16_t by = static_cast<int16_t>(HEADER_TIME_CENTER[1] + TOP_Y_OFFSET + HEADER_TIME_CENTER[3] - 6);
     display.setTextColor(GxEPD_BLACK);
     display.setTextSize(1);
     display.setCursor(rx, by);
@@ -133,10 +130,10 @@ void draw_header_time_direct(const char* time_str) {
 
 void draw_status_line_direct(const BatteryStatus& bs, const char* ip_cstr) {
     #define STATUS_Y_ADJ 0  // Temporary until we refactor this properly
-    int16_t xx = STATUS_[0];
-    int16_t yy = static_cast<int16_t>(STATUS_[1] + STATUS_Y_ADJ);
-    int16_t ww = STATUS_[2];
-    int16_t hh = STATUS_[3];
+    int16_t xx = FOOTER_STATUS[0];
+    int16_t yy = static_cast<int16_t>(FOOTER_STATUS[1] + STATUS_Y_ADJ);
+    int16_t ww = FOOTER_STATUS[2];
+    int16_t hh = FOOTER_STATUS[3];
     display.setTextColor(GxEPD_BLACK);
     display.setTextSize(1);
     int16_t cx = static_cast<int16_t>(xx + 2);

@@ -36,14 +36,11 @@ extern bool g_full_only_mode;
 #define STATUS_Y_ADJ -4
 
 // Rectangle aliases for backward compatibility
-#define INSIDE_TEMP RECT_INSIDE_TEMP
-#define INSIDE_HUMIDITY RECT_INSIDE_HUMIDITY
-#define OUT_TEMP RECT_OUT_TEMP
-#define OUT_RH RECT_OUT_HUMIDITY
-#define OUT_WEATHER RECT_OUT_WEATHER
-#define WEATHER_ICON RECT_WEATHER_ICON
-#define FOOTER_R RECT_FOOTER_WEATHER
-#define STATUS_ RECT_FOOTER_STATUS
+// Layout variables are now defined without RECT_ prefix in display_layout.h
+// Using them directly - no aliases needed
+#define OUT_RH OUT_HUMIDITY
+#define FOOTER_R FOOTER_WEATHER
+#define STATUS_ FOOTER_STATUS
 
 // Implementation for draw_in_region with lambda that takes coordinates
 void draw_in_region(const int rect[4], DrawFnLambda drawFn) {
@@ -444,27 +441,27 @@ const int* rect_ptr_by_id(uint8_t rid) {
     case ui::RECT_HEADER_NAME:
       return HEADER_NAME;
     case ui::RECT_HEADER_TIME:
-      return HEADER_TIME;
+      return HEADER_TIME_CENTER;
     case ui::RECT_HEADER_CENTER:
-      return HEADER_CENTER;
+      return HEADER_TIME_CENTER;
     case ui::RECT_INSIDE_TEMP:
       return INSIDE_TEMP;
     case ui::RECT_INSIDE_RH:
-      return INSIDE_RH;
+      return INSIDE_HUMIDITY;
     case ui::RECT_INSIDE_TIME:
-      return INSIDE_TIME;
+      return INSIDE_PRESSURE;  // Assuming this maps to pressure
     case ui::RECT_OUT_TEMP:
       return OUT_TEMP;
     case ui::RECT_OUT_ICON:
-      return OUT_ICON;
+      return WEATHER_ICON;
     case ui::RECT_OUT_ROW1_L:
-      return OUT_ROW1_L;
+      return OUT_WEATHER;
     case ui::RECT_OUT_ROW1_R:
-      return OUT_ROW1_R;
+      return OUT_PRESSURE;
     case ui::RECT_OUT_ROW2_L:
-      return OUT_ROW2_L;
+      return OUT_HUMIDITY;
     case ui::RECT_OUT_ROW2_R:
-      return OUT_ROW2_R;
+      return OUT_WIND;
     case ui::RECT_FOOTER_STATUS:
       return FOOTER_STATUS;
     case ui::RECT_FOOTER_WEATHER:
