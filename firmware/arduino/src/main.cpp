@@ -341,17 +341,8 @@ static void draw_from_spec_full_impl(uint8_t variantId) {
 // - last_status_crc
 // last_inside_rh moved to state_manager
 
-// Diagnostic counters (persist across deep sleep)
-RTC_DATA_ATTR static uint32_t rtc_boot_count = 0;           // Total boots since power-on
-RTC_DATA_ATTR static uint32_t rtc_crash_count = 0;          // Count of abnormal resets
-RTC_DATA_ATTR static uint32_t rtc_cumulative_uptime_sec = 0; // Total awake time in seconds
-RTC_DATA_ATTR static uint32_t rtc_last_boot_timestamp = 0;   // Timestamp of last boot
-RTC_DATA_ATTR static esp_reset_reason_t rtc_last_reset_reason = ESP_RST_UNKNOWN;
-
-// Diagnostic mode state
-static bool g_diagnostic_mode = false;
-static uint32_t g_diagnostic_last_publish_ms = 0;
-static const uint32_t DIAGNOSTIC_PUBLISH_INTERVAL_MS = 10000; // 10 seconds
+// Diagnostic counters moved to metrics_diagnostics module
+// Diagnostic mode state moved to metrics_diagnostics module
 
 // Memory monitoring structure
 // MemoryDiagnostics struct moved to system_manager.h
