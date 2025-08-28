@@ -49,3 +49,15 @@ void handle_serial_command_line(const String& line);
 void print_memory_stats();
 uint32_t get_display_deadline_ms();
 void set_display_deadline_ms(uint32_t deadline);
+
+// CRC and validation utilities
+uint32_t fast_crc32(const uint8_t* data, size_t len);
+
+// Helper templates for conditional redraws
+template <typename DrawFn>
+bool maybe_redraw_numeric(const int rect[4], float currentValue, float& lastValue,
+                         float threshold, DrawFn drawFn);
+
+template <typename T, typename DrawFn>
+bool maybe_redraw_value(const int rect[4], const T& currentValue, T& lastValue,
+                       DrawFn drawFn);

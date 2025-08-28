@@ -13,6 +13,13 @@
 // Global diagnostic mode flag
 static bool g_diagnostic_mode = false;
 
+// RTC variables for boot tracking (persist across deep sleep)
+RTC_DATA_ATTR static uint32_t rtc_boot_count = 0;           // Total boots since power-on
+RTC_DATA_ATTR static uint32_t rtc_crash_count = 0;          // Count of abnormal resets
+RTC_DATA_ATTR static uint32_t rtc_cumulative_uptime_sec = 0; // Total awake time in seconds
+RTC_DATA_ATTR static uint32_t rtc_last_boot_timestamp = 0;   // Timestamp of last boot
+RTC_DATA_ATTR static esp_reset_reason_t rtc_last_reset_reason = ESP_RST_UNKNOWN;
+
 // Status pixel object if enabled
 #if USE_STATUS_PIXEL
 static Adafruit_NeoPixel* g_status_pixel = nullptr;
@@ -168,3 +175,83 @@ void status_pixel_tick() {
 }
 
 #endif // USE_STATUS_PIXEL
+
+// Boot and crash tracking functions
+void update_boot_counters() {
+  esp_reset_reason_t current_reset_reason = esp_reset_reason();
+  rtc_last_reset_reason = current_reset_reason;
+  
+  // Update boot and crash counters
+  if (current_reset_reason == ESP_RST_POWERON) {
+    // Power-on reset: clear all counters
+    rtc_boot_count = 1;
+    rtc_crash_count = 0;
+    rtc_cumulative_uptime_sec = 0;
+  } else {
+    // Any other reset: increment boot count
+    rtc_boot_count++;
+    
+    // Increment crash count for abnormal resets
+    // Need to check if it's a crash (would need system_manager function)
+    if (current_reset_reason == ESP_RST_PANIC || 
+        current_reset_reason == ESP_RST_INT_WDT ||
+        current_reset_reason == ESP_RST_TASK_WDT ||
+        current_reset_reason == ESP_RST_WDT ||
+        current_reset_reason == ESP_RST_BROWNOUT) {
+      rtc_crash_count++;
+    }
+  }
+  
+  // Update boot timestamp for rapid reset detection
+  rtc_last_boot_timestamp = static_cast<uint32_t>(time(nullptr));
+}
+
+uint32_t get_boot_count() {
+  return rtc_boot_count;
+}
+
+uint32_t get_crash_count() {
+  return rtc_crash_count;
+}
+
+uint32_t get_cumulative_uptime_sec() {
+  return rtc_cumulative_uptime_sec;
+}
+
+void add_to_cumulative_uptime(uint32_t seconds) {
+  rtc_cumulative_uptime_sec += seconds;
+}
+
+uint32_t get_last_boot_timestamp() {
+  return rtc_last_boot_timestamp;
+}
+
+void set_last_boot_timestamp(uint32_t timestamp) {
+  rtc_last_boot_timestamp = timestamp;
+}
+
+esp_reset_reason_t get_last_reset_reason() {
+  return rtc_last_reset_reason;
+}
+
+void publish_boot_diagnostics() {
+  if (!mqtt_is_connected()) {
+    return;
+  }
+  
+  // Publish boot diagnostics via MQTT
+  char topic[128];
+  char payload[64];
+  
+  snprintf(topic, sizeof(topic), "%s/debug/boot_count", MQTT_PUB_BASE);
+  snprintf(payload, sizeof(payload), "%lu", (unsigned long)rtc_boot_count);
+  mqtt_publish_raw(topic, payload, false);
+  
+  snprintf(topic, sizeof(topic), "%s/debug/crash_count", MQTT_PUB_BASE);
+  snprintf(payload, sizeof(payload), "%lu", (unsigned long)rtc_crash_count);
+  mqtt_publish_raw(topic, payload, false);
+  
+  snprintf(topic, sizeof(topic), "%s/debug/uptime", MQTT_PUB_BASE);
+  snprintf(payload, sizeof(payload), "%lu", (unsigned long)rtc_cumulative_uptime_sec);
+  mqtt_publish_raw(topic, payload, false);
+}

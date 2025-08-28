@@ -3,6 +3,9 @@
 #include "generated_config.h"
 #include "config.h"
 #include <Preferences.h>
+#if LOG_MQTT_ENABLED
+#include "logging/log_mqtt.h"
+#endif
 
 // Static storage
 static WiFiClient g_wifi_client;
@@ -45,9 +48,8 @@ void mqtt_begin() {
     }
     
     // Forward log commands to LogMQTT
-    #ifdef LOG_MQTT_ENABLED
+    #if LOG_MQTT_ENABLED
     if (topicStr.indexOf("/cmd/clear_logs") >= 0 || topicStr.indexOf("/cmd/log_level") >= 0) {
-      extern void log_mqtt_handle_command(const char* topic, const uint8_t* payload, size_t length);
       log_mqtt_handle_command(topic, (const uint8_t*)payload, length);
     }
     #endif

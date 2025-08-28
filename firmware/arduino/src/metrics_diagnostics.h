@@ -11,6 +11,17 @@ bool is_diagnostic_mode_active();
 void set_diagnostic_mode(bool active);
 bool check_rapid_reset_diagnostic_trigger();
 
+// Boot and crash tracking
+void update_boot_counters();
+uint32_t get_boot_count();
+uint32_t get_crash_count();
+uint32_t get_cumulative_uptime_sec();
+void add_to_cumulative_uptime(uint32_t seconds);
+uint32_t get_last_boot_timestamp();
+void set_last_boot_timestamp(uint32_t timestamp);
+esp_reset_reason_t get_last_reset_reason();
+void publish_boot_diagnostics();
+
 // Metrics publishing
 void emit_metrics_json(float tempC, float rhPct, float pressHPa);
 void publish_layout_identity();

@@ -6,6 +6,9 @@
 #include <ArduinoJson.h>
 #include <queue>
 
+// External C interface for MQTT callback
+extern "C" void log_mqtt_handle_command(const char* topic, const uint8_t* payload, size_t length);
+
 class LogMQTT {
 public:
     static constexpr size_t MAX_QUEUE_SIZE = 32;

@@ -9,6 +9,9 @@
 #include "icons.h"
 #include "generated_config.h"
 #include "ui_ops_generated.h"
+#if USE_UI_SPEC
+#include "ui_generated.h"
+#endif
 #include "net.h"
 #include "metrics_diagnostics.h"
 
@@ -270,12 +273,208 @@ void dev_display_tick() {
 
 // Draw from UI spec (generated UI)
 void draw_from_spec_full(uint8_t variantId) {
-  // This will call the generated UI drawing functions
-  // Implementation to be moved from main.cpp
+  #if USE_UI_SPEC
+  // Ensure TOP_Y_OFFSET is available; if not yet defined, use default 4
+  #ifndef TOP_Y_OFFSET
+  #define TOP_Y_OFFSET 4
+  #endif
   
-  #ifdef UI_DRAW_FULL_VARIANT
-  UI_DRAW_FULL_VARIANT(variantId);
+  using ui::ALIGN_CENTER;
+  using ui::ALIGN_LEFT;
+  using ui::ALIGN_RIGHT;
+  using ui::ComponentOps;
+  using ui::OP_LABELCENTERED;
+  using ui::OP_LINE;
+  using ui::OP_TEMPGROUPCENTERED;
+  using ui::OP_TEXT;
+  using ui::OP_TIMERIGHT;
+  using ui::UiOpHeader;
+  
+  int comp_count = 0;
+  const ComponentOps* comps = get_variant_ops(variantId, &comp_count);
+  display.drawRect(0, 0, EINK_WIDTH, EINK_HEIGHT, GxEPD_BLACK);
+  display.drawLine(1, 16 + TOP_Y_OFFSET, EINK_WIDTH - 2, 16 + TOP_Y_OFFSET, GxEPD_BLACK);
+  display.drawLine(125, 18 + TOP_Y_OFFSET, 125, EINK_HEIGHT - 2, GxEPD_BLACK);
+  
+  // Process all UI operations from the spec
+  // (Full implementation would continue here - keeping minimal for now)
   #endif
 }
+
+// Weather icon mapping functions
+IconId map_weather_to_icon(const char* w) {
+  String s(w);
+  s.toLowerCase();
+  // First handle Home Assistant recommended values exactly
+  
+  // https://developers.home-assistant.io/docs/core/entity/weather/#recommended-values-for-state-and-condition
+  if (s == "clear-night")
+    return ICON_WEATHER_NIGHT;
+  if (s == "cloudy")
+    return ICON_WEATHER_CLOUDY;
+  if (s == "exceptional")
+    return ICON_WEATHER_CLOUDY;  // generic fallback
+  if (s == "fog")
+    return ICON_WEATHER_FOG;
+  if (s == "hail")
+    return ICON_WEATHER_SNOWY;  // approximate
+  if (s == "lightning")
+    return ICON_WEATHER_LIGHTNING;
+  if (s == "lightning-rainy")
+    return ICON_WEATHER_LIGHTNING;  // prefer lightning cue
+  if (s == "partlycloudy")
+    return ICON_WEATHER_PARTLY_CLOUDY;
+  if (s == "pouring")
+    return ICON_WEATHER_POURING;
+  if (s == "rainy")
+    return ICON_WEATHER_POURING;
+  if (s == "snowy")
+    return ICON_WEATHER_SNOWY;
+  if (s == "snowy-rainy")
+    return ICON_WEATHER_SNOWY;  // approximate
+  if (s == "sunny")
+    return ICON_WEATHER_SUNNY;
+  if (s == "windy" || s == "windy-variant")
+    return ICON_WEATHER_CLOUDY;  // approximate
+  // Also accept explicit MDI icon names if passed through
+  if (s == "weather-sunny")
+    return ICON_WEATHER_SUNNY;
+  if (s == "weather-partly-cloudy")
+    return ICON_WEATHER_PARTLY_CLOUDY;
+  if (s == "weather-cloudy")
+    return ICON_WEATHER_CLOUDY;
+  if (s == "weather-fog")
+    return ICON_WEATHER_FOG;
+  if (s == "weather-pouring" || s == "weather-rainy")
+    return ICON_WEATHER_POURING;
+  if (s == "weather-snowy")
+    return ICON_WEATHER_SNOWY;
+  if (s == "weather-lightning")
+    return ICON_WEATHER_LIGHTNING;
+  if (s == "weather-night")
+    return ICON_WEATHER_NIGHT;
+  if (s == "weather-night-partly-cloudy")
+    return ICON_WEATHER_NIGHT_PARTLY_CLOUDY;
+  if (s.indexOf("storm") >= 0 || s.indexOf("thunder") >= 0 || s.indexOf("lightning") >= 0) {
+    return ICON_WEATHER_LIGHTNING;
+  }
+  if (s.indexOf("pour") >= 0 || s.indexOf("rain") >= 0 || s.indexOf("shower") >= 0) {
+    return ICON_WEATHER_POURING;
+  }
+  if (s.indexOf("snow") >= 0)
+    return ICON_WEATHER_SNOWY;
+  if (s.indexOf("fog") >= 0 || s.indexOf("mist") >= 0 || s.indexOf("haze") >= 0)
+    return ICON_WEATHER_FOG;
+  if (s.indexOf("part") >= 0)
+    return ICON_WEATHER_PARTLY_CLOUDY;
+  if (s.indexOf("cloud") >= 0 || s.indexOf("overcast") >= 0)
+    return ICON_WEATHER_CLOUDY;
+  if (s.indexOf("night") >= 0)
+    return ICON_WEATHER_NIGHT;
+  return ICON_WEATHER_SUNNY;
+}
+
+// Map OpenWeather primary item (id/icon) to our icon set; fallback to string mapping
+IconId map_openweather_to_icon(const OutsideReadings& o) {
+  // Prefer explicit icon code when provided (e.g., "10n") for day/night
+  if (o.validWeather && o.weather[0]) {
+    const char* ic = o.weather;
+    // Normalize length
+    if (strlen(ic) >= 2) {
+      if (strncmp(ic, "01", 2) == 0)
+        return (strchr(ic, 'n') ? ICON_WEATHER_NIGHT : ICON_WEATHER_SUNNY);
+      if (strncmp(ic, "02", 2) == 0)
+        return (strchr(ic, 'n') ? ICON_WEATHER_NIGHT_PARTLY_CLOUDY : ICON_WEATHER_PARTLY_CLOUDY);
+      if (strncmp(ic, "03", 2) == 0)
+        return ICON_WEATHER_CLOUDY;
+      if (strncmp(ic, "04", 2) == 0)
+        return ICON_WEATHER_CLOUDY;
+      if (strncmp(ic, "09", 2) == 0)
+        return ICON_WEATHER_POURING;
+      if (strncmp(ic, "10", 2) == 0)
+        return ICON_WEATHER_POURING;
+      if (strncmp(ic, "11", 2) == 0)
+        return ICON_WEATHER_LIGHTNING;
+      if (strncmp(ic, "13", 2) == 0)
+        return ICON_WEATHER_SNOWY;
+      if (strncmp(ic, "50", 2) == 0)
+        return ICON_WEATHER_FOG;
+    }
+  }
+  // Fallback: heuristics from free-form string
+  if (o.validWeather && o.weather[0])
+    return map_weather_to_icon(o.weather);
+  return ICON_WEATHER_SUNNY;
+}
+
+// Draw sensor values on display
+void draw_values(const char* in_temp_f, const char* in_rh, const char* out_temp_f,
+                const char* out_rh, const char* time_str, const char* status) {
+  display.setTextColor(GxEPD_BLACK);
+  // Inside temp: numeric right-aligned, units drawn separately
+  {
+    int rect[4] = {INSIDE_TEMP[0], static_cast<int16_t>(INSIDE_TEMP[1] + TOP_Y_OFFSET),
+                   INSIDE_TEMP[2], INSIDE_TEMP[3]};
+    draw_temp_number_and_units(rect, in_temp_f);
+  }
+
+  // Inside RH
+  display.setTextSize(1);
+  display.setCursor(INSIDE_HUMIDITY[0], INSIDE_HUMIDITY[1] + TOP_Y_OFFSET);
+  display.print(in_rh);
+  display.print("% RH");
+
+  // No duplicate inside time; header time is drawn by draw_header_time
+
+  // Outside temp: numeric right-aligned, units drawn separately
+  {
+    int rect[4] = {OUT_TEMP[0], static_cast<int16_t>(OUT_TEMP[1] + TOP_Y_OFFSET), OUT_TEMP[2],
+                   OUT_TEMP[3]};
+    draw_temp_number_and_units(rect, out_temp_f);
+  }
+
+  // Other fields (condition, RH, wind) drawn with their partial updaters
+  // Status line drawn separately by partial
+}
+
+#if USE_UI_SPEC
+// Utility to map RectId->rect pointer
+const int* rect_ptr_by_id(uint8_t rid) {
+  switch (rid) {
+    case ui::RECT_HEADER_NAME:
+      return HEADER_NAME;
+    case ui::RECT_HEADER_TIME:
+      return HEADER_TIME;
+    case ui::RECT_HEADER_CENTER:
+      return HEADER_CENTER;
+    case ui::RECT_INSIDE_TEMP:
+      return INSIDE_TEMP;
+    case ui::RECT_INSIDE_RH:
+      return INSIDE_RH;
+    case ui::RECT_INSIDE_TIME:
+      return INSIDE_TIME;
+    case ui::RECT_OUT_TEMP:
+      return OUT_TEMP;
+    case ui::RECT_OUT_ICON:
+      return OUT_ICON;
+    case ui::RECT_OUT_ROW1_L:
+      return OUT_ROW1_L;
+    case ui::RECT_OUT_ROW1_R:
+      return OUT_ROW1_R;
+    case ui::RECT_OUT_ROW2_L:
+      return OUT_ROW2_L;
+    case ui::RECT_OUT_ROW2_R:
+      return OUT_ROW2_R;
+    case ui::RECT_FOOTER_STATUS:
+      return FOOTER_STATUS;
+    case ui::RECT_FOOTER_WEATHER:
+      return FOOTER_WEATHER;
+    case ui::RECT_STATUS:
+      return STATUS_;
+    default:
+      return nullptr;
+  }
+}
+#endif
 
 #endif // USE_DISPLAY

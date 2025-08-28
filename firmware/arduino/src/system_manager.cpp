@@ -263,3 +263,51 @@ void handle_serial_command_line(const String& line) {
     // Original placeholder for other commands
     Serial.println(F("Unknown command. Try 'log help' for logging commands"));
 }
+
+// CRC32 calculation utility
+uint32_t fast_crc32(const uint8_t* data, size_t len) {
+    // Tiny CRC32 (polynomial 0xEDB88320),
+    // suitable for short status strings
+    uint32_t crc = 0xFFFFFFFFu;
+    for (size_t i = 0; i < len; ++i) {
+        uint32_t byte = data[i];
+        crc ^= byte;
+        for (int k = 0; k < 8; ++k) {
+            uint32_t mask = -(crc & 1u);
+            crc = (crc >> 1) ^ (0xEDB88320u & mask);
+        }
+    }
+    return ~crc;
+}
+
+// Template implementations for conditional redraws
+template <typename DrawFn>
+bool maybe_redraw_numeric(const int rect[4], float currentValue, float& lastValue,
+                         float threshold, DrawFn drawFn) {
+    bool should = false;
+    if (!isnan(currentValue) &&
+        (!isfinite(lastValue) || fabsf(currentValue - lastValue) >= threshold))
+        should = true;
+    if (should) {
+        drawFn();
+        lastValue = currentValue;
+        return true;
+    }
+    return false;
+}
+
+template <typename T, typename DrawFn>
+bool maybe_redraw_value(const int rect[4], const T& currentValue, T& lastValue,
+                       DrawFn drawFn) {
+    if (currentValue != lastValue) {
+        drawFn();
+        lastValue = currentValue;
+        return true;
+    }
+    return false;
+}
+
+// Explicit instantiations for common types to avoid linker errors
+template bool maybe_redraw_numeric<void(*)()>(const int*, float, float&, float, void(*)());
+template bool maybe_redraw_value<int, void(*)()>(const int*, const int&, int&, void(*)());
+template bool maybe_redraw_value<uint32_t, void(*)()>(const int*, const uint32_t&, uint32_t&, void(*)());
