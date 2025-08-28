@@ -43,6 +43,14 @@ void mqtt_begin() {
         g_diagnostic_mode_request_value = (value == '1' || value == 't' || value == 'T');
       }
     }
+    
+    // Forward log commands to LogMQTT
+    #ifdef LOG_MQTT_ENABLED
+    if (topicStr.indexOf("/cmd/clear_logs") >= 0 || topicStr.indexOf("/cmd/log_level") >= 0) {
+      extern void log_mqtt_handle_command(const char* topic, const uint8_t* payload, size_t length);
+      log_mqtt_handle_command(topic, (const uint8_t*)payload, length);
+    }
+    #endif
   });
 }
 
@@ -271,4 +279,8 @@ bool mqtt_get_diagnostic_mode_value() {
 
 void mqtt_clear_diagnostic_mode_request() {
   g_diagnostic_mode_requested = false;
+}
+
+PubSubClient* mqtt_get_client() {
+  return &g_mqtt;
 }

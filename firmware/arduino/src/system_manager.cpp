@@ -4,6 +4,12 @@
 #include <esp_sleep.h>
 #include "config.h"
 #include "generated_config.h"
+#ifdef LOG_ENABLED
+#include "logging/logger.h"
+#include "logging/log_buffer.h"
+#include "logging/log_storage.h"
+LOG_MODULE("SYSTEM");
+#endif
 
 // RTC memory for persisting data across deep sleep
 RTC_DATA_ATTR static uint32_t rtc_wake_count = 0;
@@ -62,6 +68,22 @@ void print_boot_diagnostics() {
     Serial.print(F("Reset reason: "));
     Serial.println(get_reset_reason_string(reset_reason));
     
+    #ifdef LOG_ENABLED
+    // Check for crash and dump logs if needed
+    if (reset_reason_is_crash(reset_reason)) {
+        LOG_FATAL("System crashed with reason: %s", get_reset_reason_string(reset_reason));
+        
+        // Check if we have crash logs in NVS
+        LogStorage* storage = LogStorage::getInstance();
+        if (storage && storage->wasCrashed()) {
+            Serial.println(F("Previous crash detected - dumping logs:"));
+            Logger::getInstance().dumpCrashLog();
+            storage->dumpToSerial();
+            storage->clearCrashFlag();
+        }
+    }
+    #endif
+    
     // Memory stats
     MemoryDiagnostics mem = get_memory_diagnostics();
     Serial.printf("Heap: free=%u min=%u\n", mem.free_heap, mem.min_free_heap);
@@ -101,6 +123,11 @@ bool reset_reason_is_crash(esp_reset_reason_t reason) {
 
 // Go to deep sleep with wake tracking
 void go_deep_sleep_with_tracking(uint32_t seconds) {
+    #ifdef LOG_ENABLED
+    LOG_INFO("Entering deep sleep for %u seconds. Wake count: %u", seconds, rtc_wake_count);
+    Logger::getInstance().flush();
+    #endif
+    
     Serial.printf("Entering deep sleep for %u seconds\n", seconds);
     Serial.flush();
     
@@ -180,7 +207,59 @@ void print_memory_stats() {
 
 // Handle serial command line (will be moved from main.cpp)
 void handle_serial_command_line(const String& line) {
-    // This will be filled in when we move the actual implementation
-    // For now, just a placeholder
-    Serial.println(F("Command handling not yet implemented in system_manager"));
+    #ifdef LOG_ENABLED
+    // Test logging commands
+    if (line == "log test") {
+        Serial.println(F("Running logging test..."));
+        LOG_TRACE("Test TRACE message");
+        LOG_DEBUG("Test DEBUG message");
+        LOG_INFO("Test INFO message with number: %d", 42);
+        LOG_WARN("Test WARNING message");
+        LOG_ERROR("Test ERROR message with code: %d", 500);
+        Serial.println(F("Logging test complete - check serial output"));
+        return;
+    }
+    
+    if (line == "log dump") {
+        Serial.println(F("Dumping crash log buffer..."));
+        Logger::getInstance().dumpCrashLog();
+        return;
+    }
+    
+    if (line == "log stats") {
+        LogBuffer* buffer = LogBuffer::getInstance();
+        LogStorage* storage = LogStorage::getInstance();
+        Serial.printf("Buffer: %zu/%zu entries, %u overflows\n", 
+                     buffer->getCount(), buffer->getCapacity(), buffer->getOverflowCount());
+        Serial.printf("NVS: %zu stored entries\n", storage->getStoredCount());
+        Serial.printf("Dropped logs: %u\n", Logger::getInstance().getDroppedCount());
+        return;
+    }
+    
+    if (line.startsWith("log level ")) {
+        String level = line.substring(10);
+        level.toUpperCase();
+        LogLevel new_level = Logger::getInstance().stringToLevel(level.c_str());
+        if (new_level != LogLevel::NONE) {
+            Logger::getInstance().setLevel(new_level);
+            Serial.printf("Log level set to: %s\n", level.c_str());
+        } else {
+            Serial.println(F("Invalid level. Use: TRACE, DEBUG, INFO, WARN, ERROR, FATAL"));
+        }
+        return;
+    }
+    
+    if (line == "log help") {
+        Serial.println(F("Logging commands:"));
+        Serial.println(F("  log test   - Run logging test"));
+        Serial.println(F("  log dump   - Dump crash log buffer"));
+        Serial.println(F("  log stats  - Show logging statistics"));
+        Serial.println(F("  log level [LEVEL] - Set log level"));
+        Serial.println(F("  log help   - Show this help"));
+        return;
+    }
+    #endif
+    
+    // Original placeholder for other commands
+    Serial.println(F("Unknown command. Try 'log help' for logging commands"));
 }

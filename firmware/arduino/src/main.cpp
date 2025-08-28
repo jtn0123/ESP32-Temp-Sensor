@@ -10,6 +10,10 @@
 #include <Preferences.h>
 
 #include "config.h"
+#ifdef LOG_ENABLED
+#include "logging/logger.h"
+#include "logging/log_mqtt.h"
+#endif
 #if USE_STATUS_PIXEL
 #include <Adafruit_NeoPixel.h>
 #endif
@@ -1489,11 +1493,31 @@ static void dev_display_tick() {
 }
 #endif  // USE_DISPLAY && DEV_NO_SLEEP
 
+// Module registration for logging
+#ifdef LOG_ENABLED
+LOG_MODULE("MAIN");
+#endif
+
 void setup() {
   int64_t t0_us = esp_timer_get_time();
   Serial.begin(115200);
   delay(100);
   Serial.println(F("ESP32 eInk Room Node boot"));
+  
+  // Initialize logging system before diagnostics
+  #ifdef LOG_ENABLED
+  Logger::Config log_config;
+  log_config.min_level = static_cast<LogLevel>(LOG_LEVEL_DEFAULT);
+  log_config.serial_enabled = LOG_SERIAL_ENABLED;
+  log_config.buffer_enabled = LOG_BUFFER_ENABLED;
+  log_config.nvs_enabled = LOG_NVS_ENABLED;
+  log_config.mqtt_enabled = false;  // Enable after MQTT connects
+  log_config.mqtt_rate_limit_ms = LOG_MQTT_RATE_LIMIT_MS;
+  
+  Logger::getInstance().begin(log_config);
+  LOG_INFO("=== ESP32 eInk Room Node v%s ===", FW_VERSION);
+  #endif
+  
   print_boot_diagnostics();
   // Increment RTC wake counter on any reset except true power-on
   if (esp_reset_reason() == ESP_RST_DEEPSLEEP || esp_reset_reason() == ESP_RST_SW ||
@@ -1542,6 +1566,23 @@ void setup() {
   int64_t t1_us = esp_timer_get_time();
   ensure_mqtt_connected();
   int64_t t2_us = esp_timer_get_time();
+  
+  // Enable MQTT logging after connection
+  #ifdef LOG_ENABLED
+  #ifdef LOG_MQTT_ENABLED
+  if (mqtt_is_connected()) {
+    Logger::getInstance().enableMQTT(true);
+    // Use the MAC-based client ID that was set up for MQTT
+    char client_id[32];
+    uint8_t mac[6];
+    WiFi.macAddress(mac);
+    snprintf(client_id, sizeof(client_id), "%02x%02x%02x%02x%02x%02x", 
+             mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+    LogMQTT::getInstance()->setClientId(client_id);
+    LOG_INFO("MQTT logging enabled for device: %s", client_id);
+  }
+  #endif
+  #endif
 
   // Skip any pre-publish draw to avoid double full refresh. A single
   // full_refresh will be performed in the display phase below across all modes.

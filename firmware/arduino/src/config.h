@@ -83,3 +83,37 @@
 #ifndef MQTT_OUTSIDE_DEBOUNCE_MS
 #define MQTT_OUTSIDE_DEBOUNCE_MS 1200
 #endif
+
+// Logging system configuration
+#ifndef LOG_ENABLED
+#define LOG_ENABLED 1
+#endif
+
+#ifndef LOG_LEVEL_DEFAULT
+#define LOG_LEVEL_DEFAULT 2  // 0=TRACE, 1=DEBUG, 2=INFO, 3=WARN, 4=ERROR, 5=FATAL
+#endif
+
+#ifndef LOG_SERIAL_ENABLED
+#define LOG_SERIAL_ENABLED 1
+#endif
+
+#ifndef LOG_BUFFER_ENABLED
+#define LOG_BUFFER_ENABLED 1
+#endif
+
+#ifndef LOG_NVS_ENABLED
+#define LOG_NVS_ENABLED 1
+#endif
+
+#ifndef LOG_MQTT_ENABLED
+#define LOG_MQTT_ENABLED 1
+#endif
+
+#ifndef LOG_MQTT_RATE_LIMIT_MS
+#define LOG_MQTT_RATE_LIMIT_MS 1000
+#endif
+
+// Status pixel configuration 
+#ifndef USE_STATUS_PIXEL
+#define USE_STATUS_PIXEL 0
+#endif
