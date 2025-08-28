@@ -9,22 +9,21 @@ def _read(path: str) -> str:
 
 
 def test_alias_subscriptions_and_callbacks_present():
-    # TODO: Update this test after refactoring - MQTT logic moved from net.h to mqtt_client.cpp
-    # The outdoor alias subscription logic needs to be re-implemented in the refactored code
-    import pytest
-    pytest.skip("Test needs update after refactoring - MQTT logic moved to mqtt_client.cpp")
+    # Check that MQTT client subscribes to outdoor alias topics and handles them
+    mqtt_client = os.path.join(ROOT, "firmware", "arduino", "src", "mqtt_client.cpp")
+    txt = _read(mqtt_client)
+
+    # Subscription checks - look for the subscription to alias topics
+    assert '"/temp_f"' in txt, "Should subscribe to temp_f alias"
+    assert '"/condition"' in txt, "Should subscribe to condition alias"
+    assert '"/condition_code"' in txt, "Should subscribe to condition_code alias"
+
+    # Callback checks - verify the callback handles these topics
+    assert 'ends_with(topicStr, "/temp_f")' in txt, "Should handle temp_f in callback"
+    assert 'ends_with(topicStr, "/condition")' in txt, "Should handle condition in callback"
+    assert 'ends_with(topicStr, "/condition_code")' in txt, "Should handle condition_code in callback"
     
-    # Original test checked net.h, but now we need to check mqtt_client.cpp
-    # and potentially app_controller.cpp for the subscription logic
-    net_h = os.path.join(ROOT, "firmware", "arduino", "src", "net.h")
-    txt = _read(net_h)
-
-    # Subscription checks
-    assert 'sub("/temp_f")' in txt
-    assert 'sub("/condition")' in txt
-    assert 'sub("/condition_code")' in txt
-
-    # Callback checks
-    assert 'ends_with(topic, "/temp_f")' in txt
-    assert 'ends_with(topic, "/condition")' in txt
-    assert 'ends_with(topic, "/condition_code")' in txt
+    # Verify legacy topic support
+    assert '"/temp"' in txt, "Should support legacy temp topic"
+    assert '"/weather"' in txt, "Should support legacy weather topic"
+    assert '"/weather_id"' in txt, "Should support legacy weather_id topic"

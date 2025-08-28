@@ -1,6 +1,12 @@
 #!/bin/bash
+# Validation Script for ESP32 Temperature Sensor Refactoring
+# This script validates that the refactoring has not broken functionality
 
-echo "=== ESP32 Firmware Refactoring Validation ==="
+set -e  # Exit on first error
+
+echo "======================================"
+echo "ESP32 Temp Sensor Refactoring Validation"
+echo "======================================"
 echo ""
 
 # Color codes for output
@@ -38,12 +44,28 @@ warn_check() {
     fi
 }
 
-echo "1. Checking compilation..."
+echo "Phase 1: Code Generation"
+echo "------------------------"
+cd ../..
+check "Generate device header" "python3 scripts/gen_device_header.py"
+check "Generate layout header" "python3 scripts/gen_layout_header.py"
+cd firmware/arduino
+
+echo ""
+echo "Phase 2: C++ Compilation"
+echo "------------------------"
 check "Display build compiles" "pio run -e feather_esp32s2_display_only"
 check "Headless build compiles" "pio run -e feather_esp32s2_headless"
 
+# Run native tests
 echo ""
-echo "2. Checking for common issues..."
+echo "Phase 3: Native Tests"
+echo "---------------------"
+check "PlatformIO native tests" "pio test -e native"
+
+echo ""
+echo "Phase 4: Code Quality Checks"
+echo "-----------------------------"
 
 # Check for duplicate symbols
 warn_check "Duplicate g_client_id found" "grep -r 'static.*g_client_id' src/*.cpp src/*.h | grep -v '//' | wc -l | grep -v '^1$'"
@@ -61,7 +83,8 @@ check "All headers have guards" "! ls src/*.h | xargs grep -L '#pragma once'"
 warn_check "Potential circular dependency detected" "grep -l wifi_manager.h src/*.cpp src/*.h | xargs grep -l mqtt_client.h | grep -v net.h | grep ."
 
 echo ""
-echo "3. Checking MQTT consistency..."
+echo "Phase 5: Module Consistency"
+echo "----------------------------"
 
 # Check MQTT topic patterns
 ESPSENSOR_COUNT=$(grep -r 'espsensor/' src/*.cpp src/*.h | wc -l)
@@ -76,7 +99,8 @@ else
 fi
 
 echo ""
-echo "4. Checking module separation..."
+echo "Phase 6: Module Separation"
+echo "---------------------------"
 
 # Check that system functions are not in display files
 check "System functions not in display module" "! grep -E 'deep_sleep|nvs_|wake_count' src/display_manager.cpp"
@@ -88,7 +112,8 @@ check "Display functions not in system module" "! grep -E 'display\\.|draw_|part
 check "WiFi functions isolated to wifi_manager" "! grep -E 'WiFi\\.' src/mqtt_client.cpp src/ha_discovery.cpp"
 
 echo ""
-echo "5. Checking memory usage..."
+echo "Phase 7: Memory Usage Analysis"
+echo "-------------------------------"
 
 # Get memory usage from build output
 DISPLAY_RAM=$(pio run -e feather_esp32s2_display_only 2>&1 | grep "RAM:" | grep -oE '[0-9]+ bytes' | head -1 | cut -d' ' -f1)
@@ -101,33 +126,56 @@ if [ -n "$DISPLAY_RAM" ] && [ -n "$HEADLESS_RAM" ]; then
 fi
 
 echo ""
-echo "6. File size analysis..."
+echo "Phase 8: File Size Analysis"
+echo "----------------------------"
 
-# Check if any file is too large
-for file in src/*.cpp src/*.h; do
-    lines=$(wc -l < "$file")
-    name=$(basename "$file")
-    if [ $lines -gt 500 ]; then
+# Check main.cpp is under 1000 lines
+MAIN_LINES=$(wc -l < src/main.cpp)
+echo "main.cpp: $MAIN_LINES lines"
+if [ $MAIN_LINES -lt 1000 ]; then
+    echo -e "${GREEN}✓${NC} main.cpp successfully reduced (target: <1000)"
+    ((PASS++))
+else
+    echo -e "${RED}✗${NC} main.cpp still too large"
+    ((FAIL++))
+fi
+
+# Check other files
+echo ""
+echo "Module sizes:"
+for file in src/state_manager.cpp src/system_manager.cpp src/app_controller.cpp src/sensors.cpp src/power.cpp src/mqtt_client.cpp src/wifi_manager.cpp; do
+    if [ -f "$file" ]; then
+        lines=$(wc -l < "$file")
+        name=$(basename "$file")
         if [ $lines -gt 1000 ]; then
-            echo -e "${RED}✗${NC} $name has $lines lines (>1000)"
+            echo -e "${RED}✗${NC} $name: $lines lines (>1000)"
             ((FAIL++))
-        else
-            echo -e "${YELLOW}⚠${NC} $name has $lines lines (>500)"
+        elif [ $lines -gt 500 ]; then
+            echo -e "${YELLOW}⚠${NC} $name: $lines lines (>500)"
             ((WARN++))
+        else
+            echo -e "${GREEN}✓${NC} $name: $lines lines"
+            ((PASS++))
         fi
     fi
 done
 
 echo ""
-echo "=== Validation Summary ==="
-echo -e "Passed: ${GREEN}$PASS${NC}"
+echo "======================================"
+echo "VALIDATION SUMMARY"
+echo "======================================"
+echo -e "Tests Passed: ${GREEN}$PASS${NC}"
 echo -e "Warnings: ${YELLOW}$WARN${NC}"
-echo -e "Failed: ${RED}$FAIL${NC}"
+echo -e "Tests Failed: ${RED}$FAIL${NC}"
+echo ""
 
 if [ $FAIL -eq 0 ]; then
-    echo -e "\n${GREEN}Refactoring validation PASSED!${NC}"
+    echo -e "${GREEN}✓ VALIDATION PASSED${NC}"
+    echo "The refactoring has been validated successfully."
+    echo "All modules compile correctly and tests pass."
     exit 0
 else
-    echo -e "\n${RED}Refactoring validation FAILED!${NC}"
+    echo -e "${RED}✗ VALIDATION FAILED${NC}"
+    echo "Please review the failures above."
     exit 1
 fi

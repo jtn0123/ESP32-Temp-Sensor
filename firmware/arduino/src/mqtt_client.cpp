@@ -35,22 +35,84 @@ void mqtt_begin() {
   g_mqtt.setServer(MQTT_HOST, MQTT_PORT);
   #endif
   
-  // Set up MQTT callback for commands
+  // Set up MQTT callback for commands and outdoor data
   g_mqtt.setCallback([](char* topic, byte* payload, unsigned int length) {
-    // Handle diagnostic mode commands
     String topicStr(topic);
+    
+    // Handle diagnostic mode commands
     if (topicStr.endsWith("/cmd/diagnostic_mode")) {
       if (length > 0) {
         char value = (char)payload[0];
         g_diagnostic_mode_requested = true;
         g_diagnostic_mode_request_value = (value == '1' || value == 't' || value == 'T');
       }
+      return;
     }
     
     // Forward log commands to LogMQTT
     #if LOG_MQTT_ENABLED
     if (topicStr.indexOf("/cmd/clear_logs") >= 0 || topicStr.indexOf("/cmd/log_level") >= 0) {
       log_mqtt_handle_command(topic, (const uint8_t*)payload, length);
+      return;
+    }
+    #endif
+    
+    // Handle outdoor weather data (alias topics)
+    #ifdef MQTT_SUB_BASE
+    // Helper function to check if topic ends with a string
+    auto ends_with = [](const String& str, const char* suffix) {
+      int suffixLen = strlen(suffix);
+      int strLen = str.length();
+      if (strLen < suffixLen) return false;
+      return str.substring(strLen - suffixLen) == suffix;
+    };
+    
+    // Convert payload to string
+    char value_str[64];
+    if (length < sizeof(value_str)) {
+      memcpy(value_str, payload, length);
+      value_str[length] = '\0';
+    } else {
+      value_str[0] = '\0';
+    }
+    
+    // Handle temperature in Fahrenheit
+    if (ends_with(topicStr, "/temp_f")) {
+      float temp_f = atof(value_str);
+      if (isfinite(temp_f)) {
+        // Convert to Celsius and update outside readings
+        float temp_c = (temp_f - 32.0f) * 5.0f / 9.0f;
+        g_outside.temperatureC = temp_c;
+        g_outside.validTemp = true;
+      }
+    }
+    // Handle temperature in Celsius (legacy)
+    else if (ends_with(topicStr, "/temp")) {
+      float temp_c = atof(value_str);
+      if (isfinite(temp_c)) {
+        g_outside.temperatureC = temp_c;
+        g_outside.validTemp = true;
+      }
+    }
+    // Handle weather condition text
+    else if (ends_with(topicStr, "/condition")) {
+      snprintf(g_outside.weather, sizeof(g_outside.weather), "%s", value_str);
+      g_outside.validWeather = true;
+    }
+    // Handle weather description (legacy)
+    else if (ends_with(topicStr, "/weather")) {
+      snprintf(g_outside.weather, sizeof(g_outside.weather), "%s", value_str);
+      g_outside.validWeather = true;
+    }
+    // Handle weather condition code (currently not stored separately)
+    else if (ends_with(topicStr, "/condition_code")) {
+      // Weather code could be used to map to weather text if needed
+      // For now, we rely on the condition text itself
+    }
+    // Handle weather ID (legacy - currently not stored separately)
+    else if (ends_with(topicStr, "/weather_id")) {
+      // Weather ID could be used to map to weather text if needed  
+      // For now, we rely on the weather text itself
     }
     #endif
   });
@@ -89,6 +151,25 @@ bool mqtt_connect() {
     // Subscribe to command topics
     String cmd_topic = build_topic("cmd/+");
     g_mqtt.subscribe(cmd_topic.c_str());
+    
+    // Subscribe to outdoor weather data (alias topics)
+    #ifdef MQTT_SUB_BASE
+    String outdoor_base = String(MQTT_SUB_BASE);
+    // Subscribe to alias topics for outdoor data
+    String sub_topics[] = {
+      outdoor_base + "/temp_f",      // Temperature in Fahrenheit
+      outdoor_base + "/condition",   // Weather condition text
+      outdoor_base + "/condition_code", // Weather condition code
+      // Legacy topics for backward compatibility
+      outdoor_base + "/temp",        // Temperature in Celsius
+      outdoor_base + "/weather",     // Weather description
+      outdoor_base + "/weather_id"   // Weather ID
+    };
+    
+    for (const String& topic : sub_topics) {
+      g_mqtt.subscribe(topic.c_str());
+    }
+    #endif
   }
   
   return connected;
