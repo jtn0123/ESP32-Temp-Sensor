@@ -49,9 +49,40 @@ void show_boot_stage(int stage) {
 }
 #endif
 
+// Enhanced system state dump for debugging
+void dump_system_state() {
+  Serial.println("\n=== SYSTEM STATE DUMP ===");
+  
+  // Memory status
+  Serial.printf("[MEMORY] Free heap: %u bytes\n", ESP.getFreeHeap());
+  Serial.printf("[MEMORY] Min free heap: %u bytes\n", ESP.getMinFreeHeap());
+  Serial.printf("[MEMORY] Heap size: %u bytes\n", ESP.getHeapSize());
+  Serial.printf("[MEMORY] Free PSRAM: %u bytes\n", ESP.getFreePsram());
+  
+  // Chip information
+  Serial.printf("[CHIP] Model: %s\n", ESP.getChipModel());
+  Serial.printf("[CHIP] Revision: %d\n", ESP.getChipRevision());
+  Serial.printf("[CHIP] Cores: %d\n", ESP.getChipCores());
+  Serial.printf("[CHIP] CPU Freq: %u MHz\n", ESP.getCpuFreqMHz());
+  
+  // Reset/Wake information
+  Serial.printf("[BOOT] Reset reason: %d\n", esp_reset_reason());
+  
+  // Timing
+  Serial.printf("[TIME] Uptime: %lu ms\n", millis());
+  
+  Serial.println("=== END SYSTEM STATE ===");
+  Serial.flush();
+}
+
 void diagnostic_test_init() {
   Serial.println("\n=== HARDWARE DIAGNOSTIC TEST ===");
   Serial.flush();
+  
+  #ifdef BOOT_DEBUG
+  // Dump full system state in debug mode
+  dump_system_state();
+  #endif
   
   // Test 1: Neopixel
   #ifdef NEOPIXEL_PIN
