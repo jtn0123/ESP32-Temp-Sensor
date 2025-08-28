@@ -57,9 +57,7 @@ IconId map_openweather_to_icon(const OutsideReadings& o);
 void draw_in_region(const int rect[4], DrawFnLambda drawFn);
 void draw_in_region(const int rect[4], DrawFnFwd drawFn);
 
-// Template version for lambda functions with captures
-template <typename DrawFn>
-inline void draw_in_region(const int rect[4], DrawFn drawFn);
+// Note: Template version removed - use DrawFnLambda for lambdas
 
 // Text drawing helpers
 void draw_temp_number_and_units(const int r[4], const char* t);

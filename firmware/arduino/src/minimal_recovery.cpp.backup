@@ -1,0 +1,32 @@
+// Minimal recovery firmware - just blinks built-in LED
+// Rename this to main.cpp temporarily to use
+
+#include <Arduino.h>
+
+#define LED_PIN 13  // Built-in LED on most ESP32-S2 boards
+
+void setup() {
+  // Absolute minimum setup
+  pinMode(LED_PIN, OUTPUT);
+  
+  // Try serial but don't depend on it
+  Serial.begin(115200);
+}
+
+void loop() {
+  // Just blink
+  digitalWrite(LED_PIN, HIGH);
+  delay(500);
+  digitalWrite(LED_PIN, LOW);
+  delay(500);
+  
+  // Try to print but don't crash if serial fails
+  static int count = 0;
+  if (Serial) {
+    Serial.print(".");
+    if (++count > 40) {
+      Serial.println();
+      count = 0;
+    }
+  }
+}

@@ -12,6 +12,10 @@
 #include "metrics_diagnostics.h"
 #include "display_manager.h"
 
+// Diagnostic test functions (from diagnostic_test.cpp)
+extern void diagnostic_test_init();
+extern void diagnostic_test_loop();
+
 // Track wake time for phase management  
 static uint32_t g_wake_time_ms = 0;
 
@@ -31,25 +35,73 @@ bool is_first_boot() {
 void app_setup() {
   g_wake_time_ms = millis();
   
-  // Initialize serial
+  // Initialize serial FIRST with longer delay
   Serial.begin(115200);
-  delay(100);
-  Serial.println("\n=== ESP32 Sensor Starting ===");
+  delay(500);  // Longer delay for serial stability
   
-  // Initialize state management
+  // Immediate debug output
+  Serial.println("\n\n=== ESP32 BOOT DEBUG ===");
+  Serial.flush();
+  delay(10);
+  Serial.println("[1] Serial initialized");
+  Serial.flush();
+  
+  // Show we're alive with neopixel if available
+  #ifdef NEOPIXEL_PIN
+  pinMode(NEOPIXEL_PIN, OUTPUT);
+  #ifdef NEOPIXEL_POWER
+  pinMode(NEOPIXEL_POWER, OUTPUT);
+  digitalWrite(NEOPIXEL_POWER, HIGH);
+  #endif
+  // Quick red flash to show boot
+  analogWrite(NEOPIXEL_PIN, 10);
+  delay(100);
+  analogWrite(NEOPIXEL_PIN, 0);
+  #endif
+  
+  Serial.println("[2] Starting initialization");
+  Serial.flush();
+  
+  // Run diagnostic tests in DEV_NO_SLEEP mode
+  #ifdef DEV_NO_SLEEP
+  Serial.println("[2a] Running hardware diagnostics...");
+  diagnostic_test_init();
+  Serial.println("[2b] Diagnostics complete, continuing boot...");
+  Serial.flush();
+  #endif
+  
+  // Initialize state management with error checking
+  Serial.println("[3] Initializing NVS cache...");
+  Serial.flush();
   nvs_begin_cache();
   nvs_load_cache_if_unset();
+  Serial.println("[3] NVS cache OK");
+  Serial.flush();
   
-  // Initialize power management
+  // Initialize power management with error checking
+  Serial.println("[4] Initializing power management...");
+  Serial.flush();
   power_init();
   power_wake_from_sleep();
+  Serial.println("[4] Power management OK");
+  Serial.flush();
   
-  // Initialize sensors
+  // Initialize sensors with error checking
+  Serial.println("[5] Initializing sensors...");
+  Serial.flush();
   sensors_init_all();
+  Serial.println("[5] Sensors OK");
+  Serial.flush();
   
-  // Initialize network
+  // Initialize network (but don't block on it)
+  Serial.println("[6] Attempting WiFi connection...");
+  Serial.flush();
   if (!wifi_connect_with_timeout(5000)) {
-    Serial.println("WiFi connection failed");
+    Serial.println("[6] WiFi connection failed - continuing anyway");
+    Serial.flush();
+  } else {
+    Serial.println("[6] WiFi connected");
+    Serial.flush();
   }
   
   // Initialize MQTT
@@ -71,6 +123,20 @@ void app_setup() {
 
 // Main application loop (for diagnostic mode)
 void app_loop() {
+  #ifdef DEV_NO_SLEEP
+  // In always-on mode, just print alive message periodically
+  static uint32_t last_print = 0;
+  if (millis() - last_print > 5000) {
+    last_print = millis();
+    Serial.print("[ALIVE] Uptime: ");
+    Serial.print(millis() / 1000);
+    Serial.println(" seconds");
+    Serial.flush();
+  }
+  delay(100);  // Small delay to prevent watchdog issues
+  return;  // Don't run diagnostic mode logic in DEV_NO_SLEEP
+  #endif
+  
   // Check for MQTT diagnostic mode commands
   bool diag_mode_value;
   if (net_check_diagnostic_mode_request(diag_mode_value)) {
@@ -231,13 +297,15 @@ void run_display_phase() {
 void run_sleep_phase() {
   Serial.println("=== Sleep Phase ===");
   
+  #ifdef DEV_NO_SLEEP
+  Serial.println("DEV_NO_SLEEP: Staying awake in loop()");
+  Serial.println("Device will print [ALIVE] message every 5 seconds");
+  Serial.flush();
+  return;  // Return to setup(), then loop() will run continuously
+  #endif
+  
   // Calculate wake interval based on mode
   uint32_t wake_interval_sec = WAKE_INTERVAL_SEC;
-  
-  #ifdef DEV_NO_SLEEP
-  Serial.println("DEV_NO_SLEEP: Staying awake");
-  return;
-  #endif
   
   // Update cumulative uptime before sleep
   add_to_cumulative_uptime(millis() / 1000);
