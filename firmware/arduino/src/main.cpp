@@ -111,10 +111,7 @@ GxEPD2_BW<GxEPD2_213_GDEY0213B74, GxEPD2_213_GDEY0213B74::HEIGHT> display(
 // Now that display exists, provide the implementation using it
 #if USE_UI_SPEC
 static void draw_from_spec_full_impl(uint8_t variantId) {
-  // Ensure TOP_Y_OFFSET is available; if not yet defined, use default 4
-#ifndef TOP_Y_OFFSET
-#define TOP_Y_OFFSET 4
-#endif
+  // TOP_Y_OFFSET removed for spec alignment
   using ui::ALIGN_CENTER;
   using ui::ALIGN_LEFT;
   using ui::ALIGN_RIGHT;
@@ -129,10 +126,10 @@ static void draw_from_spec_full_impl(uint8_t variantId) {
   const ComponentOps* comps = get_variant_ops(variantId, &comp_count);
   display.drawRect(0, 0, EINK_WIDTH, EINK_HEIGHT, GxEPD_BLACK);
   display.drawLine(1,
-                    16 + TOP_Y_OFFSET,
+                    18,
                     EINK_WIDTH - 2,
-                    16 + TOP_Y_OFFSET,
-  display.drawLine(125, 18 + TOP_Y_OFFSET, 125, EINK_HEIGHT - 2, GxEPD_BLACK);
+                    18,
+  display.drawLine(125, 18, 125, EINK_HEIGHT - 2, GxEPD_BLACK);
   for (int ci = 0; ci < comp_count; ++ci) {
     const ComponentOps& co = comps[ci];
     for (int i = 0; i < co.count; ++i) {
@@ -150,7 +147,7 @@ static void draw_from_spec_full_impl(uint8_t variantId) {
         case ui::OP_TEXT: {
           const int* r = rect_ptr_by_id(op.rect);
           int16_t tx = op.p0;
-          int16_t ty = op.p1 + TOP_Y_OFFSET;
+          int16_t ty = op.p1;
           auto fmt_field = [&](const String& key) -> String {
             if (key == "room_name")
               return String(ROOM_NAME);
@@ -192,7 +189,7 @@ static void draw_from_spec_full_impl(uint8_t variantId) {
               tx = r[0] + r[2] - 2 - tw;
             else if (op.align == ALIGN_CENTER)
               tx = r[0] + (r[2] - tw) / 2;
-            ty = r[1] + TOP_Y_OFFSET + 1;
+            ty = r[1] + 1;
           }
           display.setCursor(tx, ty);
           display.print(out.c_str());
@@ -203,7 +200,7 @@ static void draw_from_spec_full_impl(uint8_t variantId) {
           net_time_hhmm(hhmm, sizeof(hhmm));
           int16_t tw = text_width_default_font(hhmm, 1);
           int16_t rx = static_cast<int16_t>(HEADER_TIME[0] + HEADER_TIME[2] - 2 - tw) int16_t by =
-              static_cast<int16_t>(HEADER_TIME[1] + TOP_Y_OFFSET + HEADER_TIME[3] - 2)
+              static_cast<int16_t>(HEADER_TIME[1] + HEADER_TIME[3] - 2)
                   display.setTextColor(GxEPD_BLACK);
           display.setTextSize(1);
           display.setCursor(rx, by);
@@ -218,7 +215,7 @@ static void draw_from_spec_full_impl(uint8_t variantId) {
           display.setTextSize(1);
           int16_t tw = text_width_default_font(op.s0 ? op.s0 : "", 1);
           int16_t tx = r[0] + (r[2] - tw) / 2;
-          int16_t ty = r[1] + TOP_Y_OFFSET - 14 + op.p0;
+          int16_t ty = r[1] - 14 + op.p0;
           display.setCursor(tx, ty);
           display.print(op.s0 ? op.s0 : "");
           break;
@@ -259,7 +256,7 @@ static void draw_from_spec_full_impl(uint8_t variantId) {
           OutsideReadings o = net_get_outside();
           if (o.validWeather) {
           draw_weather_icon_region_at_from_outside(r[0],
-                                                    r[1] + TOP_Y_OFFSET,
+                                                    r[1],
                                                     r[2],
                                                     r[3],
           } else {
@@ -285,7 +282,7 @@ static void draw_from_spec_full_impl(uint8_t variantId) {
             }
             display.setTextColor(GxEPD_BLACK);
             display.setTextSize(1);
-            display.setCursor(r[0] + op.p0, r[1] + TOP_Y_OFFSET + r[3] / 2 + 2);
+            display.setCursor(r[0] + op.p0, r[1] + r[3] / 2 + 2);
             display.print(sc);
           }
           break;
@@ -415,9 +412,7 @@ static bool init_full_mode_at_start = []() {
 #if USE_DISPLAY
 // Shared soft deadline used by display drawing helpers to avoid long loops
 static uint32_t g_display_deadline_ms = 0;
-#ifndef TOP_Y_OFFSET
-#define TOP_Y_OFFSET 4
-#endif
+// TOP_Y_OFFSET removed for spec alignment
 #ifndef HEADER_NAME_Y_ADJ
 #define HEADER_NAME_Y_ADJ -6
 #endif

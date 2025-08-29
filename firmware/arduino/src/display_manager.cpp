@@ -25,7 +25,6 @@ extern GxEPD2_BW<GxEPD2_213_GDEY0213B74, GxEPD2_213_GDEY0213B74::HEIGHT> display
 #endif
 
 // Constants needed for display operations
-#define TOP_Y_OFFSET 4
 #define HEADER_NAME_Y_ADJ -8
 
 // Note: Layout variables are generated without RECT_ prefix
@@ -128,31 +127,29 @@ void draw_static_chrome() {
     display.fillScreen(GxEPD_WHITE);
     // Draw outer border flush to panel extents
     display.drawRect(0, 0, EINK_WIDTH, EINK_HEIGHT, GxEPD_BLACK);
-    // Header underline aligned with simulator and other draw paths
-    display.drawLine(1, 22 + TOP_Y_OFFSET, EINK_WIDTH - 2, 22 + TOP_Y_OFFSET, GxEPD_BLACK);
-    // Extend the center divider to the bottom frame to match the simulator
-    display.drawLine(125, 18 + TOP_Y_OFFSET, 125, EINK_HEIGHT - 2, GxEPD_BLACK);
-    // Single header underline between header and content
-    display.drawLine(1, 16 + TOP_Y_OFFSET, EINK_WIDTH - 2, 16 + TOP_Y_OFFSET, GxEPD_BLACK);
-    // Horizontal rule for footer region (drawn at top edge of footer)
-    display.drawLine(1, FOOTER_STATUS[1], EINK_WIDTH - 2, FOOTER_STATUS[1], GxEPD_BLACK);
+    // Single header underline at Y=18 to match simulator
+    display.drawLine(1, 18, EINK_WIDTH - 2, 18, GxEPD_BLACK);
+    // Extend the center divider from header to bottom frame
+    display.drawLine(125, 18, 125, EINK_HEIGHT - 2, GxEPD_BLACK);
+    // Horizontal rule for footer region at Y=84 to match spec
+    display.drawLine(1, 84, EINK_WIDTH - 2, 84, GxEPD_BLACK);
 
     // Header: room name left, time will be drawn separately
     display.setTextColor(GxEPD_BLACK);
     display.setTextSize(1);
-    display.setCursor(6, 13 + TOP_Y_OFFSET + HEADER_NAME_Y_ADJ);
+    display.setCursor(6, 13 + HEADER_NAME_Y_ADJ);
     display.print(ROOM_NAME);
 
-    // Section labels: left 'INSIDE', right 'OUTSIDE'; top-right also shows version
-    display.setCursor(6, 22 + TOP_Y_OFFSET);
+    // Section labels: left 'INSIDE', right 'OUTSIDE'
+    display.setCursor(6, 22);
     display.print(F("INSIDE"));
-    display.setCursor(131, 22 + TOP_Y_OFFSET);
+    display.setCursor(131, 22);
     display.print(F("OUTSIDE"));
-    // Top-right version string within HEADER_TIME box
+    // Version string in HEADER_VERSION region (not HEADER_TIME_CENTER)
     String version_str = String("v") + FW_VERSION;
     display.setCursor(
-        HEADER_TIME_CENTER[0] + HEADER_TIME_CENTER[2] - 2 - text_width_default_font(version_str.c_str(), 1),
-        HEADER_TIME_CENTER[1] + TOP_Y_OFFSET + HEADER_TIME_CENTER[3] - 8);
+        HEADER_VERSION[0] + HEADER_VERSION[2] - 2 - text_width_default_font(version_str.c_str(), 1),
+        HEADER_VERSION[1] + HEADER_VERSION[3] - 6);
     display.print(F("v"));
     display.print(FW_VERSION);
     // Center time will be drawn later in draw_header_time(_direct)
@@ -164,7 +161,7 @@ void draw_static_chrome() {
 void draw_header_time_direct(const char* time_str) {
     int16_t tw = text_width_default_font(time_str, 1);
     int16_t rx = static_cast<int16_t>(HEADER_TIME_CENTER[0] + (HEADER_TIME_CENTER[2] - tw) / 2);
-    int16_t by = static_cast<int16_t>(HEADER_TIME_CENTER[1] + TOP_Y_OFFSET + HEADER_TIME_CENTER[3] - 6);
+    int16_t by = static_cast<int16_t>(HEADER_TIME_CENTER[1] + HEADER_TIME_CENTER[3] - 6);
     display.setTextColor(GxEPD_BLACK);
     display.setTextSize(1);
     display.setCursor(rx, by);

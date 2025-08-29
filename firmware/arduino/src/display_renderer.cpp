@@ -32,11 +32,7 @@ extern uint16_t partial_counter;
 extern bool g_full_only_mode;
 
 // Constants for display layout
-#define TOP_Y_OFFSET 4
 #define HEADER_NAME_Y_ADJ -8
-#define TEMP_Y_ADJ -40
-#define TEMP_UNITS_Y_ADJ 20
-#define TEMP_DOWN_ADJ 20
 #define STATUS_Y_ADJ -4
 
 // Rectangle aliases for backward compatibility
@@ -49,7 +45,7 @@ extern bool g_full_only_mode;
 // Implementation for draw_in_region with lambda that takes coordinates
 void draw_in_region(const int rect[4], DrawFnLambda drawFn) {
   int16_t x = rect[0];
-  int16_t y = static_cast<int16_t>(rect[1] + TOP_Y_OFFSET);
+  int16_t y = rect[1];
   int16_t w = rect[2];
   int16_t h = rect[3];
   
@@ -66,7 +62,7 @@ void draw_in_region(const int rect[4], DrawFnLambda drawFn) {
 // Implementation for draw_in_region with simple function
 void draw_in_region(const int rect[4], DrawFnFwd drawFn) {
   int16_t x = rect[0];
-  int16_t y = static_cast<int16_t>(rect[1] + TOP_Y_OFFSET);
+  int16_t y = rect[1];
   int16_t w = rect[2];
   int16_t h = rect[3];
   
@@ -84,7 +80,7 @@ void draw_in_region(const int rect[4], DrawFnFwd drawFn) {
 template <typename DrawFn>
 inline void draw_in_region(const int rect[4], DrawFn drawFn) {
   const int16_t x = rect[0];
-  const int16_t y = static_cast<int16_t>(rect[1] + TOP_Y_OFFSET);
+  const int16_t y = rect[1];
   const int16_t w = rect[2];
   const int16_t h = rect[3];
   
@@ -109,7 +105,7 @@ inline void draw_in_region(const int rect[4], DrawFn drawFn) {
 void draw_right_aligned_text_in_rect(const int rect[4], const char* text,
                                      int16_t text_width) {
   int16_t x = rect[0];
-  int16_t y = static_cast<int16_t>(rect[1] + TOP_Y_OFFSET);
+  int16_t y = rect[1];
   int16_t w = rect[2];
   int16_t h = rect[3];
   
@@ -132,7 +128,7 @@ void draw_temp_number_and_units(const int r[4], const char* t) {
     int16_t targetX = x + (w - static_cast<int16_t>(bw)) / 2;
     int16_t targetY = y + (h - static_cast<int16_t>(bh)) / 2;
     int16_t baseX = targetX - x1;
-    int16_t baseY = targetY - y1 + TEMP_DOWN_ADJ;
+    int16_t baseY = targetY - y1;
     
     display.setCursor(baseX, baseY);
     display.print(t);
@@ -159,7 +155,7 @@ void draw_temp_number_and_units_direct(int16_t x, int16_t y, int16_t w, int16_t 
   int16_t targetX = x + (w - static_cast<int16_t>(bw)) / 2;
   int16_t targetY = y + (h - static_cast<int16_t>(bh)) / 2;
   int16_t baseX = targetX - x1;
-  int16_t baseY = targetY - y1 + TEMP_DOWN_ADJ;
+  int16_t baseY = targetY - y1;
   
   display.setCursor(baseX, baseY);
   display.print(t);
@@ -261,7 +257,7 @@ void full_refresh() {
       strcpy(out_rh, "--");
     }
     
-    // Draw inside temperature (use coordinates directly from layout without TOP_Y_OFFSET)
+    // Draw inside temperature (use coordinates directly from layout)
     draw_temp_number_and_units_direct(INSIDE_TEMP[0], INSIDE_TEMP[1], 
                                       INSIDE_TEMP[2], INSIDE_TEMP[3], in_temp);
     
@@ -313,6 +309,16 @@ void full_refresh() {
     if (outside.validWeather && outside.weather[0]) {
       draw_weather_icon_region_at(WEATHER_ICON[0], WEATHER_ICON[1],
                                   WEATHER_ICON[2], WEATHER_ICON[3], outside.weather);
+      
+      // Draw full weather text in FOOTER_WEATHER region
+      display.setTextColor(GxEPD_BLACK);
+      display.setTextSize(1);
+      // Center the weather text in the FOOTER_WEATHER region
+      int16_t tw = text_width_default_font(outside.weather, 1);
+      int16_t tx = FOOTER_WEATHER[0] + (FOOTER_WEATHER[2] - tw) / 2;
+      int16_t ty = FOOTER_WEATHER[1] + FOOTER_WEATHER[3] / 2 + 3;
+      display.setCursor(tx, ty);
+      display.print(outside.weather);
     }
     
     // Draw battery status and IP
@@ -357,10 +363,7 @@ void dev_display_tick() {
 // Draw from UI spec (generated UI)
 void draw_from_spec_full(uint8_t variantId) {
   #if USE_UI_SPEC
-  // Ensure TOP_Y_OFFSET is available; if not yet defined, use default 4
-  #ifndef TOP_Y_OFFSET
-  #define TOP_Y_OFFSET 4
-  #endif
+  // TOP_Y_OFFSET removed for spec alignment
   
   using ui::ALIGN_CENTER;
   using ui::ALIGN_LEFT;
@@ -376,8 +379,8 @@ void draw_from_spec_full(uint8_t variantId) {
   int comp_count = 0;
   const ComponentOps* comps = get_variant_ops(variantId, &comp_count);
   display.drawRect(0, 0, EINK_WIDTH, EINK_HEIGHT, GxEPD_BLACK);
-  display.drawLine(1, 16 + TOP_Y_OFFSET, EINK_WIDTH - 2, 16 + TOP_Y_OFFSET, GxEPD_BLACK);
-  display.drawLine(125, 18 + TOP_Y_OFFSET, 125, EINK_HEIGHT - 2, GxEPD_BLACK);
+  display.drawLine(1, 18, EINK_WIDTH - 2, 18, GxEPD_BLACK);
+  display.drawLine(125, 18, 125, EINK_HEIGHT - 2, GxEPD_BLACK);
   
   // Process all UI operations from the spec
   // (Full implementation would continue here - keeping minimal for now)
@@ -496,14 +499,14 @@ void draw_values(const char* in_temp_f, const char* in_rh, const char* out_temp_
   display.setTextColor(GxEPD_BLACK);
   // Inside temp: numeric right-aligned, units drawn separately
   {
-    int rect[4] = {INSIDE_TEMP[0], static_cast<int16_t>(INSIDE_TEMP[1] + TOP_Y_OFFSET),
+    int rect[4] = {INSIDE_TEMP[0], INSIDE_TEMP[1],
                    INSIDE_TEMP[2], INSIDE_TEMP[3]};
     draw_temp_number_and_units(rect, in_temp_f);
   }
 
   // Inside RH
   display.setTextSize(1);
-  display.setCursor(INSIDE_HUMIDITY[0], INSIDE_HUMIDITY[1] + TOP_Y_OFFSET);
+  display.setCursor(INSIDE_HUMIDITY[0], INSIDE_HUMIDITY[1] + INSIDE_HUMIDITY[3] - 4);
   display.print(in_rh);
   display.print("% RH");
 
@@ -511,7 +514,7 @@ void draw_values(const char* in_temp_f, const char* in_rh, const char* out_temp_
 
   // Outside temp: numeric right-aligned, units drawn separately
   {
-    int rect[4] = {OUT_TEMP[0], static_cast<int16_t>(OUT_TEMP[1] + TOP_Y_OFFSET), OUT_TEMP[2],
+    int rect[4] = {OUT_TEMP[0], OUT_TEMP[1], OUT_TEMP[2],
                    OUT_TEMP[3]};
     draw_temp_number_and_units(rect, out_temp_f);
   }
