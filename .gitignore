@@ -1,3 +1,10 @@
+# Local validation and analysis artifacts (do not commit)
+out/
+validation_reports/
+
+# PlatformIO build artifacts
+.pio/
+
 /.pio
 /.venv
 /out
