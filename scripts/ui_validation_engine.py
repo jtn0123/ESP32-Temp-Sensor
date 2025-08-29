@@ -546,7 +546,33 @@ class UIValidationEngine:
             return s.getsockname()[1]
 
     def capture_screenshot(self, page) -> np.ndarray:
-        """Capture screenshot of the simulator"""
+        """Capture screenshot of the simulator, centered on the canvas pixels"""
+        # Prefer exact pixel buffer from canvas
+        try:
+            data_url = page.evaluate(
+                "() => { const c = document.getElementById('epd'); return c ? c.toDataURL('image/png') : null; }"
+            )
+            if isinstance(data_url, str) and data_url.startswith("data:image/png"):
+                import base64
+
+                b64 = data_url.split(",", 1)[1]
+                screenshot_bytes = base64.b64decode(b64)
+                img = Image.open(io.BytesIO(screenshot_bytes)).convert("RGB")
+                return np.array(img)
+        except Exception:
+            pass
+
+        # Fallback to element screenshot to avoid CSS scaling offsets
+        try:
+            el = page.query_selector("#epd")
+            if el:
+                screenshot_bytes = el.screenshot()
+                img = Image.open(io.BytesIO(screenshot_bytes)).convert("RGB")
+                return np.array(img)
+        except Exception:
+            pass
+
+        # Last resort: fixed clip
         screenshot_bytes = page.screenshot(clip={"x": 0, "y": 0, "width": 250, "height": 122})
         img = Image.open(io.BytesIO(screenshot_bytes)).convert("RGB")
         return np.array(img)

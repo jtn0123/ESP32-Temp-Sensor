@@ -15,6 +15,7 @@ import subprocess
 import sys
 import time
 from typing import Dict, List, Optional, Tuple
+import base64
 
 # Add project root to path
 ROOT = Path(__file__).resolve().parents[1]
@@ -99,6 +100,27 @@ class VisualLayoutAnalyzer:
         except Exception:
             pass
         page.wait_for_timeout(100)
+
+        # Prefer exact canvas pixels via toDataURL to avoid CSS scaling and mis-centering
+        try:
+            data_url = page.evaluate(
+                "() => { const c = document.getElementById('epd'); return c ? c.toDataURL('image/png') : null; }"
+            )
+            if data_url and isinstance(data_url, str) and data_url.startswith("data:image/png"):
+                b64 = data_url.split(",", 1)[1]
+                return base64.b64decode(b64)
+        except Exception:
+            pass
+
+        # Fallback: screenshot the canvas element if present
+        try:
+            el = page.query_selector("#epd")
+            if el:
+                return el.screenshot()
+        except Exception:
+            pass
+
+        # Last resort: static clip (may be mis-centered depending on layout)
         return page.screenshot(clip={"x": 0, "y": 0, "width": 250, "height": 122})
 
     def _get_rects_from_page(self, page) -> Dict[str, List[int]]:
@@ -121,13 +143,11 @@ class VisualLayoutAnalyzer:
     ) -> Tuple[np.ndarray, np.ndarray, Dict[str, List[int]]]:
         page.wait_for_timeout(100)
         rects = self._get_rects_from_page(page)
-        # A: base capture without overlays (for coverage)
+        # Capture base canvas pixels only and annotate ourselves for stability
         base_png = self._capture(page, overlays=False)
-        # B: overlay capture for annotation
-        over_png = self._capture(page, overlays=True)
         base = Image.open(io.BytesIO(base_png)).convert("RGB")
-        over = Image.open(io.BytesIO(over_png)).convert("RGB")
-        return np.array(base), np.array(over), rects
+        # Use base image as the background for annotated output
+        return np.array(base), np.array(base.copy()), rects
 
     def analyze_coverage(
         self, img: np.ndarray, rects: Dict[str, List[int]]
@@ -465,7 +485,8 @@ class VisualLayoutAnalyzer:
                     issues += self.detect_canvas_overflow(analyses)
                     issues += self.detect_empty_blocks(analyses, variant)
                     issues += self.detect_gaps(analyses)
-                    annotated = self.annotate(over_img, analyses, issues)
+                    # Draw our own overlays on the base pixels to avoid DOM overlay drift
+                    annotated = self.annotate(base_img, analyses, issues)
                     # Save artifacts
                     Image.fromarray(base_img).save(self.out_dir / f"layout_analysis_{variant}.png")
                     annotated.save(self.out_dir / f"layout_analysis_{variant}_annotated.png")
