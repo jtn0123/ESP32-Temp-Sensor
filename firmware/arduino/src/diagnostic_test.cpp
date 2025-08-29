@@ -129,13 +129,23 @@ void diagnostic_test_init() {
   Serial.println("[DIAG] NeoPixel: NOT CONFIGURED");
   #endif
   
-  // Test 2: Display detection
+  // Test 2: Display detection and verification
   #if USE_DISPLAY
   Serial.println("[DIAG] Testing Display...");
   Serial.flush();
   
   // Simple display size check
   Serial.printf("[DIAG] Display configured for %dx%d\n", DISPLAY_WIDTH, DISPLAY_HEIGHT);
+  
+  #ifdef BOOT_DEBUG
+  // In debug mode, test display pattern
+  Serial.println("[DIAG] Display test pattern:");
+  Serial.println("[DIAG]   - Should show 'TEST' in center");
+  Serial.println("[DIAG]   - Should show version in top-right");
+  Serial.println("[DIAG]   - Should show '12:34' as time");
+  // Note: Actual display test happens in display_manager init
+  #endif
+  
   Serial.println("[DIAG] Display: ENABLED in build");
   #else
   Serial.println("[DIAG] Display: DISABLED (USE_DISPLAY=0)");

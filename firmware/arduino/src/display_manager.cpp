@@ -42,7 +42,52 @@ void draw_in_region_lambda(const int rect[4], void(*fn)(int16_t, int16_t, int16_
 
 // Placeholder implementations - will be filled with actual code from main.cpp
 void display_manager_init() {
-    // Will be implemented when moving display initialization
+    Serial.println("[DISPLAY] Initializing display...");
+    
+    // Initialize display hardware
+    display.init(115200, true, 2, false);  // Serial speed, initial, pulldown_dis_time, use RST
+    display.setRotation(3);  // Landscape orientation
+    display.setTextColor(GxEPD_BLACK);
+    display.setFullWindow();
+    
+    // Clear display with white background
+    display.firstPage();
+    do {
+        display.fillScreen(GxEPD_WHITE);
+    } while (display.nextPage());
+    
+    #ifdef BOOT_DEBUG
+    // Show test pattern during boot
+    Serial.println("[DISPLAY] Showing boot test pattern");
+    display.firstPage();
+    do {
+        display.fillScreen(GxEPD_WHITE);
+        
+        // Draw test time "12:34"
+        display.setTextSize(2);
+        display.setCursor(HEADER_TIME_CENTER[0], HEADER_TIME_CENTER[1] + 4);
+        display.print("12:34");
+        
+        // Draw version in top right if available
+        display.setTextSize(1);
+        display.setCursor(HEADER_VERSION[0], HEADER_VERSION[1]);
+        display.print("v4.0");
+        
+        // Draw "BOOT TEST" in center
+        display.setTextSize(2);
+        const char* test_msg = "BOOT TEST";
+        int16_t x1, y1;
+        uint16_t w, h;
+        display.getTextBounds(test_msg, 0, 0, &x1, &y1, &w, &h);
+        display.setCursor((EINK_WIDTH - w) / 2, (EINK_HEIGHT - h) / 2);
+        display.print(test_msg);
+        
+    } while (display.nextPage());
+    
+    delay(2000);  // Show test pattern for 2 seconds
+    #endif
+    
+    Serial.println("[DISPLAY] Display initialized");
 }
 
 // Text width calculation

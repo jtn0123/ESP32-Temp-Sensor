@@ -65,7 +65,24 @@ def find_usb_ports():
         if not skip:
             filtered_ports.append(port)
 
-    return sorted(set(filtered_ports))  # Remove duplicates and sort
+    # Remove macOS duplicates (prefer cu.* over tty.*)
+    # On macOS, /dev/cu.* and /dev/tty.* are the same device
+    unique_ports = {}
+    for port in filtered_ports:
+        if "/dev/cu." in port:
+            # Extract device name after cu.
+            device_name = port.replace("/dev/cu.", "")
+            unique_ports[device_name] = port
+        elif "/dev/tty." in port:
+            # Only add tty if cu version doesn't exist
+            device_name = port.replace("/dev/tty.", "")
+            if device_name not in unique_ports:
+                unique_ports[device_name] = port
+        else:
+            # Non-macOS ports, add directly
+            unique_ports[port] = port
+    
+    return sorted(unique_ports.values())  # Return sorted list of unique ports
 
 
 def wait_for_device(timeout=30):

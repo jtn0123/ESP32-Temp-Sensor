@@ -79,11 +79,12 @@ void app_setup() {
   
   #ifdef BOOT_DEBUG
   show_boot_stage(2);  // Yellow for display init
-  #ifdef USE_DISPLAY
-  Serial.println("[BOOT-2c] Display test will occur during init...");
-  // Note: Display will be initialized later in normal flow
-  // The clock test happens in display_manager initialization
   #endif
+  
+  #if USE_DISPLAY
+  Serial.println("[BOOT-2c] Initializing display...");
+  display_manager_init();  // This will show "12:34" test pattern in debug mode
+  Serial.println("[BOOT-2c] Display initialized");
   #endif
   
   // Initialize state management with error checking
@@ -309,12 +310,15 @@ void run_network_phase() {
 
 #if USE_DISPLAY
 // Display update phase
+// Forward declaration for display update function from display_renderer
+extern void full_refresh();
+
 void run_display_phase() {
   Serial.println("=== Display Phase ===");
   uint32_t phase_start = millis();
   
-  // This would contain display update logic
-  // Currently in main.cpp but would be moved here
+  // Call the full refresh to update the display with current sensor data
+  full_refresh();
   
   Serial.printf("Display phase took %lu ms\n", millis() - phase_start);
 }

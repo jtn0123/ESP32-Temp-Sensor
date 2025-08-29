@@ -15,6 +15,9 @@ using namespace ui;
 #endif
 #include "net.h"
 #include "metrics_diagnostics.h"
+#include "sensors.h"
+#include "power.h"
+#include "common_types.h"
 
 // External display object from main.cpp
 #if EINK_PANEL_DEPG0213BN
@@ -161,10 +164,10 @@ void draw_temp_number_and_units_direct(int16_t x, int16_t y, int16_t w, int16_t 
   display.setCursor(baseX, baseY);
   display.print(t);
   
-  // Draw units
+  // Draw units (degree symbol and F)
   display.setTextSize(1);
   display.setCursor(baseX + static_cast<int16_t>(bw) + 2, baseY - 8);
-  display.print("\xF8");
+  display.print("\xF8");  // degree symbol
   display.setCursor(baseX + static_cast<int16_t>(bw) + 8, baseY - 8);
   display.print("F");
 }
@@ -186,12 +189,17 @@ void draw_status_line(const BatteryStatus& bs, const char* ip_cstr) {
 // Draw weather icon based on condition string
 void draw_weather_icon_region_at(int16_t x, int16_t y, int16_t w, int16_t h,
                                  const char* condition) {
-  // Map condition to icon (simplified - full implementation in main.cpp)
   if (!condition) return;
   
-  // Draw the appropriate weather icon
-  // This would call the icon drawing functions from icons.h
-  // Implementation details to be moved from main.cpp
+  // Map condition to icon ID
+  IconId iconId = map_weather_to_icon(condition);
+  
+  // Center the 24x24 icon within the region
+  int16_t icon_x = x + (w - 24) / 2;
+  int16_t icon_y = y + (h - 24) / 2;
+  
+  // Draw the icon
+  draw_icon(display, icon_x, icon_y, iconId, GxEPD_BLACK);
 }
 
 // Draw weather icon from outside readings
@@ -207,7 +215,7 @@ void full_refresh() {
   display.setFullWindow();
   display.firstPage();
   do {
-    // Draw static chrome
+    // Draw static chrome (borders, labels, room name, version)
     draw_static_chrome();
     
     // Draw current time
@@ -215,26 +223,103 @@ void full_refresh() {
     net_time_hhmm(time_str, sizeof(time_str));
     draw_header_time_direct(time_str);
     
-    // Get sensor readings
-    char in_temp[8] = "--";
-    char in_rh[8] = "--";
-    char out_temp[8] = "--"; 
-    char out_rh[8] = "--";
+    // Get current sensor readings
+    InsideReadings inside = read_inside_sensors();
+    OutsideReadings outside = net_get_outside();
     
-    // TODO: Get actual sensor values
-    // This will be filled in when moving the full implementation
+    // Format inside temperature
+    char in_temp[8];
+    if (isfinite(inside.temperatureC)) {
+      float tempF = inside.temperatureC * 9.0f / 5.0f + 32.0f;
+      snprintf(in_temp, sizeof(in_temp), "%.0f", tempF);
+    } else {
+      strcpy(in_temp, "--");
+    }
     
-    // Draw inside temperature
-    draw_temp_number_and_units_direct(INSIDE_TEMP[0],
-                                      static_cast<int16_t>(INSIDE_TEMP[1] + TOP_Y_OFFSET),
+    // Format inside humidity
+    char in_rh[8];
+    if (isfinite(inside.humidityPct)) {
+      snprintf(in_rh, sizeof(in_rh), "%.0f", inside.humidityPct);
+    } else {
+      strcpy(in_rh, "--");
+    }
+    
+    // Format outside temperature
+    char out_temp[8];
+    if (outside.validTemp && isfinite(outside.temperatureC)) {
+      float tempF = outside.temperatureC * 9.0f / 5.0f + 32.0f;
+      snprintf(out_temp, sizeof(out_temp), "%.0f", tempF);
+    } else {
+      strcpy(out_temp, "--");
+    }
+    
+    // Format outside humidity
+    char out_rh[8];
+    if (outside.validHum && isfinite(outside.humidityPct)) {
+      snprintf(out_rh, sizeof(out_rh), "%.0f", outside.humidityPct);
+    } else {
+      strcpy(out_rh, "--");
+    }
+    
+    // Draw inside temperature (use coordinates directly from layout without TOP_Y_OFFSET)
+    draw_temp_number_and_units_direct(INSIDE_TEMP[0], INSIDE_TEMP[1], 
                                       INSIDE_TEMP[2], INSIDE_TEMP[3], in_temp);
     
+    // Draw inside humidity
+    display.setTextColor(GxEPD_BLACK);
+    display.setTextSize(1);
+    display.setCursor(INSIDE_HUMIDITY[0], INSIDE_HUMIDITY[1] + INSIDE_HUMIDITY[3] - 4);
+    display.print(in_rh);
+    display.print("% RH");
+    
+    // Draw inside pressure if available
+    if (isfinite(inside.pressureHPa)) {
+      char pressure_str[12];
+      snprintf(pressure_str, sizeof(pressure_str), "%.0f hPa", inside.pressureHPa);
+      display.setCursor(INSIDE_PRESSURE[0], INSIDE_PRESSURE[1] + INSIDE_PRESSURE[3] - 4);
+      display.print(pressure_str);
+    }
+    
     // Draw outside temperature
-    draw_temp_number_and_units_direct(OUT_TEMP[0],
-                                      static_cast<int16_t>(OUT_TEMP[1] + TOP_Y_OFFSET),
+    draw_temp_number_and_units_direct(OUT_TEMP[0], OUT_TEMP[1],
                                       OUT_TEMP[2], OUT_TEMP[3], out_temp);
     
-    // TODO: Draw humidity, weather icon, status line
+    // Draw outside humidity
+    display.setCursor(OUT_HUMIDITY[0], OUT_HUMIDITY[1] + OUT_HUMIDITY[3] - 4);
+    display.print(out_rh);
+    display.print("% RH");
+    
+    // Draw outside pressure if available (note: OutsideReadings doesn't have pressure field)
+    // This would need to be added to the OutsideReadings struct if needed
+    
+    // Draw weather condition text if available
+    if (outside.validWeather && outside.weather[0]) {
+      char short_condition[24];
+      make_short_condition_cstr(outside.weather, short_condition, sizeof(short_condition));
+      display.setCursor(OUT_WEATHER[0], OUT_WEATHER[1] + OUT_WEATHER[3] - 4);
+      display.print(short_condition);
+    }
+    
+    // Draw wind speed if available (convert from m/s to mph)
+    if (outside.validWind && isfinite(outside.windMps)) {
+      char wind_str[12];
+      float windMph = outside.windMps * 2.237f; // m/s to mph conversion
+      snprintf(wind_str, sizeof(wind_str), "%.0f mph", windMph);
+      display.setCursor(OUT_WIND[0], OUT_WIND[1] + OUT_WIND[3] - 4);
+      display.print(wind_str);
+    }
+    
+    // Draw weather icon
+    if (outside.validWeather && outside.weather[0]) {
+      draw_weather_icon_region_at(WEATHER_ICON[0], WEATHER_ICON[1],
+                                  WEATHER_ICON[2], WEATHER_ICON[3], outside.weather);
+    }
+    
+    // Draw battery status and IP
+    BatteryStatus bs = read_battery_status();
+    char ip_str[32];
+    net_ip_cstr(ip_str, sizeof(ip_str));
+    draw_status_line_direct(bs, ip_str);
     
   } while (display.nextPage());
   
