@@ -7,6 +7,7 @@
 #include "common_types.h"
 #include "config.h"
 #include "display_layout.h"
+#include "display_layout_aliases.h"
 #include "icons.h"
 
 #if USE_DISPLAY

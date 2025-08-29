@@ -6,6 +6,7 @@
 #include <Arduino.h>
 #include <GxEPD2_BW.h>
 #include "display_layout.h"
+#include "display_layout_aliases.h"
 #include "icons.h"
 #include "power.h"
 #include "net.h"

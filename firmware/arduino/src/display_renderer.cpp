@@ -5,6 +5,7 @@
 
 #include <GxEPD2_BW.h>
 #include "display_layout.h"
+#include "display_layout_aliases.h"
 #include "display_manager.h"
 #include "icons.h"
 #include "generated_config.h"

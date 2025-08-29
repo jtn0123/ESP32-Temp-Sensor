@@ -23,6 +23,7 @@
 
 #if USE_DISPLAY
 #include "display_layout.h"
+#include "display_layout_aliases.h"
 #include "icons.h"
 #include "ui_ops_generated.h"
 #include "ui_generated.h"
