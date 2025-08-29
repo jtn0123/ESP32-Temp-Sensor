@@ -856,12 +856,10 @@
     ctx.lineWidth = 1;
     Object.entries(GJSON.rects).forEach(([name, r])=>{
       if (!shouldShowRect(name)) return;
-      
       // Skip internal helper rectangles - these are implementation details
       if (name.includes('_INNER') || name.includes('_BADGE') || name.includes('LABEL_BOX')) {
         return;
       }
-      
       if (searchQuery){
         const q = searchQuery.toLowerCase();
         if (!String(name).toLowerCase().includes(q)) return;
@@ -879,12 +877,10 @@
         ctx.fillStyle = '#000';
         ctx.font = `bold 10px ${FONT_STACK}`;
         ctx.textBaseline = 'top';
-        // Use shorter labels for small regions to avoid overflow
         let label = String(name);
         if (name === 'WEATHER_ICON') {
           label = 'ICON';
         } else if (w < 50 && label.length > 8) {
-          // Truncate long labels in narrow regions
           label = label.substring(0, 6) + '..';
         }
         ctx.fillText(label, x+2, y+2);
@@ -898,10 +894,19 @@
       ctx.lineWidth = 2;
       chrome.forEach(op=>{
         if (op && op.op === 'line' && Array.isArray(op.from) && Array.isArray(op.to)){
-          const fx = (op.from[0]|0) + 0.5;
-          const fy = (op.from[1]|0) + 0.5;
-          const tx = (op.to[0]|0) + 0.5;
-          const ty = (op.to[1]|0) + 0.5;
+          let fx = (op.from[0]|0);
+          let fy = (op.from[1]|0);
+          let tx = (op.to[0]|0);
+          let ty = (op.to[1]|0);
+          // Snap v2_grid overlay chrome to spec positions (header y=18, divider x=125 from 18..121, footer y=84)
+          try{
+            if (typeof window !== 'undefined' && window.__specMode === 'v2_grid'){
+              if (fy === 16 && ty === 16) { fy = ty = 18; }
+              if (fx === 128 && tx === 128) { fx = tx = 125; if (fy === 16) fy = 18; }
+              if (fy === 88 && ty === 88) { fy = ty = 84; }
+            }
+          }catch(e){}
+          fx += 0.5; fy += 0.5; tx += 0.5; ty += 0.5;
           ctx.beginPath();
           ctx.moveTo(fx, fy);
           ctx.lineTo(tx, ty);
@@ -910,7 +915,6 @@
       });
       // Also outline the full canvas as a green border
       ctx.strokeRect(0.5, 0.5, WIDTH-1, HEIGHT-1);
-
       // no extra issue highlighter
     } catch(e){}
     ctx.restore();
@@ -1105,7 +1109,18 @@
               });
               if (r){
                 ctx.save(); ctx.beginPath(); ctx.rect(r[0], r[1], r[2], r[3]); ctx.clip();
-                const x = (op.x !== undefined) ? (r[0] + op.x) : (r[0] + 1);
+                // Alignment within rect if provided
+                let x;
+                ctx.font = `${weight} ${fpx}px ${FONT_STACK}`; ctx.textBaseline='top';
+                if (op.align === 'right') {
+                  const tw = ctx.measureText(s).width;
+                  x = r[0] + r[2] - 2 - tw;
+                } else if (op.align === 'center') {
+                  const tw = ctx.measureText(s).width;
+                  x = r[0] + Math.max(0, Math.floor((r[2] - tw)/2));
+                } else {
+                  x = (op.x !== undefined) ? (r[0] + op.x) : (r[0] + 1);
+                }
                 const y = (op.y !== undefined) ? (r[1] + op.y) : (r[1] + 1);
                 // Use our text function for tracking
                 text(x, y, s, fpx, weight, op.rect);
@@ -1274,9 +1289,16 @@
               const weight = ((fonts[op.font||'small']||{}).weight) || 'normal';
               const raw = String(op.text||'');
               const s = raw.replace(/\{([^}]+)\}/g, (_,k)=>String(data[k]||''));
+              // Skip FOOTER_WEATHER here for v2; iconIn handles aligned text next to icon
+              if (op.rect === 'FOOTER_WEATHER' && typeof window !== 'undefined' && window.__specMode && String(window.__specMode).startsWith('v2')){
+                break;
+              }
               ctx.font = `${weight} ${fpx}px ${FONT_STACK}`; ctx.textBaseline='top';
               const tw = ctx.measureText(s).width;
-              const x = r[0] + Math.max(0, Math.floor((r[2]-tw)/2));
+              // Left-align FOOTER_WEATHER; center others
+              const x = (op.rect === 'FOOTER_WEATHER')
+                ? (r[0] + 2)
+                : (r[0] + Math.max(0, Math.floor((r[2]-tw)/2)));
               const yTop = (op.yOffset? (r[1]+op.yOffset) : r[1]);
               text(x, yTop, s, fpx, weight, op.rect);
               if (raw.includes('IP ')){
@@ -1294,107 +1316,89 @@
                   actualBounds: { x: r[0], y: r[1], width: r[2], height: r[3] }
                 };
               }
-              // Use the actual WEATHER_ICON rect coordinates for rendering
               const fpx = ((fonts['small']||{}).px) || pxSmall;
               let barX = r[0], barY = r[1], barW = r[2], barH = r[3];
-              // For legacy compatibility, keep old behavior if not using WEATHER_ICON
-              if (op.rect !== 'WEATHER_ICON') {
-                barX = 130; barY = 95; barW = 114; barH = 24;
-                if (typeof window !== 'undefined' && window.__specMode === 'v2_grid' && rects.FOOTER_WEATHER){
-                  const fr = rects.FOOTER_WEATHER;
-                  barW = fr[2];
-                  barH = Math.min(22, Math.max(12, fr[3] - 4));
-                  barX = fr[0];
-                  barY = fr[1] + Math.max(0, Math.floor((fr[3] - barH)/2));
-                }
-              }
-              // For WEATHER_ICON region, only draw icon (no text)
+              const isV2 = (typeof window !== 'undefined' && window.__specMode && String(window.__specMode).startsWith('v2'));
+              // For WEATHER_ICON region in v2: left-justify icon in its rect (no border)
               let iconW, iconH, startX, startY;
-              let drawText = true;
-              
-              if (op.rect === 'WEATHER_ICON') {
-                // Icon-only mode for WEATHER_ICON region
-                iconW = barW - 4;  // Leave 2px margin on each side
-                iconH = barH - 4;
-                startX = barX + 2;  // Center with 2px margin
-                startY = barY + 2;
-                drawText = false;
-              } else {
-                // Legacy mode with icon + text
-                iconW = Math.min(26, barW - 60);
-                iconH = Math.min(22, barH - 4);
-                const gap = 8;
-                const label = shortConditionLabel(data.weather || 'cloudy');
-                ctx.font = `${fpx}px ${FONT_STACK}`; ctx.textBaseline='top';
-                const textW = ctx.measureText(label).width;
-                const totalW = iconW + gap + textW;
-                startX = barX + Math.max(0, Math.floor((barW - totalW)/2));
-                startY = barY;
-              }
-              // Draw a simple condition-dependent icon to ensure differences across conditions
-              // Also guarantee non-white pixels in the left portion of the bar for tests
-              // by drawing a small filled rect whose width varies by condition.
-              const iconCx = startX + iconW/2;
-              const iconCy = (op.rect === 'WEATHER_ICON' ? startY : barY) + iconH/2;
-              ctx.strokeStyle = '#000'; ctx.fillStyle = '#000';
-              const moon = String(data.moon_phase||'');
-              const condLower = String((data.weather||'')).toLowerCase();
-              let leftBoxW = 16;
-              if (moon) leftBoxW = 20; else if (condLower.includes('rain')) leftBoxW = 22; else if (condLower.includes('snow')) leftBoxW = 18; else if (condLower.includes('storm')||condLower.includes('thunder')||condLower.includes('lightning')) leftBoxW = 24;
-              // Ensure left-side non-white area inside the sampled window (v1 only)
-              if (!(typeof window !== 'undefined' && window.__specMode && window.__specMode.startsWith('v2'))){
-                ctx.fillRect(barX + 2, barY + 2, Math.max(8, Math.min(leftBoxW, iconW - 4)), Math.max(8, iconH - 6));
-              }
-              if (moon){
-                const r0 = Math.min(iconW,iconH)/3;
-                ctx.beginPath(); ctx.arc(iconCx, iconCy, r0, 0, Math.PI*2); ctx.stroke();
-                if (/full/i.test(moon)){
-                  ctx.beginPath(); ctx.arc(iconCx, iconCy, r0-2, 0, Math.PI*2); ctx.stroke();
-                } else {
-                  ctx.beginPath(); ctx.arc(iconCx+3, iconCy, r0-2, 0, Math.PI*2); ctx.stroke();
-                }
-              } else {
+              if (op.rect === 'WEATHER_ICON' && isV2) {
+                iconW = Math.max(14, Math.min(24, barW - 4));
+                iconH = Math.max(12, Math.min(22, barH - 4));
+                startX = barX + 2;
+                startY = barY + Math.max(2, Math.floor((barH - iconH)/2));
+                // Draw icon only (no surrounding border)
+                const iconCx = startX + Math.floor(iconW/2);
+                const iconCy = startY + Math.floor(iconH/2);
+                ctx.strokeStyle = '#000'; ctx.fillStyle = '#000';
                 const wstr = String((data.weather||'')).toLowerCase();
                 if (wstr.includes('rain')){
-                  if (!(typeof window !== 'undefined' && window.__specMode === 'v2_grid')){
-                    ctx.strokeRect(startX+2, barY+6, iconW-4, iconH-8);
-                  }
                   for (let i=0;i<3;i++) { ctx.beginPath(); ctx.moveTo(startX+6+i*6, iconCy+2); ctx.lineTo(startX+3+i*6, iconCy+8); ctx.stroke(); }
                 } else if (wstr.includes('snow')){
-                  if (!(typeof window !== 'undefined' && window.__specMode === 'v2_grid')){
-                    ctx.strokeRect(startX+2, barY+6, iconW-4, iconH-8);
-                  }
                   for (let i=0;i<2;i++) text(startX+6+i*8, iconCy+2, '*', 10);
                 } else if (wstr.includes('storm')||wstr.includes('thunder')||wstr.includes('lightning')){
-                  if (!(typeof window !== 'undefined' && window.__specMode === 'v2_grid')){
-                    ctx.strokeRect(startX+2, barY+6, iconW-4, iconH-8);
-                  }
                   ctx.beginPath(); ctx.moveTo(iconCx-6, iconCy+2); ctx.lineTo(iconCx, iconCy-2); ctx.lineTo(iconCx-2, iconCy+6); ctx.lineTo(iconCx+6, iconCy+2); ctx.stroke();
                 } else if (wstr.includes('fog')||wstr.includes('mist')||wstr.includes('haze')){
-                  for (let i=0;i<3;i++){ ctx.beginPath(); ctx.moveTo(startX+2, barY+6+i*6); ctx.lineTo(startX+iconW-2, barY+6+i*6); ctx.stroke(); }
+                  for (let i=0;i<3;i++){ ctx.beginPath(); ctx.moveTo(startX+2, startY+6+i*6); ctx.lineTo(startX+iconW-2, startY+6+i*6); ctx.stroke(); }
                 } else {
                   ctx.beginPath(); ctx.arc(iconCx, iconCy, Math.min(iconW,iconH)/3, 0, Math.PI*2); ctx.stroke();
                 }
+                // If FOOTER_WEATHER exists, draw text immediately to right inside its own rect left-aligned
+                const fw = rects.FOOTER_WEATHER;
+                if (fw) {
+                  const label = shortConditionLabel(data.weather || 'cloudy');
+                  ctx.font = `${fpx}px ${FONT_STACK}`; ctx.textBaseline='top';
+                  const gap = 6;
+                  const tx = Math.max(fw[0] + 2, startX + iconW + gap);
+                  const ty = fw[1] + Math.max(0, Math.floor((fw[3]-fpx)/2));
+                  text(tx, ty, label, fpx);
+                }
+                break;
               }
-              
-              // Only draw text label if not in icon-only mode
-              if (drawText) {
-                const gap = 8;
-                const label = shortConditionLabel(data.weather || 'cloudy');
-                const labelTop = barY + Math.max(0, Math.floor((iconH - fpx)/2)) + 1;
-                text(startX + iconW + gap, labelTop, label, fpx);
-                window.__layoutMetrics.weather = {
-                  bar: { x: barX, w: barW, y: barY },
-                  iconBox: { x: startX, y: barY, w: iconW, h: iconH },
-                  totalW: iconW + gap + ctx.measureText(label).width
-                };
+              // Legacy/other behavior unchanged
+              // Use the actual WEATHER_ICON rect coordinates for rendering
+              const fpx2 = ((fonts['small']||{}).px) || pxSmall;
+              let barX2 = r[0], barY2 = r[1], barW2 = r[2], barH2 = r[3];
+              if (op.rect !== 'WEATHER_ICON') {
+                barX2 = 130; barY2 = 95; barW2 = r[2]; barH2 = Math.min(24, Math.max(12, r[3]));
+                if (typeof window !== 'undefined' && window.__specMode === 'v2_grid' && rects.FOOTER_WEATHER){
+                  const fr = rects.FOOTER_WEATHER;
+                  barW2 = fr[2];
+                  barH2 = Math.min(22, Math.max(12, fr[3] - 4));
+                  barX2 = fr[0];
+                  barY2 = fr[1] + Math.max(0, Math.floor((fr[3] - barH2)/2));
+                }
+              }
+              // Centered icon+text path for legacy
+              let iconW2 = Math.min(26, barW2 - 60);
+              let iconH2 = Math.min(22, barH2 - 4);
+              const gap2 = 8;
+              const label2 = shortConditionLabel(data.weather || 'cloudy');
+              ctx.font = `${fpx2}px ${FONT_STACK}`; ctx.textBaseline='top';
+              const textW2 = ctx.measureText(label2).width;
+              const totalW2 = iconW2 + gap2 + textW2;
+              const startX2 = barX2 + Math.max(0, Math.floor((barW2 - totalW2)/2));
+              const iconCx2 = startX2 + Math.floor(iconW2/2);
+              const iconCy2 = barY2 + Math.floor(iconH2/2);
+              ctx.strokeStyle = '#000'; ctx.fillStyle = '#000';
+              const condLower2 = String((data.weather||'')).toLowerCase();
+              if (condLower2.includes('rain')){
+                for (let i=0;i<3;i++) { ctx.beginPath(); ctx.moveTo(startX2+6+i*6, iconCy2+2); ctx.lineTo(startX2+3+i*6, iconCy2+8); ctx.stroke(); }
+              } else if (condLower2.includes('snow')){
+                for (let i=0;i<2;i++) text(startX2+6+i*8, iconCy2+2, '*', 10);
+              } else if (condLower2.includes('storm')||condLower2.includes('thunder')||condLower2.includes('lightning')){
+                ctx.beginPath(); ctx.moveTo(iconCx2-6, iconCy2+2); ctx.lineTo(iconCx2, iconCy2-2); ctx.lineTo(iconCx2-2, iconCy2+6); ctx.lineTo(iconCx2+6, iconCy2+2); ctx.stroke();
+              } else if (condLower2.includes('fog')||condLower2.includes('mist')||condLower2.includes('haze')){
+                for (let i=0;i<3;i++){ ctx.beginPath(); ctx.moveTo(startX2+2, barY2+6+i*6); ctx.lineTo(startX2+iconW2-2, barY2+6+i*6); ctx.stroke(); }
               } else {
-                window.__layoutMetrics.weather = {
-                  bar: { x: barX, w: barW, y: barY },
-                  iconBox: { x: startX, y: startY, w: iconW, h: iconH },
-                  totalW: iconW
-                };
+                ctx.beginPath(); ctx.arc(iconCx2, iconCy2, Math.min(iconW2,iconH2)/3, 0, Math.PI*2); ctx.stroke();
               }
+              const labelTop2 = barY2 + Math.max(0, Math.floor((iconH2 - fpx2)/2)) + 1;
+              text(startX2 + iconW2 + gap2, labelTop2, label2, fpx2);
+              window.__layoutMetrics.weather = {
+                bar: { x: barX2, w: barW2, y: barY2 },
+                iconBox: { x: startX2, y: barY2, w: iconW2, h: iconH2 },
+                totalW: iconW2 + gap2 + ctx.measureText(label2).width
+              };
               break;
             }
             case 'shortCondition': {
@@ -1524,6 +1528,23 @@
     } else {
       console.log('Skipping drawFromSpec - geometryOnly:', geometryOnly);
     }
+    
+    // Redraw chrome on top to ensure continuous lines (header, divider, footer)
+    try{
+      const spec = (typeof window !== 'undefined') ? window.UI_SPEC : null;
+      const chrome = (spec && spec.components && spec.components.chrome) ? spec.components.chrome : [];
+      ctx.fillStyle = '#000';
+      chrome.forEach(op=>{
+        if (op && op.op === 'line' && Array.isArray(op.from) && Array.isArray(op.to)){
+          const fx = (op.from[0]|0);
+          const fy = (op.from[1]|0);
+          const tx = (op.to[0]|0);
+          const ty = (op.to[1]|0);
+          if (fy === ty) ctx.fillRect(Math.min(fx,tx), fy, Math.abs(tx - fx) + 1, 1);
+          else if (fx === tx) ctx.fillRect(fx, Math.min(fy,ty), 1, Math.abs(ty - fy) + 1);
+        }
+      });
+    }catch(e){}
     
     // Apply 1-bit threshold before overlays to ensure clean rendering
     if (!geometryOnly && !showRects && !showLabels && !validationEnabled) {
@@ -1815,7 +1836,7 @@
           const OUTER = 12;
           const DIV_X = 128; // vertical divider aligned to grid
           const HEADER_Y = 4, HEADER_H = 12; // top rule at y=16
-          const TEMP_Y = 20, TEMP_H = 28;
+          const TEMP_Y = 24, TEMP_H = 28;
           // Adjust rows and footer
           const ROW1_Y = 52;
           const ROW2_Y = 68;
@@ -1831,28 +1852,30 @@
           base.rects.HEADER_VERSION = [152, HEADER_Y, 88, HEADER_H];
 
           base.rects.INSIDE_TEMP = [LEFT_X, TEMP_Y, LEFT_W, TEMP_H];
-          // Label band sits inside the temp box at its top edge (12px tall)
-          base.rects.INSIDE_LABEL_BOX = [LEFT_X, TEMP_Y + 2, LEFT_W, 12];
-          // Inner number area leaves room for the label band and a small badge on the right
-          // Adjust innerY to give more vertical space (was TEMP_Y + 14, now +12)
-          const innerY = TEMP_Y + 12;
-          // Increase height to accommodate 26px font size (was 12px, now full remaining space)
-          const innerH = TEMP_H - 12;
-          // Increase width to accommodate temperature values with units (was -28, now -20)
+          // Label boxes positioned just under header at y=18, height 10
+          base.rects.INSIDE_LABEL_BOX = [LEFT_X, 18, LEFT_W, 10];
+          // Inner number area leaves margin for units; taller to prevent cropping
+          const innerY = TEMP_Y + 4;
+          const innerH = TEMP_H - 4; // 24px
           base.rects.INSIDE_TEMP_INNER = [LEFT_X + 4, innerY, LEFT_W - 20, innerH];
           base.rects.INSIDE_TEMP_BADGE = [LEFT_X + LEFT_W - 16, innerY, 12, 12];
-          base.rects.INSIDE_HUMIDITY   = [LEFT_X, ROW1_Y, LEFT_W, ROW_H];
-          base.rects.INSIDE_PRESSURE = [LEFT_X, ROW2_Y, LEFT_W, ROW_H];  // Pressure row in v2
+          // Inside rows: keep pressure in same spot; move RH slightly down (handled by rows below)
+          base.rects.INSIDE_HUMIDITY   = [LEFT_X, ROW1_Y + 2, LEFT_W, ROW_H];
+          base.rects.INSIDE_PRESSURE = [LEFT_X, ROW2_Y, LEFT_W, ROW_H];
 
           base.rects.OUT_TEMP    = [RIGHT_X, TEMP_Y, RIGHT_W, TEMP_H];
-          base.rects.OUT_LABEL_BOX = [RIGHT_X, TEMP_Y + 2, RIGHT_W, 12];
-          // Increase width to accommodate temperature values with units (was -28, now -20)
+          base.rects.OUT_LABEL_BOX = [RIGHT_X, 18, RIGHT_W, 10];
+          // Match inner adjustments on the right side
           base.rects.OUT_TEMP_INNER = [RIGHT_X + 4, innerY, RIGHT_W - 20, innerH];
           base.rects.OUT_TEMP_BADGE = [RIGHT_X + RIGHT_W - 16, innerY, 12, 12];
-          base.rects.OUT_WEATHER  = [RIGHT_X, ROW1_Y, 48, ROW_H];
-          base.rects.OUT_PRESSURE = [RIGHT_X + 50, ROW1_Y, 54, ROW_H];
-          base.rects.OUT_HUMIDITY = [RIGHT_X, ROW2_Y, 48, ROW_H];
-          base.rects.OUT_WIND     = [RIGHT_X + 52, ROW2_Y, 48, ROW_H];
+          // Re-layout right column quadrants: RH top-left, wind top-right, pressure bottom-left, bottom-right blank
+          base.rects.OUT_HUMIDITY = [RIGHT_X, ROW1_Y + 2, 48, ROW_H];
+          base.rects.OUT_WIND     = [RIGHT_X + 52, ROW1_Y + 2, 48, ROW_H];
+          base.rects.OUT_PRESSURE = [RIGHT_X, ROW2_Y, 54, ROW_H];
+          // Disable OUT_WEATHER small label to avoid overlap; use FOOTER_WEATHER in footer
+          base.rects.OUT_WEATHER  = [RIGHT_X, ROW1_Y, 0, ROW_H];
+          // bottom-right blank intentionally (no rect assigned)
+
           // Weather icon is separate from FOOTER_WEATHER - positioned to the left of it
           // Use positions from display_geometry.json: WEATHER_ICON at [168, 90, 30, 32]
           base.rects.WEATHER_ICON = [168, 90, 30, 32];
@@ -1869,14 +1892,12 @@
               { op: 'line', from: [0, 121], to: [249, 121] },
               { op: 'line', from: [0, 0],   to: [0, 121] },
               { op: 'line', from: [249, 0], to: [249, 121] },
-              { op: 'line', from: [DIV_X, 16], to: [DIV_X, 121] },
-              { op: 'line', from: [1, 16], to: [249, 16] },
+              { op: 'line', from: [125, 18], to: [125, 121] },
+              { op: 'line', from: [1, 18], to: [249, 18] },
               { op: 'line', from: [1, FOOTER_Y], to: [249, FOOTER_Y] }
             ];
           }
-          // Add explicit label boxes for overlay clarity
-          // Label boxes defined above
-          // Adjust fonts: big:26, label:12, small:10, time:10
+          // Adjust fonts
           if (!base.fonts) base.fonts = {};
           if (!base.fonts.tokens) base.fonts.tokens = {};
           base.fonts.tokens.big = { px: 22, weight: 'bold' };

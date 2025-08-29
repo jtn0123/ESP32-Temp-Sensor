@@ -169,8 +169,8 @@ def draw_layout(draw: ImageDraw.ImageDraw, data: dict):
     draw.line((125, 18, 125, 121), fill=0, width=1)
     # Header underline
     draw.line((1, 18, WIDTH - 2, 18), fill=0, width=1)
-    # Footer split line at y=92 like sim chrome
-    draw.line((1, 92, WIDTH - 2, 92), fill=0, width=1)
+    # Footer split line at y=84 to match ui_spec.json chrome
+    draw.line((1, 84, WIDTH - 2, 84), fill=0, width=1)
     # Header right time within HEADER_TIME
     t = data.get("time", "10:32")
     tx = HEADER_TIME[0] + HEADER_TIME[2] - 2 - len(t) * 6

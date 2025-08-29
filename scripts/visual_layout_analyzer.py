@@ -180,13 +180,13 @@ class VisualLayoutAnalyzer:
         expected_content_regions: Dict[str, Dict[str, str]] = {
             "v2_grid": {
                 "HEADER_NAME": "Room name text",
-                "HEADER_TIME": "Current time",
+                "HEADER_TIME_CENTER": "Current time",
                 "INSIDE_TEMP": "Inside temperature display",
                 "OUT_TEMP": "Outside temperature display",
-                "INSIDE_RH": "Inside humidity percentage",
-                "OUT_ROW1_L": "Outside humidity",
-                "OUT_ROW1_R": "Wind speed",
-                "STATUS": "Battery and system status",
+                "INSIDE_HUMIDITY": "Inside humidity percentage",
+                "OUT_HUMIDITY": "Outside humidity",
+                "OUT_WIND": "Wind speed",
+                "FOOTER_STATUS": "Battery and system status",
             },
         }
         expected = expected_content_regions.get(variant, {})
@@ -205,9 +205,9 @@ class VisualLayoutAnalyzer:
             a = analyses[name]
             thr = min_cov.get(a.category, 2.0)
             if a.pixel_coverage < thr:
-                if ("TEMP" in name) or (name in ("HEADER_NAME", "STATUS")):
+                if ("TEMP" in name) or (name in ("HEADER_NAME", "FOOTER_STATUS")):
                     sev = "critical"
-                elif ("LABEL" in name) or (name in ("HEADER_TIME", "INSIDE_RH")):
+                elif ("LABEL" in name) or (name in ("HEADER_TIME_CENTER", "INSIDE_HUMIDITY")):
                     sev = "warning"
                 else:
                     sev = "info"
@@ -422,6 +422,162 @@ class VisualLayoutAnalyzer:
                 # no-op unless we establish goldens; keep structure
         return issues
 
+    def detect_temp_cropping(self, analyses: Dict[str, RegionAnalysis]) -> List[LayoutIssue]:
+        issues: List[LayoutIssue] = []
+        for name in ("INSIDE_TEMP", "OUT_TEMP"):
+            a = analyses.get(name)
+            if not a or not a.content_bounds:
+                continue
+            x, y, w, h = a.rect
+            bx, by, bw, bh = a.content_bounds
+            top_touch = (by - y) <= 1
+            bottom_touch = (y + h) - (by + bh) <= 1
+            if top_touch or bottom_touch:
+                issues.append(
+                    LayoutIssue(
+                        "temp_cropping",
+                        "error",
+                        name,
+                        "Temperature content touches region {} edge".format(
+                            "top" if top_touch else "bottom"
+                        ),
+                        a.rect,
+                    )
+                )
+        return issues
+
+    def detect_weather_layout(self, analyses: Dict[str, RegionAnalysis]) -> List[LayoutIssue]:
+        issues: List[LayoutIssue] = []
+        icon = analyses.get("WEATHER_ICON")
+        bar = analyses.get("FOOTER_WEATHER")
+        # Check icon left-justified inside its rect
+        if icon and icon.content_bounds:
+            rx, ry, rw, rh = icon.rect
+            bx, by, bw, bh = icon.content_bounds
+            if (bx - rx) > 3:
+                issues.append(
+                    LayoutIssue(
+                        "weather_icon_alignment",
+                        "warning",
+                        "WEATHER_ICON",
+                        "Weather icon not left-justified in its box",
+                        icon.rect,
+                    )
+                )
+        # Check that FOOTER_WEATHER has text starting right of the icon box
+        if icon and bar and bar.content_bounds:
+            ix, iy, iw, ih = icon.rect
+            bx, by, bw, bh = bar.content_bounds
+            if bx < (ix + iw + 4):
+                issues.append(
+                    LayoutIssue(
+                        "weather_text_alignment",
+                        "warning",
+                        "FOOTER_WEATHER",
+                        "Weather text starts too far left; should follow icon",
+                        bar.rect,
+                    )
+                )
+        return issues
+
+    def check_chrome_continuity(self, img: np.ndarray) -> List[LayoutIssue]:
+        """Check for gaps in chrome lines defined in ui_spec.json"""
+        issues: List[LayoutIssue] = []
+        
+        # Load chrome definitions from ui_spec
+        try:
+            spec = json.loads((ROOT / "config" / "ui_spec.json").read_text())
+            chrome_lines = spec.get("components", {}).get("chrome", [])
+        except Exception:
+            return issues
+        
+        # Convert to grayscale and threshold
+        gray = 0.2126 * img[:, :, 0] + 0.7152 * img[:, :, 1] + 0.0722 * img[:, :, 2]
+        binary = (gray < 176).astype(np.uint8)
+        
+        for line_def in chrome_lines:
+            if line_def.get("op") != "line":
+                continue
+            
+            from_pt = line_def.get("from", [0, 0])
+            to_pt = line_def.get("to", [0, 0])
+            x1, y1 = from_pt[0], from_pt[1]
+            x2, y2 = to_pt[0], to_pt[1]
+            
+            # Check horizontal lines
+            if y1 == y2:
+                y = y1
+                if y < 0 or y >= img.shape[0]:
+                    continue
+                x_start = min(x1, x2)
+                x_end = max(x1, x2)
+                # Sample along the line
+                gaps = []
+                for x in range(x_start, min(x_end + 1, img.shape[1])):
+                    if binary[y, x] == 0:  # No pixel at this position
+                        gaps.append(x)
+                
+                # Report significant gaps (more than 2 pixels)
+                if len(gaps) > 2:
+                    gap_ranges = []
+                    start = gaps[0]
+                    for i in range(1, len(gaps)):
+                        if gaps[i] != gaps[i-1] + 1:
+                            gap_ranges.append((start, gaps[i-1]))
+                            start = gaps[i]
+                    gap_ranges.append((start, gaps[-1]))
+                    
+                    for gap_start, gap_end in gap_ranges:
+                        gap_width = gap_end - gap_start + 1
+                        if gap_width > 5:  # Only report gaps wider than 5 pixels (allow for text overlap)
+                            issues.append(
+                                LayoutIssue(
+                                    "chrome_gap",
+                                    "info" if gap_width < 10 else "warning" if gap_width < 30 else "critical",
+                                    [],
+                                    f"Gap in horizontal chrome line at y={y}, x={gap_start}-{gap_end} ({gap_width}px)",
+                                    (gap_start, y, gap_width, 1)
+                                )
+                            )
+            
+            # Check vertical lines
+            elif x1 == x2:
+                x = x1
+                if x < 0 or x >= img.shape[1]:
+                    continue
+                y_start = min(y1, y2)
+                y_end = max(y1, y2)
+                # Sample along the line
+                gaps = []
+                for y in range(y_start, min(y_end + 1, img.shape[0])):
+                    if binary[y, x] == 0:  # No pixel at this position
+                        gaps.append(y)
+                
+                # Report significant gaps
+                if len(gaps) > 2:
+                    gap_ranges = []
+                    start = gaps[0]
+                    for i in range(1, len(gaps)):
+                        if gaps[i] != gaps[i-1] + 1:
+                            gap_ranges.append((start, gaps[i-1]))
+                            start = gaps[i]
+                    gap_ranges.append((start, gaps[-1]))
+                    
+                    for gap_start, gap_end in gap_ranges:
+                        gap_width = gap_end - gap_start + 1
+                        if gap_width > 5:  # Only report gaps wider than 5 pixels (allow for text overlap)
+                            issues.append(
+                                LayoutIssue(
+                                    "chrome_gap",
+                                    "info" if gap_width < 10 else "warning" if gap_width < 30 else "critical",
+                                    [],
+                                    f"Gap in vertical chrome line at x={x}, y={gap_start}-{gap_end} ({gap_width}px)",
+                                    (x, gap_start, 1, gap_width)
+                                )
+                            )
+        
+        return issues
+
     def annotate(
         self, base_img: np.ndarray, analyses: Dict[str, RegionAnalysis], issues: List[LayoutIssue]
     ) -> Image.Image:
@@ -430,6 +586,9 @@ class VisualLayoutAnalyzer:
         draw = ImageDraw.Draw(ov)
         for a in analyses.values():
             x, y, w, h = a.rect
+            # Skip invalid/non-positive rectangles
+            if w <= 0 or h <= 0:
+                continue
             draw.rectangle(
                 (x, y, x + w - 1, y + h - 1),
                 outline=(128, 128, 128, 255),
@@ -449,13 +608,16 @@ class VisualLayoutAnalyzer:
             )
             if issue.coordinates:
                 x, y, w, h = issue.coordinates
-                draw.rectangle(
-                    (x, y, x + w - 1, y + h - 1), outline=color[:3] + (255,), fill=color, width=2
-                )
+                if w > 0 and h > 0:
+                    draw.rectangle(
+                        (x, y, x + w - 1, y + h - 1), outline=color[:3] + (255,), fill=color, width=2
+                    )
             else:
                 for r in issue.regions:
                     if r in analyses:
                         x, y, w, h = analyses[r].rect
+                        if w <= 0 or h <= 0:
+                            continue
                         draw.rectangle(
                             (x, y, x + w - 1, y + h - 1),
                             outline=color[:3] + (255,),
@@ -485,7 +647,9 @@ class VisualLayoutAnalyzer:
                     issues += self.detect_canvas_overflow(analyses)
                     issues += self.detect_empty_blocks(analyses, variant)
                     issues += self.detect_gaps(analyses)
-                    # Draw our own overlays on the base pixels to avoid DOM overlay drift
+                    # New checks
+                    issues += self.detect_temp_cropping(analyses)
+                    issues += self.detect_weather_layout(analyses)
                     annotated = self.annotate(base_img, analyses, issues)
                     # Save artifacts
                     Image.fromarray(base_img).save(self.out_dir / f"layout_analysis_{variant}.png")
