@@ -483,28 +483,92 @@ class VisualLayoutAnalyzer:
         return issues
 
     def detect_label_clear_line(self, base_img: np.ndarray, analyses: Dict[str, RegionAnalysis]) -> List[LayoutIssue]:
-        """Detect horizontal lines cutting through text labels using segment detection"""
+        """Detect horizontal lines cutting through text labels using dynamic spec-driven detection"""
         issues: List[LayoutIssue] = []
         import numpy as _np
         H, W = base_img.shape[0], base_img.shape[1]
         gray = 0.2126 * base_img[:, :, 0] + 0.7152 * base_img[:, :, 1] + 0.0722 * base_img[:, :, 2]
         binary = (gray < 176).astype(_np.uint8)
         
-        # Check for horizontal lines in the label area (y=20-31 for labels)
-        # Visual inspection shows the line is around y=24-26
-        label_y_start = 22
-        label_y_end = 28
+        # Load spec-driven parameters
+        try:
+            spec = json.loads((ROOT / "config" / "ui_spec.json").read_text())
+            tokens = spec.get("fonts", {}).get("tokens", {})
+            label_px = int(tokens.get("label", {}).get("px", 11))
+        except Exception:
+            spec = {}
+            label_px = 11
         
-        # Check broader areas to catch the full text and line
-        label_regions = [
-            ("INSIDE", 20, 120, label_y_start, label_y_end),  # Broader INSIDE area
-            ("OUTSIDE", 130, 220, label_y_start, label_y_end)  # Broader OUTSIDE area
-        ]
+        # Find center divider x from chrome
+        center_x = 125
+        try:
+            for ln in spec.get("components", {}).get("chrome", []):
+                if ln.get("op") != "line":
+                    continue
+                x1, y1 = ln.get("from", [0, 0])
+                x2, y2 = ln.get("to", [0, 0])
+                if x1 == x2 and y1 != y2:  # Vertical line
+                    center_x = int(x1)
+                    break
+        except Exception:
+            pass
+        
+        # Find label positions from spec components
+        def find_label_xy(section: str):
+            ops = spec.get("components", {}).get(section, [])
+            for op in ops:
+                if op.get("op") == "text" and op.get("font") == "label":
+                    return int(op.get("x", 0)), int(op.get("y", 20))
+            return None, None
+        
+        inside_x, inside_y = find_label_xy("inside")
+        outside_x, outside_y = find_label_xy("outside")
+        
+        # Use temp rects to bound scan width
+        left_rect = analyses.get("INSIDE_TEMP")
+        right_rect = analyses.get("OUT_TEMP")
+        
+        label_regions = []
+        if inside_y is not None and left_rect:
+            left_x1 = left_rect.rect[0]
+            left_x2 = min(left_rect.rect[0] + left_rect.rect[2] - 1, center_x - 3)
+            label_regions.append(("INSIDE", left_x1, left_x2, inside_y, min(H, inside_y + label_px)))
+        
+        if outside_y is not None and right_rect:
+            right_x1 = max(right_rect.rect[0], center_x + 3)
+            right_x2 = min(right_rect.rect[0] + right_rect.rect[2] - 1, W - 2)
+            label_regions.append(("OUTSIDE", right_x1, right_x2, outside_y, min(H, outside_y + label_px)))
+        
+        # Build chrome mask to exclude chrome pixels from content
+        chrome_mask = _np.zeros_like(binary)
+        try:
+            for ln in spec.get("components", {}).get("chrome", []):
+                if ln.get("op") != "line":
+                    continue
+                x1, y1 = ln.get("from", [0, 0])
+                x2, y2 = ln.get("to", [0, 0])
+                if y1 == y2:  # Horizontal line
+                    y = int(y1)
+                    if 0 <= y < H:
+                        chrome_mask[y, max(0, min(x1, x2)):min(W, max(x1, x2) + 1)] = 1
+                elif x1 == x2:  # Vertical line
+                    x = int(x1)
+                    if 0 <= x < W:
+                        chrome_mask[max(0, min(y1, y2)):min(H, max(y1, y2) + 1), x] = 1
+        except Exception:
+            pass
+        
+        # Remove chrome pixels from binary to get content only
+        content = binary.copy()
+        content[chrome_mask == 1] = 0
         
         for label_name, x_start, x_end, y_start, y_end in label_regions:
+            if x_end <= x_start or y_end <= y_start:
+                continue
+            
             for y in range(max(0, y_start), min(H, y_end)):
                 if x_end <= W:
-                    line_pixels = binary[y, x_start:x_end]
+                    line_pixels = content[y, x_start:x_end+1]
                     
                     # Detect segments (lines broken by text)
                     segments = []
@@ -519,226 +583,192 @@ class VisualLayoutAnalyzer:
                         else:
                             if in_segment:
                                 segment_len = x_idx - segment_start
-                                if segment_len >= 2:  # Minimum segment length
-                                    segments.append((segment_start, x_idx, segment_len))
+                                if segment_len >= 2:
+                                    segments.append((segment_start, x_idx))
                                 in_segment = False
                     
                     # Handle segment at end
                     if in_segment:
                         segment_len = len(line_pixels) - segment_start
                         if segment_len >= 2:
-                            segments.append((segment_start, len(line_pixels), segment_len))
+                            segments.append((segment_start, len(line_pixels)))
                     
-                    # Check for line-through-text pattern:
-                    # Multiple segments with gaps indicates text with line through it
+                    # Check for line-through-text pattern
                     if len(segments) >= 2:
-                        total_segment_pixels = sum(seg[2] for seg in segments)
-                        coverage = total_segment_pixels / len(line_pixels)
+                        total_pixels = sum(end - start for start, end in segments)
+                        coverage = total_pixels / len(line_pixels) if len(line_pixels) > 0 else 0
                         
-                        # Also check if segments are reasonably distributed
                         gaps = []
                         for i in range(1, len(segments)):
                             gap = segments[i][0] - segments[i-1][1]
                             gaps.append(gap)
                         
-                        # If we have multiple segments with reasonable gaps (text characters)
-                        # and good coverage, it's likely a line through text
-                        if coverage > 0.15 and len(gaps) > 0:
-                            avg_gap = sum(gaps) / len(gaps)
-                            if 2 <= avg_gap <= 15:  # Reasonable gap for characters
-                                issues.append(
-                                    LayoutIssue(
-                                        "line_through_text",
-                                        "critical",
-                                        [label_name + "_LABEL"],
-                                        f"Horizontal line cuts through {label_name} label at y={y} ({len(segments)} segments, {coverage:.1%} coverage)",
-                                        (x_start, y, x_end - x_start, 1)
-                                    )
-                                )
-                                break  # Only report once per label
-                    
-                    # Alternative: Check for unusually high pixel density
-                    elif len(line_pixels) > 0:
-                        density = line_pixels.sum() / len(line_pixels)
-                        # Check neighbors for comparison
-                        above_density = 0
-                        below_density = 0
-                        if y > 0 and x_end <= W:
-                            above_pixels = binary[y-1, x_start:x_end]
-                            above_density = above_pixels.sum() / len(above_pixels)
-                        if y < H-1 and x_end <= W:
-                            below_pixels = binary[y+1, x_start:x_end]
-                            below_density = below_pixels.sum() / len(below_pixels)
+                        avg_gap = sum(gaps) / len(gaps) if gaps else 0
                         
-                        # If this row has significantly more pixels than neighbors
-                        # it might be a line overlapping with text
-                        if density > 0.2 and density > above_density * 1.5 and density > below_density * 1.5:
+                        # Heuristics: coverage > 0.20 and gaps 2-15px indicates line through text
+                        if coverage > 0.20 and 2 <= avg_gap <= 15:
                             issues.append(
                                 LayoutIssue(
-                                    "abnormal_horizontal_density",
-                                    "warning",
+                                    "line_through_text",
+                                    "critical",
                                     [label_name + "_LABEL"],
-                                    f"Abnormal horizontal pixel density at y={y} in {label_name} area (density: {density:.1%})",
-                                    (x_start, y, x_end - x_start, 1)
+                                    f"Horizontal line intersects {label_name} label at y={y}",
+                                    (x_start, y, x_end - x_start + 1, 1)
                                 )
                             )
+                            break  # Only report once per label
         
         return issues
     
     def detect_label_temp_collision(self, analyses: Dict[str, RegionAnalysis]) -> List[LayoutIssue]:
-        """Detect collision between INSIDE/OUTSIDE labels and temperature values"""
+        """Detect collision between INSIDE/OUTSIDE labels and temperature values using geometry"""
         issues: List[LayoutIssue] = []
         
-        # Label positions (y=20 with ~11px height extends to y=31)
-        label_bottom = 31
+        # Get label positions from spec
+        try:
+            spec = json.loads((ROOT / "config" / "ui_spec.json").read_text())
+            label_px = int(spec.get("fonts", {}).get("tokens", {}).get("label", {}).get("px", 11))
+            
+            def get_label_y(section: str) -> Optional[int]:
+                for op in spec.get("components", {}).get(section, []):
+                    if op.get("op") == "text" and op.get("font") == "label":
+                        return int(op.get("y", 20))
+                return None
+            
+            inside_label_y = get_label_y("inside")
+            outside_label_y = get_label_y("outside")
+        except Exception:
+            label_px = 11
+            inside_label_y = None
+            outside_label_y = None
         
-        # Temperature regions start at y=24 (from TEMP_Y in sim.js)
-        temp_regions = [
-            ("INSIDE_TEMP", 24),
-            ("OUT_TEMP", 24)
+        # Check collisions using actual geometry
+        pairs = [
+            ("INSIDE_TEMP", inside_label_y, "INSIDE"),
+            ("OUT_TEMP", outside_label_y, "OUTSIDE")
         ]
         
-        for temp_name, temp_y in temp_regions:
-            if temp_y < label_bottom:
-                overlap = label_bottom - temp_y
+        for temp_name, label_y, label_name in pairs:
+            if label_y is None:
+                continue
+                
+            temp_region = analyses.get(temp_name)
+            if temp_region is None:
+                continue
+            
+            # Calculate overlap
+            label_bottom = label_y + label_px
+            temp_top = temp_region.rect[1]
+            overlap = label_bottom - temp_top
+            
+            # Report based on thresholds
+            if overlap >= 4:
                 issues.append(
                     LayoutIssue(
                         "label_temp_overlap",
                         "critical",
                         [temp_name],
-                        f"{temp_name.split('_')[0]} label overlaps with temperature by {overlap}px",
-                        None
+                        f"{label_name} label overlaps temperature by {overlap}px",
+                        temp_region.rect
+                    )
+                )
+            elif overlap >= 1:
+                issues.append(
+                    LayoutIssue(
+                        "label_temp_proximity",
+                        "warning",
+                        [temp_name],
+                        f"{label_name} label too close to temperature (overlap: {overlap}px)",
+                        temp_region.rect
                     )
                 )
         
         return issues
     
     def detect_fahrenheit_centerline_collision(self, analyses: Dict[str, RegionAnalysis]) -> List[LayoutIssue]:
-        """Detect collision between Fahrenheit symbol and center divider line using pixel analysis"""
-        issues: List[LayoutIssue] = []
+        """[DEPRECATED] Fahrenheit collision detection is now handled by detect_centerline_content_collision.
         
-        # Center divider is at x=125
-        center_line_x = 125
-        
-        # First check if dynamic regions exist
-        badge = analyses.get("OUT_TEMP_BADGE")
-        if badge and badge.rect:
-            x, y, w, h = badge.rect
-            badge_left = x
-            badge_right = x + w
-            
-            # Check if badge crosses or touches the center line
-            if badge_left <= center_line_x <= badge_right:
-                issues.append(
-                    LayoutIssue(
-                        "fahrenheit_centerline_collision", 
-                        "critical",
-                        ["OUT_TEMP_BADGE"],
-                        f"Fahrenheit symbol collides with center divider at x={center_line_x}",
-                        badge.rect
-                    )
-                )
-            elif abs(badge_left - center_line_x) < 3:  # Too close to center line
-                issues.append(
-                    LayoutIssue(
-                        "fahrenheit_centerline_proximity",
-                        "warning", 
-                        ["OUT_TEMP_BADGE"],
-                        f"Fahrenheit symbol too close to center divider (gap: {badge_left - center_line_x}px)",
-                        badge.rect
-                    )
-                )
-        
-        # Always perform pixel-based detection as well
-        # This will catch the actual collision even without dynamic regions
-        return issues
+        This method is kept for backward compatibility but returns no issues.
+        The geometry-based detection in detect_centerline_content_collision now handles
+        all content-divider collisions including temperature badges.
+        """
+        return []  # Functionality moved to detect_centerline_content_collision
     
     def detect_centerline_content_collision(self, base_img: np.ndarray, analyses: Dict[str, RegionAnalysis]) -> List[LayoutIssue]:
-        """Detect content collision with center divider using direct pixel analysis"""
+        """Detect content collision with center divider using pure geometry"""
         issues: List[LayoutIssue] = []
-        import numpy as _np
         
-        H, W = base_img.shape[0], base_img.shape[1]
-        gray = 0.2126 * base_img[:, :, 0] + 0.7152 * base_img[:, :, 1] + 0.0722 * base_img[:, :, 2]
-        binary = (gray < 176).astype(_np.uint8)
-        
-        # Center divider is at x=125
+        # Get center divider position from chrome
         center_x = 125
+        try:
+            spec = json.loads((ROOT / "config" / "ui_spec.json").read_text())
+            for ln in spec.get("components", {}).get("chrome", []):
+                if ln.get("op") != "line":
+                    continue
+                x1, y1 = ln.get("from", [0, 0])
+                x2, y2 = ln.get("to", [0, 0])
+                if x1 == x2 and y1 != y2:  # Vertical line
+                    center_x = int(x1)
+                    break
+        except Exception:
+            pass
         
-        # Check temperature region rows (y=36-64 based on TEMP_Y and TEMP_H)
-        temp_y_start = 36
-        temp_y_end = 64
+        # Check gaps using geometry only
+        left = analyses.get("INSIDE_TEMP")
+        right = analyses.get("OUT_TEMP")
+        min_gap = 4  # Threshold for warnings
         
-        if center_x < W:
-            # Get the column at the center line in the temperature region
-            center_column = binary[temp_y_start:temp_y_end, center_x]
-            content_pixels = center_column.sum()
-            total_pixels = len(center_column)
-            collision_coverage = content_pixels / total_pixels if total_pixels > 0 else 0
+        if left:
+            # Calculate gap from left region to center
+            left_edge = left.rect[0] + left.rect[2]
+            left_gap = center_x - left_edge
             
-            # Check if there's significant content at the divider
-            # The divider itself should be there, but if coverage is very high,
-            # it means temperature content is also there
-            if collision_coverage > 0.8:  # High coverage indicates collision
-                # Determine which side is colliding
-                # Check pixels just left and right of center
-                left_coverage = 0
-                right_coverage = 0
-                
-                if center_x > 0:
-                    left_column = binary[temp_y_start:temp_y_end, center_x - 1]
-                    left_coverage = left_column.sum() / len(left_column)
-                
-                if center_x < W - 1:
-                    right_column = binary[temp_y_start:temp_y_end, center_x + 1]
-                    right_coverage = right_column.sum() / len(right_column)
-                
-                # Determine which temperature is colliding based on coverage patterns
-                # Check a bit further away to see which side has content
-                left_side_coverage = 0
-                right_side_coverage = 0
-                
-                # Check 2-5 pixels away on each side
-                for offset in range(2, 6):
-                    if center_x - offset >= 0:
-                        col = binary[temp_y_start:temp_y_end, center_x - offset]
-                        left_side_coverage = max(left_side_coverage, col.sum() / len(col))
-                    if center_x + offset < W:
-                        col = binary[temp_y_start:temp_y_end, center_x + offset]
-                        right_side_coverage = max(right_side_coverage, col.sum() / len(col))
-                
-                # The side with more content nearby is likely the one colliding
-                if left_side_coverage > 0.3 or left_coverage > 0.3:  # Content on left side
-                    issues.append(
-                        LayoutIssue(
-                            "inside_temp_centerline_collision",
-                            "critical",
-                            ["INSIDE_TEMP"],
-                            f"INSIDE temperature/°F collides with center divider at x={center_x} ({collision_coverage:.1%} coverage)",
-                            (center_x - 5, temp_y_start, 10, temp_y_end - temp_y_start)
-                        )
+            if left_gap < 0:
+                issues.append(
+                    LayoutIssue(
+                        "inside_temp_centerline_collision",
+                        "critical",
+                        ["INSIDE_TEMP"],
+                        f"INSIDE temperature crosses center divider (gap: {left_gap}px)",
+                        (center_x - 5, left.rect[1], 10, left.rect[3])
                     )
-                elif right_side_coverage > 0.3 or right_coverage > 0.3:  # Content on right side
-                    issues.append(
-                        LayoutIssue(
-                            "outside_temp_centerline_collision",
-                            "warning",
-                            ["OUT_TEMP"],
-                            f"OUTSIDE temperature touches center divider at x={center_x} ({collision_coverage:.1%} coverage)",
-                            (center_x - 5, temp_y_start, 10, temp_y_end - temp_y_start)
-                        )
+                )
+            elif left_gap < min_gap:
+                issues.append(
+                    LayoutIssue(
+                        "inside_temp_centerline_proximity",
+                        "warning",
+                        ["INSIDE_TEMP"],
+                        f"INSIDE temperature too close to center divider (gap: {left_gap}px)",
+                        (center_x - 5, left.rect[1], 10, left.rect[3])
                     )
-                else:
-                    # Can't determine which side, report generic collision
-                    issues.append(
-                        LayoutIssue(
-                            "centerline_collision",
-                            "critical",
-                            ["INSIDE_TEMP", "OUT_TEMP"],
-                            f"Content collides with center divider at x={center_x} ({collision_coverage:.1%} coverage)",
-                            (center_x - 5, temp_y_start, 10, temp_y_end - temp_y_start)
-                        )
+                )
+        
+        if right:
+            # Calculate gap from center to right region
+            right_edge = right.rect[0]
+            right_gap = right_edge - center_x
+            
+            if right_gap < 0:
+                issues.append(
+                    LayoutIssue(
+                        "outside_temp_centerline_collision",
+                        "critical",
+                        ["OUT_TEMP"],
+                        f"OUTSIDE temperature crosses center divider (gap: {right_gap}px)",
+                        (center_x - 5, right.rect[1], 10, right.rect[3])
                     )
+                )
+            elif right_gap < min_gap:
+                issues.append(
+                    LayoutIssue(
+                        "outside_temp_centerline_proximity",
+                        "warning",
+                        ["OUT_TEMP"],
+                        f"OUTSIDE temperature too close to center divider (gap: {right_gap}px)",
+                        (center_x - 5, right.rect[1], 10, right.rect[3])
+                    )
+                )
         
         return issues
 

@@ -1526,6 +1526,7 @@
     }
     
     // Redraw chrome on top to ensure continuous lines (header, divider, footer)
+    // Skip lines that would conflict with labels (y=18-31)
     try{
       const spec = (typeof window !== 'undefined') ? window.UI_SPEC : null;
       const chrome = (spec && spec.components && spec.components.chrome) ? spec.components.chrome : [];
@@ -1536,6 +1537,8 @@
           const fy = (op.from[1]|0);
           const tx = (op.to[0]|0);
           const ty = (op.to[1]|0);
+          // Skip horizontal lines in the label area (y=18-31)
+          if (fy === ty && fy >= 18 && fy <= 31) return;
           if (fy === ty) ctx.fillRect(Math.min(fx,tx), fy, Math.abs(tx - fx) + 1, 1);
           else if (fx === tx) ctx.fillRect(fx, Math.min(fy,ty), 1, Math.abs(ty - fy) + 1);
         }
@@ -1832,14 +1835,14 @@
           const OUTER = 12;
           const DIV_X = 128; // vertical divider aligned to grid
           const HEADER_Y = 4, HEADER_H = 12; // top rule at y=16
-          const TEMP_Y = 24, TEMP_H = 28;
-          // Adjust rows and footer
-          const ROW1_Y = 52;
-          const ROW2_Y = 68;
+          const TEMP_Y = 32, TEMP_H = 28; // Moved down to avoid label collision (was 24)
+          // Adjust rows and footer (aligned to 4px grid)
+          const ROW1_Y = 60;  // Was 52, adjusted for TEMP_Y change
+          const ROW2_Y = 72;  // Was 68, adjusted for TEMP_Y change
           const ROW_H = 12;
           const FOOTER_Y = 84;  // Moved up from 88 to give more room for bottom row
           const FOOTER_H = 32;  // Increased from 28
-          const LEFT_X = OUTER; const LEFT_W = DIV_X - OUTER; // 12..128 -> 116
+          const LEFT_X = OUTER; const LEFT_W = DIV_X - OUTER - 4; // 12..124 -> 112 (4px gap before divider)
           const RIGHT_X = DIV_X + 4; const RIGHT_W = 250 - OUTER - RIGHT_X; // from 132 -> 106
 
           // Prevent header overlaps in v2 grid: narrow left/name and shift time
