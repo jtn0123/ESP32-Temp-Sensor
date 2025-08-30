@@ -566,7 +566,19 @@ class VisualLayoutAnalyzer:
             if x_end <= x_start or y_end <= y_start:
                 continue
             
-            for y in range(max(0, y_start), min(H, y_end)):
+            # Check for lines NEAR the label region, not within the text itself
+            # Check 2 pixels above and below the label region
+            check_ys = []
+            if y_start - 2 >= 0:
+                check_ys.append(y_start - 2)
+            if y_start - 1 >= 0:
+                check_ys.append(y_start - 1)
+            if y_end < H:
+                check_ys.append(y_end)
+            if y_end + 1 < H:
+                check_ys.append(y_end + 1)
+            
+            for y in check_ys:
                 if x_end <= W:
                     line_pixels = content[y, x_start:x_end+1]
                     
@@ -722,6 +734,10 @@ class VisualLayoutAnalyzer:
             # Calculate gap from left region to center
             left_edge = left.rect[0] + left.rect[2]
             left_gap = center_x - left_edge
+            
+            # Debug output
+            if self.debug:
+                print(f"DEBUG: INSIDE_TEMP rect={left.rect}, left_edge={left_edge}, center_x={center_x}, gap={left_gap}")
             
             if left_gap < 0:
                 issues.append(
