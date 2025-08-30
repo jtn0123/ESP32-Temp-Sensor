@@ -732,12 +732,17 @@ class VisualLayoutAnalyzer:
         
         if left:
             # Calculate gap from left region to center
-            left_edge = left.rect[0] + left.rect[2]
+            # Debug: ensure rect is valid
+            if not isinstance(left.rect, (list, tuple)) or len(left.rect) != 4:
+                print(f"WARNING: Invalid INSIDE_TEMP rect: {left.rect}")
+                return issues
+            
+            left_x, left_y, left_w, left_h = left.rect
+            left_edge = left_x + left_w
             left_gap = center_x - left_edge
             
-            # Debug output
-            if self.debug:
-                print(f"DEBUG: INSIDE_TEMP rect={left.rect}, left_edge={left_edge}, center_x={center_x}, gap={left_gap}")
+            # Debug output always
+            print(f"DEBUG: INSIDE_TEMP rect={left.rect} (x={left_x}, w={left_w}), left_edge={left_edge}, center_x={center_x}, gap={left_gap}")
             
             if left_gap < 0:
                 issues.append(
