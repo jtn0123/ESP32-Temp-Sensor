@@ -60,13 +60,13 @@
       { "op": "timeRight", "rect": "HEADER_VERSION", "font": "time", "source": "{time_hhmm}" }
     ],
     "inside": [
-      { "op": "labelCentered", "y": 22, "aboveRect": "INSIDE_TEMP", "text": "INSIDE", "font": "label" },
+      { "op": "text", "x": 30, "y": 20, "font": "label", "text": "INSIDE" },
       { "op": "tempGroupCentered", "rect": "INSIDE_TEMP", "value": "{inside_temp_f}" },
       { "op": "text", "rect": "INSIDE_HUMIDITY", "font": "small", "align": "left", "text": "{inside_hum_pct}% RH" },
       { "op": "text", "rect": "INSIDE_PRESSURE", "font": "small", "align": "left", "text": "{pressure_hpa:.1f} hPa", "when": "has(pressure_hpa)" }
     ],
     "outside": [
-      { "op": "labelCentered", "y": 22, "aboveRect": "OUT_TEMP", "text": "OUTSIDE", "font": "label" },
+      { "op": "text", "x": 145, "y": 20, "font": "label", "text": "OUTSIDE" },
       { "op": "tempGroupCentered", "rect": "OUT_TEMP", "value": "{outside_temp_f}" },
       { "op": "iconIn", "rect": "WEATHER_ICON", "iconFromWeather": "{weather}" },
       { "op": "text", "rect": "OUT_WEATHER", "font": "small", "align": "left", "text": "{weather_short}", "when": "has(weather_short)" },

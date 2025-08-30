@@ -1234,13 +1234,9 @@
               const lab = String(op.text||'');
               ctx.font = `${weight} ${fpx}px ${FONT_STACK}`; ctx.textBaseline='top'; ctx.fillStyle='#000';
               const lw = ctx.measureText(lab).width;
-              let targetBox = r;
-              if (typeof window !== 'undefined' && true /* always v2 */){
-                const lb = (op.aboveRect === 'INSIDE_TEMP') ? rects.INSIDE_LABEL_BOX : (op.aboveRect === 'OUT_TEMP' ? rects.OUT_LABEL_BOX : null);
-                if (lb) targetBox = lb;
-              }
-              const lx = targetBox[0] + Math.floor((targetBox[2] - lw)/2);
-              const ly = targetBox[1] + Math.max(0, Math.floor(((targetBox[3]||fpx) - fpx)/2));
+              // Position label above the temperature region
+              const lx = r[0] + Math.floor((r[2] - lw)/2);
+              const ly = op.y || 24; // Use specified y or default to 24
               text(lx, ly, lab, fpx, weight, op.aboveRect ? op.aboveRect + '_LABEL' : undefined);
               if (op.aboveRect === 'INSIDE_TEMP') window.__layoutMetrics.labels.inside = { x: lx + lw/2 };
               if (op.aboveRect === 'OUT_TEMP') window.__layoutMetrics.labels.outside = { x: lx + lw/2 };
@@ -1852,8 +1848,6 @@
           base.rects.HEADER_VERSION = [152, HEADER_Y, 88, HEADER_H];
 
           base.rects.INSIDE_TEMP = [LEFT_X, TEMP_Y, LEFT_W, TEMP_H];
-          // Label boxes positioned just under header at y=18, height 10
-          base.rects.INSIDE_LABEL_BOX = [LEFT_X, 18, LEFT_W, 10];
           // Inner number area leaves margin for units; taller to prevent cropping
           const innerY = TEMP_Y + 4;
           const innerH = TEMP_H - 4; // 24px
@@ -1864,7 +1858,6 @@
           base.rects.INSIDE_PRESSURE = [LEFT_X, ROW2_Y, LEFT_W, ROW_H];
 
           base.rects.OUT_TEMP    = [RIGHT_X, TEMP_Y, RIGHT_W, TEMP_H];
-          base.rects.OUT_LABEL_BOX = [RIGHT_X, 18, RIGHT_W, 10];
           // Match inner adjustments on the right side
           base.rects.OUT_TEMP_INNER = [RIGHT_X + 4, innerY, RIGHT_W - 20, innerH];
           base.rects.OUT_TEMP_BADGE = [RIGHT_X + RIGHT_W - 16, innerY, 12, 12];
