@@ -567,16 +567,13 @@ class VisualLayoutAnalyzer:
                 continue
             
             # Check for lines NEAR the label region, not within the text itself
-            # Check 2 pixels above and below the label region
+            # Only check ABOVE the label region since below might be other content
             check_ys = []
             if y_start - 2 >= 0:
                 check_ys.append(y_start - 2)
             if y_start - 1 >= 0:
                 check_ys.append(y_start - 1)
-            if y_end < H:
-                check_ys.append(y_end)
-            if y_end + 1 < H:
-                check_ys.append(y_end + 1)
+            # Don't check below label as that's where temperature content starts
             
             for y in check_ys:
                 if x_end <= W:
@@ -720,8 +717,10 @@ class VisualLayoutAnalyzer:
                 x1, y1 = ln.get("from", [0, 0])
                 x2, y2 = ln.get("to", [0, 0])
                 if x1 == x2 and y1 != y2:  # Vertical line
-                    center_x = int(x1)
-                    break
+                    # Skip border lines (x=0 or x=249)
+                    if x1 > 10 and x1 < 240:  # Center divider should be in middle
+                        center_x = int(x1)
+                        break
         except Exception:
             pass
         
@@ -741,8 +740,9 @@ class VisualLayoutAnalyzer:
             left_edge = left_x + left_w
             left_gap = center_x - left_edge
             
-            # Debug output always
-            print(f"DEBUG: INSIDE_TEMP rect={left.rect} (x={left_x}, w={left_w}), left_edge={left_edge}, center_x={center_x}, gap={left_gap}")
+            # Debug output
+            if hasattr(self, 'debug') and self.debug:
+                print(f"DEBUG: INSIDE_TEMP rect={left.rect} (x={left_x}, w={left_w}), left_edge={left_edge}, center_x={center_x}, gap={left_gap}")
             
             if left_gap < 0:
                 issues.append(
@@ -790,6 +790,138 @@ class VisualLayoutAnalyzer:
                         (center_x - 5, right.rect[1], 10, right.rect[3])
                     )
                 )
+        
+        return issues
+    
+    def detect_line_through_content(self, base_img: np.ndarray, analyses: Dict[str, RegionAnalysis]) -> List[LayoutIssue]:
+        """Detect chrome horizontal lines cutting through any text/content regions using geometry."""
+        issues: List[LayoutIssue] = []
+        
+        # Load chrome lines and static rects for fallback
+        try:
+            spec = json.loads((ROOT / "config" / "ui_spec.json").read_text())
+            chrome_lines = spec.get("components", {}).get("chrome", [])
+            static_rects = spec.get("rects", {})
+        except Exception:
+            chrome_lines = []
+            static_rects = {}
+        
+        # Candidate regions: anything with some content; skip tiny/empty
+        candidates = [a for a in analyses.values() if a.pixel_coverage >= 3.0 and a.rect[2] > 0 and a.rect[3] > 0]
+        
+        # Also check static rects as fallback for key regions that might have wrong dynamic rects
+        # This catches cases where simulator reports wrong positions
+        static_candidates = []
+        for name in ['INSIDE_PRESSURE', 'OUT_PRESSURE', 'OUT_HUMIDITY', 'OUT_WIND']:
+            if name in static_rects and name in analyses:
+                # Only add static check if dynamic rect differs significantly
+                dynamic_rect = analyses[name].rect
+                static_rect = tuple(static_rects[name])
+                if dynamic_rect[1] != static_rect[1]:  # Different Y position
+                    static_candidates.append((name, static_rect, analyses[name]))
+        
+        # Debug: print what regions we're checking
+        if hasattr(self, 'debug') and self.debug:
+            print(f"DEBUG: Checking {len(candidates)} regions for line-through-content")
+            for c in candidates:
+                print(f"  {c.name}: rect={c.rect}, coverage={c.pixel_coverage:.1f}%")
+            if static_candidates:
+                print(f"DEBUG: Also checking {len(static_candidates)} static fallbacks")
+        
+        # Only consider horizontal chrome lines
+        horiz = []
+        for ln in chrome_lines:
+            if ln.get("op") != "line":
+                continue
+            (x1, y1) = ln.get("from", [0, 0])
+            (x2, y2) = ln.get("to", [0, 0])
+            if int(y1) == int(y2):
+                y = int(y1)
+                x_start, x_end = min(int(x1), int(x2)), max(int(x1), int(x2))
+                horiz.append((y, x_start, x_end))
+        
+        for y, x_start, x_end in horiz:
+            for a in candidates:
+                rx, ry, rw, rh = a.rect
+                # Intersection in Y with the region rect
+                if not (ry <= y <= (ry + rh - 1)):
+                    continue
+                
+                # Debug specific case
+                if hasattr(self, 'debug') and self.debug and 'PRESSURE' in a.name and y == 84:
+                    print(f"DEBUG: y=84 vs {a.name}: rect={a.rect}, y-range={ry}-{ry+rh-1}")
+                # Focus on the actual drawn text box if available
+                cb = a.content_bounds or (rx, ry, rw, rh)
+                cbx, cby, cbw, cbh = cb
+                if cbh <= 0 or cbw <= 0:
+                    continue
+                if not (cby <= y <= (cby + cbh - 1)):
+                    # If line is within padding inside rect but outside content, treat as low severity info/warn or ignore
+                    continue
+                
+                # How deep is the line within the content box?
+                pos = (y - cby) / max(1, cbh - 1)
+                if 0.25 <= pos <= 0.75:
+                    sev = "critical"
+                elif 0.10 <= pos < 0.25 or 0.75 < pos <= 0.90:
+                    sev = "warning"
+                else:
+                    continue  # near edges → ignore
+                
+                # Also require a bit of X overlap with the content box, not just the region rect
+                L = max(cbx, x_start)
+                R = min(cbx + cbw - 1, x_end)
+                if L >= R:
+                    continue
+                
+                issues.append(
+                    LayoutIssue(
+                        "line_through_content",
+                        sev,
+                        [a.name],
+                        f"Chrome line at y={y} intersects {a.name} near the text body",
+                        (L, y, R - L + 1, 1),
+                    )
+                )
+        
+        # Also check static rects as fallback when dynamic rects are wrong
+        for name, static_rect, analysis in static_candidates:
+            rx, ry, rw, rh = static_rect
+            for y, x_start, x_end in horiz:
+                # Check if line intersects with static rect position
+                if not (ry <= y <= (ry + rh - 1)):
+                    continue
+                
+                # Use static rect as the bounds since dynamic is likely wrong
+                pos = (y - ry) / max(1, rh - 1)
+                if 0.25 <= pos <= 0.75:
+                    sev = "critical"
+                elif 0.10 <= pos < 0.25 or 0.75 < pos <= 0.90:
+                    sev = "warning"
+                else:
+                    continue
+                
+                # Check X overlap
+                L = max(rx, x_start)
+                R = min(rx + rw - 1, x_end)
+                if L >= R:
+                    continue
+                
+                # Only report if not already reported via dynamic rect
+                already_reported = any(
+                    issue.regions == [name] and 'y={}'.format(y) in issue.description
+                    for issue in issues
+                )
+                if not already_reported:
+                    issues.append(
+                        LayoutIssue(
+                            "line_through_content",
+                            sev,
+                            [name],
+                            f"Chrome line at y={y} intersects {name} (using static position)",
+                            (L, y, R - L + 1, 1),
+                        )
+                    )
         
         return issues
 
@@ -967,6 +1099,7 @@ class VisualLayoutAnalyzer:
                     issues += self.detect_label_temp_collision(analyses)
                     issues += self.detect_fahrenheit_centerline_collision(analyses)
                     issues += self.detect_centerline_content_collision(base_img, analyses)
+                    issues += self.detect_line_through_content(base_img, analyses)
                     annotated = self.annotate(base_img, analyses, issues)
                     # Save artifacts
                     Image.fromarray(base_img).save(self.out_dir / f"layout_analysis_{variant}.png")
