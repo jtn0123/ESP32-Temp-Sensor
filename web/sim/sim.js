@@ -1847,8 +1847,10 @@
           const ROW1_Y = 60;  // Was 52, adjusted for TEMP_Y change
           const ROW2_Y = 72;  // Was 68, adjusted for TEMP_Y change
           const ROW_H = 12;
-          const FOOTER_Y = 84;  // Moved up from 88 to give more room for bottom row
-          const FOOTER_H = 32;  // Increased from 28
+          // Footer divider line stays at y=90 to match UI spec chrome, footer regions start at y=92
+          const FOOTER_LINE_Y = 90;
+          const FOOTER_Y = 92;
+          const FOOTER_H = 28;
           const LEFT_X = OUTER; const LEFT_W = DIV_X - OUTER - 4; // 12..124 -> 112 (4px gap before divider)
           const RIGHT_X = DIV_X + 4; const RIGHT_W = 250 - OUTER - RIGHT_X; // from 132 -> 106
 
@@ -1887,10 +1889,11 @@
           // Footer columns - FOOTER_STATUS on left, FOOTER_WEATHER on right (after icon)
           base.rects.FOOTER_STATUS    = [LEFT_X, FOOTER_Y, LEFT_W, FOOTER_H];
           // FOOTER_WEATHER starts after the weather icon with a gap
-          base.rects.FOOTER_WEATHER    = [200, 90, 44, 32];
+          base.rects.FOOTER_WEATHER    = [200, FOOTER_Y, 44, FOOTER_H];
 
           // Adjust chrome lines to match grid
           if (base.components && Array.isArray(base.components.chrome)){
+            // Honor UI spec chrome lines, but ensure header (y=18) and footer (y=90) lines are present
             base.components.chrome = [
               { op: 'line', from: [0, 0],   to: [249, 0] },
               { op: 'line', from: [0, 121], to: [249, 121] },
@@ -1898,7 +1901,7 @@
               { op: 'line', from: [249, 0], to: [249, 121] },
               { op: 'line', from: [125, 18], to: [125, 121] },
               { op: 'line', from: [1, 18], to: [249, 18] },
-              { op: 'line', from: [1, FOOTER_Y], to: [249, FOOTER_Y] }
+              { op: 'line', from: [1, FOOTER_LINE_Y], to: [249, FOOTER_LINE_Y] }
             ];
           }
           // Adjust fonts

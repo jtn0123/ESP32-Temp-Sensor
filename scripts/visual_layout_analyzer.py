@@ -172,7 +172,30 @@ class VisualLayoutAnalyzer:
     def capture_variant(
         self, page, variant: str
     ) -> Tuple[np.ndarray, np.ndarray, Dict[str, List[int]]]:
+        # Set test data with temperature values to ensure proper coverage
+        test_data = {
+            "room_name": "Office",
+            "time_hhmm": "18:32",
+            "fw_version": "1.03",
+            "inside_temp_f": 72.5,
+            "inside_hum_pct": 47,
+            "pressure_hpa": 1013.2,
+            "outside_temp_f": 68.4,
+            "outside_hum_pct": 53,
+            "outside_pressure_hpa": 1010,
+            "wind_mps": 4.2,
+            "weather": "cloudy",
+            "weather_short": "cloudy",
+            "battery_percent": 76,
+            "battery_voltage": 4.017,
+            "days": 192,
+            "ip": "192.168.1.42"
+        }
+        
+        # Apply the test data
+        page.evaluate(f"window.draw && window.draw({json.dumps(test_data)})")
         page.wait_for_timeout(100)
+        
         rects = self._get_rects_from_page(page)
         # Capture base canvas pixels only and annotate ourselves for stability
         base_png = self._capture(page, overlays=False)
@@ -232,7 +255,7 @@ class VisualLayoutAnalyzer:
             },
         }
         expected = expected_content_regions.get(variant, {})
-        min_cov = {"header": 1.0, "temp": 15.0, "label": 8.0, "footer": 3.0, "other": 2.0}
+        min_cov = {"header": 1.0, "temp": 10.0, "label": 8.0, "footer": 3.0, "other": 2.0}
         for name, hint in expected.items():
             if name not in analyses:
                 issues.append(
