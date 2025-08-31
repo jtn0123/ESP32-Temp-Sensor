@@ -1108,7 +1108,12 @@
                 return String(val);
               });
               if (r){
-                ctx.save(); ctx.beginPath(); ctx.rect(r[0], r[1], r[2], r[3]); ctx.clip();
+                // Pad clipping box slightly to avoid cutting off glyph ascenders/descenders
+                const __pad_top = 1, __pad_bottom = 1, __pad_left = 0, __pad_right = 0;
+                ctx.save();
+                ctx.beginPath();
+                ctx.rect(r[0] - __pad_left, r[1] - __pad_top, r[2] + __pad_left + __pad_right, r[3] + __pad_top + __pad_bottom);
+                ctx.clip();
                 // Alignment within rect if provided
                 let x;
                 ctx.font = `${weight} ${fpx}px ${FONT_STACK}`; ctx.textBaseline='top';
@@ -1119,8 +1124,10 @@
                   const tw = ctx.measureText(s).width;
                   x = r[0] + Math.max(0, Math.floor((r[2] - tw)/2));
                 } else {
+                  // Add 1px padding for left-aligned text to avoid touching the edge
                   x = (op.x !== undefined) ? (r[0] + op.x) : (r[0] + 1);
                 }
+                // Add 1px padding from top for better appearance
                 const y = (op.y !== undefined) ? (r[1] + op.y) : (r[1] + 1);
                 // Use our text function for tracking
                 text(x, y, s, fpx, weight, op.rect);
@@ -1874,7 +1881,8 @@
 
           // Weather icon is separate from FOOTER_WEATHER - positioned to the left of it
           // Use positions from display_geometry.json: WEATHER_ICON at [168, 90, 30, 32]
-          base.rects.WEATHER_ICON = [168, 90, 30, 32];
+          // Move icon down 2px and slightly adjust size to avoid y=90 chrome line intersection
+          base.rects.WEATHER_ICON = [170, 92, 28, 28];
 
           // Footer columns - FOOTER_STATUS on left, FOOTER_WEATHER on right (after icon)
           base.rects.FOOTER_STATUS    = [LEFT_X, FOOTER_Y, LEFT_W, FOOTER_H];
