@@ -1292,10 +1292,6 @@
               const weight = ((fonts[op.font||'small']||{}).weight) || 'normal';
               const raw = String(op.text||'');
               const s = raw.replace(/\{([^}]+)\}/g, (_,k)=>String(data[k]||''));
-              // Skip FOOTER_WEATHER here for v2; iconIn handles aligned text next to icon
-              if (op.rect === 'FOOTER_WEATHER' && typeof window !== 'undefined' && window.__specMode && String(window.__specMode).startsWith('v2')){
-                break;
-              }
               ctx.font = `${weight} ${fpx}px ${FONT_STACK}`; ctx.textBaseline='top';
               const tw = ctx.measureText(s).width;
               // Left-align FOOTER_WEATHER; center others
@@ -1325,11 +1321,20 @@
               // For WEATHER_ICON region in v2: left-justify icon in its rect (no border)
               let iconW, iconH, startX, startY;
               if (op.rect === 'WEATHER_ICON' && isV2) {
-                iconW = Math.max(14, Math.min(24, barW - 4));
-                iconH = Math.max(12, Math.min(22, barH - 4));
-                startX = barX + 2;
-                startY = barY + Math.max(2, Math.floor((barH - iconH)/2));
+                // Inset and clip to avoid any boundary overlap/cutoff
+                const inset = 2;
+                ctx.save();
+                ctx.beginPath();
+                ctx.rect(barX + inset, barY + inset, Math.max(0, barW - inset*2), Math.max(0, barH - inset*2));
+                ctx.clip();
+                // Fill the rect (minus inset) with the icon, centered within the inner box
+                iconW = Math.max(14, (barW - inset*2));
+                iconH = Math.max(12, (barH - inset*2));
+                startX = barX + inset + Math.max(0, Math.floor(((barW - inset*2) - iconW)/2));
+                startY = barY + inset + Math.max(0, Math.floor(((barH - inset*2) - iconH)/2));
                 // Draw icon only (no surrounding border)
+                // Center circular icons inside the inner box
+                const radius = Math.floor(Math.min(iconW, iconH) / 3);
                 const iconCx = startX + Math.floor(iconW/2);
                 const iconCy = startY + Math.floor(iconH/2);
                 ctx.strokeStyle = '#000'; ctx.fillStyle = '#000';
@@ -1346,15 +1351,23 @@
                   ctx.beginPath(); ctx.arc(iconCx, iconCy, Math.min(iconW,iconH)/3, 0, Math.PI*2); ctx.stroke();
                 }
                 // If FOOTER_WEATHER exists, draw text immediately to right inside its own rect left-aligned
+                // Draw label to the right of the inner icon box if quadrant label exists
                 const fw = rects.FOOTER_WEATHER;
-                if (fw) {
-                  const label = shortConditionLabel(data.weather || 'cloudy');
+                const rawLabel = String(data.weather || 'cloudy').trim();
+                if (fw && fw[2] > 0 && rawLabel) {
+                  const label = shortConditionLabel(rawLabel);
                   ctx.font = `${fpx}px ${FONT_STACK}`; ctx.textBaseline='top';
-                  const gap = 6;
-                  const tx = Math.max(fw[0] + 2, startX + iconW + gap);
+                  const tx = fw[0] + 2;
                   const ty = fw[1] + Math.max(0, Math.floor((fw[3]-fpx)/2));
-                  text(tx, ty, label, fpx);
+                  // Clip label to FOOTER_WEATHER region to prevent overflow
+                  ctx.save();
+                  ctx.beginPath();
+                  ctx.rect(fw[0], fw[1], fw[2], fw[3]);
+                  ctx.clip();
+                  text(tx, ty, label, fpx, 'normal', 'FOOTER_WEATHER');
+                  ctx.restore();
                 }
+                ctx.restore();
                 break;
               }
               // Legacy/other behavior unchanged
@@ -1424,8 +1437,19 @@
                 const val = (data[tpl]!==undefined) ? data[tpl] : data.battery_percent;
                 pct = parseInt(String(val||0), 10);
               }catch(e){ pct = parseInt(String(data.battery_percent||0), 10); }
-              ctx.strokeStyle = '#000'; ctx.strokeRect(x, y, bw, bh); ctx.fillStyle = '#000';
+              // Draw crisp 1px border via filled rectangles to avoid any stroke artifacts
+              ctx.fillStyle = '#000';
+              // Top border
+              ctx.fillRect(x, y, bw, 1);
+              // Bottom border
+              ctx.fillRect(x, y + bh - 1, bw, 1);
+              // Left border
+              ctx.fillRect(x, y, 1, bh);
+              // Right border
+              ctx.fillRect(x + bw - 1, y, 1, bh);
+              // Terminal nub
               ctx.fillRect(x + bw, y + 2, 2, 3);
+              // Inner fill based on percentage
               const fillw = Math.max(0, Math.min(bw-2, Math.round((bw-2) * (pct/100))));
               if (fillw > 0) ctx.fillRect(x+1, y+1, fillw, bh-2);
               window.__layoutMetrics.statusLeft.batteryIcon = { x, y, w: bw, h: bh };
@@ -1881,15 +1905,22 @@
           base.rects.OUT_WEATHER  = [RIGHT_X, ROW1_Y, 0, ROW_H];
           // bottom-right blank intentionally (no rect assigned)
 
-          // Weather icon is separate from FOOTER_WEATHER - positioned to the left of it
-          // Use positions from display_geometry.json: WEATHER_ICON at [168, 90, 30, 32]
-          // Move icon down 2px and slightly adjust size to avoid y=90 chrome line intersection
-          base.rects.WEATHER_ICON = [170, 92, 28, 28];
+          // Bottom-right quadrant: from RIGHT_X to right outer margin
+          const BR_X = RIGHT_X;
+          const BR_RIGHT = 250 - OUTER;
+          const BR_W = Math.max(0, BR_RIGHT - BR_X);
+          // Larger left-anchored icon and label to the right within the quadrant
+          const ICON_INSET = 2;
+          const ICON_W = Math.min(40, Math.max(20, Math.floor(BR_W * 0.36)));
+          base.rects.WEATHER_ICON = [BR_X + ICON_INSET, FOOTER_Y, ICON_W, FOOTER_H];
 
-          // Footer columns - FOOTER_STATUS on left, FOOTER_WEATHER on right (after icon)
-          base.rects.FOOTER_STATUS    = [LEFT_X, FOOTER_Y, LEFT_W, FOOTER_H];
-          // FOOTER_WEATHER starts after the weather icon with a gap
-          base.rects.FOOTER_WEATHER    = [200, FOOTER_Y, 44, FOOTER_H];
+          // Footer columns - extend FOOTER_STATUS 10px to the left to keep content clear of boundaries
+          base.rects.FOOTER_STATUS    = [Math.max(0, LEFT_X - 10), FOOTER_Y, LEFT_W + 10, FOOTER_H];
+          // Allocate remaining space to FOOTER_WEATHER (label) with a small gap
+          const GAP = 6;
+          const LABEL_X = BR_X + ICON_INSET + ICON_W + GAP;
+          const LABEL_W = Math.max(0, BR_RIGHT - LABEL_X);
+          base.rects.FOOTER_WEATHER    = [LABEL_X, FOOTER_Y, LABEL_W, FOOTER_H];
 
           // Adjust chrome lines to match grid
           if (base.components && Array.isArray(base.components.chrome)){

@@ -17,13 +17,13 @@
     "INSIDE_HUMIDITY": [6, 66, 115, 14],
     "INSIDE_PRESSURE": [6, 76, 115, 14],
     "OUT_TEMP":    [129, 36, 94, 28],
-    "WEATHER_ICON":    [170, 92, 28, 28],
+    "WEATHER_ICON":    [170, 92, 30, 28],
     "OUT_WEATHER":  [131, 66, 44, 14],
     "OUT_PRESSURE":  [177, 66, 64, 14],
     "OUT_HUMIDITY":  [131, 76, 44, 14],
     "OUT_WIND":  [177, 76, 44, 14],
     "FOOTER_STATUS": [6, 92, 160, 28],
-    "FOOTER_WEATHER":    [200, 92, 44, 28]
+    "FOOTER_WEATHER":    [202, 92, 46, 28]
   },
   "iconMap": [
     { "match": ["storm", "thunder", "lightning"], "icon": "weather-lightning" },
@@ -75,7 +75,7 @@
       { "op": "text", "rect": "OUT_WIND", "font": "small", "align": "left", "text": "{wind_mps->mph:.1f} mph" }
     ],
     "footer_split": [
-      { "op": "batteryGlyph", "x": 8, "y": 93, "w": 13, "h": 7, "percent": "{battery_percent}" },
+      { "op": "batteryGlyph", "x": 9, "y": 93, "w": 13, "h": 7, "percent": "{battery_percent}" },
       { "op": "text", "x": 26, "y": 93, "font": "small", "text": "Batt {battery_voltage:.2f}V {battery_percent}%" },
       { "op": "text", "x": 26, "y": 101, "font": "small", "text": "~{days}d" },
       { "op": "text", "x": 26, "y": 110, "font": "small", "text": "IP {ip}" },

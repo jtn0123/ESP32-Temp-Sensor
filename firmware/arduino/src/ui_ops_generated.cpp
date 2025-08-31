@@ -50,7 +50,7 @@ const UiOpHeader kOps_outside[] = {
 const int kOps_outside_count = sizeof(kOps_outside)/sizeof(kOps_outside[0]);
 
 const UiOpHeader kOps_footer_split[] = {
-    { OP_BATTERYGLYPH, 255, 0, 0, 8, 93, 13, 7, "battery_percent", NULL },
+    { OP_BATTERYGLYPH, 255, 0, 0, 9, 93, 13, 7, "battery_percent", NULL },
     { OP_TEXT, 255, 2, 0, 26, 93, 0, 0, "Batt {battery_voltage:.2f}V {battery_percent}%", NULL },
     { OP_TEXT, 255, 2, 0, 26, 101, 0, 0, "~{days}d", NULL },
     { OP_TEXT, 255, 2, 0, 26, 110, 0, 0, "IP {ip}", NULL },

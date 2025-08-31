@@ -5,8 +5,8 @@
 
 // Layout identity for simulator ↔ firmware parity checks
 #define LAYOUT_VERSION 1
-#define LAYOUT_CRC 0xA6453328u
-#define LAYOUT_MD5 "d14fdbc3c562857a95aa32362d5b3169"
+#define LAYOUT_CRC 0x4E836038u
+#define LAYOUT_MD5 "f8ef284f841842575e9e025453724660"
 
 // Display dimensions
 #define DISPLAY_WIDTH 250
@@ -20,13 +20,13 @@ static constexpr int RECT_INSIDE_TEMP[4] = {   6,  36, 118, 28};
 static constexpr int RECT_INSIDE_HUMIDITY[4] = {   6,  66, 115, 14};
 static constexpr int RECT_INSIDE_PRESSURE[4] = {   6,  76, 115, 14};
 static constexpr int RECT_OUT_TEMP[4] = { 129,  36,  94, 28};
-static constexpr int RECT_WEATHER_ICON[4] = { 170,  92,  28, 28};
+static constexpr int RECT_WEATHER_ICON[4] = { 170,  92,  30, 28};
 static constexpr int RECT_OUT_WEATHER[4] = { 131,  66,  44, 14};
 static constexpr int RECT_OUT_PRESSURE[4] = { 177,  66,  64, 14};
 static constexpr int RECT_OUT_HUMIDITY[4] = { 131,  76,  44, 14};
 static constexpr int RECT_OUT_WIND[4] = { 177,  76,  44, 14};
 static constexpr int RECT_FOOTER_STATUS[4] = {   6,  92, 160, 28};
-static constexpr int RECT_FOOTER_WEATHER[4] = { 200,  92,  44, 28};
+static constexpr int RECT_FOOTER_WEATHER[4] = { 202,  92,  46, 28};
 
 enum WeatherIconId {
     ICON_CLEAR = 0,
@@ -61,7 +61,7 @@ static_assert(RECT_OUT_TEMP[0] >= 0 && RECT_OUT_TEMP[1] >= 0, "OUT_TEMP origin")
 static_assert(129 + 94 <= DISPLAY_WIDTH,  "OUT_TEMP width");
 static_assert(36 + 28 <= DISPLAY_HEIGHT, "OUT_TEMP height");
 static_assert(RECT_WEATHER_ICON[0] >= 0 && RECT_WEATHER_ICON[1] >= 0, "WEATHER_ICON origin");
-static_assert(170 + 28 <= DISPLAY_WIDTH,  "WEATHER_ICON width");
+static_assert(170 + 30 <= DISPLAY_WIDTH,  "WEATHER_ICON width");
 static_assert(92 + 28 <= DISPLAY_HEIGHT, "WEATHER_ICON height");
 static_assert(RECT_OUT_WEATHER[0] >= 0 && RECT_OUT_WEATHER[1] >= 0, "OUT_WEATHER origin");
 static_assert(131 + 44 <= DISPLAY_WIDTH,  "OUT_WEATHER width");
@@ -79,6 +79,6 @@ static_assert(RECT_FOOTER_STATUS[0] >= 0 && RECT_FOOTER_STATUS[1] >= 0, "FOOTER_
 static_assert(6 + 160 <= DISPLAY_WIDTH,  "FOOTER_STATUS width");
 static_assert(92 + 28 <= DISPLAY_HEIGHT, "FOOTER_STATUS height");
 static_assert(RECT_FOOTER_WEATHER[0] >= 0 && RECT_FOOTER_WEATHER[1] >= 0, "FOOTER_WEATHER origin");
-static_assert(200 + 44 <= DISPLAY_WIDTH,  "FOOTER_WEATHER width");
+static_assert(202 + 46 <= DISPLAY_WIDTH,  "FOOTER_WEATHER width");
 static_assert(92 + 28 <= DISPLAY_HEIGHT, "FOOTER_WEATHER height");
 
