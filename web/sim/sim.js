@@ -275,7 +275,9 @@
             info: 'ℹ️'
           }[issue.severity];
           
-          html += `<div style="margin-bottom:6px;">
+          // Add data-region for hover highlighting; use first region token if multiple
+          const regionAttr = String(issue.region || '').replace(/"/g, '&quot;');
+          html += `<div class="issue-item" data-region="${regionAttr}" style="margin-bottom:6px;">
             <div><span style="font-weight:bold;">${icon} ${issue.type.replace(/_/g, ' ').toUpperCase()}</span> 
             <span style="color:#666;font-size:10px;">[${issue.region}]</span></div>
             <div style="margin-left:20px;font-size:11px;">${issue.description}</div>`;
@@ -301,6 +303,35 @@
       });
       
       results.innerHTML = html;
+      // Wire hover highlighting for issues → highlightRect and toggle showRects for visibility
+      try {
+        const items = results.querySelectorAll('.issue-item');
+        items.forEach(el => {
+          const regionStr = el.getAttribute('data-region') || '';
+          // Parse first region from patterns like "A,B" or "A vs B"
+          let first = regionStr.split(',')[0];
+          if (first.includes(' vs ')) first = first.split(' vs ')[0];
+          first = first.trim();
+          el.addEventListener('mouseenter', () => {
+            if (!first || !GJSON || !GJSON.rects || !GJSON.rects[first]) return;
+            window.__prevShowRects = showRects;
+            showRects = true;
+            const rEl = document.getElementById('showRects');
+            if (rEl) rEl.checked = true;
+            highlightRect = first;
+            scheduleDraw();
+          });
+          el.addEventListener('mouseleave', () => {
+            highlightRect = null;
+            if (window.__prevShowRects === false) {
+              showRects = false;
+              const rEl = document.getElementById('showRects');
+              if (rEl) rEl.checked = false;
+            }
+            scheduleDraw();
+          });
+        });
+      } catch(e) { /* non-fatal */ }
     }
   }
   

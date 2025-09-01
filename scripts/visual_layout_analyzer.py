@@ -188,10 +188,8 @@ class VisualLayoutAnalyzer:
         # Convert JS issues to Python LayoutIssue objects
         issues = []
         for js_issue in result.get("issues", []):
-            # Map JS severity to Python severity
+            # Preserve simulator-provided severity (critical, error, warning, info)
             severity = js_issue.get("severity", "info")
-            if severity == "error":
-                severity = "warning"  # Map error to warning for consistency
             
             issue = LayoutIssue(
                 issue_type=js_issue.get("type", "unknown"),
@@ -1286,11 +1284,15 @@ class VisualLayoutAnalyzer:
         non_line_issues = [i for i in issues if i.issue_type not in ("line_through_content", "line_through_text")]
         line_issues = [i for i in issues if i.issue_type in ("line_through_content", "line_through_text")]
         for issue in non_line_issues + line_issues:
-            color = (
-                (255, 0, 0, 128)
-                if issue.severity == "critical"
-                else (255, 165, 0, 128) if issue.severity == "warning" else (255, 255, 0, 128)
-            )
+            # Distinct colors per severity: critical(red), error(orange), warning(yellow), info(blue)
+            if issue.severity == "critical":
+                color = (255, 0, 0, 128)
+            elif issue.severity == "error":
+                color = (255, 136, 0, 128)
+            elif issue.severity == "warning":
+                color = (255, 187, 0, 128)
+            else:
+                color = (0, 136, 255, 128)
             if issue.coordinates:
                 x, y, w, h = issue.coordinates
                 if w > 0 and h > 0:
@@ -1398,7 +1400,7 @@ class VisualLayoutAnalyzer:
                         for name, rect in rects.items():
                             analyses[name] = RegionAnalysis(
                                 name=name,
-                                rect=rect,
+                                rect=(int(rect[0]), int(rect[1]), int(rect[2]), int(rect[3])),
                                 category="",
                                 pixel_coverage=0.0,
                                 content_bounds=None,
@@ -1414,21 +1416,21 @@ class VisualLayoutAnalyzer:
                         # Use legacy Python validation
                         base_img, over_img, rects = self.capture_variant(page, variant)
                         analyses = self.analyze_coverage(base_img, rects)
-                        issues: List[LayoutIssue] = []
-                        issues += self.detect_overlaps(analyses)
-                        issues += self.detect_alignment(analyses, grid4=(variant.startswith("v2")))
-                        issues += self.detect_canvas_overflow(analyses)
-                        issues += self.detect_empty_blocks(analyses, variant)
-                        issues += self.detect_gaps(analyses)
-                        issues += self.detect_temp_cropping(analyses)
-                        issues += self.detect_weather_layout(analyses)
+                        legacy_issues: List[LayoutIssue] = []
+                        legacy_issues += self.detect_overlaps(analyses)
+                        legacy_issues += self.detect_alignment(analyses, grid4=(variant.startswith("v2")))
+                        legacy_issues += self.detect_canvas_overflow(analyses)
+                        legacy_issues += self.detect_empty_blocks(analyses, variant)
+                        legacy_issues += self.detect_gaps(analyses)
+                        legacy_issues += self.detect_temp_cropping(analyses)
+                        legacy_issues += self.detect_weather_layout(analyses)
                         # Detect all label and layout issues
-                        issues += self.detect_label_clear_line(base_img, analyses)
-                        issues += self.detect_label_temp_collision(analyses)
-                        issues += self.detect_fahrenheit_centerline_collision(analyses)
-                        issues += self.detect_centerline_content_collision(base_img, analyses)
-                        issues += self.detect_line_through_content(base_img, analyses)
-                        annotated = self.annotate(base_img, analyses, issues)
+                        legacy_issues += self.detect_label_clear_line(base_img, analyses)
+                        legacy_issues += self.detect_label_temp_collision(analyses)
+                        legacy_issues += self.detect_fahrenheit_centerline_collision(analyses)
+                        legacy_issues += self.detect_centerline_content_collision(base_img, analyses)
+                        legacy_issues += self.detect_line_through_content(base_img, analyses)
+                        annotated = self.annotate(base_img, analyses, legacy_issues)
                     # Timestamped artifacts
                     ts = datetime.now().strftime("%Y-%m-%dT%H-%M-%S")
                     base_name = f"layout_analysis_{variant}_{ts}"
