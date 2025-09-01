@@ -2145,11 +2145,8 @@
       // Reset toggles
       const ids = ['showWindows','stressMode','showGrid','showRects','showLabels','simulateGhosting'];
       ids.forEach(id=>{ const el = document.getElementById(id); if (el){ el.checked = false; el.dispatchEvent(new Event('change')); }});
-      // Spec-only default true if present
-      const specEl = document.getElementById('specOnly'); if (specEl){ specEl.checked = true; specEl.disabled = true; }
       // Reset selects
       const presetSel = document.getElementById('presetMode'); if (presetSel){ presetSel.value = 'normal'; presetSel.dispatchEvent(new Event('change')); }
-      const layoutSel = document.getElementById('layoutMode'); if (layoutSel){ /* keep default */ }
       // Reset zoom
       setZoom(2); if (zoomEl) zoomEl.value = '2';
       // Redraw
@@ -2183,28 +2180,43 @@
     });
   }
   
+  // Stress mode toggle with baseline restore
+  let __baselineData = null;
   const stressModeEl = document.getElementById('stressMode');
   if (stressModeEl) {
     stressModeEl.addEventListener('change', (e)=>{
-    stressMode = !!e.target.checked;
-    const stress = {
-      room_name: 'Extremely Long Room Name Example',
-      time: '23:59',
-      inside_temp: '-10.2',
-      inside_hum: '100',
-      outside_temp: '-10.2',
-      outside_hum: '100',
-      weather: 'Thunderstorms and very windy with heavy rain bands',
-      wind: '99.9',
-      high: '199.9',
-      low: '-40.0',
-      moon_phase: '',
-      percent: 12,
-      voltage: '3.42',
-      days: '1',
-      ip: '10.1.2.3'
-    };
-      draw(stressMode ? stress : {});
+      stressMode = !!e.target.checked;
+      if (stressMode && !__baselineData) {
+        try { __baselineData = { ...lastData }; } catch(_) { __baselineData = null; }
+      }
+      if (stressMode) {
+        const stress = {
+          room_name: 'Extremely Long Room Name Example',
+          time_hhmm: '23:59',
+          inside_temp_f: 99.9,
+          inside_hum_pct: 100,
+          outside_temp_f: -40.0,
+          outside_hum_pct: 0,
+          pressure_hpa: 1085.0,
+          wind_mph: 99.9,
+          weather: 'thunderstorm with hail and extreme winds',
+          battery_percent: 3,
+          battery_voltage: 3.20,
+          days: 999,
+          ip: '10.1.2.3'
+        };
+        draw(stress);
+      } else {
+        if (__baselineData) {
+          // Restore snapshot and redraw without merging
+          lastData = { ...__baselineData };
+          try{ window.lastData = lastData; }catch(_){ }
+          draw({});
+        } else {
+          draw({});
+        }
+        __baselineData = null;
+      }
     });
   }
   const gridEl = document.getElementById('showGrid');
@@ -2231,8 +2243,7 @@
   const ghostEl = document.getElementById('simulateGhosting');
   if (ghostEl) ghostEl.addEventListener('change', (e)=>{ simulateGhosting = !!e.target.checked; draw({}); });
   // removed highlightIssues wiring
-  const specOnlyEl = document.getElementById('specOnly');
-  if (specOnlyEl){ specOnlyEl.checked = true; specOnlyEl.disabled = true; }
+  // Spec-only control removed from UI; rendering uses spec by design
   const variantSel = document.getElementById('variantMode');
   if (variantSel){
     // Hide the variant selector since it causes confusion - we only use the Layout Version selector
