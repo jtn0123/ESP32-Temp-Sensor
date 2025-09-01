@@ -1,0 +1,68 @@
+name: Release Firmware
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  build-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install PlatformIO
+        run: pip install platformio
+
+      - name: Cache PlatformIO
+        uses: actions/cache@v4
+        with:
+          path: ~/.platformio
+          key: pio-${{ runner.os }}-${{ hashFiles('**/platformio.ini') }}
+
+      - name: Derive FW_VERSION from tag
+        id: ver
+        run: |
+          TAG=${GITHUB_REF#refs/tags/}
+          # Strip leading 'v' if present for FW_VERSION canonical format
+          FW=${TAG#v}
+          echo "fw_version=$FW" >> $GITHUB_OUTPUT
+
+      - name: Build firmware (display and headless)
+        env:
+          FW_VERSION: ${{ steps.ver.outputs.fw_version }}
+        run: |
+          cd firmware/arduino
+          pio run -e feather_esp32s2_display_only -e feather_esp32s2_headless
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: firmware-${{ steps.ver.outputs.fw_version }}
+          path: |
+            firmware/arduino/.pio/build/**/firmware*.bin
+            firmware/arduino/.pio/build/**/firmware*.elf
+            firmware/arduino/src/generated_config.h
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: Release ${{ github.ref_name }}
+          draft: false
+          prerelease: false
+          files: |
+            firmware/arduino/.pio/build/**/firmware*.bin
+            firmware/arduino/.pio/build/**/firmware*.elf
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+
