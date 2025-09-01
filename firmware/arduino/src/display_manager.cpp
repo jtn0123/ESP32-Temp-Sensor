@@ -71,7 +71,8 @@ void display_manager_init() {
         // Draw version in top right if available
         display.setTextSize(1);
         display.setCursor(HEADER_VERSION[0], HEADER_VERSION[1]);
-        display.print("v4.0");
+        display.print(F("v"));
+        display.print(FW_VERSION);
         
         // Draw "BOOT TEST" in center
         display.setTextSize(2);

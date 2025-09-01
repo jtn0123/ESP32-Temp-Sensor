@@ -3,14 +3,22 @@
 Convert SVG weather/moon icons to 24x24 1-bit bitmaps and emit a C header
 with PROGMEM arrays suitable for Adafruit GFX drawXBitmap.
 
+Quality improvements:
+- Oversample SVG rasterization (default 4×) for crisp edges
+- Auto-threshold via Otsu (fallback to manual threshold)
+- Optional 1px bolding (morphological dilation) to strengthen thin strokes
+- Optional preview PNGs for quick visual verification
+
 Dependencies:
   pip install cairosvg pillow
 """
 import io
 import os
+import argparse
+from typing import Optional
 
 import cairosvg
-from PIL import Image
+from PIL import Image, ImageFilter
 
 PROJECT_ROOT = os.path.dirname(os.path.dirname(__file__))
 SRC_DIR = os.path.join(PROJECT_ROOT, "web", "icons", "mdi")
@@ -43,14 +51,47 @@ WIDTH = 24
 HEIGHT = 24
 
 
-def svg_to_png_bytes(svg_path: str) -> bytes:
+def svg_to_png_bytes(svg_path: str, oversample: int = 4) -> bytes:
     with open(svg_path, "rb") as f:
         svg_data = f.read()
-    # Render at higher scale then downsample for sharper edges
-    return cairosvg.svg2png(bytestring=svg_data, output_width=96, output_height=96)
+    ow = max(1, WIDTH * max(1, int(oversample)))
+    oh = max(1, HEIGHT * max(1, int(oversample)))
+    return cairosvg.svg2png(bytestring=svg_data, output_width=ow, output_height=oh)
 
 
-def rasterize_1bit_centered(png_bytes: bytes, invert: bool = False) -> Image.Image:
+def _otsu_threshold(img_l: Image.Image) -> int:
+    # img_l must be mode 'L'
+    hist = img_l.histogram()
+    total = sum(hist)
+    sum_total = sum(i * h for i, h in enumerate(hist))
+    sum_b = 0.0
+    w_b = 0.0
+    var_max = -1.0
+    threshold = 160
+    for t in range(256):
+        w_b += hist[t]
+        if w_b == 0:
+            continue
+        w_f = total - w_b
+        if w_f == 0:
+            break
+        sum_b += t * hist[t]
+        m_b = sum_b / w_b
+        m_f = (sum_total - sum_b) / w_f
+        var_between = w_b * w_f * (m_b - m_f) ** 2
+        if var_between > var_max:
+            var_max = var_between
+            threshold = t
+    return int(threshold)
+
+
+def rasterize_1bit_centered(
+    png_bytes: bytes,
+    invert: bool = False,
+    threshold: Optional[int] = None,
+    auto_threshold: bool = True,
+    bold_px: int = 0,
+) -> Image.Image:
     with Image.open(io.BytesIO(png_bytes)) as im:
         # Preserve alpha and composite onto white to avoid black squares
         im = im.convert("RGBA")
@@ -64,8 +105,22 @@ def rasterize_1bit_centered(png_bytes: bytes, invert: bool = False) -> Image.Ima
         ox = (WIDTH - im.width) // 2
         oy = (HEIGHT - im.height) // 2
         canvas.paste(im, (ox, oy))
-        # Binarize
-        bw = canvas.point(lambda p: 0 if p < 160 else 255, "1")
+        # Auto threshold (Otsu) unless overridden
+        thr = int(threshold) if isinstance(threshold, int) else None
+        if thr is None and auto_threshold:
+            thr = _otsu_threshold(canvas)
+            # Bias slightly darker to keep thin details
+            thr = max(0, min(255, thr - 5))
+        if thr is None:
+            thr = 160
+            # Binarize to 1-bit via threshold
+            def threshold_fn(p):
+                return 0 if p < thr else 255
+            bw_l = canvas.point(threshold_fn, "L")
+            # Optional bold (dilate black) using MinFilter on L-mode
+            for _ in range(max(0, int(bold_px))):
+                bw_l = bw_l.filter(ImageFilter.MinFilter(3))
+            bw = bw_l.convert("1")
         if invert:
             bw = bw.point(lambda p: 255 - p, "1")
         return bw
@@ -97,6 +152,26 @@ def c_array_name(name: str) -> str:
 
 
 def main() -> None:
+    parser = argparse.ArgumentParser(description="Convert SVG icons to 24x24 1-bit header")
+    parser.add_argument("--oversample", type=int, default=4, help="SVG raster oversample factor (default 4)")
+    parser.add_argument("--threshold", type=str, default="auto", help="'auto' (Otsu) or integer 0-255")
+    parser.add_argument("--bold", type=int, default=0, help="Number of dilation passes to thicken lines (default 0)")
+    parser.add_argument("--preview-dir", type=str, default="", help="Optional directory to write 1-bit PNG previews")
+    args = parser.parse_args()
+
+    thr_arg: Optional[int]
+    auto_thr = True
+    if str(args.threshold).lower() == "auto":
+        thr_arg = None
+        auto_thr = True
+    else:
+        try:
+            thr_arg = int(args.threshold)
+            auto_thr = False
+        except Exception:
+            thr_arg = None
+            auto_thr = True
+
     header_lines: list[str] = []
     header_lines.append("#pragma once")
     header_lines.append("// Copyright 2024 Justin")
@@ -126,13 +201,21 @@ def main() -> None:
     header_lines.append("};")
     header_lines.append("")
 
+    previews: list[tuple[str, Image.Image]] = []
     for name in ICON_NAMES:
         svg_path = os.path.join(SRC_DIR, f"{name}.svg")
         if not os.path.exists(svg_path):
             print("missing", svg_path)
             continue
-        png_bytes = svg_to_png_bytes(svg_path)
-        img = rasterize_1bit_centered(png_bytes)
+        png_bytes = svg_to_png_bytes(svg_path, oversample=args.oversample)
+        img = rasterize_1bit_centered(
+            png_bytes,
+            invert=False,
+            threshold=thr_arg,
+            auto_threshold=auto_thr,
+            bold_px=args.bold,
+        )
+        previews.append((name, img))
         bits = pack_xbm_bits(img)
         arr_name = c_array_name(name)
         header_lines.append(f"static const uint8_t {arr_name}[] PROGMEM = {{")
@@ -172,6 +255,18 @@ def main() -> None:
     with open(OUT_HEADER, "w") as f:
         f.write("\n".join(header_lines) + "\n")
     print("wrote", OUT_HEADER)
+
+    # Optional previews
+    if args.preview_dir:
+        pdir = os.path.join(PROJECT_ROOT, args.preview_dir)
+        os.makedirs(pdir, exist_ok=True)
+        for name, img in previews:
+            outp = os.path.join(pdir, f"{name}.png")
+            try:
+                img.save(outp)
+            except Exception:
+                pass
+        print("wrote previews to", pdir)
 
 
 if __name__ == "__main__":

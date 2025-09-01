@@ -17,10 +17,10 @@
     "INSIDE_HUMIDITY": [6, 50, 56, 12],
     "INSIDE_PRESSURE": [6, 62, 115, 12],
     "OUT_TEMP":    [130, 30, 118, 20],
-    "WEATHER_ICON":    [170, 92, 30, 28],
     "OUT_HUMIDITY":  [130, 50, 58, 12],
     "OUT_PRESSURE":  [130, 62, 58, 12],
     "OUT_WIND":  [190, 50, 44, 12],
+    "WEATHER_ICON":    [170, 92, 30, 28],
     "FOOTER_STATUS": [6, 92, 118, 28],
     "FOOTER_WEATHER":    [202, 92, 46, 28]
   },

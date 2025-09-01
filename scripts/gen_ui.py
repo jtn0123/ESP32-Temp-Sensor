@@ -42,8 +42,68 @@ def _fail(msg: str) -> None:
 def load_ui_spec() -> Dict[str, Any]:
     if not UI_SPEC_PATH.exists():
         _fail(f"ui spec not found: {UI_SPEC_PATH}")
+    def _strip_json_comments(text: str) -> str:
+        out: list[str] = []
+        i = 0
+        n = len(text)
+        in_string = False
+        escape = False
+        in_line_comment = False
+        in_block_comment = False
+        while i < n:
+            ch = text[i]
+            nxt = text[i + 1] if i + 1 < n else ""
+            if in_line_comment:
+                if ch == "\n":
+                    in_line_comment = False
+                    out.append(ch)
+                i += 1
+                continue
+            if in_block_comment:
+                if ch == "*" and nxt == "/":
+                    in_block_comment = False
+                    i += 2
+                else:
+                    i += 1
+                continue
+            if in_string:
+                out.append(ch)
+                if escape:
+                    escape = False
+                elif ch == "\\":
+                    escape = True
+                elif ch == '"':
+                    in_string = False
+                i += 1
+                continue
+            # Detect start of string
+            if ch == '"':
+                in_string = True
+                out.append(ch)
+                i += 1
+                continue
+            # Detect // line comment
+            if ch == "/" and nxt == "/":
+                in_line_comment = True
+                i += 2
+                continue
+            # Detect /* block comment */
+            if ch == "/" and nxt == "*":
+                in_block_comment = True
+                i += 2
+                continue
+            # Detect # line comment (YAML-style), allowed outside strings
+            if ch == "#":
+                in_line_comment = True
+                i += 1
+                continue
+            out.append(ch)
+            i += 1
+        return "".join(out)
+
     try:
-        data = json.loads(UI_SPEC_PATH.read_text())
+        raw = UI_SPEC_PATH.read_text()
+        data = json.loads(_strip_json_comments(raw))
     except Exception as e:
         _fail(f"failed to parse {UI_SPEC_PATH}: {e}")
     # Minimal validation
