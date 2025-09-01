@@ -2154,37 +2154,57 @@
   }
   // Screenshot copy to clipboard
   const copyBtn = document.getElementById('copyShot');
-  if (copyBtn && navigator.clipboard){
+  if (copyBtn){
+    async function showToast(msg){ const t=document.getElementById('actionToast'); if(t){ t.textContent = msg; setTimeout(()=>{ t.textContent=''; }, 1800);} }
+    function toBlobAsync(canvas){ return new Promise(res=>canvas.toBlob(res,'image/png')); }
+    async function copyAsImage(canvas){
+      if (!(window.ClipboardItem && navigator.clipboard && navigator.clipboard.write)) return false;
+      try{
+        const blob = await toBlobAsync(canvas);
+        if (!blob) return false;
+        await navigator.clipboard.write([ new ClipboardItem({ 'image/png': blob }) ]);
+        await showToast('Copied PNG to clipboard');
+        return true;
+      }catch(err){ console.warn('copyAsImage failed', err); return false; }
+    }
+    async function copyAsHtmlImage(url){
+      try{
+        const holder = document.createElement('div');
+        holder.contentEditable = 'true';
+        holder.style.position = 'fixed';
+        holder.style.left = '-9999px';
+        const img = document.createElement('img'); img.src = url; img.alt = '';
+        holder.appendChild(img); document.body.appendChild(holder);
+        const range = document.createRange(); range.selectNodeContents(holder);
+        const sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(range);
+        const ok = document.execCommand('copy');
+        document.body.removeChild(holder); sel.removeAllRanges();
+        if (ok){ await showToast('Copied image via fallback'); return true; }
+        return false;
+      }catch(err){ console.warn('copyAsHtmlImage failed', err); return false; }
+    }
+    async function copyAsText(url){
+      try{
+        if (navigator.clipboard && navigator.clipboard.writeText){ await navigator.clipboard.writeText(url); }
+        else {
+          const ta=document.createElement('textarea'); ta.value=url; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
+        }
+        await showToast('Copied data URL');
+        return true;
+      }catch(err){ console.warn('copyAsText failed', err); return false; }
+    }
     copyBtn.addEventListener('click', async ()=>{
       try{
-        const canvas = document.getElementById('epd');
-        if (!canvas || !canvas.toBlob) return;
-        canvas.toBlob(async (blob)=>{
-          if (!blob) return;
-          try{
-            await navigator.clipboard.write([
-              new ClipboardItem({ 'image/png': blob })
-            ]);
-            const toast = document.getElementById('actionToast'); if (toast){ toast.textContent = 'Copied PNG to clipboard'; setTimeout(()=>{ toast.textContent=''; }, 1500); }
-          }catch(err){ console.error('clipboard write failed', err); }
-        });
-      }catch(e){ console.error('copy screenshot failed', e); }
-    });
-  }
-
-  // Fallback for older browsers: copy data URL string
-  if (copyBtn && !navigator.clipboard){
-    copyBtn.addEventListener('click', ()=>{
-      try{
-        const canvas = document.getElementById('epd');
-        if (!canvas) return;
+        const canvas = document.getElementById('epd'); if (!canvas) return;
+        // 1) Try native image clipboard
+        if (await copyAsImage(canvas)) return;
+        // 2) Try HTML image fallback
         const url = canvas.toDataURL('image/png');
-        const ta = document.createElement('textarea');
-        ta.value = url; document.body.appendChild(ta); ta.select();
-        try{ document.execCommand('copy'); }catch(_){ /* ignore */ }
-        document.body.removeChild(ta);
-        const toast = document.getElementById('actionToast'); if (toast){ toast.textContent = 'Copied data URL'; setTimeout(()=>{ toast.textContent=''; }, 1500); }
-      }catch(e){ console.error('fallback copy failed', e); }
+        if (await copyAsHtmlImage(url)) return;
+        // 3) Fallback to text; if that also fails, open in new tab
+        const ok = await copyAsText(url);
+        if (!ok){ try{ window.open(url, '_blank', 'noopener'); }catch(_){} }
+      }catch(e){ console.error('copy handler failed', e); showToast('Copy failed'); }
     });
   }
 
