@@ -274,10 +274,7 @@ def draw_layout(draw: ImageDraw.ImageDraw, data: dict):
         fill=0,
     )
     # Simplified icon strokes
-    # Use stroke-only rectangle as in sim before specific details
-    draw.rectangle(
-        ((start_x + 2, bar_y + 6), (start_x + icon_w - 2, bar_y + icon_h - 2)), outline=0, width=1
-    )
+    # Removed border rectangle to match simulator behavior - no border around weather icon
     if any(k in cond_lower for k in ["rain"]):
         # diagonal raindrops
         for i in range(3):

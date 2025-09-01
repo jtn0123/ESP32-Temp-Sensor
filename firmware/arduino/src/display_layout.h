@@ -5,8 +5,8 @@
 
 // Layout identity for simulator ↔ firmware parity checks
 #define LAYOUT_VERSION 1
-#define LAYOUT_CRC 0x4E836038u
-#define LAYOUT_MD5 "f8ef284f841842575e9e025453724660"
+#define LAYOUT_CRC 0x697D12C8u
+#define LAYOUT_MD5 "d9b330dec7ce2fddd83ca8e27b8aa738"
 
 // Display dimensions
 #define DISPLAY_WIDTH 250
@@ -21,7 +21,6 @@ static constexpr int RECT_INSIDE_HUMIDITY[4] = {   6,  66, 115, 14};
 static constexpr int RECT_INSIDE_PRESSURE[4] = {   6,  76, 115, 14};
 static constexpr int RECT_OUT_TEMP[4] = { 129,  36,  94, 28};
 static constexpr int RECT_WEATHER_ICON[4] = { 170,  92,  30, 28};
-static constexpr int RECT_OUT_WEATHER[4] = { 131,  66,  44, 14};
 static constexpr int RECT_OUT_PRESSURE[4] = { 177,  66,  64, 14};
 static constexpr int RECT_OUT_HUMIDITY[4] = { 131,  76,  44, 14};
 static constexpr int RECT_OUT_WIND[4] = { 177,  76,  44, 14};
@@ -63,9 +62,6 @@ static_assert(36 + 28 <= DISPLAY_HEIGHT, "OUT_TEMP height");
 static_assert(RECT_WEATHER_ICON[0] >= 0 && RECT_WEATHER_ICON[1] >= 0, "WEATHER_ICON origin");
 static_assert(170 + 30 <= DISPLAY_WIDTH,  "WEATHER_ICON width");
 static_assert(92 + 28 <= DISPLAY_HEIGHT, "WEATHER_ICON height");
-static_assert(RECT_OUT_WEATHER[0] >= 0 && RECT_OUT_WEATHER[1] >= 0, "OUT_WEATHER origin");
-static_assert(131 + 44 <= DISPLAY_WIDTH,  "OUT_WEATHER width");
-static_assert(66 + 14 <= DISPLAY_HEIGHT, "OUT_WEATHER height");
 static_assert(RECT_OUT_PRESSURE[0] >= 0 && RECT_OUT_PRESSURE[1] >= 0, "OUT_PRESSURE origin");
 static_assert(177 + 64 <= DISPLAY_WIDTH,  "OUT_PRESSURE width");
 static_assert(66 + 14 <= DISPLAY_HEIGHT, "OUT_PRESSURE height");

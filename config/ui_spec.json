@@ -18,7 +18,6 @@
     "INSIDE_PRESSURE": [6, 76, 115, 14],
     "OUT_TEMP":    [129, 36, 94, 28],
     "WEATHER_ICON":    [170, 92, 30, 28],
-    "OUT_WEATHER":  [131, 66, 44, 14],
     "OUT_PRESSURE":  [177, 66, 64, 14],
     "OUT_HUMIDITY":  [131, 76, 44, 14],
     "OUT_WIND":  [177, 76, 44, 14],
@@ -69,7 +68,6 @@
       { "op": "text", "x": 145, "y": 22, "font": "label", "text": "OUTSIDE" },
       { "op": "tempGroupCentered", "rect": "OUT_TEMP", "value": "{outside_temp_f}" },
       { "op": "iconIn", "rect": "WEATHER_ICON", "iconFromWeather": "{weather}" },
-      { "op": "text", "rect": "OUT_WEATHER", "font": "small", "align": "left", "text": "{weather_short}", "when": "has(weather_short)" },
       { "op": "text", "rect": "OUT_PRESSURE", "font": "small", "align": "left", "y": 3, "text": "{outside_pressure_hpa:.0f} hPa", "when": "has(outside_pressure_hpa)" },
       { "op": "text", "rect": "OUT_HUMIDITY", "font": "small", "align": "left", "text": "{outside_hum_pct}% RH" },
       { "op": "text", "rect": "OUT_WIND", "font": "small", "align": "left", "text": "{wind_mps->mph:.1f} mph" }
@@ -91,7 +89,6 @@
       "INSIDE_TEMP": ["tempGroupCentered"],
       "OUT_TEMP": ["tempGroupCentered"],
       "WEATHER_ICON": ["iconIn"],
-      "OUT_WEATHER": ["text"],
       "OUT_PRESSURE": ["text"],
       "OUT_HUMIDITY": ["text"],
       "OUT_WIND": ["text"],

@@ -11,7 +11,6 @@
   let OUT_TEMP    = [129, 36,  94, 28];
   let WEATHER_ICON = [168, 90,  30, 32];
   // Outside metric regions with meaningful names
-  let OUT_WEATHER  = [131, 68,  44, 12]; // Weather description
   let OUT_PRESSURE = [177, 68,  64, 12]; // Outside pressure
   let OUT_HUMIDITY = [131, 78,  44, 12]; // Outside humidity
   let OUT_WIND     = [177, 78,  44, 12]; // Wind speed
@@ -163,7 +162,6 @@
       'OUT_TEMP': 10,
       'HEADER_NAME': 8,
       'INSIDE_HUMIDITY': 7,
-      'OUT_WEATHER': 6,
       'OUT_HUMIDITY': 6,
       'FOOTER_STATUS': 5,
       'FOOTER_WEATHER': 5
@@ -462,7 +460,7 @@
           continue;
         }
         // Skip outside metric regions that have known tight bounds (but not temp regions)
-        if (regionName === 'OUT_WEATHER' || regionName === 'OUT_PRESSURE' ||
+        if (regionName === 'OUT_PRESSURE' ||
             regionName === 'OUT_HUMIDITY' || regionName === 'OUT_WIND') {
           continue;
         }
@@ -687,7 +685,7 @@
     
     ctx.save();
     
-    // Draw issue highlights
+    // Draw issue highlights (skip WEATHER_ICON entirely to avoid any perceived border)
     for (const issue of validationIssues) {
       if (issue.rect) {
         const [x, y, w, h] = issue.rect;
@@ -695,10 +693,10 @@
         // Skip drawing for regions that shouldn't show validation
         // Also skip outside metric regions since we're not validating them
         // Also skip collision issues that involve outside metric regions
-        if (issue.region && (issue.region.includes('_INNER') || 
+        if (issue.region && (issue.region === 'WEATHER_ICON' || issue.region.includes('_INNER') || 
             issue.region.includes('_BADGE') || 
             issue.region.includes('LABEL_BOX') ||
-            issue.region === 'OUT_WEATHER' || issue.region === 'OUT_PRESSURE' ||
+            issue.region === 'OUT_PRESSURE' ||
             issue.region === 'OUT_HUMIDITY' || issue.region === 'OUT_WIND')) {
           continue;
         }
@@ -712,7 +710,7 @@
           default: color = 'rgba(0, 136, 255, 0.3)';
         }
         
-        // Draw filled rectangle for the issue area
+        // Draw filled rectangle for the issue area (but never for WEATHER_ICON)
         ctx.fillStyle = color;
         ctx.fillRect(x, y, w, h);
         
@@ -756,7 +754,6 @@
           OUT_TEMP    = R.OUT_TEMP    || OUT_TEMP;
           WEATHER_ICON = R.WEATHER_ICON || WEATHER_ICON;
           // Use new meaningful names
-          OUT_WEATHER  = R.OUT_WEATHER  || OUT_WEATHER;
           OUT_PRESSURE = R.OUT_PRESSURE || OUT_PRESSURE;
           OUT_HUMIDITY = R.OUT_HUMIDITY || OUT_HUMIDITY;
           OUT_WIND     = R.OUT_WIND     || OUT_WIND;
@@ -782,7 +779,6 @@
           OUT_TEMP    = R.OUT_TEMP    || OUT_TEMP;
           WEATHER_ICON = R.WEATHER_ICON || WEATHER_ICON;
           // Use new meaningful names
-          OUT_WEATHER  = R.OUT_WEATHER  || OUT_WEATHER;
           OUT_PRESSURE = R.OUT_PRESSURE || OUT_PRESSURE;
           OUT_HUMIDITY = R.OUT_HUMIDITY || OUT_HUMIDITY;
           OUT_WIND     = R.OUT_WIND     || OUT_WIND;
@@ -858,6 +854,10 @@
       if (!shouldShowRect(name)) return;
       // Skip internal helper rectangles - these are implementation details
       if (name.includes('_INNER') || name.includes('_BADGE') || name.includes('LABEL_BOX')) {
+        return;
+      }
+      // EXPLICITLY skip WEATHER_ICON to prevent any border
+      if (name === 'WEATHER_ICON') {
         return;
       }
       if (searchQuery){
@@ -1321,6 +1321,14 @@
               // For WEATHER_ICON region in v2: left-justify icon in its rect (no border)
               let iconW, iconH, startX, startY;
               if (op.rect === 'WEATHER_ICON' && isV2) {
+                // AGGRESSIVELY clear any border - fill larger area with white
+                ctx.fillStyle = '#fff';
+                ctx.fillRect(barX - 2, barY - 2, barW + 4, barH + 4);
+                // Also stroke with white to ensure no border remains
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(barX, barY, barW, barH);
+                ctx.strokeStyle = '#000'; // Reset for icon drawing
                 // Inset and clip to avoid any boundary overlap/cutoff
                 const inset = 2;
                 ctx.save();
@@ -1374,6 +1382,15 @@
               // Use the actual WEATHER_ICON rect coordinates for rendering
               const fpx2 = ((fonts['small']||{}).px) || pxSmall;
               let barX2 = r[0], barY2 = r[1], barW2 = r[2], barH2 = r[3];
+              // Clear border for WEATHER_ICON in legacy path too
+              if (op.rect === 'WEATHER_ICON') {
+                ctx.fillStyle = '#fff';
+                ctx.fillRect(barX2 - 2, barY2 - 2, barW2 + 4, barH2 + 4);
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(barX2, barY2, barW2, barH2);
+                ctx.strokeStyle = '#000';
+              }
               if (op.rect !== 'WEATHER_ICON') {
                 barX2 = 130; barY2 = 95; barW2 = r[2]; barH2 = Math.min(24, Math.max(12, r[3]));
                 if (typeof window !== 'undefined' && window.__specMode === 'v2_grid' && rects.FOOTER_WEATHER){
@@ -1901,8 +1918,6 @@
           base.rects.OUT_HUMIDITY = [RIGHT_X, ROW1_Y + 2, 48, ROW_H];
           base.rects.OUT_WIND     = [RIGHT_X + 52, ROW1_Y + 2, 48, ROW_H];
           base.rects.OUT_PRESSURE = [RIGHT_X, ROW2_Y, 54, ROW_H];
-          // Disable OUT_WEATHER small label to avoid overlap; use FOOTER_WEATHER in footer
-          base.rects.OUT_WEATHER  = [RIGHT_X, ROW1_Y, 0, ROW_H];
           // bottom-right blank intentionally (no rect assigned)
 
           // Bottom-right quadrant: from RIGHT_X to right outer margin

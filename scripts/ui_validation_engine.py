@@ -865,9 +865,12 @@ class UIValidationEngine:
             annotated = img.copy()
             ImageDraw.Draw(annotated)
 
-            # Draw regions with issues
+            # Draw regions with issues (skip WEATHER_ICON to avoid any outline box)
             for region in validation.regions.values():
                 if region.issues:
+                    # Do not overlay WEATHER_ICON to keep icon borderless in reports
+                    if region.name.upper() == "WEATHER_ICON":
+                        continue
                     x, y, w, h = region.rect
                     # Color based on worst severity
                     severities = [i.severity for i in region.issues]

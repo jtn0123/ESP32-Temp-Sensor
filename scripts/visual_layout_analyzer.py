@@ -1223,6 +1223,10 @@ class VisualLayoutAnalyzer:
             # Skip invalid/non-positive rectangles
             if w <= 0 or h <= 0:
                 continue
+            # Do not draw a default outline for WEATHER_ICON in annotated output
+            # to avoid suggesting a visual border around the icon in screenshots
+            if a.name == "WEATHER_ICON":
+                continue
             draw.rectangle(
                 (x, y, x + w - 1, y + h - 1),
                 outline=(128, 128, 128, 255),
