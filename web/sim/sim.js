@@ -2305,6 +2305,19 @@
       const presetSel = document.getElementById('presetMode'); if (presetSel){ presetSel.value = 'normal'; presetSel.dispatchEvent(new Event('change')); }
       // Reset zoom
       setZoom(2); if (zoomEl) zoomEl.value = '2';
+      // Clear persisted panel open states
+      try{
+        const suffix = (function(){
+          try{
+            const variant = (QS.get('variant') || (window.UI_SPEC && window.UI_SPEC.defaultVariant) || 'v1');
+            const specMode = (typeof window !== 'undefined' && window.__specMode) ? String(window.__specMode) : 'v1';
+            return `${variant}::${specMode}`;
+          }catch(e){ return 'v1::v1'; }
+        })();
+        ['regionInspector','validationPanel','advancedDebugDetails'].forEach(id=>{
+          try{ localStorage.removeItem(`sim_panel_open::${id}::${suffix}`); }catch(e){}
+        });
+      }catch(e){}
       // Redraw
       draw(window.lastData || {});
     });
