@@ -13,6 +13,7 @@ import sys
 import threading
 import time
 import webbrowser
+import subprocess
 
 
 def find_free_port():
@@ -36,6 +37,16 @@ def start_server(port, directory):
             if args[1] != "200":
                 super().log_message(format, *args)
 
+        def end_headers(self):
+            # Disable caching to ensure updated JS/JSON are always fetched
+            try:
+                self.send_header("Cache-Control", "no-store, no-cache, must-revalidate")
+                self.send_header("Pragma", "no-cache")
+                self.send_header("Expires", "0")
+            except Exception:
+                pass
+            super().end_headers()
+
     with socketserver.TCPServer(("", port), QuietHTTPRequestHandler) as httpd:
         print(f"🚀 Simulator server running at http://localhost:{port}/")
         print(f"📁 Serving files from: {directory}")
@@ -57,6 +68,43 @@ def main():
     if not sim_directory.exists():
         print(f"❌ Error: Simulator directory not found at {sim_directory}")
         sys.exit(1)
+
+    # Proactively (re)generate UI assets so edits to config/ui_spec.json are reflected
+    try:
+        gen_script = repo_root / "scripts" / "gen_ui.py"
+        if gen_script.exists():
+            print("🔧 Generating UI assets from config/ui_spec.json…")
+            subprocess.run([sys.executable, str(gen_script)], check=False)
+        else:
+            print(f"⚠️ UI generator not found at {gen_script}")
+    except Exception as e:
+        print(f"⚠️ Failed to generate UI assets: {e}")
+
+    # Start a lightweight watcher to auto-regenerate on changes to ui_spec.json
+    def _watch_and_regen():
+        spec_path = repo_root / "config" / "ui_spec.json"
+        last_mtime = None
+        while True:
+            try:
+                if spec_path.exists():
+                    mtime = spec_path.stat().st_mtime
+                    if last_mtime is None:
+                        last_mtime = mtime
+                    elif mtime != last_mtime:
+                        last_mtime = mtime
+                        print("🔁 Detected ui_spec.json change, regenerating…")
+                        subprocess.run([sys.executable, str(gen_script)], check=False)
+                time.sleep(1.0)
+            except Exception:
+                # Never crash the watcher; wait and retry
+                time.sleep(1.0)
+
+    try:
+        watcher = threading.Thread(target=_watch_and_regen, daemon=True)
+        watcher.start()
+        print("👀 Watching config/ui_spec.json for changes…")
+    except Exception as e:
+        print(f"⚠️ Could not start watcher: {e}")
 
     # Find a free port
     port = find_free_port()

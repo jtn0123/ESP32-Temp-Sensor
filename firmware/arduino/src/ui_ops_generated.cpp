@@ -10,13 +10,13 @@ const UiOpHeader kOps_chrome[] = {
     { OP_LINE, 255, 0, 0, 0, 121, 249, 121, NULL, NULL },
     { OP_LINE, 255, 0, 0, 0, 0, 0, 121, NULL, NULL },
     { OP_LINE, 255, 0, 0, 249, 0, 249, 121, NULL, NULL },
-    { OP_LINE, 255, 0, 0, 125, 18, 125, 121, NULL, NULL },
+    { OP_LINE, 255, 0, 0, 125, 14, 125, 121, NULL, NULL },
     { OP_LINE, 255, 0, 0, 1, 90, 249, 90, NULL, NULL },
 };
 const int kOps_chrome_count = sizeof(kOps_chrome)/sizeof(kOps_chrome[0]);
 
 const UiOpHeader kOps_header_centered[] = {
-    { OP_LINE, 255, 0, 0, 1, 18, 249, 18, NULL, NULL },
+    { OP_LINE, 255, 0, 0, 1, 14, 249, 14, NULL, NULL },
     { OP_TEXT, 2, 1, 0, 0, 0, 0, 0, "{room_name}", NULL },
     { OP_TEXTCENTEREDIN, 3, 3, 2, 1, 0, 0, 0, "{time_hhmm}", NULL },
     { OP_TEXT, 4, 3, 1, 0, 0, 0, 0, "v{fw_version}", NULL },
@@ -24,7 +24,7 @@ const UiOpHeader kOps_header_centered[] = {
 const int kOps_header_centered_count = sizeof(kOps_header_centered)/sizeof(kOps_header_centered[0]);
 
 const UiOpHeader kOps_header[] = {
-    { OP_LINE, 255, 0, 0, 1, 18, 249, 18, NULL, NULL },
+    { OP_LINE, 255, 0, 0, 1, 14, 249, 14, NULL, NULL },
     { OP_TEXT, 2, 1, 0, 0, 0, 0, 0, "{room_name}", NULL },
     { OP_TIMERIGHT, 4, 3, 1, 0, 0, 0, 0, "time_hhmm", NULL },
 };

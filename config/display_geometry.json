@@ -1,6 +1,6 @@
 {
   "layout_version": 1,
-  "layout_crc": "0x7B69C740",
+  "layout_crc": "0xE7D9B88A",
   "canvas": {
     "w": 250,
     "h": 122
@@ -14,44 +14,44 @@
     "HEADER_NAME": [
       6,
       2,
-      160,
-      14
-    ],
-    "HEADER_VERSION": [
-      172,
-      2,
-      72,
-      14
+      94,
+      12
     ],
     "HEADER_TIME_CENTER": [
       100,
       2,
       50,
-      14
+      12
+    ],
+    "HEADER_VERSION": [
+      172,
+      2,
+      72,
+      12
     ],
     "INSIDE_TEMP": [
       6,
-      36,
+      30,
       118,
-      28
+      20
     ],
     "INSIDE_HUMIDITY": [
       6,
-      66,
+      50,
       56,
-      14
+      12
     ],
     "INSIDE_PRESSURE": [
       6,
-      80,
+      62,
       115,
-      14
+      12
     ],
     "OUT_TEMP": [
-      129,
-      36,
-      94,
-      28
+      130,
+      30,
+      118,
+      20
     ],
     "WEATHER_ICON": [
       170,
@@ -59,23 +59,23 @@
       30,
       28
     ],
-    "OUT_PRESSURE": [
-      177,
-      55,
-      64,
-      14
-    ],
     "OUT_HUMIDITY": [
-      131,
-      73,
-      44,
-      14
+      130,
+      50,
+      58,
+      12
+    ],
+    "OUT_PRESSURE": [
+      130,
+      62,
+      58,
+      12
     ],
     "OUT_WIND": [
-      177,
-      73,
+      190,
+      50,
       44,
-      14
+      12
     ],
     "FOOTER_STATUS": [
       6,
