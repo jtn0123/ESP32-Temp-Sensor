@@ -46,7 +46,6 @@ class TestLayoutGeometryPipeline:
             "INSIDE_HUMIDITY",
             "OUT_TEMP",
             "OUT_HUMIDITY",
-            "OUT_WEATHER",
             "FOOTER_STATUS",
             "FOOTER_WEATHER",
         ]
@@ -78,7 +77,6 @@ class TestLayoutGeometryPipeline:
         allowed_overlaps = [
             ("HEADER_NAME", "HEADER_TIME_CENTER"),  # Time can overlap with name
             ("INSIDE_HUMIDITY", "INSIDE_PRESSURE"),  # Pressure and humidity can overlap
-            ("OUT_WEATHER", "OUT_HUMIDITY"),  # Weather and humidity can overlap
             ("OUT_PRESSURE", "OUT_WIND"),  # Pressure and wind can overlap
         ]
 

@@ -67,8 +67,6 @@ class TestUIValidationEdgeCases:
         expected_collisions = [
             ("HEADER_NAME", "HEADER_TIME_CENTER"),  # Time can overlap with name
             ("INSIDE_HUMIDITY", "INSIDE_PRESSURE"),  # Pressure and humidity can overlap
-            ("OUT_WEATHER", "OUT_HUMIDITY"),  # Weather and humidity can overlap
-            ("OUT_HUMIDITY", "OUT_WEATHER"),  # Same overlap, different order
             ("OUT_PRESSURE", "OUT_WIND"),  # Pressure and wind can overlap
         ]
 
