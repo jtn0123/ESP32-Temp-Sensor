@@ -7,11 +7,11 @@
   let HEADER_TIME_CENTER = [100,  2,  50, 14];
   let INSIDE_TEMP = [  6, 36, 118, 28];
   let INSIDE_HUMIDITY = [  6, 66, 115, 14];
-  let INSIDE_PRESSURE = [  6, 81, 115, 14];
+  let INSIDE_PRESSURE = [  6, 105, 115, 14];
   let OUT_TEMP    = [129, 36,  94, 28];
   let WEATHER_ICON = [170, 92,  30, 28];
   // Outside metric regions with meaningful names
-  let OUT_PRESSURE = [177, 68,  64, 14]; // Outside pressure
+  let OUT_PRESSURE = [177, 55,  64, 14]; // Outside pressure
   let OUT_HUMIDITY = [131, 73,  44, 14]; // Outside humidity
   let OUT_WIND     = [177, 73,  44, 14]; // Wind speed
 
@@ -155,53 +155,70 @@
     // Ensure stroke styles
     ctx.strokeStyle = '#000';
     ctx.fillStyle = '#000';
-    const drawCloud = () => {
-      // Three-lobe cloud outline
+    const drawCloud = (yOffset = 0) => {
+      // Three-lobe cloud outline with slight base curve for 1-bit clarity
       const r1 = Math.floor(minDim * 0.22);
       const r2 = Math.floor(minDim * 0.28);
       const r3 = Math.floor(minDim * 0.20);
-      const cy = startY + Math.floor(iconH * 0.58);
+      const cy = startY + Math.floor(iconH * 0.60) + yOffset;
       const cx1 = startX + r1 + 2;
       const cx2 = iconCx;
       const cx3 = startX + iconW - r3 - 2;
       ctx.beginPath();
       ctx.arc(cx1, cy, r1, Math.PI, 0);
-      ctx.arc(cx2, cy - Math.floor(r2*0.5), r2, Math.PI, 0);
+      ctx.arc(cx2, cy - Math.floor(r2*0.6), r2, Math.PI*0.9, Math.PI*0.1);
       ctx.arc(cx3, cy, r3, Math.PI, 0);
-      ctx.lineTo(cx3 + r3, cy + Math.floor(r1*0.75));
-      ctx.lineTo(cx1 - r1, cy + Math.floor(r1*0.75));
+      // base
+      const baseY = cy + Math.floor(r1*0.8);
+      ctx.lineTo(cx3 + r3, baseY);
+      ctx.lineTo(cx1 - r1, baseY);
       ctx.closePath();
       ctx.stroke();
     };
+    const drawSunRays = (r, count = 8) => {
+      for (let i=0;i<count;i++){
+        const a = (Math.PI*2 * i)/count;
+        const dx = Math.round(Math.cos(a) * (r + 4));
+        const dy = Math.round(Math.sin(a) * (r + 4));
+        ctx.beginPath(); ctx.moveTo(iconCx, iconCy); ctx.lineTo(iconCx + dx, iconCy + dy); ctx.stroke();
+      }
+    };
     switch (category){
       case 'rain': {
-        // Raindrops
+        drawCloud(-2);
+        // Raindrops under cloud
         for (let i=0;i<3;i++){
           ctx.beginPath();
-          ctx.moveTo(startX + 6 + i*6, iconCy+2);
-          ctx.lineTo(startX + 3 + i*6, iconCy+8);
+          const dropX = startX + 6 + i*6;
+          const dropY = iconCy + Math.floor(minDim*0.10);
+          ctx.moveTo(dropX, dropY);
+          ctx.lineTo(dropX - 3, dropY + 6);
           ctx.stroke();
         }
         break;
       }
       case 'snow': {
-        for (let i=0;i<2;i++) text(startX + 6 + i*8, iconCy+2, '*', 10);
+        drawCloud(-2);
+        for (let i=0;i<3;i++) text(startX + 4 + i*6, iconCy + Math.floor(minDim*0.12), '*', 10);
         break;
       }
       case 'storm': {
+        drawCloud(-2);
         ctx.beginPath();
-        ctx.moveTo(iconCx-6, iconCy+2);
+        ctx.moveTo(iconCx-6, iconCy+4);
         ctx.lineTo(iconCx, iconCy-2);
-        ctx.lineTo(iconCx-2, iconCy+6);
-        ctx.lineTo(iconCx+6, iconCy+2);
+        ctx.lineTo(iconCx-2, iconCy+8);
+        ctx.lineTo(iconCx+6, iconCy+4);
         ctx.stroke();
         break;
       }
       case 'fog': {
+        drawCloud(0);
         for (let i=0;i<3;i++){
           ctx.beginPath();
-          ctx.moveTo(startX+2, startY+6+i*6);
-          ctx.lineTo(startX+iconW-2, startY+6+i*6);
+          const yy = startY + Math.floor(iconH*0.35) + i*5;
+          ctx.moveTo(startX+2, yy);
+          ctx.lineTo(startX+iconW-2, yy);
           ctx.stroke();
         }
         break;
@@ -212,10 +229,11 @@
       }
       case 'partly': {
         drawCloud();
-        const r = Math.floor(minDim*0.18);
-        const sx = startX + Math.floor(iconW*0.25);
-        const sy = startY + Math.floor(iconH*0.3);
+        const r = Math.floor(minDim*0.16);
+        const sx = startX + Math.floor(iconW*0.28);
+        const sy = startY + Math.floor(iconH*0.32);
         ctx.beginPath(); ctx.arc(sx, sy, r, 0, Math.PI*2); ctx.stroke();
+        drawSunRays(r, 6);
         break;
       }
       case 'night': {
@@ -230,7 +248,7 @@
       }
       case 'night-partly': {
         drawCloud();
-        const r = Math.floor(minDim*0.22);
+        const r = Math.floor(minDim*0.20);
         const sx = startX + Math.floor(iconW*0.30);
         const sy = startY + Math.floor(iconH*0.35);
         ctx.beginPath(); ctx.arc(sx, sy, r, 0, Math.PI*2); ctx.stroke();
@@ -241,20 +259,22 @@
         break;
       }
       case 'wind': {
-        // Two wavy gust lines
+        // Gust lines with hooks for direction
         const y0 = iconCy - 3, y1 = iconCy + 4;
-        ctx.beginPath(); ctx.moveTo(startX+2, y0); ctx.quadraticCurveTo(iconCx, y0-4, startX+iconW-2, y0); ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(startX+2, y1); ctx.quadraticCurveTo(iconCx, y1+4, startX+iconW-6, y1); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(startX+2, y0); ctx.quadraticCurveTo(iconCx, y0-4, startX+iconW-6, y0); ctx.lineTo(startX+iconW-2, y0+2); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(startX+2, y1); ctx.quadraticCurveTo(iconCx, y1+4, startX+iconW-10, y1); ctx.lineTo(startX+iconW-6, y1+2); ctx.stroke();
         break;
       }
       case 'hail': {
-        drawCloud();
-        for (let i=0;i<3;i++) text(startX + 6 + i*6, iconCy+6, '•', 10);
+        drawCloud(-2);
+        for (let i=0;i<3;i++) text(startX + 6 + i*6, iconCy + Math.floor(minDim*0.12), '•', 10);
         break;
       }
       default: {
-        // Sunny: simple circle
-        ctx.beginPath(); ctx.arc(iconCx, iconCy, Math.floor(minDim/3), 0, Math.PI*2); ctx.stroke();
+        // Sunny: circle + rays
+        const r = Math.floor(minDim/3);
+        ctx.beginPath(); ctx.arc(iconCx, iconCy, r, 0, Math.PI*2); ctx.stroke();
+        drawSunRays(r, 8);
         break;
       }
     }
@@ -289,6 +309,22 @@
     if (typeof requestAnimationFrame !== 'undefined') requestAnimationFrame(doRedraw);
     else setTimeout(doRedraw, 16);
   }
+  // Normalize external SVGs to render with light-mode friendly colors.
+  // - Force any use of currentColor to black to avoid OS/browser dark-mode inversions.
+  // - Ensure the root <svg> has a black color fallback for any color references.
+  function normalizeSvgForLightMode(svgText){
+    try{
+      let s = String(svgText || '');
+      // Replace any currentColor usages so paths/strokes render black
+      s = s.replace(/currentColor/gi, '#000');
+      // Ensure root svg has a color attribute defaulting to black
+      s = s.replace(/<svg([^>]*?)>/i, (m, attrs) => {
+        if (/\scolor\s*=/.test(attrs)) return m;
+        return `<svg${attrs} color="#000">`;
+      });
+      return s;
+    }catch(_){ return svgText; }
+  }
   async function fetchMdiSvgText(name){
     let entry = __mdiCache.get(name);
     if (entry && entry.svgText) return entry.svgText;
@@ -296,10 +332,11 @@
     try{
       const res = await fetch(url.href);
       const txt = await res.text();
+      const norm = normalizeSvgForLightMode(txt);
       entry = entry || { svgText: '', bitmaps: new Map() };
-      entry.svgText = txt;
+      entry.svgText = norm;
       __mdiCache.set(name, entry);
-      return txt;
+      return norm;
     }catch(_){ return ''; }
   }
   function thresholdTo1Bit(offCtx, w, h, threshold){
@@ -340,6 +377,9 @@
               if (!oc) return;
               oc.imageSmoothingEnabled = false;
               oc.clearRect(0,0,off.width,off.height);
+              // Fill white to ensure background remains white after 1-bit thresholding
+              oc.fillStyle = '#fff';
+              oc.fillRect(0,0,off.width,off.height);
               oc.drawImage(img, 0, 0, off.width, off.height);
               thresholdTo1Bit(oc, off.width, off.height, 160);
               let e = __mdiCache.get(mdiName); if (!e) { e = { svgText, bitmaps: new Map() }; __mdiCache.set(mdiName, e); }
@@ -1442,10 +1482,7 @@
       if (name.includes('_INNER') || name.includes('_BADGE') || name.includes('LABEL_BOX')) {
         return;
       }
-      // EXPLICITLY skip WEATHER_ICON to prevent any border
-      if (name === 'WEATHER_ICON') {
-        return;
-      }
+      // Allow WEATHER_ICON to render in overlay so it can be positioned visually
       if (searchQuery){
         const q = searchQuery.toLowerCase();
         if (!String(name).toLowerCase().includes(q)) return;
@@ -2633,8 +2670,13 @@
     if (variantSel.parentElement && variantSel.parentElement.tagName === 'LABEL') {
       variantSel.parentElement.style.display = 'none';
     }
-    // Set to v2_grid as default (this is handled by the spec selector now)
-    variantSel.value = 'v2_grid';
+    // Set variant based on specMode (only force v2_grid when explicitly requested)
+    const __specModeParam = (QS.get('specMode') || '').toLowerCase();
+    if (__specModeParam === 'v2_grid') {
+      variantSel.value = 'v2_grid';
+    } else {
+      variantSel.value = (typeof window !== 'undefined' && window.UI_SPEC && window.UI_SPEC.defaultVariant) || 'v2';
+    }
     
   }
   // Presets
@@ -2671,9 +2713,9 @@
       draw(base);
     });
   }
-  // Initialize v2 layout directly (only version now)
+  // Initialize optional specMode override (e.g., ?specMode=v2_grid)
   {
-    const which = 'v2_grid';
+    const which = (QS.get('specMode') || '').toLowerCase();
     try{
       if (which === 'v2_grid'){
           // Construct a v2 spec by cloning UI_SPEC and snapping rects + fonts
@@ -2772,12 +2814,6 @@
               if (regionVisible.size === 0) regionSelectionActive = false;
             }
           }catch(e){}
-        } else {
-          // Reload original generated UI_SPEC by reloading page without param
-          // More stable than trying to restore deep-cloned structure across toggles
-          const url = new URL(window.location.href);
-          window.location.replace(url.toString());
-          return;
       }
     }catch(e){}
     refreshRegionList();

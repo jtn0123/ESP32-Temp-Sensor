@@ -1,6 +1,6 @@
 {
   "layout_version": 1,
-  "layout_crc": "0x86368D28",
+  "layout_crc": "0x369D88FB",
   "canvas": {
     "w": 250,
     "h": 122
@@ -43,7 +43,7 @@
     ],
     "INSIDE_PRESSURE": [
       6,
-      81,
+      105,
       115,
       14
     ],
@@ -61,7 +61,7 @@
     ],
     "OUT_PRESSURE": [
       177,
-      68,
+      55,
       64,
       14
     ],
