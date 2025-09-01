@@ -31,7 +31,7 @@ const UiOpHeader kOps_header[] = {
 const int kOps_header_count = sizeof(kOps_header)/sizeof(kOps_header[0]);
 
 const UiOpHeader kOps_inside[] = {
-    { OP_TEXT, 255, 1, 0, 30, 22, 0, 0, "INSIDE", NULL },
+    { OP_TEXT, 255, 1, 0, 30, 20, 0, 0, "INSIDE", NULL },
     { OP_TEMPGROUPCENTERED, 7, 0, 2, 0, 0, 0, 0, "inside_temp_f", NULL },
     { OP_TEXT, 5, 2, 0, 0, 0, 0, 0, "{inside_hum_pct}% RH", NULL },
     { OP_TEXT, 6, 2, 0, 0, 3, 0, 0, "{pressure_hpa:.1f} hPa", NULL },
@@ -39,7 +39,7 @@ const UiOpHeader kOps_inside[] = {
 const int kOps_inside_count = sizeof(kOps_inside)/sizeof(kOps_inside[0]);
 
 const UiOpHeader kOps_outside[] = {
-    { OP_TEXT, 255, 1, 0, 145, 22, 0, 0, "OUTSIDE", NULL },
+    { OP_TEXT, 255, 1, 0, 145, 20, 0, 0, "OUTSIDE", NULL },
     { OP_TEMPGROUPCENTERED, 10, 0, 2, 0, 0, 0, 0, "outside_temp_f", NULL },
     { OP_ICONIN, 12, 0, 0, 0, 0, 0, 0, "weather", NULL },
     { OP_TEXT, 9, 2, 0, 0, 3, 0, 0, "{outside_pressure_hpa:.0f} hPa", NULL },
