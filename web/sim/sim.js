@@ -50,6 +50,7 @@
   let showLabels = false;
   let simulateGhosting = false;
   let geometryOnly = false; // when true, render only geometry (for labeled mode)
+  let labelsOnlyMode = false; // when true, hide normal content and show only region labels
   // removed highlightIssues toggle per feedback
   let GJSON = null;    // centralized geometry JSON
   // Region inspector state
@@ -149,6 +150,7 @@
 
   // Draw simplified glyph for a given category
   function drawWeatherGlyph(category, startX, startY, iconW, iconH){
+    if (!isFinite(iconW) || !isFinite(iconH) || iconW <= 0 || iconH <= 0) return;
     const iconCx = startX + Math.floor(iconW/2);
     const iconCy = startY + Math.floor(iconH/2);
     const minDim = Math.min(iconW, iconH);
@@ -372,16 +374,23 @@
           const img = new Image();
           img.onload = ()=>{
             try{
-              const off = document.createElement('canvas'); off.width = Math.max(1,w); off.height = Math.max(1,h);
-              const oc = off.getContext('2d');
-              if (!oc) return;
+              // Oversample at 4x for crisp 1-bit edges, then downscale without smoothing
+              const SCALE = 4;
+              const hiW = Math.max(1, w * SCALE);
+              const hiH = Math.max(1, h * SCALE);
+              const offHi = document.createElement('canvas'); offHi.width = hiW; offHi.height = hiH;
+              const ocHi = offHi.getContext('2d'); if (!ocHi) return;
+              ocHi.imageSmoothingEnabled = true;
+              ocHi.clearRect(0,0,hiW,hiH);
+              ocHi.fillStyle = '#fff';
+              ocHi.fillRect(0,0,hiW,hiH);
+              ocHi.drawImage(img, 0, 0, hiW, hiH);
+              thresholdTo1Bit(ocHi, hiW, hiH, 150);
+              const off = document.createElement('canvas'); off.width = Math.max(1, w); off.height = Math.max(1, h);
+              const oc = off.getContext('2d'); if (!oc) return;
               oc.imageSmoothingEnabled = false;
               oc.clearRect(0,0,off.width,off.height);
-              // Fill white to ensure background remains white after 1-bit thresholding
-              oc.fillStyle = '#fff';
-              oc.fillRect(0,0,off.width,off.height);
-              oc.drawImage(img, 0, 0, off.width, off.height);
-              thresholdTo1Bit(oc, off.width, off.height, 160);
+              oc.drawImage(offHi, 0, 0, hiW, hiH, 0, 0, off.width, off.height);
               let e = __mdiCache.get(mdiName); if (!e) { e = { svgText, bitmaps: new Map() }; __mdiCache.set(mdiName, e); }
               e.bitmaps.set(sizeKey, off);
               URL.revokeObjectURL(url);
@@ -1306,8 +1315,9 @@
   }
   
   function drawValidationOverlay() {
+    // Suppress validation overlay during labels-only to reduce clutter
     // Draw validation overlay when enabled and there are issues
-    if (!validationEnabled || validationIssues.length === 0) return;
+    if (labelsOnlyMode || !validationEnabled || validationIssues.length === 0) return;
     
     ctx.save();
     
@@ -1428,7 +1438,7 @@
   }
 
   function drawGridOverlay(){
-    if (!showGrid) return;
+    if (!showGrid || labelsOnlyMode) return;
     ctx.save();
     ctx.strokeStyle = '#bbb';
     ctx.lineWidth = 1;
@@ -1511,34 +1521,36 @@
     });
     // Distinguish chrome/border lines by drawing them in green in overlay mode
     try {
-      const spec = (typeof window !== 'undefined') ? window.UI_SPEC : null;
-      const chrome = (spec && spec.components && spec.components.chrome) ? spec.components.chrome : [];
-      ctx.strokeStyle = '#0a0';
-      ctx.lineWidth = 2;
-      chrome.forEach(op=>{
-        if (op && op.op === 'line' && Array.isArray(op.from) && Array.isArray(op.to)){
-          let fx = (op.from[0]|0);
-          let fy = (op.from[1]|0);
-          let tx = (op.to[0]|0);
-          let ty = (op.to[1]|0);
-          // Snap v2_grid overlay chrome to spec positions (header y=18, divider x=125 from 18..121, footer y=84)
-          try{
-            if (typeof window !== 'undefined' && window.__specMode === 'v2_grid'){
-              if (fy === 16 && ty === 16) { fy = ty = 18; }
-              if (fx === 128 && tx === 128) { fx = tx = 125; if (fy === 16) fy = 18; }
-              if (fy === 88 && ty === 88) { fy = ty = 84; }
-            }
-          }catch(e){}
-          fx += 0.5; fy += 0.5; tx += 0.5; ty += 0.5;
-          ctx.beginPath();
-          ctx.moveTo(fx, fy);
-          ctx.lineTo(tx, ty);
-          ctx.stroke();
-        }
-      });
-      // Also outline the full canvas as a green border
-      ctx.strokeRect(0.5, 0.5, WIDTH-1, HEIGHT-1);
-      // no extra issue highlighter
+      if (!labelsOnlyMode){
+        const spec = (typeof window !== 'undefined') ? window.UI_SPEC : null;
+        const chrome = (spec && spec.components && spec.components.chrome) ? spec.components.chrome : [];
+        ctx.strokeStyle = '#0a0';
+        ctx.lineWidth = 2;
+        chrome.forEach(op=>{
+          if (op && op.op === 'line' && Array.isArray(op.from) && Array.isArray(op.to)){
+            let fx = (op.from[0]|0);
+            let fy = (op.from[1]|0);
+            let tx = (op.to[0]|0);
+            let ty = (op.to[1]|0);
+            // Snap v2_grid overlay chrome to spec positions (header y=18, divider x=125 from 18..121, footer y=84)
+            try{
+              if (typeof window !== 'undefined' && window.__specMode === 'v2_grid'){
+                if (fy === 16 && ty === 16) { fy = ty = 18; }
+                if (fx === 128 && tx === 128) { fx = tx = 125; if (fy === 16) fy = 18; }
+                if (fy === 88 && ty === 88) { fy = ty = 84; }
+              }
+            }catch(e){}
+            fx += 0.5; fy += 0.5; tx += 0.5; ty += 0.5;
+            ctx.beginPath();
+            ctx.moveTo(fx, fy);
+            ctx.lineTo(tx, ty);
+            ctx.stroke();
+          }
+        });
+        // Also outline the full canvas as a green border
+        ctx.strokeRect(0.5, 0.5, WIDTH-1, HEIGHT-1);
+        // no extra issue highlighter
+      }
     } catch(e){}
     ctx.restore();
   }
@@ -1677,6 +1689,7 @@
       for (const cname of list){
         const ops = (spec.components || {})[cname] || [];
         for (const op of ops){
+          try{
           switch(op.op){
             case 'line': {
               const fx = (op.from && op.from[0]) || 0;
@@ -1689,12 +1702,17 @@
               break;
             }
             case 'text': {
-              // Check "when" condition if present
+              // Check "when" condition if present (treat DEFAULTS as fallback source)
               if (op.when) {
                 const whenStr = String(op.when);
                 if (whenStr.startsWith('has(') && whenStr.endsWith(')')) {
                   const field = whenStr.slice(4, -1);
-                  if (data[field] === undefined || data[field] === null) {
+                  let present = !(data[field] === undefined || data[field] === null);
+                  if (!present && typeof window !== 'undefined' && window.DEFAULTS) {
+                    const dv = window.DEFAULTS[field];
+                    present = !(dv === undefined || dv === null);
+                  }
+                  if (!present) {
                     break; // Skip this operation
                   }
                 }
@@ -1707,14 +1725,22 @@
                 // Basic formatter: support fw_version injection and simple passthrough
                 if (k === 'fw_version' && typeof window !== 'undefined' && typeof window.UI_FW_VERSION === 'string') return window.UI_FW_VERSION;
                 const base = k.replace(/[:].*$/, '').replace(/->.*$/, '');
-                const v = (data[base] !== undefined) ? data[base] : data[base.replace(/_f$/, '')];
-                if (v === undefined || v === null) {
-                  // Track missing data field
+                // Prefer provided data; fall back to DEFAULTS when missing
+                let val = (data[base] !== undefined && data[base] !== null)
+                  ? data[base]
+                  : ((typeof window !== 'undefined' && window.DEFAULTS) ? window.DEFAULTS[base] : undefined);
+                if (val === undefined || val === null) {
+                  // Secondary fallback: allow "_f" alias (e.g., inside_temp_f)
+                  const alias = base.replace(/_f$/, '');
+                  val = (data[alias] !== undefined && data[alias] !== null)
+                    ? data[alias]
+                    : ((typeof window !== 'undefined' && window.DEFAULTS) ? window.DEFAULTS[alias] : undefined);
+                }
+                if (val === undefined || val === null) {
                   if (validationEnabled) missingDataFields.add(base);
                   return '';
                 }
                 // conversions
-                let val = v;
                 const conv = k.match(/->([a-z]+)/);
                 if (conv){
                   const to = conv[1]; const num = parseFloat(String(val));
@@ -1937,7 +1963,14 @@
               }
               const fpx = ((fonts['small']||{}).px) || pxSmall;
               let barX = r[0], barY = r[1], barW = r[2], barH = r[3];
-              const isV2 = (typeof window !== 'undefined' && window.__specMode && String(window.__specMode).startsWith('v2'));
+              const isV2 = (function(){
+                try{
+                  const mode = (typeof window !== 'undefined' && window.__specMode) ? String(window.__specMode) : '';
+                  const variant = (typeof window !== 'undefined' && window.QS) ? (window.QS.get('variant') || '') : '';
+                  const defVar = (typeof window !== 'undefined' && window.UI_SPEC && window.UI_SPEC.defaultVariant) ? String(window.UI_SPEC.defaultVariant) : '';
+                  return mode.startsWith('v2') || variant.startsWith('v2') || defVar.startsWith('v2');
+                }catch(_){ return false; }
+              })();
               // For WEATHER_ICON region in v2: left-justify icon in its rect (no border)
               let iconW, iconH, startX, startY;
               if (op.rect === 'WEATHER_ICON' && isV2) {
@@ -2013,9 +2046,10 @@
                 }
               }
               // Centered icon+text path for legacy
-              let iconW2 = Math.min(26, barW2 - 60);
-              let iconH2 = Math.min(22, barH2 - 4);
-              const gap2 = 8;
+              if (barW2 <= 0 || barH2 <= 0) break;
+              let iconW2 = Math.max(12, Math.min(26, barW2 - 4));
+              let iconH2 = Math.max(12, Math.min(22, barH2 - 4));
+              const gap2 = Math.max(4, Math.min(10, Math.floor(barW2 * 0.10)));
               const label2 = shortConditionLabel(data.weather || 'cloudy');
               ctx.font = `${fpx2}px ${FONT_STACK}`; ctx.textBaseline='top';
               const textW2 = ctx.measureText(label2).width;
@@ -2094,6 +2128,10 @@
             }
             default: break;
           }
+          }catch(err){
+            try{ console.error('drawFromSpec op failed:', (op&&op.op), (op&&op.rect), err); }catch(_){ }
+            // Continue rendering remaining ops/components
+          }
         }
       }
     }catch(e){ }
@@ -2110,6 +2148,8 @@
     inside_hum_pct: 47,
     outside_temp_f: 68.4,
     outside_hum_pct: 53,
+    // Provide outside pressure so OUT_PRESSURE renders by default
+    outside_pressure_hpa: 1016,
     weather: 'cloudy',
     wind_mph: 4.2,
     wind_mps: 1.88,  // Add default wind_mps value
@@ -2255,7 +2295,12 @@
     
     // Draw overlays only if enabled (these are drawn on top of the thresholded image)
     drawGridOverlay();
+    // In labels-only, force showLabels=true and showRects=true temporarily for overlay
+    const prevShowLabels = showLabels;
+    const prevShowRects = showRects;
+    if (labelsOnlyMode){ showLabels = true; showRects = true; }
     drawRectsOverlay();
+    if (labelsOnlyMode){ showLabels = prevShowLabels; showRects = prevShowRects; }
     
     // Draw validation overlay (it checks its own conditions internally)
     drawValidationOverlay();
@@ -2319,6 +2364,48 @@
   if (typeof window !== 'undefined') {
     window.draw = draw;
   }
+
+  // Canvas click → toggle labels-only when clicking a label region
+  (function setupCanvasClicks(){
+    try{
+      const c = document.getElementById('epd');
+      if (!c) return;
+      c.addEventListener('click', (ev)=>{
+        if (!GJSON || !GJSON.rects) return;
+        const rect = c.getBoundingClientRect();
+        const zoom = Math.max(1, parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--zoom')) || 2);
+        const cx = Math.floor((ev.clientX - rect.left) / zoom);
+        const cy = Math.floor((ev.clientY - rect.top) / zoom);
+        // Find top-most matching region under cursor, preferring label regions
+        let clickedName = null;
+        for (const [name, r] of Object.entries(GJSON.rects)){
+          if (name.includes('_INNER') || name.includes('_BADGE')) continue;
+          const [x,y,w,h] = r;
+          if (cx >= x && cx <= x+w && cy >= y && cy <= y+h){
+            clickedName = name;
+            // Prefer label boxes when overlapping
+            if (/_LABEL_BOX$/.test(name) || name === 'WEATHER_ICON') break;
+          }
+        }
+        if (!clickedName) return;
+        const isLabelRegion = /_LABEL_BOX$/.test(clickedName) || clickedName === 'WEATHER_ICON';
+        if (isLabelRegion){
+          labelsOnlyMode = !labelsOnlyMode;
+          // When entering labels-only: hide normal content and show only labels
+          if (labelsOnlyMode){
+            geometryOnly = true; // skip drawFromSpec content
+            showRects = true; // ensure rect anchors visible (but overlay suppresses fills)
+            showLabels = true; // ensure labels visible
+            const rectsEl = document.getElementById('showRects'); if (rectsEl) rectsEl.checked = true;
+            const labelsEl = document.getElementById('showLabels'); if (labelsEl) labelsEl.checked = true;
+          } else {
+            geometryOnly = false;
+          }
+          draw(lastData);
+        }
+      });
+    }catch(e){}
+  })();
 
   async function load(){
     console.log('load() called');
@@ -2556,6 +2643,10 @@
       const presetSel = document.getElementById('presetMode'); if (presetSel){ presetSel.value = 'normal'; presetSel.dispatchEvent(new Event('change')); }
       // Reset zoom
       setZoom(2); if (zoomEl) zoomEl.value = '2';
+      // Exit labels-only mode if active
+      labelsOnlyMode = false;
+      geometryOnly = false;
+      draw(lastData);
       // Clear persisted panel open states
       try{
         const suffix = (function(){
@@ -2655,9 +2746,14 @@
       showRects = true; 
       const rectsEl = document.getElementById('showRects'); 
       if (rectsEl) rectsEl.checked = true; 
+      // Enter labels-only mode when user enables label regions from the toolbar
+      labelsOnlyMode = true; 
+      geometryOnly = true; 
     }
     // Do NOT toggle geometryOnly here; labels should overlay on full render
     // Force a full redraw to clear any artifacts
+    // If labels-only was active and user explicitly toggled labels, exit labels-only
+    if (!showLabels && labelsOnlyMode){ labelsOnlyMode = false; geometryOnly = false; }
     draw(lastData); 
   });
   const ghostEl = document.getElementById('simulateGhosting');

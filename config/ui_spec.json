@@ -13,15 +13,15 @@
     "HEADER_NAME": [6, 2, 160, 14],
     "HEADER_VERSION": [172, 2, 72, 14],
     "HEADER_TIME_CENTER": [100, 2, 50, 14],
-    "INSIDE_TEMP": [6, 36, 118, 28],
-    "INSIDE_HUMIDITY": [6, 66, 115, 14],
-    "INSIDE_PRESSURE": [6, 105, 115, 14],
+    "INSIDE_TEMP": [6, 30, 118, 28],
+    "INSIDE_HUMIDITY": [6, 66, 56, 14],
+    "INSIDE_PRESSURE": [6, 80, 115, 14],
     "OUT_TEMP":    [129, 36, 94, 28],
     "WEATHER_ICON":    [170, 92, 30, 28],
     "OUT_PRESSURE":  [177, 55, 64, 14],
     "OUT_HUMIDITY":  [131, 73, 44, 14],
     "OUT_WIND":  [177, 73, 44, 14],
-    "FOOTER_STATUS": [6, 92, 160, 28],
+    "FOOTER_STATUS": [6, 92, 118, 28],
     "FOOTER_WEATHER":    [202, 92, 46, 28]
   },
   "iconMap": [
@@ -48,7 +48,7 @@
       { "op": "line", "from": [1, 90], "to": [249, 90] }
     ],
     "header_centered": [
-      { "op": "line", "from": [1, 18], "to": [249, 18] },
+      { "op": "line", "from": [1, 16], "to": [249, 16] },
       { "op": "text", "rect": "HEADER_NAME", "font": "label", "align": "left", "text": "{room_name}", "truncate": "ellipsis" },
       { "op": "textCenteredIn", "rect": "HEADER_TIME_CENTER", "yOffset": 1, "font": "time", "text": "{time_hhmm}" },
       { "op": "text", "rect": "HEADER_VERSION", "font": "time", "align": "right", "text": "v{fw_version}" }
