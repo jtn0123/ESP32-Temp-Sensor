@@ -1888,6 +1888,7 @@
 
   function draw(data){
     console.log('draw() called with data:', data);
+    const __start = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
     
     // Ensure canvas is initialized
     if (!ctx) {
@@ -2007,6 +2008,12 @@
       ctx.putImageData(img,0,0);
       applyOneBitThreshold();
     }
+    // Update status UI
+    try {
+      const renderMs = (typeof performance !== 'undefined' && performance.now) ? (performance.now() - __start) : (Date.now() - window.__lastDrawAt);
+      window.__lastRenderMs = renderMs;
+      if (typeof updateStatusUI === 'function') updateStatusUI(renderMs);
+    } catch (e) {}
   }
   
   // Expose draw function to window for debug panel
@@ -2099,6 +2106,58 @@
         applyOneBitThreshold();
       }catch(e){ load(); }
     });
+  }
+  // Zoom control
+  function setZoom(z){
+    const zoom = Math.max(1, Math.min(4, Number(z) || 2));
+    try { localStorage.setItem('simZoom', String(zoom)); } catch(e){}
+    const root = document.documentElement;
+    if (root && root.style) root.style.setProperty('--zoom', zoom);
+    const zVal = document.getElementById('zoomValue'); if (zVal) zVal.textContent = `${zoom}×`;
+  }
+  const zoomEl = document.getElementById('zoom');
+  if (zoomEl){
+    const storedZ = (function(){ try { return parseFloat(localStorage.getItem('simZoom')||'2'); } catch(e){ return 2; } })();
+    if (!isNaN(storedZ)) { zoomEl.value = String(storedZ); setZoom(storedZ); }
+    zoomEl.addEventListener('input', (e)=>{ setZoom(e.target.value); });
+  }
+
+  // Reset UI button
+  const resetBtn = document.getElementById('resetUI');
+  if (resetBtn){
+    resetBtn.addEventListener('click', ()=>{
+      // Reset toggles
+      const ids = ['showWindows','stressMode','showGrid','showRects','showLabels','simulateGhosting'];
+      ids.forEach(id=>{ const el = document.getElementById(id); if (el){ el.checked = false; el.dispatchEvent(new Event('change')); }});
+      // Spec-only default true if present
+      const specEl = document.getElementById('specOnly'); if (specEl){ specEl.checked = true; specEl.disabled = true; }
+      // Reset selects
+      const presetSel = document.getElementById('presetMode'); if (presetSel){ presetSel.value = 'normal'; presetSel.dispatchEvent(new Event('change')); }
+      const layoutSel = document.getElementById('layoutMode'); if (layoutSel){ /* keep default */ }
+      // Reset zoom
+      setZoom(2); if (zoomEl) zoomEl.value = '2';
+      // Redraw
+      draw(window.lastData || {});
+    });
+  }
+
+  // Status bar/pill updates
+  function updateStatusUI(renderMs){
+    try{
+      const ready = !!window.__simReady;
+      const pill = document.getElementById('statusPill');
+      if (pill){
+        pill.textContent = ready ? 'Ready' : 'Not Ready';
+        pill.classList.remove('ok','warn');
+        pill.classList.add(ready ? 'ok' : 'warn');
+      }
+      const bar = document.getElementById('statusBar');
+      if (bar){
+        const issuesCount = (Array.isArray(validationIssues) ? validationIssues.length : 0);
+        const ms = (Number(renderMs)||0).toFixed(1);
+        bar.textContent = `${ready ? '✓ Simulator ready' : '… Initializing'} | ⟳ ${ms}ms | Issues: ${issuesCount}`;
+      }
+    }catch(e){}
   }
   
   const showWindowsEl = document.getElementById('showWindows');

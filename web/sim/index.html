@@ -4,80 +4,102 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>ESP32 eInk Room Node — Display Simulator</title>
-    <link rel="stylesheet" href="style.css?v=1" />
+    <link rel="stylesheet" href="style.css?v=2" />
     <style>
-      /* Inline minimal sizing CSS to satisfy tests */
-      #epd { width: 500px; height: 244px; }
-      @media (max-width: 600px){ #epd { width: 300px; height: 146px; } }
+      /* Minimal responsive sizing (kept for tests), real sizing via CSS vars */
+      @media (max-width: 600px){ canvas#epd { width: 300px; height: 146px; } }
     </style>
   </head>
   <body>
     <div class="wrap">
-      <h1>ESP32 eInk Room Node — Display Simulator (250×122)</h1>
-      <canvas id="epd" width="250" height="122" style="image-rendering: pixelated"></canvas>
-      <p id="hint">If you see a blank canvas, open your browser console for logs.</p>
-      <div class="controls">
-        <button id="refresh">Refresh</button>
-        <label><input type="checkbox" id="showWindows"> Show partial windows</label>
-        <label><input type="checkbox" id="stressMode"> Stress test</label>
-        <label><input type="checkbox" id="specOnly"> Spec only</label>
-        <label><input type="checkbox" id="showGrid"> Show 4px grid</label>
-        <label><input type="checkbox" id="showRects"> Show geometry rects</label>
-        <label><input type="checkbox" id="showLabels"> Label regions</label>
-        <label><input type="checkbox" id="simulateGhosting"> Simulate ghosting</label>
-        <label>
-          Preset
-          <select id="presetMode">
-            <option value="normal" selected>Normal</option>
-            <option value="low_batt">Low battery</option>
-            <option value="no_mqtt">No MQTT</option>
-            <option value="extreme">Extreme temps</option>
-            <option value="long_city">Very long city name</option>
-          </select>
-        </label>
-        <label>
-          Layout
-          <select id="layoutMode">
-            <option value="split3" selected>Split + 3-row status</option>
-          </select>
-        </label>
+      <header class="page-header">
+        <h1>Display Simulator (250×122) <span id="statusPill" class="status-pill" title="Simulator status">Not Ready</span></h1>
+        <div class="subtitle">ESP32 eInk Room Node</div>
+      </header>
+
+      <div class="layout">
+        <main class="device-pane">
+          <div class="device-frame" aria-label="E‑ink display frame">
+            <canvas id="epd" width="250" height="122" style="image-rendering: pixelated"></canvas>
+          </div>
+
+          <div class="toolbar" role="toolbar" aria-label="Simulator controls">
+            <div class="toolbar-row">
+              <button id="refresh">Refresh</button>
+              <label>Preset
+                <select id="presetMode">
+                  <option value="normal" selected>Normal</option>
+                  <option value="low_batt">Low battery</option>
+                  <option value="no_mqtt">No MQTT</option>
+                  <option value="extreme">Extreme temps</option>
+                  <option value="long_city">Very long city name</option>
+                </select>
+              </label>
+              <label>Layout
+                <select id="layoutMode">
+                  <option value="split3" selected>Split + 3-row status</option>
+                </select>
+              </label>
+              <label title="Zoom canvas">
+                Zoom
+                <input type="range" id="zoom" min="1" max="4" step="0.5" value="2" style="width:140px;" />
+                <span id="zoomValue" aria-live="polite">2×</span>
+              </label>
+              <button id="resetUI" title="Reset UI preferences">Reset UI</button>
+            </div>
+
+            <div class="toolbar-row toggles" aria-label="Overlays">
+              <label title="Show partial refresh windows"><input type="checkbox" id="showWindows"> Partial refresh windows</label>
+              <label title="Toggle stress data"><input type="checkbox" id="stressMode"> Stress test</label>
+              <label title="Render from spec only"><input type="checkbox" id="specOnly"> Spec only</label>
+              <label title="Show 4px grid"><input type="checkbox" id="showGrid"> Show 4px grid</label>
+              <label title="Show geometry rectangles"><input type="checkbox" id="showRects"> Show geometry rects</label>
+              <label title="Label regions"><input type="checkbox" id="showLabels"> Label regions</label>
+              <label title="Simulates e‑ink ghosting artifacts"><input type="checkbox" id="simulateGhosting"> Simulate ghosting</label>
+            </div>
+          </div>
+
+          <div id="statusBar" class="status-bar" role="status" aria-live="polite">Initializing…</div>
+        </main>
+
+        <aside class="inspector-pane">
+          <details id="regionInspector">
+            <summary>Region inspector</summary>
+            <div class="region-browser">
+              <div class="region-controls">
+                <label><input type="checkbox" id="filterAll" checked disabled> All</label>
+                <label><input type="checkbox" id="filterHeader" checked> Header</label>
+                <label><input type="checkbox" id="filterTemp" checked> Temp</label>
+                <label><input type="checkbox" id="filterLabel" checked> Label</label>
+                <label><input type="checkbox" id="filterFooter" checked> Footer</label>
+                <input id="regionSearch" type="text" placeholder="Search regions…">
+                <button id="resetRegionFilters">Reset</button>
+                <button id="showAllRects">Show all</button>
+                <button id="hideAllRects">Hide all</button>
+              </div>
+              <div class="legend">
+                <span class="legend-box legend-header"></span> Header
+                <span class="legend-box legend-temp"></span> Temp
+                <span class="legend-box legend-label"></span> Label
+                <span class="legend-box legend-footer"></span> Footer
+              </div>
+              <div id="regionList" class="region-list"></div>
+            </div>
+          </details>
+
+          <details id="validationPanel">
+            <summary>UI Validation <span id="validationBadge" class="badge"></span></summary>
+            <div class="validation-controls">
+              <label><input type="checkbox" id="enableValidation" checked> Enable real-time validation</label>
+              <button id="runValidation">Run Full Validation</button>
+              <button id="clearValidation">Clear</button>
+            </div>
+            <div id="validationResults" class="validation-results">
+              <div class="muted">No validation issues detected</div>
+            </div>
+          </details>
+        </aside>
       </div>
-
-      <details id="regionInspector" style="margin-top:8px;">
-        <summary>Region inspector</summary>
-        <div class="region-browser" style="margin-top:6px;">
-          <div class="region-controls" style="margin-bottom:6px;">
-            <label style="margin-right:8px;"><input type="checkbox" id="filterAll" checked disabled> All</label>
-            <label style="margin-right:8px;"><input type="checkbox" id="filterHeader" checked> Header</label>
-            <label style="margin-right:8px;"><input type="checkbox" id="filterTemp" checked> Temp</label>
-            <label style="margin-right:8px;"><input type="checkbox" id="filterLabel" checked> Label</label>
-            <label style="margin-right:8px;"><input type="checkbox" id="filterFooter" checked> Footer</label>
-            <input id="regionSearch" type="text" placeholder="Search regions…" style="margin-left:8px; padding:2px 4px; width:180px;">
-            <button id="resetRegionFilters" style="margin-left:8px;">Reset</button>
-            <button id="showAllRects" style="margin-left:4px;">Show all</button>
-            <button id="hideAllRects" style="margin-left:4px;">Hide all</button>
-          </div>
-          <div class="legend" style="font-size:12px; margin-bottom:6px;">
-            <span style="display:inline-block;width:10px;height:10px;background:#ff6b6b;margin-right:4px;border:1px solid #333;vertical-align:middle;"></span> Header
-            <span style="display:inline-block;width:10px;height:10px;background:#4ecdc4;margin-left:10px;margin-right:4px;border:1px solid #333;vertical-align:middle;"></span> Temp
-            <span style="display:inline-block;width:10px;height:10px;background:#45b7d1;margin-left:10px;margin-right:4px;border:1px solid #333;vertical-align:middle;"></span> Label
-            <span style="display:inline-block;width:10px;height:10px;background:#96ceb4;margin-left:10px;margin-right:4px;border:1px solid #333;vertical-align:middle;"></span> Footer
-          </div>
-          <div id="regionList" class="region-list" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:4px;"></div>
-        </div>
-      </details>
-
-      <details id="validationPanel" style="margin-top:8px;">
-        <summary>UI Validation <span id="validationBadge" style="margin-left:8px;padding:2px 6px;border-radius:3px;font-size:11px;"></span></summary>
-        <div class="validation-controls" style="margin-top:6px;">
-          <label><input type="checkbox" id="enableValidation" checked> Enable real-time validation</label>
-          <button id="runValidation" style="margin-left:8px;">Run Full Validation</button>
-          <button id="clearValidation" style="margin-left:4px;">Clear</button>
-        </div>
-        <div id="validationResults" style="margin-top:8px;font-size:12px;max-height:200px;overflow-y:auto;">
-          <div style="color:#666;">No validation issues detected</div>
-        </div>
-      </details>
     </div>
     <script src="ui_generated.js?v=5"></script>
     <script src="sim.js?v=7"></script>

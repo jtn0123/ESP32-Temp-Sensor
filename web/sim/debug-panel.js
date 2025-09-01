@@ -221,26 +221,23 @@
     const panel = document.createElement('div');
     panel.id = 'advancedDebugPanel';
     panel.innerHTML = `
-      <details style="margin-top:8px;">
+      <details class="card">
         <summary>🔧 Advanced Debug Tools</summary>
-        
-        <div style="margin-top:10px;">
-          <!-- Performance Monitor -->
-          <fieldset style="margin-bottom:10px;padding:8px;">
+        <div class="debug-body">
+          <fieldset class="fieldset">
             <legend>⚡ Performance</legend>
-            <div id="perfMonitor" style="font-family:monospace;font-size:11px;">
+            <div id="perfMonitor" class="muted" style="font-family:monospace;font-size:11px;">
               <div>FPS: <span id="debugFPS">0</span></div>
               <div>Render: <span id="debugRenderTime">0</span>ms</div>
               <div>Frames: <span id="debugFrameCount">0</span></div>
             </div>
-            <button id="perfReset" style="margin-top:4px;">Reset</button>
-            <label style="margin-left:8px;">
+            <button id="perfReset">Reset</button>
+            <label>
               <input type="checkbox" id="perfAutoLog"> Auto-log
             </label>
           </fieldset>
-          
-          <!-- Test Scenarios -->
-          <fieldset style="margin-bottom:10px;padding:8px;">
+
+          <fieldset class="fieldset">
             <legend>🧪 Test Scenarios</legend>
             <select id="scenarioCategory" style="width:100%;margin-bottom:4px;">
               <option value="">Select category...</option>
@@ -249,35 +246,36 @@
               <option value="">Select scenario...</option>
             </select>
             <button id="applyScenario" disabled>Apply</button>
-            <button id="randomScenario" style="margin-left:4px;">Random</button>
-            <button id="cycleScenarios" style="margin-left:4px;">Cycle All</button>
+            <button id="randomScenario">Random</button>
+            <button id="cycleScenarios">Cycle All</button>
           </fieldset>
-          
-          <!-- Data Editor -->
-          <fieldset style="margin-bottom:10px;padding:8px;">
+
+          <fieldset class="fieldset">
             <legend>✏️ Data Editor</legend>
-            <div id="dataFields" style="max-height:200px;overflow-y:auto;">
-              <!-- Dynamic fields will be added here -->
-            </div>
-            <button id="applyData" style="margin-top:4px;">Apply Changes</button>
-            <button id="resetData" style="margin-left:4px;">Reset</button>
-            <button id="exportData" style="margin-left:4px;">Export</button>
-            <button id="importData" style="margin-left:4px;">Import</button>
+            <div id="dataFields" style="max-height:200px;overflow-y:auto;"></div>
+            <button id="applyData">Apply Changes</button>
+            <button id="resetData">Reset</button>
+            <button id="exportData">Export</button>
+            <button id="importData">Import</button>
           </fieldset>
-          
-          <!-- Visual Testing -->
-          <fieldset style="margin-bottom:10px;padding:8px;">
+
+          <fieldset class="fieldset">
             <legend>👁️ Visual Testing</legend>
-            <button id="captureBaseline">Capture Baseline</button>
-            <button id="compareVisual" style="margin-left:4px;">Compare</button>
-            <button id="showDiff" style="margin-left:4px;" disabled>Show Diff</button>
-            <div id="visualDiff" style="margin-top:8px;"></div>
+            <div class="toolbar-row">
+              <button id="captureBaseline">Capture Baseline</button>
+              <button id="compareVisual">Compare</button>
+              <button id="showDiff" disabled>Show Diff</button>
+              <button id="downloadBaseline" disabled>Download Baseline</button>
+              <button id="downloadCurrent" disabled>Download Current</button>
+              <button id="downloadDiff" disabled>Download Diff</button>
+            </div>
+            <div id="visualGallery"></div>
+            <div id="visualDiff" style="display:none"></div>
           </fieldset>
-          
-          <!-- Icon Tester -->
-          <fieldset style="margin-bottom:10px;padding:8px;">
+
+          <fieldset class="fieldset">
             <legend>🎨 Icon Tester</legend>
-            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px;">
+            <div class="icon-grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px;">
               <button class="icon-test" data-weather="sunny">☀️</button>
               <button class="icon-test" data-weather="partly-cloudy">⛅</button>
               <button class="icon-test" data-weather="cloudy">☁️</button>
@@ -291,35 +289,28 @@
               <button class="icon-test" data-weather="night-cloudy">☁️🌙</button>
               <button class="icon-test" data-weather="hail">🧊</button>
             </div>
-            <input type="text" id="customWeather" placeholder="Custom weather text" style="width:100%;margin-top:4px;">
-            <button id="testCustomWeather" style="margin-top:4px;">Test Custom</button>
+            <input type="text" id="customWeather" placeholder="Custom weather text">
+            <button id="testCustomWeather">Test Custom</button>
           </fieldset>
-          
-          <!-- State Inspector -->
-          <fieldset style="margin-bottom:10px;padding:8px;">
+
+          <fieldset class="fieldset">
             <legend>🔍 State Inspector</legend>
-            <div id="stateInspector" style="font-family:monospace;font-size:10px;max-height:150px;overflow-y:auto;">
-              <!-- State will be displayed here -->
-            </div>
+            <div id="stateInspector"></div>
             <button id="refreshState">Refresh</button>
-            <button id="copyState" style="margin-left:4px;">Copy</button>
+            <button id="copyState">Copy</button>
           </fieldset>
-          
-          <!-- Console -->
-          <fieldset style="margin-bottom:10px;padding:8px;">
+
+          <fieldset class="fieldset">
             <legend>📝 Debug Console</legend>
-            <div id="debugConsole" style="font-family:monospace;font-size:10px;max-height:100px;overflow-y:auto;background:#f0f0f0;padding:4px;">
-              <!-- Log messages here -->
-            </div>
+            <div id="debugConsole" class="console"></div>
             <button id="clearConsole">Clear</button>
-            <label style="margin-left:8px;">
+            <label>
               <input type="checkbox" id="verboseLogging"> Verbose
             </label>
           </fieldset>
         </div>
       </details>
     `;
-    
     return panel;
   }
 
@@ -336,10 +327,9 @@
     ];
     
     container.innerHTML = fields.map(field => `
-      <div style="margin-bottom:4px;">
-        <label style="display:inline-block;width:120px;font-size:11px;">${field}:</label>
-        <input type="text" id="field_${field}" style="width:120px;font-size:11px;" 
-               placeholder="${getDefaultValue(field)}">
+      <div class="data-field">
+        <label class="data-label">${field}:</label>
+        <input type="text" id="field_${field}" class="data-input" placeholder="${getDefaultValue(field)}">
       </div>
     `).join('');
   }
@@ -393,7 +383,7 @@
     }[type] || 'ℹ️';
     
     const entry = document.createElement('div');
-    entry.innerHTML = `<span style="color:#666;">${timestamp}</span> ${typeIcon} ${message}`;
+    entry.innerHTML = `<span class="muted">${timestamp}</span> ${typeIcon} ${message}`;
     console.appendChild(entry);
     console.scrollTop = console.scrollHeight;
     
@@ -405,6 +395,7 @@
 
   // Capture baseline for visual testing
   let baselineImage = null;
+  let lastDiffImage = null;
   
   function captureBaseline() {
     const canvas = document.getElementById('epd');
@@ -471,19 +462,33 @@
         
         ctx.putImageData(diffData, 0, 0);
         
-        // Display diff
-        const diffContainer = document.getElementById('visualDiff');
-        if (diffContainer) {
-          const pixels = canvas.width * canvas.height;
-          const percentage = ((differences / pixels) * 100).toFixed(2);
-          
-          diffContainer.innerHTML = `
-            <div style="margin-bottom:4px;">Differences: ${differences} pixels (${percentage}%)</div>
-            <img src="${diffCanvas.toDataURL()}" style="width:250px;border:1px solid #ccc;">
+        // Display gallery (baseline/current/diff)
+        const pixels = canvas.width * canvas.height;
+        const percentage = ((differences / pixels) * 100).toFixed(2);
+        const gallery = document.getElementById('visualGallery');
+        lastDiffImage = diffCanvas.toDataURL();
+        if (gallery){
+          gallery.innerHTML = `
+            <div class="shot"><div class="muted">Baseline</div><img src="${baselineImage}"></div>
+            <div class="shot"><div class="muted">Current</div><img src="${currentImage}"></div>
+            <div class="shot"><div class="muted">Diff (${percentage}%)</div><img src="${lastDiffImage}"></div>
           `;
-          
-          debugLog(`Visual diff: ${percentage}% changed`, differences > 0 ? 'warn' : 'success');
+        } else {
+          // Fallback to legacy container
+          const diffContainer = document.getElementById('visualDiff');
+          if (diffContainer) {
+            diffContainer.style.display = 'block';
+            diffContainer.innerHTML = `
+              <div>Differences: ${differences} pixels (${percentage}%)</div>
+              <img src="${lastDiffImage}">
+            `;
+          }
         }
+        // Enable downloads
+        document.getElementById('downloadBaseline')?.removeAttribute('disabled');
+        document.getElementById('downloadCurrent')?.removeAttribute('disabled');
+        document.getElementById('downloadDiff')?.removeAttribute('disabled');
+        debugLog(`Visual diff: ${percentage}% changed`, differences > 0 ? 'warn' : 'success');
       };
       current.src = currentImage;
     };
@@ -494,7 +499,6 @@
   function updateStateInspector() {
     const inspector = document.getElementById('stateInspector');
     if (!inspector) return;
-    
     const state = {
       lastData: window.lastData || {},
       UI_SPEC: window.UI_SPEC ? Object.keys(window.UI_SPEC) : [],
@@ -502,8 +506,19 @@
       regionVisible: window.regionVisible ? Array.from(window.regionVisible) : [],
       metrics: window.__layoutMetrics || {}
     };
-    
-    inspector.innerHTML = `<pre>${JSON.stringify(state, null, 2)}</pre>`;
+    const rows = [
+      ['Issues', Array.isArray(state.validationIssues) ? state.validationIssues.length : 0],
+      ['Regions visible', state.regionVisible.length],
+      ['UI spec keys', state.UI_SPEC.length],
+      ['Last render (ms)', (window.__lastRenderMs||0).toFixed ? (window.__lastRenderMs||0).toFixed(1) : window.__lastRenderMs],
+    ];
+    inspector.innerHTML = `
+      <table class="kv-table">
+        <tbody>
+          ${rows.map(([k,v])=>`<tr><th class="muted">${k}</th><td>${v}</td></tr>`).join('')}
+        </tbody>
+      </table>
+    `;
   }
 
   // Setup event handlers
@@ -653,6 +668,9 @@
     // Visual testing
     document.getElementById('captureBaseline')?.addEventListener('click', captureBaseline);
     document.getElementById('compareVisual')?.addEventListener('click', compareVisual);
+    document.getElementById('downloadBaseline')?.addEventListener('click', ()=>{ if (baselineImage){ const a=document.createElement('a'); a.href=baselineImage; a.download='baseline.png'; a.click(); } });
+    document.getElementById('downloadCurrent')?.addEventListener('click', ()=>{ const c=document.getElementById('epd'); if (c){ const a=document.createElement('a'); a.href=c.toDataURL(); a.download='current.png'; a.click(); }});
+    document.getElementById('downloadDiff')?.addEventListener('click', ()=>{ if (lastDiffImage){ const a=document.createElement('a'); a.href=lastDiffImage; a.download='diff.png'; a.click(); }});
     
     // Icon testing
     document.querySelectorAll('.icon-test').forEach(btn => {
