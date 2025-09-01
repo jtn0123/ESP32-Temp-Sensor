@@ -18,7 +18,7 @@
     "INSIDE_PRESSURE": [6, 77, 115, 14],
     "OUT_TEMP":    [129, 36, 94, 28],
     "WEATHER_ICON":    [170, 92, 30, 28],
-    "OUT_PRESSURE":  [177, 70, 64, 14],
+    "OUT_PRESSURE":  [177, 74, 64, 14],
     "OUT_HUMIDITY":  [131, 73, 44, 14],
     "OUT_WIND":  [177, 73, 44, 14],
     "FOOTER_STATUS": [6, 92, 160, 28],

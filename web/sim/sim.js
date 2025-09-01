@@ -993,8 +993,8 @@
   }
   
   function drawValidationOverlay() {
-    // Don't draw validation overlay if geometry overlays are active
-    if (!validationEnabled || validationIssues.length === 0 || showRects || showLabels) return;
+    // Draw validation overlay when enabled and there are issues
+    if (!validationEnabled || validationIssues.length === 0) return;
     
     ctx.save();
     
@@ -2545,6 +2545,8 @@
     validationEnabled = !!enabled;
     if (validationEnabled) {
       runValidation();
+      // Ensure overlays render immediately
+      try { draw(window.lastData || {}); } catch(_) { draw({}); }
     } else {
       validationIssues = [];
       updateValidationDisplay();
