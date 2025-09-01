@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Option B Validation Test</title>
+    <style>
+        body { font-family: monospace; padding: 20px; max-width: 1200px; margin: 0 auto; }
+        .test-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .test-section { border: 1px solid #ccc; padding: 15px; }
+        .success { color: green; font-weight: bold; }
+        .error { color: red; font-weight: bold; }
+        .warning { color: orange; }
+        .info { color: blue; }
+        pre { background: #f5f5f5; padding: 10px; overflow: auto; font-size: 12px; }
+        .summary { background: #e8f5e9; padding: 10px; margin: 10px 0; }
+        iframe { width: 100%; border: 1px solid #ddd; }
+    </style>
+</head>
+<body>
+    <h1>Option B Implementation Validation Test</h1>
+    <p>Testing the new simulator-based validation (single source of truth)</p>
+    
+    <div class="test-grid">
+        <div class="test-section">
+            <h2>Simulator</h2>
+            <iframe id="sim" src="index.html?variant=v2_grid" height="400"></iframe>
+        </div>
+        
+        <div class="test-section">
+            <h2>Test Status</h2>
+            <div id="status">Initializing...</div>
+            <div class="summary" id="summary"></div>
+            <div id="test-results"></div>
+        </div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Validation Results</h2>
+        <pre id="validation-output"></pre>
+    </div>
+    
+    <script>
+    async function runValidationTests() {
+        const iframe = document.getElementById('sim');
+        const win = iframe.contentWindow;
+        const status = document.getElementById('status');
+        const summary = document.getElementById('summary');
+        const testResults = document.getElementById('test-results');
+        const output = document.getElementById('validation-output');
+        
+        // Wait for simulator
+        let attempts = 0;
+        while (!win.__simReady && attempts < 10) {
+            await new Promise(r => setTimeout(r, 500));
+            attempts++;
+        }
+        
+        if (!win.__simReady) {
+            status.innerHTML = '<span class="error">❌ Simulator failed to load</span>';
+            return;
+        }
+        
+        status.innerHTML = '<span class="success">✓ Simulator loaded</span>';
+        
+        // Test scenarios to verify all new features
+        const scenarios = [
+            {
+                name: 'Centerline Proximity Test',
+                data: { 
+                    room_name: 'Test',
+                    inside_temp_f: 199.9,  // Wide text
+                    outside_temp_f: -199.9  // Wide text
+                },
+                expectIssue: 'centerline'
+            },
+            {
+                name: 'Coverage Detection Test',
+                data: { 
+                    room_name: 'X',  // Very short text
+                    inside_temp_f: 1,
+                    inside_hum_pct: 1
+                },
+                expectIssue: 'low_coverage'
+            },
+            {
+                name: 'Label Overlap Test',
+                data: {
+                    room_name: 'Label Test',
+                    inside_temp_f: 88.8,
+                    inside_hum_pct: 99
+                },
+                expectIssue: 'label'
+            },
+            {
+                name: 'Smart Expected Content Test',
+                data: {
+                    room_name: 'Minimal',
+                    inside_temp_f: 72,
+                    inside_hum_pct: 50
+                    // No weather, battery, or outside data
+                },
+                notExpect: ['WEATHER_ICON', 'FOOTER_WEATHER']
+            },
+            {
+                name: 'All Severities Test',
+                data: {
+                    room_name: 'Very Long Room Name That Overflows',
+                    inside_temp_f: 999,
+                    outside_temp_f: -999,
+                    pressure_hpa: 1013,
+                    weather: 'storm',
+                    battery_percent: 1
+                },
+                expectSeverities: ['critical', 'error', 'warning', 'info']
+            }
+        ];
+        
+        let testsPassed = 0;
+        let testsFailed = 0;
+        let resultsHtml = '';
+        
+        for (const scenario of scenarios) {
+            // Draw test data
+            win.draw(scenario.data);
+            await new Promise(r => setTimeout(r, 200));
+            
+            // Get validation results
+            const result = win.exportValidation({ includeScreenshot: false });
+            
+            // Check expectations
+            let passed = true;
+            let reason = '';
+            
+            if (scenario.expectIssue) {
+                const found = result.issues.some(i => i.type.includes(scenario.expectIssue));
+                if (!found) {
+                    passed = false;
+                    reason = `Expected ${scenario.expectIssue} issue not found`;
+                }
+            }
+            
+            if (scenario.notExpect) {
+                for (const region of scenario.notExpect) {
+                    const found = result.issues.some(i => i.region === region && i.type === 'empty_region');
+                    if (found) {
+                        passed = false;
+                        reason = `Unexpected empty_region issue for ${region}`;
+                    }
+                }
+            }
+            
+            if (scenario.expectSeverities) {
+                const foundSeverities = new Set(result.issues.map(i => i.severity));
+                for (const sev of scenario.expectSeverities) {
+                    if (!foundSeverities.has(sev)) {
+                        passed = false;
+                        reason = `Missing expected severity: ${sev}`;
+                    }
+                }
+            }
+            
+            // Update results
+            if (passed) {
+                testsPassed++;
+                resultsHtml += `<div class="success">✓ ${scenario.name}</div>`;
+            } else {
+                testsFailed++;
+                resultsHtml += `<div class="error">✗ ${scenario.name}: ${reason}</div>`;
+            }
+        }
+        
+        testResults.innerHTML = resultsHtml;
+        
+        // Final validation with complex data
+        const finalData = {
+            room_name: 'Living Room',
+            time: '13:45',
+            version: 'v4.2',
+            inside_temp_f: 72.5,
+            inside_hum_pct: 47,
+            pressure_hpa: 1013.2,
+            outside_temp_f: 68.4,
+            outside_hum_pct: 53,
+            wind_mps: 4.2,
+            weather: 'cloudy',
+            battery_percent: 76,
+            ip: '192.168.1.42'
+        };
+        
+        win.draw(finalData);
+        await new Promise(r => setTimeout(r, 200));
+        
+        const finalResult = win.exportValidation({ includeScreenshot: false });
+        
+        // Verify key features
+        const features = {
+            'Validation Version': finalResult.validationVersion === '1.0.0',
+            'Issues Sorted': checkSorting(finalResult.issues),
+            'De-duplication Working': checkNoDuplicates(finalResult.issues),
+            'Smart Coverage': finalResult.issues.some(i => i.type === 'low_coverage'),
+            'Fixed Centerline Rect': checkCenterlineRect(finalResult.issues),
+            'Label Overlap Messaging': checkLabelMessages(finalResult.issues)
+        };
+        
+        let featureHtml = '<h3>Feature Verification:</h3>';
+        for (const [feature, working] of Object.entries(features)) {
+            featureHtml += `<div class="${working ? 'success' : 'error'}">`;
+            featureHtml += `${working ? '✓' : '✗'} ${feature}</div>`;
+        }
+        
+        summary.innerHTML = `
+            <strong>Test Summary:</strong><br>
+            Scenarios Passed: ${testsPassed}/${scenarios.length}<br>
+            Features Working: ${Object.values(features).filter(v => v).length}/${Object.keys(features).length}<br>
+            Total Issues Found: ${finalResult.issues.length}<br>
+            Severities: ${[...new Set(finalResult.issues.map(i => i.severity))].join(', ')}
+        ` + featureHtml;
+        
+        // Show full result
+        output.textContent = JSON.stringify(finalResult, null, 2);
+        
+        // Overall status
+        const allPassed = testsPassed === scenarios.length && Object.values(features).every(v => v);
+        if (allPassed) {
+            status.innerHTML += '<br><span class="success">✅ Option B fully operational! Safe to deprecate legacy validation.</span>';
+        } else {
+            status.innerHTML += '<br><span class="warning">⚠️ Some tests failed. Review results above.</span>';
+        }
+    }
+    
+    function checkSorting(issues) {
+        const severityOrder = { critical: 0, error: 1, warning: 2, info: 3 };
+        for (let i = 1; i < issues.length; i++) {
+            const prevSev = severityOrder[issues[i-1].severity];
+            const currSev = severityOrder[issues[i].severity];
+            if (prevSev > currSev) return false;
+        }
+        return true;
+    }
+    
+    function checkNoDuplicates(issues) {
+        const seen = new Set();
+        for (const issue of issues) {
+            const key = `${issue.type}_${issue.region}_${issue.severity}`;
+            if (seen.has(key)) return false;
+            seen.add(key);
+        }
+        return true;
+    }
+    
+    function checkCenterlineRect(issues) {
+        const centerlineIssue = issues.find(i => i.type.includes('centerline'));
+        if (!centerlineIssue || !centerlineIssue.rect) return true;
+        // Should be 6px wide (fixed width)
+        return centerlineIssue.rect[2] === 6;
+    }
+    
+    function checkLabelMessages(issues) {
+        const labelIssue = issues.find(i => i.type.includes('label'));
+        if (!labelIssue) return true;
+        // Should say "overlaps by Xpx" not "gap"
+        return labelIssue.description.includes('overlaps');
+    }
+    
+    // Start tests
+    window.addEventListener('load', () => {
+        setTimeout(runValidationTests, 1500);
+    });
+    </script>
+</body>
+</html>
