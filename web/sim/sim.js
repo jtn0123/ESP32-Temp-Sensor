@@ -62,7 +62,7 @@
   // Enable spec-only render (always on to keep single source of truth)
   const QS = (typeof window !== 'undefined') ? new URLSearchParams(window.location.search) : new URLSearchParams();
   // Validation state
-  let validationEnabled = true;
+  let validationEnabled = false;
   let validationIssues = [];
   let renderedContent = {}; // Track what was actually rendered
   let emptyRegions = new Set(); // Track regions with no content
@@ -2529,24 +2529,45 @@
   }
   // Validation panel controls
   const enableValidationCheckbox = document.getElementById('enableValidation');
+  const validationOverlayToggle = document.getElementById('toggleValidationOverlay');
+  // Initialize default state: validation disabled
+  if (enableValidationCheckbox) enableValidationCheckbox.checked = false;
+  if (validationOverlayToggle) validationOverlayToggle.checked = false;
+  const syncValidationUI = ()=>{
+    if (enableValidationCheckbox && enableValidationCheckbox.checked !== validationEnabled) {
+      enableValidationCheckbox.checked = validationEnabled;
+    }
+    if (validationOverlayToggle && validationOverlayToggle.checked !== validationEnabled) {
+      validationOverlayToggle.checked = validationEnabled;
+    }
+  };
+  const onValidationToggle = (enabled)=>{
+    validationEnabled = !!enabled;
+    if (validationEnabled) {
+      runValidation();
+    } else {
+      validationIssues = [];
+      updateValidationDisplay();
+      // Also force redraw to clear overlay artifacts
+      try { draw(window.lastData || {}); } catch(_) { draw({}); }
+    }
+    syncValidationUI();
+  };
   if (enableValidationCheckbox) {
     enableValidationCheckbox.addEventListener('change', (e) => {
-      validationEnabled = e.target.checked;
-      if (validationEnabled) {
-        runValidation();
-      } else {
-        validationIssues = [];
-        updateValidationDisplay();
-      }
+      onValidationToggle(e.target.checked);
+    });
+  }
+  if (validationOverlayToggle) {
+    validationOverlayToggle.addEventListener('change', (e) => {
+      onValidationToggle(e.target.checked);
     });
   }
   
   const runValidationBtn = document.getElementById('runValidation');
   if (runValidationBtn) {
     runValidationBtn.addEventListener('click', () => {
-      validationEnabled = true;
-      if (enableValidationCheckbox) enableValidationCheckbox.checked = true;
-      runValidation();
+      onValidationToggle(true);
     });
   }
   
@@ -2555,6 +2576,8 @@
     clearValidationBtn.addEventListener('click', () => {
       validationIssues = [];
       updateValidationDisplay();
+      // Keep validation disabled after clear to match intent
+      onValidationToggle(false);
     });
   }
   

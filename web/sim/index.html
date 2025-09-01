@@ -53,6 +53,7 @@
               <label title="Show geometry rectangles"><input type="checkbox" id="showRects" aria-label="Toggle geometry rectangles"> Show geometry rects</label>
               <label title="Label regions"><input type="checkbox" id="showLabels" aria-label="Toggle region labels"> Label regions</label>
               <label title="Simulates e‑ink ghosting artifacts"><input type="checkbox" id="simulateGhosting" aria-label="Toggle ghosting simulation"> Simulate ghosting</label>
+              <label title="Show UI validation overlay"><input type="checkbox" id="toggleValidationOverlay" aria-label="Toggle UI validation overlay"> UI validation overlay</label>
             </div>
           </div>
 
@@ -88,7 +89,7 @@
             <summary>UI Validation <span id="validationBadge" class="badge" aria-live="polite"></span></summary>
             <span id="validationAnnouncement" class="sr-only" role="alert" aria-live="assertive"></span>
             <div class="validation-controls">
-              <label><input type="checkbox" id="enableValidation" checked> Enable real-time validation</label>
+              <label><input type="checkbox" id="enableValidation"> Enable real-time validation</label>
               <button id="runValidation">Run Full Validation</button>
               <button id="clearValidation">Clear</button>
             </div>
