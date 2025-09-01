@@ -13,21 +13,21 @@
   <body>
     <div class="wrap">
       <header class="page-header">
-        <h1>Display Simulator (250×122) <span id="statusPill" class="status-pill" title="Simulator status">Not Ready</span></h1>
+        <h1>Display Simulator (250×122) <span id="statusPill" class="status-pill" title="Simulator status" role="status" aria-live="polite">Not Ready</span></h1>
         <div class="subtitle">ESP32 eInk Room Node</div>
       </header>
 
       <div class="layout">
         <main class="device-pane">
           <div class="device-frame" aria-label="E‑ink display frame">
-            <canvas id="epd" width="250" height="122" style="image-rendering: pixelated"></canvas>
+            <canvas id="epd" width="250" height="122" style="image-rendering: pixelated" role="img" aria-label="ESP32 display simulation"></canvas>
           </div>
 
           <div class="toolbar" role="toolbar" aria-label="Simulator controls">
             <div class="toolbar-row">
-              <button id="refresh">Refresh</button>
+              <button id="refresh" aria-label="Refresh display">Refresh</button>
               <label>Preset
-                <select id="presetMode">
+                <select id="presetMode" aria-label="Select test preset">
                   <option value="normal" selected>Normal</option>
                   <option value="low_batt">Low battery</option>
                   <option value="no_mqtt">No MQTT</option>
@@ -36,34 +36,34 @@
                 </select>
               </label>
               <label>Layout
-                <select id="layoutMode">
+                <select id="layoutMode" aria-label="Select layout mode">
                   <option value="split3" selected>Split + 3-row status</option>
                 </select>
               </label>
               <label title="Zoom canvas">
                 Zoom
-                <input type="range" id="zoom" min="1" max="4" step="0.5" value="2" style="width:140px;" />
+                <input type="range" id="zoom" min="1" max="4" step="0.5" value="2" style="width:140px;" aria-label="Zoom level" aria-valuemin="1" aria-valuemax="4" aria-valuenow="2" />
                 <span id="zoomValue" aria-live="polite">2×</span>
               </label>
-              <button id="resetUI" title="Reset UI preferences">Reset UI</button>
+              <button id="resetUI" title="Reset UI preferences" aria-label="Reset UI settings">Reset UI</button>
             </div>
 
             <div class="toolbar-row toggles" aria-label="Overlays">
-              <label title="Show partial refresh windows"><input type="checkbox" id="showWindows"> Partial refresh windows</label>
-              <label title="Toggle stress data"><input type="checkbox" id="stressMode"> Stress test</label>
-              <label title="Render from spec only"><input type="checkbox" id="specOnly"> Spec only</label>
-              <label title="Show 4px grid"><input type="checkbox" id="showGrid"> Show 4px grid</label>
-              <label title="Show geometry rectangles"><input type="checkbox" id="showRects"> Show geometry rects</label>
-              <label title="Label regions"><input type="checkbox" id="showLabels"> Label regions</label>
-              <label title="Simulates e‑ink ghosting artifacts"><input type="checkbox" id="simulateGhosting"> Simulate ghosting</label>
+              <label title="Show partial refresh windows"><input type="checkbox" id="showWindows" aria-label="Toggle partial refresh windows"> Partial refresh windows</label>
+              <label title="Toggle stress data"><input type="checkbox" id="stressMode" aria-label="Toggle stress test mode"> Stress test</label>
+              <label title="Render from spec only"><input type="checkbox" id="specOnly" aria-label="Toggle spec-only rendering"> Spec only</label>
+              <label title="Show 4px grid"><input type="checkbox" id="showGrid" aria-label="Toggle 4px grid overlay"> Show 4px grid</label>
+              <label title="Show geometry rectangles"><input type="checkbox" id="showRects" aria-label="Toggle geometry rectangles"> Show geometry rects</label>
+              <label title="Label regions"><input type="checkbox" id="showLabels" aria-label="Toggle region labels"> Label regions</label>
+              <label title="Simulates e‑ink ghosting artifacts"><input type="checkbox" id="simulateGhosting" aria-label="Toggle ghosting simulation"> Simulate ghosting</label>
             </div>
           </div>
 
-          <div id="statusBar" class="status-bar" role="status" aria-live="polite">Initializing…</div>
+          <div id="statusBar" class="status-bar" role="status" aria-live="polite" aria-atomic="true">Initializing…</div>
         </main>
 
         <aside class="inspector-pane">
-          <details id="regionInspector">
+          <details id="regionInspector" aria-label="Region inspector panel">
             <summary>Region inspector</summary>
             <div class="region-browser">
               <div class="region-controls">
@@ -87,14 +87,16 @@
             </div>
           </details>
 
-          <details id="validationPanel">
-            <summary>UI Validation <span id="validationBadge" class="badge"></span></summary>
+          <details id="validationPanel" aria-label="UI validation panel">
+            <summary>UI Validation <span id="validationBadge" class="badge" aria-live="polite"></span></summary>
+            <span id="validationAnnouncement" class="sr-only" role="alert" aria-live="assertive"></span>
             <div class="validation-controls">
               <label><input type="checkbox" id="enableValidation" checked> Enable real-time validation</label>
               <button id="runValidation">Run Full Validation</button>
               <button id="clearValidation">Clear</button>
             </div>
-            <div id="validationResults" class="validation-results">
+            <div id="validationResults" class="validation-results" role="region" aria-label="Validation results">
+              <div id="validationSummary" class="sr-only" aria-live="polite"></div>
               <div class="muted">No validation issues detected</div>
             </div>
           </details>

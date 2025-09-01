@@ -218,6 +218,8 @@
   function updateValidationDisplay() {
     const badge = document.getElementById('validationBadge');
     const results = document.getElementById('validationResults');
+    const announcement = document.getElementById('validationAnnouncement');
+    const summary = document.getElementById('validationSummary');
     
     if (!badge || !results) return;
     
@@ -226,22 +228,36 @@
     const warnings = validationIssues.filter(i => i.severity === 'warning').length;
     
     // Update badge
+    let announcementText = '';
     if (critical > 0) {
       badge.textContent = `${critical} critical`;
       badge.style.background = '#ff4444';
       badge.style.color = 'white';
+      announcementText = `${critical} critical validation issue${critical > 1 ? 's' : ''} detected`;
     } else if (errors > 0) {
       badge.textContent = `${errors} errors`;
       badge.style.background = '#ff8800';
       badge.style.color = 'white';
+      announcementText = `${errors} validation error${errors > 1 ? 's' : ''} detected`;
     } else if (warnings > 0) {
       badge.textContent = `${warnings} warnings`;
       badge.style.background = '#ffbb00';
       badge.style.color = 'black';
+      announcementText = `${warnings} validation warning${warnings > 1 ? 's' : ''} detected`;
     } else {
       badge.textContent = 'OK';
       badge.style.background = '#44ff44';
       badge.style.color = 'black';
+      announcementText = 'No validation issues';
+    }
+    
+    // Announce to screen readers
+    if (announcement) {
+      announcement.textContent = announcementText;
+    }
+    if (summary) {
+      const totalIssues = critical + errors + warnings;
+      summary.textContent = `${totalIssues} validation issue${totalIssues !== 1 ? 's' : ''}: ${critical} critical, ${errors} errors, ${warnings} warnings`;
     }
     
     // Update results list with enhanced formatting and suggestions
@@ -2202,7 +2218,13 @@
   const labelsEl = document.getElementById('showLabels');
   if (labelsEl) labelsEl.addEventListener('change', (e)=>{ 
     showLabels = !!e.target.checked; 
-    geometryOnly = showLabels; 
+    // When labeling, ensure rects are visible so labels have anchors
+    if (showLabels){ 
+      showRects = true; 
+      const rectsEl = document.getElementById('showRects'); 
+      if (rectsEl) rectsEl.checked = true; 
+    }
+    // Do NOT toggle geometryOnly here; labels should overlay on full render
     // Force a full redraw to clear any artifacts
     draw(lastData); 
   });
@@ -2471,12 +2493,125 @@
     console.log('Simulator functions exposed to window');
   }
   
+  // Setup keyboard navigation
+  function setupKeyboardNavigation() {
+    document.addEventListener('keydown', (e) => {
+      // Ignore if user is typing in an input field
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') {
+        return;
+      }
+      
+      // Keyboard shortcuts
+      switch(e.key.toLowerCase()) {
+        case 'v':
+          // Toggle validation panel
+          const validationPanel = document.getElementById('validationPanel');
+          if (validationPanel) {
+            validationPanel.open = !validationPanel.open;
+          }
+          break;
+          
+        case 'd':
+          // Toggle region inspector (debug panel)
+          const regionInspector = document.getElementById('regionInspector');
+          if (regionInspector) {
+            regionInspector.open = !regionInspector.open;
+          }
+          break;
+          
+        case 'r':
+          // Refresh display
+          if (!e.ctrlKey && !e.metaKey) { // Don't interfere with browser refresh
+            e.preventDefault();
+            const refreshBtn = document.getElementById('refresh');
+            if (refreshBtn) refreshBtn.click();
+          }
+          break;
+          
+        case 'z':
+          // Cycle zoom levels (1, 1.5, 2, 2.5, 3, 3.5, 4)
+          if (!e.ctrlKey && !e.metaKey) { // Don't interfere with undo
+            e.preventDefault();
+            const zoomInput = document.getElementById('zoom');
+            if (zoomInput) {
+              let currentZoom = parseFloat(zoomInput.value);
+              currentZoom += 0.5;
+              if (currentZoom > 4) currentZoom = 1;
+              zoomInput.value = currentZoom;
+              zoomInput.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+          }
+          break;
+          
+        case 'g':
+          // Toggle grid
+          const gridCheckbox = document.getElementById('showGrid');
+          if (gridCheckbox) {
+            gridCheckbox.checked = !gridCheckbox.checked;
+            gridCheckbox.dispatchEvent(new Event('change', { bubbles: true }));
+          }
+          break;
+          
+        case 'l':
+          // Toggle labels
+          const labelsCheckbox = document.getElementById('showLabels');
+          if (labelsCheckbox) {
+            labelsCheckbox.checked = !labelsCheckbox.checked;
+            labelsCheckbox.dispatchEvent(new Event('change', { bubbles: true }));
+          }
+          break;
+          
+        case 'w':
+          // Toggle partial refresh windows
+          const windowsCheckbox = document.getElementById('showWindows');
+          if (windowsCheckbox) {
+            windowsCheckbox.checked = !windowsCheckbox.checked;
+            windowsCheckbox.dispatchEvent(new Event('change', { bubbles: true }));
+          }
+          break;
+          
+        case '?':
+          // Show keyboard shortcuts help
+          if (e.shiftKey) {
+            showKeyboardHelp();
+          }
+          break;
+      }
+      
+      // Update zoom ARIA value when changed
+      const zoomInput = document.getElementById('zoom');
+      if (zoomInput && e.key.toLowerCase() === 'z') {
+        zoomInput.setAttribute('aria-valuenow', zoomInput.value);
+      }
+    });
+  }
+  
+  function showKeyboardHelp() {
+    const helpText = `
+Keyboard Shortcuts:
+  V - Toggle validation panel
+  D - Toggle debug/region inspector
+  R - Refresh display
+  Z - Cycle zoom levels
+  G - Toggle grid overlay
+  L - Toggle region labels
+  W - Toggle partial refresh windows
+  ? - Show this help (Shift+?)
+    `.trim();
+    
+    alert(helpText);
+  }
+
   // Wait for DOM to be ready before initializing
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', load);
+    document.addEventListener('DOMContentLoaded', () => {
+      load();
+      setupKeyboardNavigation();
+    });
   } else {
     // DOM is already ready
     load();
+    setupKeyboardNavigation();
   }
 })();
 
