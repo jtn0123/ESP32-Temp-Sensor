@@ -343,10 +343,10 @@ class VisualLayoutAnalyzer:
             f"Found {len(issues)} total issues",
             "",
         ]
-        for sev in ("critical", "warning", "info"):
+        for sev in ("critical", "error", "warning", "info"):
             items = [i for i in issues if i.severity == sev]
             if items:
-                icon = {"critical": "🔴", "warning": "🟡", "info": "ℹ️"}[sev]
+                icon = {"critical": "🔴", "error": "🟠", "warning": "🟡", "info": "ℹ️"}[sev]
                 lines.append(f"{icon} {sev.upper()} ISSUES ({len(items)}):")
                 for it in items:
                     lines.append(f"  • {it.description}")
@@ -1460,26 +1460,36 @@ def main() -> None:
                     help="Validation mode: 'sim' uses simulator API, 'legacy' uses Python detection")
     ap.add_argument("--fail-on-critical", action="store_true",
                     help="Exit with non-zero code if critical issues found")
+    ap.add_argument("--fail-on-error", action="store_true",
+                    help="Exit with non-zero code if error-level issues found")
     args = ap.parse_args()
     
     use_sim_validation = (args.validation_mode == "sim")
     analyzer = VisualLayoutAnalyzer(args.web_root, use_sim_validation=use_sim_validation)
     results = analyzer.run(args.variants)
-    # Count critical issues explicitly to satisfy type checkers
-    critical = 0
+    # Count issues by severity
+    by_severity = {"critical": 0, "error": 0, "warning": 0, "info": 0}
     for v in results.values():
         issues_list_obj = v.get("issues")
         if not isinstance(issues_list_obj, list):
             continue
         for i in issues_list_obj:
-            if isinstance(i, LayoutIssue) and i.severity == "critical":
-                critical += 1
+            if isinstance(i, LayoutIssue) and i.severity in by_severity:
+                by_severity[i.severity] += 1
     
-    if args.fail_on_critical and critical > 0:
-        print(f"Found {critical} critical issues. Exiting with error.")
+    # Print summary
+    print(f"\nSummary: {by_severity['critical']} critical, {by_severity['error']} errors, "
+          f"{by_severity['warning']} warnings, {by_severity['info']} info")
+    
+    # Exit based on flags
+    if args.fail_on_critical and by_severity['critical'] > 0:
+        print(f"Exiting with error due to {by_severity['critical']} critical issues.")
         sys.exit(1)
-    elif critical > 0:
-        print(f"Found {critical} critical issues.")
+    elif args.fail_on_error and by_severity['error'] > 0:
+        print(f"Exiting with error due to {by_severity['error']} error-level issues.")
+        sys.exit(1)
+    elif by_severity['critical'] > 0:
+        print(f"Found {by_severity['critical']} critical issues (not failing build).")
     else:
         print("No critical layout issues detected.")
 

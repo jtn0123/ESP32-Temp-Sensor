@@ -468,7 +468,7 @@
           severity: 'critical',
           region: 'INSIDE_TEMP',
           description: `INSIDE_TEMP crosses center divider (gap: ${gap}px)`,
-          rect: [centerX - 2, y, 4, h]
+          rect: [centerX - 3, y, 6, h]  // Fixed 6px width centered on divider
         });
       } else if (gap < minGap) {
         issues.push({
@@ -476,7 +476,7 @@
           severity: 'warning',
           region: 'INSIDE_TEMP',
           description: `INSIDE_TEMP too close to center (gap: ${gap}px, min: ${minGap}px)`,
-          rect: [rightEdge, y, gap, h]
+          rect: [centerX - 3, y, 6, h]  // Fixed 6px width for visibility
         });
       }
     }
@@ -493,7 +493,7 @@
           severity: 'critical',
           region: 'OUT_TEMP',
           description: `OUT_TEMP crosses center divider (gap: ${gap}px)`,
-          rect: [centerX - 2, y, 4, h]
+          rect: [centerX - 3, y, 6, h]  // Fixed 6px width centered on divider
         });
       } else if (gap < minGap) {
         issues.push({
@@ -501,7 +501,7 @@
           severity: 'warning',
           region: 'OUT_TEMP',
           description: `OUT_TEMP too close to center (gap: ${gap}px, min: ${minGap}px)`,
-          rect: [centerX, y, gap, h]
+          rect: [centerX - 3, y, 6, h]  // Fixed 6px width for visibility
         });
       }
     }
@@ -509,34 +509,35 @@
     return issues;
   }
   
-  function validateLabelTempProximity(rects, labelGap = 4, warnGap = 8, critGap = 2) {
+  function validateLabelTempProximity(rects, minWarnOverlapPx = 1, minCritOverlapPx = 4) {
     const issues = [];
+    const LABEL_HEIGHT = 12; // Standard label height
     
     // Check INSIDE label to INSIDE_TEMP proximity
     if (rects.INSIDE_TEMP && rects.INSIDE_HUMIDITY) {
       const [tx, ty, tw, th] = rects.INSIDE_TEMP;
       const [hx, hy, hw, hh] = rects.INSIDE_HUMIDITY;
       
-      // Assume label is at top of humidity region
-      const labelBottom = hy + 12; // Approximate label height
+      // Label is at top of humidity region
+      const labelBottom = hy + LABEL_HEIGHT;
       const tempTop = ty;
-      const gap = tempTop - labelBottom;
+      const overlap = labelBottom - tempTop; // Positive = overlapping
       
-      if (gap < critGap) {
+      if (overlap >= minCritOverlapPx) {
         issues.push({
           type: 'label_temp_collision',
           severity: 'critical',
           region: 'INSIDE_TEMP',
-          description: `INSIDE label collides with temperature (gap: ${gap}px)`,
-          rect: [tx, labelBottom, tw, Math.max(1, gap)]
+          description: `INSIDE label overlaps temperature by ${overlap}px`,
+          rect: [tx, tempTop, tw, overlap]
         });
-      } else if (gap < warnGap) {
+      } else if (overlap >= minWarnOverlapPx) {
         issues.push({
-          type: 'label_temp_proximity',
+          type: 'label_temp_overlap',
           severity: 'warning',
           region: 'INSIDE_TEMP',
-          description: `INSIDE label too close to temperature (gap: ${gap}px)`,
-          rect: [tx, labelBottom, tw, gap]
+          description: `INSIDE label overlaps temperature by ${overlap}px`,
+          rect: [tx, tempTop, tw, Math.max(1, overlap)]
         });
       }
     }
@@ -546,25 +547,25 @@
       const [tx, ty, tw, th] = rects.OUT_TEMP;
       const [hx, hy, hw, hh] = rects.OUT_HUMIDITY;
       
-      const labelBottom = hy + 12;
+      const labelBottom = hy + LABEL_HEIGHT;
       const tempTop = ty;
-      const gap = tempTop - labelBottom;
+      const overlap = labelBottom - tempTop; // Positive = overlapping
       
-      if (gap < critGap) {
+      if (overlap >= minCritOverlapPx) {
         issues.push({
           type: 'label_temp_collision',
           severity: 'critical',
           region: 'OUT_TEMP',
-          description: `OUTSIDE label collides with temperature (gap: ${gap}px)`,
-          rect: [tx, labelBottom, tw, Math.max(1, gap)]
+          description: `OUTSIDE label overlaps temperature by ${overlap}px`,
+          rect: [tx, tempTop, tw, overlap]
         });
-      } else if (gap < warnGap) {
+      } else if (overlap >= minWarnOverlapPx) {
         issues.push({
-          type: 'label_temp_proximity',
+          type: 'label_temp_overlap',
           severity: 'warning',
           region: 'OUT_TEMP',
-          description: `OUTSIDE label too close to temperature (gap: ${gap}px)`,
-          rect: [tx, labelBottom, tw, gap]
+          description: `OUTSIDE label overlaps temperature by ${overlap}px`,
+          rect: [tx, tempTop, tw, Math.max(1, overlap)]
         });
       }
     }
@@ -715,30 +716,53 @@
     // Check weather icon alignment
     validationIssues.push(...validateWeatherIconAlignment(rectsToValidate));
     
-    // Check for empty regions that should have content (varies by variant)
+    // Check for empty regions that should have content
     const variant = QS.get('variant') || (window.UI_SPEC && window.UI_SPEC.defaultVariant) || 'v2';
-    // All variants are now v2
-    const isV2 = true;
-    const usesCenteredHeader = variant.includes('centered'); // header_centered variant uses HEADER_TIME_CENTER
     
-    const expectedContent = new Set([
-      'HEADER_NAME', 'HEADER_VERSION', 'HEADER_TIME_CENTER', 'INSIDE_TEMP', 'INSIDE_HUMIDITY', 'OUT_TEMP'
-    ]);
+    // Smart expected content based on available data
+    const expectedContent = new Set(['HEADER_NAME', 'HEADER_VERSION', 'INSIDE_TEMP', 'INSIDE_HUMIDITY']);
     
-    // Add v2 expected content
-    expectedContent.add('HEADER_NAME');
-    expectedContent.add('HEADER_VERSION');
-    expectedContent.add('HEADER_TIME_CENTER');
-    expectedContent.add('INSIDE_TEMP');
-    expectedContent.add('INSIDE_HUMIDITY');
-    expectedContent.add('INSIDE_PRESSURE'); // Pressure in v2
-    expectedContent.add('OUT_TEMP');
-    // Don't expect outside metric regions as they are optional based on data availability
-    // expectedContent.add('OUT_HUMIDITY');
-    // expectedContent.add('OUT_WIND');
-    expectedContent.add('FOOTER_STATUS'); // v2 uses FOOTER_STATUS for battery/IP
-    expectedContent.add('FOOTER_WEATHER'); // v2 uses FOOTER_WEATHER for weather text
-    expectedContent.add('WEATHER_ICON'); // v2 uses WEATHER_ICON for weather icon
+    // Add conditional expectations based on actual data
+    if (lastData.time || lastData.time_hhmm) {
+      expectedContent.add('HEADER_TIME_CENTER');
+    }
+    if (lastData.pressure_hpa !== undefined && lastData.pressure_hpa !== null) {
+      expectedContent.add('INSIDE_PRESSURE');
+    }
+    if (lastData.outside_temp_f !== undefined || lastData.outside_temp_c !== undefined) {
+      expectedContent.add('OUT_TEMP');
+    }
+    if (lastData.outside_hum_pct !== undefined) {
+      expectedContent.add('OUT_HUMIDITY');
+    }
+    if (lastData.wind_mps !== undefined || lastData.wind_mph !== undefined) {
+      expectedContent.add('OUT_WIND');
+    }
+    if (lastData.weather) {
+      expectedContent.add('WEATHER_ICON');
+      expectedContent.add('FOOTER_WEATHER');
+    }
+    if (lastData.battery_percent !== undefined || lastData.ip || lastData.days !== undefined) {
+      expectedContent.add('FOOTER_STATUS');
+    }
+    
+    // Coverage thresholds for different region types
+    const COVERAGE_THRESHOLDS = {
+      WEATHER_ICON: 5,      // Icon regions
+      INSIDE_TEMP: 10,      // Large text regions
+      OUT_TEMP: 10,
+      HEADER_NAME: 10,      // Header text
+      HEADER_VERSION: 10,
+      HEADER_TIME_CENTER: 10,
+      INSIDE_HUMIDITY: 8,   // Smaller text regions
+      INSIDE_PRESSURE: 8,
+      OUT_HUMIDITY: 8,
+      OUT_WIND: 8,
+      OUT_PRESSURE: 8,
+      FOOTER_STATUS: 8,     // Footer regions
+      FOOTER_WEATHER: 8,
+      default: 10           // Default threshold
+    };
     
     for (const regionName of expectedContent) {
       if (!renderedContent[regionName] && GJSON.rects[regionName]) {
@@ -760,6 +784,31 @@
             description: `Region shows placeholder: "${text}"`,
             rect: GJSON.rects[regionName]
           });
+        }
+        
+        // Check coverage-based empty detection
+        const content = renderedContent[regionName];
+        if (content.actualBounds && GJSON.rects[regionName]) {
+          const rect = GJSON.rects[regionName];
+          const rectArea = rect[2] * rect[3];
+          const contentArea = content.actualBounds.width * content.actualBounds.height;
+          const coverage = (contentArea / rectArea) * 100;
+          const threshold = COVERAGE_THRESHOLDS[regionName] || COVERAGE_THRESHOLDS.default;
+          
+          // Skip coverage check for naturally small text (1-2 chars like units)
+          const isNaturallySmall = text.length <= 2 && text !== '';
+          
+          if (!isNaturallySmall && coverage < threshold) {
+            // Downgrade to info if it's a legitimate low coverage (e.g., "4%" text)
+            const severity = (text.length > 0 && text.length <= 4) ? 'info' : 'warning';
+            validationIssues.push({
+              type: 'low_coverage',
+              severity: severity,
+              region: regionName,
+              description: `Region appears empty (${coverage.toFixed(1)}% coverage)`,
+              rect: GJSON.rects[regionName]
+            });
+          }
         }
       }
     }
@@ -880,6 +929,15 @@
     
     // Validate data ranges and formats
     validateDataRanges(lastData);
+    
+    // De-duplicate issues
+    const seen = new Set();
+    validationIssues = validationIssues.filter(issue => {
+      const key = `${issue.type}_${issue.region}_${issue.severity}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
     
     // Update validation UI
     updateValidationDisplay();
@@ -1751,13 +1809,15 @@
   
   // Export validation results with optional screenshot
   window.exportValidation = function(opts = { includeScreenshot: false }) {
+    const VALIDATION_VERSION = "1.0.0";
+    
     // Ensure fresh validation results
     if (typeof window.runValidation === 'function') {
       window.runValidation();
     }
     
     // Map issues to stable format
-    const issues = (window.validationIssues || []).map(i => ({
+    let issues = (window.validationIssues || []).map(i => ({
       type: i.type,
       severity: i.severity,
       region: i.region,
@@ -1765,6 +1825,18 @@
       rect: i.rect || null,
       suggestion: i.suggestion || null
     }));
+    
+    // Sort issues deterministically
+    const severityOrder = { critical: 0, error: 1, warning: 2, info: 3 };
+    issues.sort((a, b) => {
+      const sevDiff = severityOrder[a.severity] - severityOrder[b.severity];
+      if (sevDiff !== 0) return sevDiff;
+      
+      const regionDiff = (a.region || '').localeCompare(b.region || '');
+      if (regionDiff !== 0) return regionDiff;
+      
+      return (a.type || '').localeCompare(b.type || '');
+    });
     
     // Optionally include screenshot
     let screenshot = null;
@@ -1778,7 +1850,8 @@
       screenshot: screenshot,
       variant: (window.QS && window.QS.get('variant')) || 'v2_grid',
       timestamp: window.__lastDrawAt || null,
-      ready: window.__simReady || false
+      ready: window.__simReady || false,
+      validationVersion: VALIDATION_VERSION
     };
   };
 
