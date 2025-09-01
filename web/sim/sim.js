@@ -74,13 +74,190 @@
   const SIZE_TIME = 10; // reduced from 11 to fit 14px header
   const SIZE_BIG = 22;
   const THRESH = 176;
-  // Provide a simple, deterministic short label from weather text
-  function shortConditionLabel(s){
+  // Classify weather strings (HA states, MDI tokens, free-form) to canonical categories
+  function classifyWeather(s){
     try{
-      const str = String(s||'');
-      const parts = str.split(/[\s-]+/);
-      return parts[0] || str;
-    }catch(e){ return String(s||''); }
+      const str = String(s||'').toLowerCase().trim();
+      if (!str) return 'unknown';
+      // MDI tokens
+      if (str.startsWith('weather-')){
+        const rest = str.slice(8);
+        if (rest === 'sunny') return 'sunny';
+        if (rest === 'partly-cloudy') return 'partly';
+        if (rest === 'cloudy') return 'cloudy';
+        if (rest === 'fog') return 'fog';
+        if (rest === 'pouring' || rest === 'rainy') return 'rain';
+        if (rest === 'snowy') return 'snow';
+        if (rest === 'lightning') return 'storm';
+        if (rest === 'night') return 'night';
+        if (rest === 'night-partly-cloudy') return 'night-partly';
+        if (rest === 'windy-variant' || rest === 'windy') return 'wind';
+        // heuristics on MDI remainder
+        if (rest.includes('night') && rest.includes('cloud')) return 'night-partly';
+        if (rest.includes('night')) return 'night';
+        if (rest.includes('part')) return 'partly';
+        if (rest.includes('cloud')) return 'cloudy';
+        if (rest.includes('lightning')||rest.includes('thunder')||rest.includes('storm')) return 'storm';
+        if (rest.includes('rain')||rest.includes('pour')) return 'rain';
+        if (rest.includes('snow')) return 'snow';
+        if (rest.includes('fog')||rest.includes('mist')||rest.includes('haze')) return 'fog';
+        if (rest.includes('wind')) return 'wind';
+        if (rest.includes('hail')) return 'hail';
+      }
+      // HA recommended states
+      if (str === 'clear-night') return 'night';
+      if (str === 'partlycloudy') return 'partly';
+      if (str === 'cloudy') return 'cloudy';
+      if (str === 'pouring' || str === 'rainy' || str.includes('showers')) return 'rain';
+      if (str === 'lightning' || str === 'lightning-rainy') return 'storm';
+      if (str === 'snowy' || str.includes('sleet')) return 'snow';
+      if (str === 'fog') return 'fog';
+      if (str === 'windy' || str === 'windy-variant') return 'wind';
+      if (str === 'hail') return 'hail';
+      // Generic heuristics
+      if (str.includes('night') && str.includes('cloud')) return 'night-partly';
+      if (str.includes('night') || str.includes('moon')) return 'night';
+      if (str.includes('part')) return 'partly';
+      if (str.includes('cloud') || str.includes('overcast')) return 'cloudy';
+      if (str.includes('storm') || str.includes('thunder') || str.includes('lightning')) return 'storm';
+      if (str.includes('rain') || str.includes('pour') || str.includes('shower') || str.includes('drizzle')) return 'rain';
+      if (str.includes('snow')) return 'snow';
+      if (str.includes('fog') || str.includes('mist') || str.includes('haze')) return 'fog';
+      if (str.includes('wind')) return 'wind';
+      if (str.includes('hail')) return 'hail';
+      if (str.includes('sun') || str.includes('clear')) return 'sunny';
+      return 'sunny';
+    }catch(e){ return 'sunny'; }
+  }
+
+  // Provide a short, user-facing label for the weather category
+  function shortConditionLabel(s){
+    const c = classifyWeather(s);
+    switch (c){
+      case 'night': return 'Night';
+      case 'night-partly': return 'Night';
+      case 'partly': return 'Partly';
+      case 'cloudy': return 'Cloudy';
+      case 'rain': return 'Rain';
+      case 'snow': return 'Snow';
+      case 'storm': return 'Storm';
+      case 'fog': return 'Fog';
+      case 'wind': return 'Wind';
+      default: return 'Sunny';
+    }
+  }
+
+  // Draw simplified glyph for a given category
+  function drawWeatherGlyph(category, startX, startY, iconW, iconH){
+    const iconCx = startX + Math.floor(iconW/2);
+    const iconCy = startY + Math.floor(iconH/2);
+    const minDim = Math.min(iconW, iconH);
+    // Ensure stroke styles
+    ctx.strokeStyle = '#000';
+    ctx.fillStyle = '#000';
+    const drawCloud = () => {
+      // Three-lobe cloud outline
+      const r1 = Math.floor(minDim * 0.22);
+      const r2 = Math.floor(minDim * 0.28);
+      const r3 = Math.floor(minDim * 0.20);
+      const cy = startY + Math.floor(iconH * 0.58);
+      const cx1 = startX + r1 + 2;
+      const cx2 = iconCx;
+      const cx3 = startX + iconW - r3 - 2;
+      ctx.beginPath();
+      ctx.arc(cx1, cy, r1, Math.PI, 0);
+      ctx.arc(cx2, cy - Math.floor(r2*0.5), r2, Math.PI, 0);
+      ctx.arc(cx3, cy, r3, Math.PI, 0);
+      ctx.lineTo(cx3 + r3, cy + Math.floor(r1*0.75));
+      ctx.lineTo(cx1 - r1, cy + Math.floor(r1*0.75));
+      ctx.closePath();
+      ctx.stroke();
+    };
+    switch (category){
+      case 'rain': {
+        // Raindrops
+        for (let i=0;i<3;i++){
+          ctx.beginPath();
+          ctx.moveTo(startX + 6 + i*6, iconCy+2);
+          ctx.lineTo(startX + 3 + i*6, iconCy+8);
+          ctx.stroke();
+        }
+        break;
+      }
+      case 'snow': {
+        for (let i=0;i<2;i++) text(startX + 6 + i*8, iconCy+2, '*', 10);
+        break;
+      }
+      case 'storm': {
+        ctx.beginPath();
+        ctx.moveTo(iconCx-6, iconCy+2);
+        ctx.lineTo(iconCx, iconCy-2);
+        ctx.lineTo(iconCx-2, iconCy+6);
+        ctx.lineTo(iconCx+6, iconCy+2);
+        ctx.stroke();
+        break;
+      }
+      case 'fog': {
+        for (let i=0;i<3;i++){
+          ctx.beginPath();
+          ctx.moveTo(startX+2, startY+6+i*6);
+          ctx.lineTo(startX+iconW-2, startY+6+i*6);
+          ctx.stroke();
+        }
+        break;
+      }
+      case 'cloudy': {
+        drawCloud();
+        break;
+      }
+      case 'partly': {
+        drawCloud();
+        const r = Math.floor(minDim*0.18);
+        const sx = startX + Math.floor(iconW*0.25);
+        const sy = startY + Math.floor(iconH*0.3);
+        ctx.beginPath(); ctx.arc(sx, sy, r, 0, Math.PI*2); ctx.stroke();
+        break;
+      }
+      case 'night': {
+        const r = Math.floor(minDim*0.28);
+        ctx.beginPath(); ctx.arc(iconCx, iconCy, r, 0, Math.PI*2); ctx.stroke();
+        // crescent cutout
+        ctx.save();
+        ctx.fillStyle = '#fff';
+        ctx.beginPath(); ctx.arc(iconCx + Math.floor(r*0.4), iconCy - Math.floor(r*0.2), r, 0, Math.PI*2); ctx.fill();
+        ctx.restore();
+        break;
+      }
+      case 'night-partly': {
+        drawCloud();
+        const r = Math.floor(minDim*0.22);
+        const sx = startX + Math.floor(iconW*0.30);
+        const sy = startY + Math.floor(iconH*0.35);
+        ctx.beginPath(); ctx.arc(sx, sy, r, 0, Math.PI*2); ctx.stroke();
+        ctx.save();
+        ctx.fillStyle = '#fff';
+        ctx.beginPath(); ctx.arc(sx + Math.floor(r*0.5), sy - Math.floor(r*0.2), r, 0, Math.PI*2); ctx.fill();
+        ctx.restore();
+        break;
+      }
+      case 'wind': {
+        // Two wavy gust lines
+        const y0 = iconCy - 3, y1 = iconCy + 4;
+        ctx.beginPath(); ctx.moveTo(startX+2, y0); ctx.quadraticCurveTo(iconCx, y0-4, startX+iconW-2, y0); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(startX+2, y1); ctx.quadraticCurveTo(iconCx, y1+4, startX+iconW-6, y1); ctx.stroke();
+        break;
+      }
+      case 'hail': {
+        drawCloud();
+        for (let i=0;i<3;i++) text(startX + 6 + i*6, iconCy+6, '•', 10);
+        break;
+      }
+      default: {
+        // Sunny: simple circle
+        ctx.beginPath(); ctx.arc(iconCx, iconCy, Math.floor(minDim/3), 0, Math.PI*2); ctx.stroke();
+        break;
+      }
+    }
   }
   
   // UI Validation Functions
@@ -1655,18 +1832,8 @@
                 const iconCx = startX + Math.floor(iconW/2);
                 const iconCy = startY + Math.floor(iconH/2);
                 ctx.strokeStyle = '#000'; ctx.fillStyle = '#000';
-                const wstr = String((data.weather||'')).toLowerCase();
-                if (wstr.includes('rain')){
-                  for (let i=0;i<3;i++) { ctx.beginPath(); ctx.moveTo(startX+6+i*6, iconCy+2); ctx.lineTo(startX+3+i*6, iconCy+8); ctx.stroke(); }
-                } else if (wstr.includes('snow')){
-                  for (let i=0;i<2;i++) text(startX+6+i*8, iconCy+2, '*', 10);
-                } else if (wstr.includes('storm')||wstr.includes('thunder')||wstr.includes('lightning')){
-                  ctx.beginPath(); ctx.moveTo(iconCx-6, iconCy+2); ctx.lineTo(iconCx, iconCy-2); ctx.lineTo(iconCx-2, iconCy+6); ctx.lineTo(iconCx+6, iconCy+2); ctx.stroke();
-                } else if (wstr.includes('fog')||wstr.includes('mist')||wstr.includes('haze')){
-                  for (let i=0;i<3;i++){ ctx.beginPath(); ctx.moveTo(startX+2, startY+6+i*6); ctx.lineTo(startX+iconW-2, startY+6+i*6); ctx.stroke(); }
-                } else {
-                  ctx.beginPath(); ctx.arc(iconCx, iconCy, Math.min(iconW,iconH)/3, 0, Math.PI*2); ctx.stroke();
-                }
+                const category = classifyWeather(data.weather);
+                drawWeatherGlyph(category, startX, startY, iconW, iconH);
                 // If FOOTER_WEATHER exists, draw text immediately to right inside its own rect left-aligned
                 // Draw label to the right of the inner icon box if quadrant label exists
                 const fw = rects.FOOTER_WEATHER;
@@ -1722,18 +1889,8 @@
               const iconCx2 = startX2 + Math.floor(iconW2/2);
               const iconCy2 = barY2 + Math.floor(iconH2/2);
               ctx.strokeStyle = '#000'; ctx.fillStyle = '#000';
-              const condLower2 = String((data.weather||'')).toLowerCase();
-              if (condLower2.includes('rain')){
-                for (let i=0;i<3;i++) { ctx.beginPath(); ctx.moveTo(startX2+6+i*6, iconCy2+2); ctx.lineTo(startX2+3+i*6, iconCy2+8); ctx.stroke(); }
-              } else if (condLower2.includes('snow')){
-                for (let i=0;i<2;i++) text(startX2+6+i*8, iconCy2+2, '*', 10);
-              } else if (condLower2.includes('storm')||condLower2.includes('thunder')||condLower2.includes('lightning')){
-                ctx.beginPath(); ctx.moveTo(iconCx2-6, iconCy2+2); ctx.lineTo(iconCx2, iconCy2-2); ctx.lineTo(iconCx2-2, iconCy2+6); ctx.lineTo(iconCx2+6, iconCy2+2); ctx.stroke();
-              } else if (condLower2.includes('fog')||condLower2.includes('mist')||condLower2.includes('haze')){
-                for (let i=0;i<3;i++){ ctx.beginPath(); ctx.moveTo(startX2+2, barY2+6+i*6); ctx.lineTo(startX2+iconW2-2, barY2+6+i*6); ctx.stroke(); }
-              } else {
-                ctx.beginPath(); ctx.arc(iconCx2, iconCy2, Math.min(iconW2,iconH2)/3, 0, Math.PI*2); ctx.stroke();
-              }
+              const category2 = classifyWeather(data.weather);
+              drawWeatherGlyph(category2, startX2, barY2, iconW2, iconH2);
               const labelTop2 = barY2 + Math.max(0, Math.floor((iconH2 - fpx2)/2)) + 1;
               text(startX2 + iconW2 + gap2, labelTop2, label2, fpx2);
               window.__layoutMetrics.weather = {
