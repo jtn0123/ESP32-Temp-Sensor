@@ -2147,13 +2147,19 @@
   if (copyBtn){
     async function showToast(msg){ const t=document.getElementById('actionToast'); if(t){ t.textContent = msg; setTimeout(()=>{ t.textContent=''; }, 1800);} }
     function showGlobalToast(msg){ const g=document.getElementById('globalToast'); if(!g){ showToast(msg); return; } g.textContent = msg; g.classList.add('show'); setTimeout(()=>{ g.classList.remove('show'); }, 1500); }
-    function toBlobAsync(canvas){ return new Promise(res=>canvas.toBlob(res,'image/png')); }
     async function copyAsImage(canvas){
       if (!(window.ClipboardItem && navigator.clipboard && navigator.clipboard.write)) return false;
       try{
-        const blob = await toBlobAsync(canvas);
-        if (!blob) return false;
-        await navigator.clipboard.write([ new ClipboardItem({ 'image/png': blob }) ]);
+        // Safari fix: Don't await before clipboard.write - pass promise directly
+        const blobPromise = new Promise((resolve) => {
+          canvas.toBlob((blob) => resolve(blob), 'image/png');
+        });
+        
+        await navigator.clipboard.write([
+          new ClipboardItem({
+            'image/png': blobPromise  // Pass promise directly, don't await
+          })
+        ]);
         showGlobalToast('Copied PNG to clipboard');
         return true;
       }catch(err){ console.warn('copyAsImage failed', err); return false; }
@@ -2216,30 +2222,24 @@
         return true;
       }catch(err){ console.warn('copyAsText failed', err); return false; }
     }
-    // Safari-specific copy method using canvas selection
+    // Safari-specific copy method - no await before write
     async function copyViaSafariCanvas(canvas){
       try{
         // Check if we're in Safari
         const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
         if (!isSafari) return false;
         
-        // Create a temporary canvas copy that Safari can select
-        const tempCanvas = document.createElement('canvas');
-        tempCanvas.width = canvas.width;
-        tempCanvas.height = canvas.height;
-        const ctx = tempCanvas.getContext('2d');
-        ctx.drawImage(canvas, 0, 0);
-        
-        // Convert to blob
-        const blob = await toBlobAsync(tempCanvas);
-        if (!blob) return false;
-        
-        // Try the native clipboard API with user activation
-        if (navigator.clipboard && navigator.clipboard.write) {
+        // Try the native clipboard API with direct promise (Safari fix)
+        if (window.ClipboardItem && navigator.clipboard && navigator.clipboard.write) {
           try {
+            // Don't await - pass promise directly for Safari
+            const blobPromise = new Promise((resolve) => {
+              canvas.toBlob((blob) => resolve(blob), 'image/png');
+            });
+            
             await navigator.clipboard.write([
               new ClipboardItem({
-                'image/png': blob
+                'image/png': blobPromise
               })
             ]);
             showGlobalToast('Copied PNG (Safari)');
@@ -2258,37 +2258,137 @@
     
     copyBtn.addEventListener('click', async ()=>{
       try{
-        const canvas = document.getElementById('epd'); if (!canvas) return;
+        const canvas = document.getElementById('epd'); 
+        if (!canvas) {
+          console.error('Canvas not found');
+          return;
+        }
         
         // Detect Safari
         const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+        console.log('Browser detection - Safari:', isSafari, 'UserAgent:', navigator.userAgent);
         
         // Pre-flight: report feature availability so user sees immediate feedback
         const hasNative = !!(window.ClipboardItem && navigator.clipboard && navigator.clipboard.write);
+        console.log('Clipboard API available:', hasNative);
         showGlobalToast(isSafari ? 'Copying (Safari)…' : (hasNative ? 'Copying PNG…' : 'Copying (fallback)…'));
         
         // 1) Try Safari-specific method first if in Safari
-        if (isSafari && await copyViaSafariCanvas(canvas)) return;
+        if (isSafari) {
+          console.log('Trying Safari-specific method...');
+          const safariResult = await copyViaSafariCanvas(canvas);
+          console.log('Safari method result:', safariResult);
+          if (safariResult) return;
+        }
         
         // 2) Try standard native image clipboard
-        if (await copyAsImage(canvas)) return;
+        console.log('Trying standard clipboard API...');
+        const imageResult = await copyAsImage(canvas);
+        console.log('Standard clipboard result:', imageResult);
+        if (imageResult) return;
         
         // 3) Try HTML image fallback
+        console.log('Trying HTML image fallback...');
         const url = canvas.toDataURL('image/png');
-        if (await copyAsHtmlImage(url)) return;
+        console.log('Data URL created, length:', url.length);
+        const htmlResult = await copyAsHtmlImage(url);
+        console.log('HTML fallback result:', htmlResult);
+        if (htmlResult) return;
         
-        // 4) Fallback to text; if that also fails, open in new tab
-        const ok = await copyAsText(url);
-        if (!ok){ 
-          try{ 
-            window.open(url, '_blank', 'noopener'); 
-            showGlobalToast('Opened image in new tab'); 
-          }catch(_){ 
-            showGlobalToast('Copy failed - try right-click → Copy Image'); 
+        // 4) Fallback to text
+        console.log('Trying text copy fallback...');
+        const textResult = await copyAsText(url);
+        console.log('Text copy result:', textResult);
+        
+        if (!textResult) { 
+          console.log('All copy methods failed, showing copyable image...');
+          
+          // Create a modal with a copyable image
+          try {
+            // Remove any existing copy modal
+            const existingModal = document.getElementById('copyModal');
+            if (existingModal) existingModal.remove();
+            
+            // Create modal overlay
+            const modal = document.createElement('div');
+            modal.id = 'copyModal';
+            modal.style.cssText = `
+              position: fixed;
+              top: 0;
+              left: 0;
+              width: 100%;
+              height: 100%;
+              background: rgba(0,0,0,0.8);
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              z-index: 10000;
+              cursor: pointer;
+            `;
+            
+            // Create container
+            const container = document.createElement('div');
+            container.style.cssText = `
+              background: white;
+              padding: 20px;
+              border-radius: 8px;
+              text-align: center;
+              max-width: 90%;
+              max-height: 90%;
+              overflow: auto;
+            `;
+            container.onclick = (e) => e.stopPropagation();
+            
+            // Add instructions
+            const instructions = document.createElement('p');
+            instructions.textContent = 'Right-click the image below and select "Copy Image"';
+            instructions.style.cssText = 'margin-bottom: 10px; font-family: system-ui;';
+            container.appendChild(instructions);
+            
+            // Create copyable image
+            const img = document.createElement('img');
+            img.src = url;
+            img.style.cssText = 'max-width: 100%; border: 1px solid #ccc;';
+            img.alt = 'ESP32 Display Screenshot';
+            container.appendChild(img);
+            
+            // Add close button
+            const closeBtn = document.createElement('button');
+            closeBtn.textContent = 'Close';
+            closeBtn.style.cssText = `
+              margin-top: 10px;
+              padding: 8px 16px;
+              background: #4B5563;
+              color: white;
+              border: none;
+              border-radius: 4px;
+              cursor: pointer;
+              font-family: system-ui;
+            `;
+            closeBtn.onclick = () => modal.remove();
+            container.appendChild(closeBtn);
+            
+            // Click outside to close
+            modal.onclick = () => modal.remove();
+            
+            modal.appendChild(container);
+            document.body.appendChild(modal);
+            
+            showGlobalToast('Right-click image to copy');
+            console.log('Copyable image modal shown');
+          } catch(err) { 
+            console.error('Error showing copyable image:', err);
+            // Last resort: try to open in new tab
+            try {
+              window.open(url, '_blank');
+              showGlobalToast('Opened in new tab');
+            } catch(_) {
+              showGlobalToast('Copy failed - try Screenshot button');
+            }
           } 
         }
       }catch(e){ 
-        console.error('copy handler failed', e); 
+        console.error('Copy handler failed with exception:', e); 
         showGlobalToast('Copy failed - try Screenshot button'); 
       }
     });
