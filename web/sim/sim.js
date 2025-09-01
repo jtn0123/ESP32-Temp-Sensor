@@ -6,14 +6,14 @@
   let HEADER_VERSION = [172,  2,  72, 14];
   let HEADER_TIME_CENTER = [100,  2,  50, 14];
   let INSIDE_TEMP = [  6, 36, 118, 28];
-  let INSIDE_HUMIDITY = [  6, 66, 118, 14];
-  let INSIDE_PRESSURE = [  6, 78, 118, 12];
+  let INSIDE_HUMIDITY = [  6, 66, 115, 14];
+  let INSIDE_PRESSURE = [  6, 81, 115, 14];
   let OUT_TEMP    = [129, 36,  94, 28];
-  let WEATHER_ICON = [168, 90,  30, 32];
+  let WEATHER_ICON = [170, 92,  30, 28];
   // Outside metric regions with meaningful names
-  let OUT_PRESSURE = [177, 68,  64, 12]; // Outside pressure
-  let OUT_HUMIDITY = [131, 78,  44, 12]; // Outside humidity
-  let OUT_WIND     = [177, 78,  44, 12]; // Wind speed
+  let OUT_PRESSURE = [177, 68,  64, 14]; // Outside pressure
+  let OUT_HUMIDITY = [131, 73,  44, 14]; // Outside humidity
+  let OUT_WIND     = [177, 73,  44, 14]; // Wind speed
 
   let canvas = null;
   let ctx = null;
@@ -258,6 +258,102 @@
         break;
       }
     }
+  }
+
+  // --- High-fidelity SVG icon rendering (MDI) with 1-bit threshold ---
+  const MDI_ICON_BY_CATEGORY = {
+    sunny: 'weather-sunny',
+    partly: 'weather-partly-cloudy',
+    cloudy: 'weather-cloudy',
+    fog: 'weather-fog',
+    rain: 'weather-pouring',
+    snow: 'weather-snowy',
+    storm: 'weather-lightning',
+    night: 'weather-night',
+    'night-partly': 'weather-night-partly-cloudy',
+    wind: 'weather-windy-variant'
+  };
+  const __mdiCache = new Map(); // name -> { svgText, bitmaps: Map(sizeKey->canvas) }
+  let __redrawPending = false;
+  function queueRedrawSoon(){
+    if (__redrawPending) return;
+    __redrawPending = true;
+    const doRedraw = ()=>{
+      try{
+        __redrawPending = false;
+        if (typeof window !== 'undefined' && window.draw && window.lastData){
+          window.draw(window.lastData);
+        }
+      }catch(_){ __redrawPending = false; }
+    };
+    if (typeof requestAnimationFrame !== 'undefined') requestAnimationFrame(doRedraw);
+    else setTimeout(doRedraw, 16);
+  }
+  async function fetchMdiSvgText(name){
+    let entry = __mdiCache.get(name);
+    if (entry && entry.svgText) return entry.svgText;
+    const url = new URL(`../icons/mdi/${name}.svg`, (typeof window!== 'undefined'? window.location.href : '')); 
+    try{
+      const res = await fetch(url.href);
+      const txt = await res.text();
+      entry = entry || { svgText: '', bitmaps: new Map() };
+      entry.svgText = txt;
+      __mdiCache.set(name, entry);
+      return txt;
+    }catch(_){ return ''; }
+  }
+  function thresholdTo1Bit(offCtx, w, h, threshold){
+    const img = offCtx.getImageData(0, 0, w, h);
+    const data = img.data;
+    const t = typeof threshold === 'number' ? threshold : 160; // align with firmware conversion
+    for (let i=0;i<data.length;i+=4){
+      const r = data[i], g = data[i+1], b = data[i+2], a = data[i+3];
+      const y = (0.2126*r + 0.7152*g + 0.0722*b) * (a/255);
+      const v = y < t ? 0 : 255;
+      data[i] = data[i+1] = data[i+2] = v;
+      data[i+3] = 255;
+    }
+    offCtx.putImageData(img, 0, 0);
+  }
+  function tryDrawMdiIcon(category, x, y, w, h){
+    try{
+      const mdiName = MDI_ICON_BY_CATEGORY[category];
+      if (!mdiName) return false;
+      const sizeKey = `${w}x${h}`;
+      const entry = __mdiCache.get(mdiName);
+      if (entry){
+        const c = entry.bitmaps && entry.bitmaps.get(sizeKey);
+        if (c){ ctx.drawImage(c, x, y); return true; }
+      }
+      // Begin async load/rasterize; fallback glyph will draw now
+      (async()=>{
+        try{
+          const svgText = await fetchMdiSvgText(mdiName);
+          if (!svgText) return;
+          const blob = new Blob([svgText], { type: 'image/svg+xml' });
+          const url = URL.createObjectURL(blob);
+          const img = new Image();
+          img.onload = ()=>{
+            try{
+              const off = document.createElement('canvas'); off.width = Math.max(1,w); off.height = Math.max(1,h);
+              const oc = off.getContext('2d');
+              if (!oc) return;
+              oc.imageSmoothingEnabled = false;
+              oc.clearRect(0,0,off.width,off.height);
+              oc.drawImage(img, 0, 0, off.width, off.height);
+              thresholdTo1Bit(oc, off.width, off.height, 160);
+              let e = __mdiCache.get(mdiName); if (!e) { e = { svgText, bitmaps: new Map() }; __mdiCache.set(mdiName, e); }
+              e.bitmaps.set(sizeKey, off);
+              URL.revokeObjectURL(url);
+              queueRedrawSoon();
+            }catch(_){ }
+          };
+          img.onerror = ()=>{ try{ URL.revokeObjectURL(url); }catch(_){ } };
+          img.src = url;
+        }catch(_){ }
+      })();
+      return false;
+    }catch(_){ return false; }
   }
   
   // UI Validation Functions
@@ -1622,7 +1718,7 @@
                 if (s.startsWith('Batt ')){
                   window.__layoutMetrics.statusLeft.line1Y = y;
                   // approximate group bounds: from battery x (set in batteryGlyph) to end of string
-                  const leftCol = rects.FOOTER_STATUS || [6,90,160,32];
+                  const leftCol = rects.FOOTER_STATUS || [6,92,160,28];
                   window.__layoutMetrics.statusLeft.left = leftCol[0];
                   window.__layoutMetrics.statusLeft.right = leftCol[0] + leftCol[2];
                   const textW = ctx.measureText(s).width;
@@ -1672,7 +1768,7 @@
                 // Export metrics even for absolute-positioned footer rows
                 if (s.startsWith('Batt ') || s.includes('%')){
                   window.__layoutMetrics.statusLeft.line1Y = y;
-                  const leftCol = rects.FOOTER_STATUS || [6,90,160,32];
+                  const leftCol = rects.FOOTER_STATUS || [6,92,160,28];
                   window.__layoutMetrics.statusLeft.left = leftCol[0];
                   window.__layoutMetrics.statusLeft.right = leftCol[0] + leftCol[2];
                   const textW = ctx.measureText(s).width;
@@ -1833,7 +1929,9 @@
                 const iconCy = startY + Math.floor(iconH/2);
                 ctx.strokeStyle = '#000'; ctx.fillStyle = '#000';
                 const category = classifyWeather(data.weather);
-                drawWeatherGlyph(category, startX, startY, iconW, iconH);
+                // Try high-fidelity icon; fallback to glyphs this frame
+                const drewSvg = tryDrawMdiIcon(category, startX, startY, iconW, iconH);
+                if (!drewSvg) drawWeatherGlyph(category, startX, startY, iconW, iconH);
                 // If FOOTER_WEATHER exists, draw text immediately to right inside its own rect left-aligned
                 // Draw label to the right of the inner icon box if quadrant label exists
                 const fw = rects.FOOTER_WEATHER;
@@ -1890,7 +1988,8 @@
               const iconCy2 = barY2 + Math.floor(iconH2/2);
               ctx.strokeStyle = '#000'; ctx.fillStyle = '#000';
               const category2 = classifyWeather(data.weather);
-              drawWeatherGlyph(category2, startX2, barY2, iconW2, iconH2);
+              const drewSvg2 = tryDrawMdiIcon(category2, startX2, barY2, iconW2, iconH2);
+              if (!drewSvg2) drawWeatherGlyph(category2, startX2, barY2, iconW2, iconH2);
               const labelTop2 = barY2 + Math.max(0, Math.floor((iconH2 - fpx2)/2)) + 1;
               text(startX2 + iconW2 + gap2, labelTop2, label2, fpx2);
               window.__layoutMetrics.weather = {
