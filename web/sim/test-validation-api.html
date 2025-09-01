@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Validation API</title>
+    <style>
+        body { font-family: monospace; padding: 20px; }
+        #status { margin: 20px 0; }
+        .success { color: green; }
+        .error { color: red; }
+        pre { background: #f0f0f0; padding: 10px; overflow: auto; }
+    </style>
+</head>
+<body>
+    <h1>Validation API Test</h1>
+    <div id="status">Loading simulator...</div>
+    <iframe id="sim" src="index.html?variant=v2_grid" width="700" height="400" style="border: 1px solid #ccc;"></iframe>
+    
+    <h2>Test Results:</h2>
+    <pre id="results"></pre>
+    
+    <script>
+    function log(msg, isError = false) {
+        const status = document.getElementById('status');
+        status.innerHTML += '<div class="' + (isError ? 'error' : 'success') + '">' + msg + '</div>';
+    }
+    
+    function runTest() {
+        const iframe = document.getElementById('sim');
+        const win = iframe.contentWindow;
+        
+        log('Testing validation API...');
+        
+        // Check if simulator is ready
+        if (!win.__simReady) {
+            log('ERROR: Simulator not ready (__simReady = ' + win.__simReady + ')', true);
+            setTimeout(runTest, 1000);
+            return;
+        }
+        
+        log('✓ Simulator is ready');
+        
+        // Draw test data with potential issues
+        const testData = {
+            room_name: "Very Long Room Name That Might Overflow",
+            time: "23:59",
+            version: "v4.2",
+            inside_temp_f: 199.9,  // Very high temp
+            inside_hum_pct: 47,
+            pressure_hpa: 1013.2,
+            outside_temp_f: -99.9,  // Very low temp
+            outside_hum_pct: 53,
+            weather: "thunderstorm",
+            battery_percent: 5,  // Low battery
+            ip: "192.168.1.42"
+        };
+        
+        log('Drawing test data...');
+        win.draw(testData);
+        
+        // Wait for draw to complete
+        setTimeout(() => {
+            // Export validation with screenshot
+            log('Calling exportValidation()...');
+            const result = win.exportValidation({ includeScreenshot: false });
+            
+            if (!result) {
+                log('ERROR: exportValidation returned null', true);
+                return;
+            }
+            
+            log('✓ Got validation result');
+            
+            // Display results
+            const resultsEl = document.getElementById('results');
+            
+            // Summary
+            const summary = {
+                variant: result.variant,
+                ready: result.ready,
+                timestamp: result.timestamp,
+                totalIssues: result.issues ? result.issues.length : 0,
+                issuesBySeverity: {}
+            };
+            
+            // Count by severity
+            if (result.issues) {
+                result.issues.forEach(issue => {
+                    const sev = issue.severity || 'unknown';
+                    summary.issuesBySeverity[sev] = (summary.issuesBySeverity[sev] || 0) + 1;
+                });
+            }
+            
+            // Format output
+            let output = 'SUMMARY:\n' + JSON.stringify(summary, null, 2) + '\n\n';
+            
+            if (result.issues && result.issues.length > 0) {
+                output += 'ISSUES FOUND:\n';
+                result.issues.forEach((issue, i) => {
+                    output += `\n${i + 1}. [${issue.severity}] ${issue.type}\n`;
+                    output += `   Region: ${issue.region}\n`;
+                    output += `   Description: ${issue.description}\n`;
+                    if (issue.suggestion) {
+                        output += `   Suggestion: ${issue.suggestion}\n`;
+                    }
+                    if (issue.rect) {
+                        output += `   Rectangle: [${issue.rect.join(', ')}]\n`;
+                    }
+                });
+            } else {
+                output += 'No validation issues found.\n';
+            }
+            
+            resultsEl.textContent = output;
+            
+            log('✓ Test completed successfully!');
+            
+            // Test the new validation functions
+            log('\nTesting specific validation functions:');
+            if (typeof win.validateCenterlineProximity === 'function') {
+                log('✓ validateCenterlineProximity exists');
+            } else {
+                log('✗ validateCenterlineProximity missing', true);
+            }
+            
+            if (typeof win.validateLabelTempProximity === 'function') {
+                log('✓ validateLabelTempProximity exists');
+            } else {
+                log('✗ validateLabelTempProximity missing', true);
+            }
+            
+            if (typeof win.validateGridAlignment === 'function') {
+                log('✓ validateGridAlignment exists');
+            } else {
+                log('✗ validateGridAlignment missing', true);
+            }
+            
+            if (typeof win.validateWeatherIconAlignment === 'function') {
+                log('✓ validateWeatherIconAlignment exists');
+            } else {
+                log('✗ validateWeatherIconAlignment missing', true);
+            }
+            
+        }, 500);
+    }
+    
+    // Start test when iframe loads
+    window.addEventListener('load', () => {
+        setTimeout(runTest, 2000);
+    });
+    </script>
+</body>
+</html>

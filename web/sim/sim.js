@@ -437,6 +437,208 @@
     return issues;
   }
   
+  function validateCenterlineProximity(rects, spec, minGap = 4) {
+    const issues = [];
+    
+    // Find center divider X position from chrome spec
+    let centerX = 125; // default
+    if (spec && spec.components && spec.components.chrome) {
+      for (const op of spec.components.chrome) {
+        if (op.op === 'line' && op.from && op.to) {
+          const [x1, y1] = op.from;
+          const [x2, y2] = op.to;
+          // Vertical line check
+          if (x1 === x2 && y1 !== y2 && x1 > 100 && x1 < 150) {
+            centerX = x1;
+            break;
+          }
+        }
+      }
+    }
+    
+    // Check INSIDE_TEMP proximity to center
+    if (rects.INSIDE_TEMP) {
+      const [x, y, w, h] = rects.INSIDE_TEMP;
+      const rightEdge = x + w;
+      const gap = centerX - rightEdge;
+      
+      if (gap < 0) {
+        issues.push({
+          type: 'centerline_collision',
+          severity: 'critical',
+          region: 'INSIDE_TEMP',
+          description: `INSIDE_TEMP crosses center divider (gap: ${gap}px)`,
+          rect: [centerX - 2, y, 4, h]
+        });
+      } else if (gap < minGap) {
+        issues.push({
+          type: 'centerline_proximity',
+          severity: 'warning',
+          region: 'INSIDE_TEMP',
+          description: `INSIDE_TEMP too close to center (gap: ${gap}px, min: ${minGap}px)`,
+          rect: [rightEdge, y, gap, h]
+        });
+      }
+    }
+    
+    // Check OUT_TEMP proximity to center
+    if (rects.OUT_TEMP) {
+      const [x, y, w, h] = rects.OUT_TEMP;
+      const leftEdge = x;
+      const gap = leftEdge - centerX;
+      
+      if (gap < 0) {
+        issues.push({
+          type: 'centerline_collision',
+          severity: 'critical',
+          region: 'OUT_TEMP',
+          description: `OUT_TEMP crosses center divider (gap: ${gap}px)`,
+          rect: [centerX - 2, y, 4, h]
+        });
+      } else if (gap < minGap) {
+        issues.push({
+          type: 'centerline_proximity',
+          severity: 'warning',
+          region: 'OUT_TEMP',
+          description: `OUT_TEMP too close to center (gap: ${gap}px, min: ${minGap}px)`,
+          rect: [centerX, y, gap, h]
+        });
+      }
+    }
+    
+    return issues;
+  }
+  
+  function validateLabelTempProximity(rects, labelGap = 4, warnGap = 8, critGap = 2) {
+    const issues = [];
+    
+    // Check INSIDE label to INSIDE_TEMP proximity
+    if (rects.INSIDE_TEMP && rects.INSIDE_HUMIDITY) {
+      const [tx, ty, tw, th] = rects.INSIDE_TEMP;
+      const [hx, hy, hw, hh] = rects.INSIDE_HUMIDITY;
+      
+      // Assume label is at top of humidity region
+      const labelBottom = hy + 12; // Approximate label height
+      const tempTop = ty;
+      const gap = tempTop - labelBottom;
+      
+      if (gap < critGap) {
+        issues.push({
+          type: 'label_temp_collision',
+          severity: 'critical',
+          region: 'INSIDE_TEMP',
+          description: `INSIDE label collides with temperature (gap: ${gap}px)`,
+          rect: [tx, labelBottom, tw, Math.max(1, gap)]
+        });
+      } else if (gap < warnGap) {
+        issues.push({
+          type: 'label_temp_proximity',
+          severity: 'warning',
+          region: 'INSIDE_TEMP',
+          description: `INSIDE label too close to temperature (gap: ${gap}px)`,
+          rect: [tx, labelBottom, tw, gap]
+        });
+      }
+    }
+    
+    // Check OUTSIDE label to OUT_TEMP proximity
+    if (rects.OUT_TEMP && rects.OUT_HUMIDITY) {
+      const [tx, ty, tw, th] = rects.OUT_TEMP;
+      const [hx, hy, hw, hh] = rects.OUT_HUMIDITY;
+      
+      const labelBottom = hy + 12;
+      const tempTop = ty;
+      const gap = tempTop - labelBottom;
+      
+      if (gap < critGap) {
+        issues.push({
+          type: 'label_temp_collision',
+          severity: 'critical',
+          region: 'OUT_TEMP',
+          description: `OUTSIDE label collides with temperature (gap: ${gap}px)`,
+          rect: [tx, labelBottom, tw, Math.max(1, gap)]
+        });
+      } else if (gap < warnGap) {
+        issues.push({
+          type: 'label_temp_proximity',
+          severity: 'warning',
+          region: 'OUT_TEMP',
+          description: `OUTSIDE label too close to temperature (gap: ${gap}px)`,
+          rect: [tx, labelBottom, tw, gap]
+        });
+      }
+    }
+    
+    return issues;
+  }
+  
+  function validateGridAlignment(rects, gridSize = 4) {
+    const issues = [];
+    
+    for (const [name, rect] of Object.entries(rects)) {
+      const [x, y, w, h] = rect;
+      const misaligned = [];
+      
+      if (x % gridSize !== 0) misaligned.push(`x=${x}`);
+      if (y % gridSize !== 0) misaligned.push(`y=${y}`);
+      if (w % gridSize !== 0) misaligned.push(`w=${w}`);
+      if (h % gridSize !== 0) misaligned.push(`h=${h}`);
+      
+      if (misaligned.length > 0) {
+        issues.push({
+          type: 'grid_misalignment',
+          severity: 'info',
+          region: name,
+          description: `Not aligned to ${gridSize}px grid: ${misaligned.join(', ')}`,
+          rect: rect,
+          suggestion: `Align to ${gridSize}px grid for consistency`
+        });
+      }
+    }
+    
+    return issues;
+  }
+  
+  function validateWeatherIconAlignment(rects, maxLeftPadding = 8) {
+    const issues = [];
+    
+    if (rects.WEATHER_ICON && rects.FOOTER_WEATHER) {
+      const [iconX, iconY, iconW, iconH] = rects.WEATHER_ICON;
+      const [footerX, footerY, footerW, footerH] = rects.FOOTER_WEATHER;
+      
+      // Check if icon is left-justified within footer
+      const leftPadding = iconX - footerX;
+      
+      if (leftPadding > maxLeftPadding) {
+        issues.push({
+          type: 'weather_icon_alignment',
+          severity: 'warning',
+          region: 'WEATHER_ICON',
+          description: `Weather icon not left-justified (padding: ${leftPadding}px, max: ${maxLeftPadding}px)`,
+          rect: rects.WEATHER_ICON,
+          suggestion: 'Move icon to left edge of footer region'
+        });
+      }
+      
+      // Check vertical centering
+      const footerCenterY = footerY + footerH / 2;
+      const iconCenterY = iconY + iconH / 2;
+      const verticalOffset = Math.abs(footerCenterY - iconCenterY);
+      
+      if (verticalOffset > 4) {
+        issues.push({
+          type: 'weather_icon_vertical',
+          severity: 'info',
+          region: 'WEATHER_ICON',
+          description: `Weather icon not vertically centered (offset: ${verticalOffset}px)`,
+          rect: rects.WEATHER_ICON
+        });
+      }
+    }
+    
+    return issues;
+  }
+  
   function runValidation() {
     if (!validationEnabled || !GJSON || !GJSON.rects) return;
     
@@ -500,6 +702,18 @@
     
     // Check baseline alignment
     validationIssues.push(...validateBaselineAlignment(renderedContent));
+    
+    // Check centerline proximity
+    validationIssues.push(...validateCenterlineProximity(rectsToValidate, window.UI_SPEC));
+    
+    // Check label-temperature proximity
+    validationIssues.push(...validateLabelTempProximity(rectsToValidate));
+    
+    // Check grid alignment (info level)
+    validationIssues.push(...validateGridAlignment(rectsToValidate));
+    
+    // Check weather icon alignment
+    validationIssues.push(...validateWeatherIconAlignment(rectsToValidate));
     
     // Check for empty regions that should have content (varies by variant)
     const variant = QS.get('variant') || (window.UI_SPEC && window.UI_SPEC.defaultVariant) || 'v2';
@@ -1534,6 +1748,39 @@
       window.drawValidationOverlay = drawValidationOverlay;
     }
   } catch(e) {}
+  
+  // Export validation results with optional screenshot
+  window.exportValidation = function(opts = { includeScreenshot: false }) {
+    // Ensure fresh validation results
+    if (typeof window.runValidation === 'function') {
+      window.runValidation();
+    }
+    
+    // Map issues to stable format
+    const issues = (window.validationIssues || []).map(i => ({
+      type: i.type,
+      severity: i.severity,
+      region: i.region,
+      description: i.description,
+      rect: i.rect || null,
+      suggestion: i.suggestion || null
+    }));
+    
+    // Optionally include screenshot
+    let screenshot = null;
+    if (opts.includeScreenshot && window.canvas && window.canvas.toDataURL) {
+      screenshot = window.canvas.toDataURL('image/png');
+    }
+    
+    // Return structured result
+    return {
+      issues: issues,
+      screenshot: screenshot,
+      variant: (window.QS && window.QS.get('variant')) || 'v2_grid',
+      timestamp: window.__lastDrawAt || null,
+      ready: window.__simReady || false
+    };
+  };
 
   function draw(data){
     console.log('draw() called with data:', data);
@@ -1593,15 +1840,16 @@
       });
     }catch(e){}
     
-    // Apply 1-bit threshold before overlays to ensure clean rendering
-    if (!geometryOnly && !showRects && !showLabels && !validationEnabled) {
+    // Apply 1-bit threshold BEFORE overlays for consistent rendering
+    // This ensures text is properly thresholded before any debug overlays are drawn
+    if (oneBitMode && !geometryOnly) {
       applyOneBitThreshold();
     }
     
     // Run validation after drawing content but before overlays
     runValidation();
     
-    // Draw overlays only if enabled
+    // Draw overlays only if enabled (these are drawn on top of the thresholded image)
     drawGridOverlay();
     drawRectsOverlay();
     
@@ -1615,11 +1863,9 @@
     // Layout constants
     // DISPLAY_WIDTH DISPLAY_HEIGHT RECT_HEADER_NAME RECT_OUT_TEMP CANVAS
     
-    // Apply final 1-bit threshold if no overlays are active
-    if (!geometryOnly && !showRects && !showLabels && validationEnabled) {
-      // We already applied it earlier if validation is disabled, only apply here if validation is enabled
-      applyOneBitThreshold();
-    }
+    // Mark simulator as ready after draw completes
+    window.__simReady = true;
+    window.__lastDrawAt = Date.now();
     if (simulateGhosting){
       // Enhanced eInk ghosting simulation
       const img = ctx.getImageData(0,0,WIDTH,HEIGHT);

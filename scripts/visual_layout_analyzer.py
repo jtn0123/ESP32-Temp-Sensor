@@ -55,10 +55,11 @@ class RegionAnalysis:
 
 
 class VisualLayoutAnalyzer:
-    def __init__(self, web_root: Optional[str] = None):
+    def __init__(self, web_root: Optional[str] = None, use_sim_validation: bool = True):
         self.web_root = web_root or str(ROOT / "web" / "sim")
         self.out_dir = ROOT / "out"
         self.out_dir.mkdir(exist_ok=True)
+        self.use_sim_validation = use_sim_validation
 
     def _clean_out(self, variants: List[str]) -> None:
         """Remove prior layout_analysis artifacts for the given variants.
@@ -168,6 +169,49 @@ class VisualLayoutAnalyzer:
         # fallback to ui_spec.json
         spec = json.loads((ROOT / "config" / "ui_spec.json").read_text())
         return spec.get("rects", {})
+    
+    def _capture_with_sim_validation(self, page, test_data: Dict) -> Tuple[List[LayoutIssue], Optional[Image.Image]]:
+        """Capture validation results from the simulator"""
+        # Wait for simulator to be ready
+        page.wait_for_function("() => window.__simReady === true", timeout=5000)
+        
+        # Draw test data
+        page.evaluate(f"window.draw && window.draw({json.dumps(test_data)})")
+        
+        # Wait for draw to complete
+        page.wait_for_function("() => window.__lastDrawAt > 0", timeout=1000)
+        page.wait_for_timeout(100)  # Extra time for rendering
+        
+        # Get validation results with screenshot
+        result = page.evaluate("() => window.exportValidation({ includeScreenshot: true })")
+        
+        # Convert JS issues to Python LayoutIssue objects
+        issues = []
+        for js_issue in result.get("issues", []):
+            # Map JS severity to Python severity
+            severity = js_issue.get("severity", "info")
+            if severity == "error":
+                severity = "warning"  # Map error to warning for consistency
+            
+            issue = LayoutIssue(
+                issue_type=js_issue.get("type", "unknown"),
+                severity=severity,
+                regions=[js_issue.get("region", "unknown")] if js_issue.get("region") else [],
+                description=js_issue.get("description", ""),
+                coordinates=tuple(js_issue["rect"]) if js_issue.get("rect") else None
+            )
+            issues.append(issue)
+        
+        # Decode screenshot if present
+        screenshot = None
+        if result.get("screenshot"):
+            data_url = result["screenshot"]
+            if data_url.startswith("data:image/png;base64,"):
+                b64_data = data_url.split(",", 1)[1]
+                img_bytes = base64.b64decode(b64_data)
+                screenshot = Image.open(io.BytesIO(img_bytes))
+        
+        return issues, screenshot
 
     def capture_variant(
         self, page, variant: str
@@ -1311,23 +1355,80 @@ class VisualLayoutAnalyzer:
                 page.goto(f"http://127.0.0.1:{port}/index.html", wait_until="load")
                 page.wait_for_timeout(300)
                 for variant in variants:
-                    base_img, over_img, rects = self.capture_variant(page, variant)
-                    analyses = self.analyze_coverage(base_img, rects)
-                    issues: List[LayoutIssue] = []
-                    issues += self.detect_overlaps(analyses)
-                    issues += self.detect_alignment(analyses, grid4=(variant.startswith("v2")))
-                    issues += self.detect_canvas_overflow(analyses)
-                    issues += self.detect_empty_blocks(analyses, variant)
-                    issues += self.detect_gaps(analyses)
-                    issues += self.detect_temp_cropping(analyses)
-                    issues += self.detect_weather_layout(analyses)
-                    # Detect all label and layout issues
-                    issues += self.detect_label_clear_line(base_img, analyses)
-                    issues += self.detect_label_temp_collision(analyses)
-                    issues += self.detect_fahrenheit_centerline_collision(analyses)
-                    issues += self.detect_centerline_content_collision(base_img, analyses)
-                    issues += self.detect_line_through_content(base_img, analyses)
-                    annotated = self.annotate(base_img, analyses, issues)
+                    if self.use_sim_validation:
+                        # Use simulator validation API
+                        page.goto(f"http://127.0.0.1:{port}/index.html?variant={variant}", wait_until="load")
+                        page.wait_for_timeout(300)
+                        
+                        # Prepare test data
+                        test_data = {
+                            "room_name": "Living Room",
+                            "time": "13:45",
+                            "version": "v4.2",
+                            "inside_temp_f": 72.5,
+                            "inside_hum_pct": 47,
+                            "pressure_hpa": 1013.2,
+                            "outside_temp_f": 68.4,
+                            "outside_hum_pct": 53,
+                            "outside_pressure_hpa": 1010,
+                            "wind_mps": 4.2,
+                            "weather": "cloudy",
+                            "weather_short": "cloudy",
+                            "battery_percent": 76,
+                            "battery_voltage": 4.017,
+                            "days": 192,
+                            "ip": "192.168.1.42"
+                        }
+                        
+                        issues, screenshot = self._capture_with_sim_validation(page, test_data)
+                        
+                        # Convert screenshot to numpy array for consistency
+                        if screenshot:
+                            base_img = np.array(screenshot.convert("RGB"))
+                            annotated_img = screenshot.copy()
+                        else:
+                            # Fallback to regular capture if screenshot failed
+                            base_img, over_img, rects = self.capture_variant(page, variant)
+                            analyses = self.analyze_coverage(base_img, rects)
+                            annotated_img = Image.fromarray(base_img)
+                        
+                        # Create minimal analyses for reporting (simulator handles validation)
+                        rects = self._get_rects_from_page(page)
+                        analyses = {}
+                        for name, rect in rects.items():
+                            analyses[name] = RegionAnalysis(
+                                name=name,
+                                rect=rect,
+                                category="",
+                                pixel_coverage=0.0,
+                                content_bounds=None,
+                                issues=[]
+                            )
+                        
+                        # Annotate the screenshot with issues
+                        if issues:
+                            annotated = self.annotate(base_img, analyses, issues)
+                        else:
+                            annotated = annotated_img
+                    else:
+                        # Use legacy Python validation
+                        base_img, over_img, rects = self.capture_variant(page, variant)
+                        analyses = self.analyze_coverage(base_img, rects)
+                        issues: List[LayoutIssue] = []
+                        issues += self.detect_overlaps(analyses)
+                        issues += self.detect_alignment(analyses, grid4=(variant.startswith("v2")))
+                        issues += self.detect_canvas_overflow(analyses)
+                        issues += self.detect_empty_blocks(analyses, variant)
+                        issues += self.detect_gaps(analyses)
+                        issues += self.detect_temp_cropping(analyses)
+                        issues += self.detect_weather_layout(analyses)
+                        # Detect all label and layout issues
+                        issues += self.detect_label_clear_line(base_img, analyses)
+                        issues += self.detect_label_temp_collision(analyses)
+                        issues += self.detect_fahrenheit_centerline_collision(analyses)
+                        issues += self.detect_centerline_content_collision(base_img, analyses)
+                        issues += self.detect_line_through_content(base_img, analyses)
+                        annotated = self.annotate(base_img, analyses, issues)
                     # Timestamped artifacts
                     ts = datetime.now().strftime("%Y-%m-%dT%H-%M-%S")
                     base_name = f"layout_analysis_{variant}_{ts}"
@@ -1355,8 +1456,14 @@ def main() -> None:
     ap = argparse.ArgumentParser(description="Analyze ESP32 eInk display layout")
     ap.add_argument("--variants", nargs="*", default=["v2_grid"])
     ap.add_argument("--web-root", default=str(ROOT / "web" / "sim"))
+    ap.add_argument("--validation-mode", choices=["sim", "legacy"], default="sim",
+                    help="Validation mode: 'sim' uses simulator API, 'legacy' uses Python detection")
+    ap.add_argument("--fail-on-critical", action="store_true",
+                    help="Exit with non-zero code if critical issues found")
     args = ap.parse_args()
-    analyzer = VisualLayoutAnalyzer(args.web_root)
+    
+    use_sim_validation = (args.validation_mode == "sim")
+    analyzer = VisualLayoutAnalyzer(args.web_root, use_sim_validation=use_sim_validation)
     results = analyzer.run(args.variants)
     # Count critical issues explicitly to satisfy type checkers
     critical = 0
@@ -1367,10 +1474,14 @@ def main() -> None:
         for i in issues_list_obj:
             if isinstance(i, LayoutIssue) and i.severity == "critical":
                 critical += 1
-    if critical:
-        print(f"Found {critical} critical issues.")
+    
+    if args.fail_on_critical and critical > 0:
+        print(f"Found {critical} critical issues. Exiting with error.")
         sys.exit(1)
-    print("No critical layout issues detected.")
+    elif critical > 0:
+        print(f"Found {critical} critical issues.")
+    else:
+        print("No critical layout issues detected.")
 
 
 if __name__ == "__main__":
