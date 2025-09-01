@@ -14,9 +14,6 @@
   let OUT_PRESSURE = [177, 68,  64, 12]; // Outside pressure
   let OUT_HUMIDITY = [131, 78,  44, 12]; // Outside humidity
   let OUT_WIND     = [177, 78,  44, 12]; // Wind speed
-  // Footer regions
-  let FOOTER_STATUS = [  6, 90, 160, 32];
-  let FOOTER_WEATHER = [200, 90,  44, 32];
 
   let canvas = null;
   let ctx = null;
@@ -44,6 +41,7 @@
     
     return true;
   }
+  
   let showWindows = false;
   let stressMode = false;
   let oneBitMode = true;
@@ -53,7 +51,6 @@
   let simulateGhosting = false;
   let geometryOnly = false; // when true, render only geometry (for labeled mode)
   // removed highlightIssues toggle per feedback
-  let GEOMETRY = null; // optional overlay geometry loaded from geometry.json
   let GJSON = null;    // centralized geometry JSON
   // Region inspector state
   let regionFilters = { all: true, header: true, temp: true, label: true, footer: true };
@@ -64,7 +61,6 @@
   let pendingDraw = 0; // rAF id for coalesced redraws
   // Enable spec-only render (always on to keep single source of truth)
   const QS = (typeof window !== 'undefined') ? new URLSearchParams(window.location.search) : new URLSearchParams();
-  const specOnly = true;
   // Validation state
   let validationEnabled = true;
   let validationIssues = [];
@@ -98,7 +94,7 @@
     
     // Use more accurate font metrics including ascent/descent
     const actualHeight = metrics.actualBoundingBoxAscent + metrics.actualBoundingBoxDescent || fontSize * 1.2;
-    const [x, y, w, h] = rect;
+    const [_x, _y, w, h] = rect;
     
     const issues = [];
     if (textWidth > w) {
@@ -530,7 +526,7 @@
     
     // Check OUT_TEMP proximity to center
     if (rects.OUT_TEMP) {
-      const [x, y, w, h] = rects.OUT_TEMP;
+      const [x, y, _w, h] = rects.OUT_TEMP;
       const leftEdge = x;
       const gap = leftEdge - centerX;
       
@@ -562,8 +558,8 @@
     
     // Check INSIDE label to INSIDE_TEMP proximity
     if (rects.INSIDE_TEMP && rects.INSIDE_HUMIDITY) {
-      const [tx, ty, tw, th] = rects.INSIDE_TEMP;
-      const [hx, hy, hw, hh] = rects.INSIDE_HUMIDITY;
+      const [tx, ty, tw, _th] = rects.INSIDE_TEMP;
+      const [_hx, hy, _hw, _hh] = rects.INSIDE_HUMIDITY;
       
       // Label is at top of humidity region
       const labelBottom = hy + LABEL_HEIGHT;
@@ -591,8 +587,8 @@
     
     // Check OUTSIDE label to OUT_TEMP proximity
     if (rects.OUT_TEMP && rects.OUT_HUMIDITY) {
-      const [tx, ty, tw, th] = rects.OUT_TEMP;
-      const [hx, hy, hw, hh] = rects.OUT_HUMIDITY;
+      const [tx, ty, tw, _th] = rects.OUT_TEMP;
+      const [_hx, hy, _hw, _hh] = rects.OUT_HUMIDITY;
       
       const labelBottom = hy + LABEL_HEIGHT;
       const tempTop = ty;
@@ -651,8 +647,8 @@
     const issues = [];
     
     if (rects.WEATHER_ICON && rects.FOOTER_WEATHER) {
-      const [iconX, iconY, iconW, iconH] = rects.WEATHER_ICON;
-      const [footerX, footerY, footerW, footerH] = rects.FOOTER_WEATHER;
+      const [iconX, iconY, _iconW, iconH] = rects.WEATHER_ICON;
+      const [footerX, footerY, _footerW, footerH] = rects.FOOTER_WEATHER;
       
       // Check if icon is left-justified within footer
       const leftPadding = iconX - footerX;
@@ -764,8 +760,6 @@
     validationIssues.push(...validateWeatherIconAlignment(rectsToValidate));
     
     // Check for empty regions that should have content
-    const variant = QS.get('variant') || (window.UI_SPEC && window.UI_SPEC.defaultVariant) || 'v2';
-    
     // Smart expected content based on available data
     const expectedContent = new Set(['HEADER_NAME', 'HEADER_VERSION', 'INSIDE_TEMP', 'INSIDE_HUMIDITY']);
     
@@ -776,7 +770,7 @@
     if (lastData.pressure_hpa !== undefined && lastData.pressure_hpa !== null) {
       expectedContent.add('INSIDE_PRESSURE');
     }
-    if (lastData.outside_temp_f !== undefined || lastData.outside_temp_c !== undefined) {
+    if (lastData.outside_temp_f !== undefined) {
       expectedContent.add('OUT_TEMP');
     }
     if (lastData.outside_hum_pct !== undefined) {
@@ -1362,7 +1356,6 @@
       const spec = (typeof window !== 'undefined' && window.UI_SPEC) ? window.UI_SPEC : {};
       const rects = spec.rects || {};
       const fonts = (spec.fonts && spec.fonts.tokens) ? spec.fonts.tokens : {};
-      const pxBig = (fonts.big && fonts.big.px) ? fonts.big.px : SIZE_BIG;
       const pxSmall = (fonts.small && fonts.small.px) ? fonts.small.px : SIZE_SMALL;
       const pxLabel = (fonts.label && fonts.label.px) ? fonts.label.px : SIZE_LABEL;
       const pxTime = (fonts.time && fonts.time.px) ? fonts.time.px : SIZE_TIME;
@@ -1371,8 +1364,6 @@
       // Export layout metrics for tests
       window.__layoutMetrics = { labels: {}, weather: {}, statusLeft: {} };
       window.__tempMetrics = { inside: {}, outside: {} };
-      const OUT_TEMP = rects.OUT_TEMP || [131,36,90,28];
-      const INSIDE_TEMP = rects.INSIDE_TEMP || [6,36,118,28];
       for (const cname of list){
         const ops = (spec.components || {})[cname] || [];
         for (const op of ops){
@@ -1661,7 +1652,6 @@
                 startY = barY + inset + Math.max(0, Math.floor(((barH - inset*2) - iconH)/2));
                 // Draw icon only (no surrounding border)
                 // Center circular icons inside the inner box
-                const radius = Math.floor(Math.min(iconW, iconH) / 3);
                 const iconCx = startX + Math.floor(iconW/2);
                 const iconCy = startY + Math.floor(iconH/2);
                 ctx.strokeStyle = '#000'; ctx.fillStyle = '#000';
@@ -2148,7 +2138,7 @@
         const url = canvas.toDataURL('image/png');
         const a = document.createElement('a');
         a.href = url; a.download = `sim-${Date.now()}.png`; a.click();
-        const toast = document.getElementById('actionToast'); if (toast){ toast.textContent = 'Downloaded PNG'; setTimeout(()=>{ toast.textContent=''; }, 1500); }
+        showGlobalToast('Downloaded PNG');
       }catch(e){ console.error('screenshot failed', e); }
     });
   }
@@ -2156,6 +2146,7 @@
   const copyBtn = document.getElementById('copyShot');
   if (copyBtn){
     async function showToast(msg){ const t=document.getElementById('actionToast'); if(t){ t.textContent = msg; setTimeout(()=>{ t.textContent=''; }, 1800);} }
+    function showGlobalToast(msg){ const g=document.getElementById('globalToast'); if(!g){ showToast(msg); return; } g.textContent = msg; g.classList.add('show'); setTimeout(()=>{ g.classList.remove('show'); }, 1500); }
     function toBlobAsync(canvas){ return new Promise(res=>canvas.toBlob(res,'image/png')); }
     async function copyAsImage(canvas){
       if (!(window.ClipboardItem && navigator.clipboard && navigator.clipboard.write)) return false;
@@ -2163,23 +2154,53 @@
         const blob = await toBlobAsync(canvas);
         if (!blob) return false;
         await navigator.clipboard.write([ new ClipboardItem({ 'image/png': blob }) ]);
-        await showToast('Copied PNG to clipboard');
+        showGlobalToast('Copied PNG to clipboard');
         return true;
       }catch(err){ console.warn('copyAsImage failed', err); return false; }
     }
     async function copyAsHtmlImage(url){
       try{
+        // Safari-specific approach: use a contenteditable div with focus
         const holder = document.createElement('div');
         holder.contentEditable = 'true';
         holder.style.position = 'fixed';
         holder.style.left = '-9999px';
-        const img = document.createElement('img'); img.src = url; img.alt = '';
-        holder.appendChild(img); document.body.appendChild(holder);
-        const range = document.createRange(); range.selectNodeContents(holder);
-        const sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(range);
+        holder.style.top = '0';
+        holder.style.width = '1px';
+        holder.style.height = '1px';
+        holder.style.overflow = 'hidden';
+        
+        const img = document.createElement('img'); 
+        img.src = url; 
+        img.alt = '';
+        img.style.maxWidth = '100%';
+        holder.appendChild(img); 
+        document.body.appendChild(holder);
+        
+        // Focus the container for Safari
+        holder.focus();
+        
+        // Select the image
+        const range = document.createRange(); 
+        range.selectNodeContents(holder);
+        const sel = window.getSelection(); 
+        sel.removeAllRanges(); 
+        sel.addRange(range);
+        
+        // Try copy with a small delay for Safari
+        await new Promise(resolve => setTimeout(resolve, 10));
+        
+        // eslint-disable-next-line deprecation/deprecation -- Legacy fallback for browsers without Clipboard API
         const ok = document.execCommand('copy');
-        document.body.removeChild(holder); sel.removeAllRanges();
-        if (ok){ await showToast('Copied image via fallback'); return true; }
+        
+        // Clean up
+        document.body.removeChild(holder); 
+        sel.removeAllRanges();
+        
+        if (ok){ 
+          showGlobalToast('Copied image via fallback'); 
+          return true; 
+        }
         return false;
       }catch(err){ console.warn('copyAsHtmlImage failed', err); return false; }
     }
@@ -2187,24 +2208,89 @@
       try{
         if (navigator.clipboard && navigator.clipboard.writeText){ await navigator.clipboard.writeText(url); }
         else {
-          const ta=document.createElement('textarea'); ta.value=url; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
+          const ta=document.createElement('textarea'); ta.value=url; document.body.appendChild(ta); ta.select(); 
+          // eslint-disable-next-line deprecation/deprecation -- Legacy fallback for browsers without Clipboard API
+          document.execCommand('copy'); document.body.removeChild(ta);
         }
-        await showToast('Copied data URL');
+        showGlobalToast('Copied data URL');
         return true;
       }catch(err){ console.warn('copyAsText failed', err); return false; }
     }
+    // Safari-specific copy method using canvas selection
+    async function copyViaSafariCanvas(canvas){
+      try{
+        // Check if we're in Safari
+        const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+        if (!isSafari) return false;
+        
+        // Create a temporary canvas copy that Safari can select
+        const tempCanvas = document.createElement('canvas');
+        tempCanvas.width = canvas.width;
+        tempCanvas.height = canvas.height;
+        const ctx = tempCanvas.getContext('2d');
+        ctx.drawImage(canvas, 0, 0);
+        
+        // Convert to blob
+        const blob = await toBlobAsync(tempCanvas);
+        if (!blob) return false;
+        
+        // Try the native clipboard API with user activation
+        if (navigator.clipboard && navigator.clipboard.write) {
+          try {
+            await navigator.clipboard.write([
+              new ClipboardItem({
+                'image/png': blob
+              })
+            ]);
+            showGlobalToast('Copied PNG (Safari)');
+            return true;
+          } catch(e) {
+            console.log('Safari native clipboard failed, trying fallback', e);
+          }
+        }
+        
+        return false;
+      }catch(err){ 
+        console.warn('Safari copy method failed', err); 
+        return false; 
+      }
+    }
+    
     copyBtn.addEventListener('click', async ()=>{
       try{
         const canvas = document.getElementById('epd'); if (!canvas) return;
-        // 1) Try native image clipboard
+        
+        // Detect Safari
+        const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+        
+        // Pre-flight: report feature availability so user sees immediate feedback
+        const hasNative = !!(window.ClipboardItem && navigator.clipboard && navigator.clipboard.write);
+        showGlobalToast(isSafari ? 'Copying (Safari)…' : (hasNative ? 'Copying PNG…' : 'Copying (fallback)…'));
+        
+        // 1) Try Safari-specific method first if in Safari
+        if (isSafari && await copyViaSafariCanvas(canvas)) return;
+        
+        // 2) Try standard native image clipboard
         if (await copyAsImage(canvas)) return;
-        // 2) Try HTML image fallback
+        
+        // 3) Try HTML image fallback
         const url = canvas.toDataURL('image/png');
         if (await copyAsHtmlImage(url)) return;
-        // 3) Fallback to text; if that also fails, open in new tab
+        
+        // 4) Fallback to text; if that also fails, open in new tab
         const ok = await copyAsText(url);
-        if (!ok){ try{ window.open(url, '_blank', 'noopener'); }catch(_){} }
-      }catch(e){ console.error('copy handler failed', e); showToast('Copy failed'); }
+        if (!ok){ 
+          try{ 
+            window.open(url, '_blank', 'noopener'); 
+            showGlobalToast('Opened image in new tab'); 
+          }catch(_){ 
+            showGlobalToast('Copy failed - try right-click → Copy Image'); 
+          } 
+        }
+      }catch(e){ 
+        console.error('copy handler failed', e); 
+        showGlobalToast('Copy failed - try Screenshot button'); 
+      }
     });
   }
 
@@ -2323,29 +2409,6 @@
     // Set to v2_grid as default (this is handled by the spec selector now)
     variantSel.value = 'v2_grid';
     
-    // Keep the original code in case we need it later, but skip execution
-    if (false) {
-      // Populate variants from UI_SPEC if available
-      try {
-        const spec = (typeof window !== 'undefined') ? window.UI_SPEC : null;
-        if (spec && spec.variants){
-          const known = new Set([...variantSel.options].map(o=>o.value));
-          Object.keys(spec.variants).forEach(name=>{
-            if (!known.has(name)){
-              const opt = document.createElement('option');
-              opt.value = name; opt.textContent = name; variantSel.appendChild(opt);
-            }
-          });
-        }
-      } catch(e) {}
-      const currentVar = QS.get('variant') || (window.UI_SPEC && window.UI_SPEC.defaultVariant) || 'v2';
-      try { if ([...variantSel.options].some(o=>o.value===currentVar)) variantSel.value = currentVar; } catch(e) {}
-      variantSel.addEventListener('change', ()=>{
-        const url = new URL(window.location.href);
-        if (variantSel.value) url.searchParams.set('variant', variantSel.value); else url.searchParams.delete('variant');
-        window.location.replace(url.toString());
-      });
-    }
   }
   // Presets
   const presetSel = document.getElementById('presetMode');
@@ -2389,8 +2452,6 @@
           // Construct a v2 spec by cloning UI_SPEC and snapping rects + fonts
           const base = JSON.parse(JSON.stringify(window.UI_SPEC || {}));
           if (!base.rects) base.rects = {};
-          // Preserve INSIDE_PRESSURE from original spec if it exists
-          const originalINSIDE_PRESSURE = base.rects.INSIDE_PRESSURE;
           // Define a clean 4px-grid layout with 12px outer padding and 4px gutters
           const OUTER = 12;
           const DIV_X = 128; // vertical divider aligned to grid
@@ -2688,6 +2749,33 @@ Keyboard Shortcuts:
     
     alert(helpText);
   }
+
+  // Persist open/closed state for inspector panels
+  (function(){
+    try{
+      const suffix = (function(){
+        try{
+          const variant = (QS.get('variant') || (window.UI_SPEC && window.UI_SPEC.defaultVariant) || 'v1');
+          const specMode = (typeof window !== 'undefined' && window.__specMode) ? String(window.__specMode) : 'v1';
+          return `${variant}::${specMode}`;
+        }catch(e){ return 'v1::v1'; }
+      })();
+      const key = (id)=>`sim_panel_open::${id}::${suffix}`;
+      const wire = (id)=>{
+        const el = document.getElementById(id);
+        if (!el || typeof el.open === 'undefined') return;
+        try{
+          const saved = localStorage.getItem(key(id));
+          if (saved !== null) el.open = saved === '1';
+        }catch(e){}
+        el.addEventListener('toggle', ()=>{
+          try{ localStorage.setItem(key(id), el.open ? '1' : '0'); }catch(e){}
+        });
+      };
+      wire('regionInspector');
+      wire('validationPanel');
+    }catch(e){}
+  })();
 
   // Wait for DOM to be ready before initializing
   if (document.readyState === 'loading') {

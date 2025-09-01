@@ -221,7 +221,7 @@
     const panel = document.createElement('div');
     panel.id = 'advancedDebugPanel';
     panel.innerHTML = `
-      <details class="card">
+      <details id="advancedDebugDetails" class="card">
         <summary>🔧 Advanced Debug Tools</summary>
         <div class="debug-body">
           <fieldset class="fieldset">
@@ -775,6 +775,25 @@
     if (validationPanel) {
       const debugPanel = createDebugPanel();
       validationPanel.parentNode.insertBefore(debugPanel, validationPanel.nextSibling);
+      // Restore open-state from storage
+      try{
+        const suffix = (function(){
+          try{
+            const variant = (new URLSearchParams(window.location.search)).get('variant') || (window.UI_SPEC && window.UI_SPEC.defaultVariant) || 'v1';
+            const specMode = (typeof window !== 'undefined' && window.__specMode) ? String(window.__specMode) : 'v1';
+            return `${variant}::${specMode}`;
+          }catch(e){ return 'v1::v1'; }
+        })();
+        const key = `sim_panel_open::advancedDebugDetails::${suffix}`;
+        const details = document.getElementById('advancedDebugDetails');
+        if (details) {
+          const saved = localStorage.getItem(key);
+          if (saved !== null) details.open = saved === '1';
+          details.addEventListener('toggle', ()=>{
+            try{ localStorage.setItem(key, details.open ? '1' : '0'); }catch(e){}
+          });
+        }
+      }catch(e){}
       
       initDataFields();
       setupEventHandlers();
