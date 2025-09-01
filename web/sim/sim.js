@@ -2138,6 +2138,56 @@
     zoomEl.addEventListener('input', (e)=>{ setZoom(e.target.value); });
   }
 
+  // Screenshot download
+  const shotBtn = document.getElementById('screenshot');
+  if (shotBtn){
+    shotBtn.addEventListener('click', ()=>{
+      try{
+        const canvas = document.getElementById('epd');
+        if (!canvas) return;
+        const url = canvas.toDataURL('image/png');
+        const a = document.createElement('a');
+        a.href = url; a.download = `sim-${Date.now()}.png`; a.click();
+        const toast = document.getElementById('actionToast'); if (toast){ toast.textContent = 'Downloaded PNG'; setTimeout(()=>{ toast.textContent=''; }, 1500); }
+      }catch(e){ console.error('screenshot failed', e); }
+    });
+  }
+  // Screenshot copy to clipboard
+  const copyBtn = document.getElementById('copyShot');
+  if (copyBtn && navigator.clipboard){
+    copyBtn.addEventListener('click', async ()=>{
+      try{
+        const canvas = document.getElementById('epd');
+        if (!canvas || !canvas.toBlob) return;
+        canvas.toBlob(async (blob)=>{
+          if (!blob) return;
+          try{
+            await navigator.clipboard.write([
+              new ClipboardItem({ 'image/png': blob })
+            ]);
+            const toast = document.getElementById('actionToast'); if (toast){ toast.textContent = 'Copied PNG to clipboard'; setTimeout(()=>{ toast.textContent=''; }, 1500); }
+          }catch(err){ console.error('clipboard write failed', err); }
+        });
+      }catch(e){ console.error('copy screenshot failed', e); }
+    });
+  }
+
+  // Fallback for older browsers: copy data URL string
+  if (copyBtn && !navigator.clipboard){
+    copyBtn.addEventListener('click', ()=>{
+      try{
+        const canvas = document.getElementById('epd');
+        if (!canvas) return;
+        const url = canvas.toDataURL('image/png');
+        const ta = document.createElement('textarea');
+        ta.value = url; document.body.appendChild(ta); ta.select();
+        try{ document.execCommand('copy'); }catch(_){ /* ignore */ }
+        document.body.removeChild(ta);
+        const toast = document.getElementById('actionToast'); if (toast){ toast.textContent = 'Copied data URL'; setTimeout(()=>{ toast.textContent=''; }, 1500); }
+      }catch(e){ console.error('fallback copy failed', e); }
+    });
+  }
+
   // Reset UI button
   const resetBtn = document.getElementById('resetUI');
   if (resetBtn){
@@ -2536,6 +2586,12 @@
             e.preventDefault();
             const refreshBtn = document.getElementById('refresh');
             if (refreshBtn) refreshBtn.click();
+          }
+          break;
+        case 's':
+          // Download screenshot
+          if (!e.ctrlKey && !e.metaKey){
+            const btn = document.getElementById('screenshot'); if (btn) btn.click();
           }
           break;
           

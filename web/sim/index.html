@@ -40,6 +40,9 @@
                 <input type="range" id="zoom" min="1" max="4" step="0.5" value="2" style="width:140px;" aria-label="Zoom level" aria-valuemin="1" aria-valuemax="4" aria-valuenow="2" />
                 <span id="zoomValue" aria-live="polite">2×</span>
               </label>
+              <button id="screenshot" title="Download canvas as PNG" aria-label="Download screenshot">Screenshot</button>
+              <button id="copyShot" title="Copy canvas PNG to clipboard" aria-label="Copy screenshot">Copy</button>
+              <span id="actionToast" class="action-toast" aria-live="polite" aria-atomic="true"></span>
               <button id="resetUI" title="Reset UI preferences" aria-label="Reset UI settings">Reset UI</button>
             </div>
 

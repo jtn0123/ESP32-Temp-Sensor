@@ -62,13 +62,13 @@
       { "op": "text", "x": 30, "y": 20, "font": "label", "text": "INSIDE" },
       { "op": "tempGroupCentered", "rect": "INSIDE_TEMP", "value": "{inside_temp_f}" },
       { "op": "text", "rect": "INSIDE_HUMIDITY", "font": "small", "align": "left", "text": "{inside_hum_pct}% RH" },
-      { "op": "text", "rect": "INSIDE_PRESSURE", "font": "small", "align": "left", "y": 3, "text": "{pressure_hpa:.1f} hPa", "when": "has(pressure_hpa)" }
+      { "op": "text", "rect": "INSIDE_PRESSURE", "font": "small", "align": "left", "y": 5, "text": "{pressure_hpa:.1f} hPa", "when": "has(pressure_hpa)" }
     ],
     "outside": [
       { "op": "text", "x": 145, "y": 20, "font": "label", "text": "OUTSIDE" },
       { "op": "tempGroupCentered", "rect": "OUT_TEMP", "value": "{outside_temp_f}" },
       { "op": "iconIn", "rect": "WEATHER_ICON", "iconFromWeather": "{weather}" },
-      { "op": "text", "rect": "OUT_PRESSURE", "font": "small", "align": "left", "y": 3, "text": "{outside_pressure_hpa:.0f} hPa", "when": "has(outside_pressure_hpa)" },
+      { "op": "text", "rect": "OUT_PRESSURE", "font": "small", "align": "left", "y": 5, "text": "{outside_pressure_hpa:.0f} hPa", "when": "has(outside_pressure_hpa)" },
       { "op": "text", "rect": "OUT_HUMIDITY", "font": "small", "align": "left", "text": "{outside_hum_pct}% RH" },
       { "op": "text", "rect": "OUT_WIND", "font": "small", "align": "left", "text": "{wind_mps->mph:.1f} mph" }
     ],

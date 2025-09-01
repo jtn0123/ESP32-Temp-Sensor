@@ -114,6 +114,12 @@ button:hover{ border-color: #b9c0cc; }
   color: var(--color-muted);
 }
 
+.action-toast{
+  margin-left: 8px;
+  font-size: 12px;
+  color: var(--color-muted);
+}
+
 .status-pill{
   display: inline-block;
   padding: 2px 8px;
