@@ -33,6 +33,8 @@ ICON_NAMES: list[str] = [
     "weather-pouring",
     "weather-snowy",
     "weather-lightning",
+    "weather-hurricane",
+    "weather-tornado",
     "weather-night",
     "weather-night-partly-cloudy",
     "weather-windy-variant",
