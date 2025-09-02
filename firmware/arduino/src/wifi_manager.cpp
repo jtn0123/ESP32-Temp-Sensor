@@ -6,6 +6,9 @@
 // Static storage for provisioning
 static Preferences g_wifi_prefs;
 
+// WiFi connection state tracking
+static WiFiConnectionState g_wifi_state = WIFI_STATE_IDLE;
+
 bool parse_bssid(const char* str, uint8_t out[6]) {
   if (!str)
     return false;
@@ -26,6 +29,8 @@ bool is_all_zero_bssid(const uint8_t b[6]) {
 }
 
 bool wifi_connect_with_timeout(uint32_t timeout_ms) {
+  g_wifi_state = WIFI_STATE_CONNECTING;
+  
   // Try to connect with configured credentials
   WiFi.mode(WIFI_STA);
   
@@ -45,8 +50,10 @@ bool wifi_connect_with_timeout(uint32_t timeout_ms) {
   
   // Connect with or without BSSID
   if (has_bssid) {
+    Serial.printf("[WiFi] Connecting to %s with BSSID\n", WIFI_SSID);
     WiFi.begin(WIFI_SSID, WIFI_PASS, 0, bssid_bytes);
   } else {
+    Serial.printf("[WiFi] Connecting to %s\n", WIFI_SSID);
     WiFi.begin(WIFI_SSID, WIFI_PASS);
   }
   
@@ -56,7 +63,41 @@ bool wifi_connect_with_timeout(uint32_t timeout_ms) {
     delay(100);
   }
   
-  return WiFi.isConnected();
+  if (WiFi.isConnected()) {
+    g_wifi_state = WIFI_STATE_CONNECTED;
+    Serial.printf("[WiFi] Connected! IP: %s, RSSI: %d\n", 
+                  WiFi.localIP().toString().c_str(), WiFi.RSSI());
+    return true;
+  } else {
+    g_wifi_state = WIFI_STATE_FAILED;
+    Serial.printf("[WiFi] Connection failed after %dms\n", timeout_ms);
+    return false;
+  }
+}
+
+bool wifi_connect_with_exponential_backoff(uint32_t max_attempts, uint32_t initial_delay_ms) {
+  uint32_t retry_delay_ms = initial_delay_ms;
+  
+  for (uint32_t attempt = 0; attempt < max_attempts; attempt++) {
+    Serial.printf("[WiFi] Connection attempt %d/%d\n", attempt + 1, max_attempts);
+    
+    if (wifi_connect_with_timeout(WIFI_CONNECT_TIMEOUT_MS)) {
+      return true;
+    }
+    
+    // Don't delay after the last attempt
+    if (attempt < max_attempts - 1) {
+      Serial.printf("[WiFi] Waiting %dms before retry...\n", retry_delay_ms);
+      delay(retry_delay_ms);
+      
+      // Exponential backoff with cap at 16 seconds
+      retry_delay_ms = min(retry_delay_ms * 2, (uint32_t)16000);
+    }
+  }
+  
+  Serial.printf("[WiFi] Failed to connect after %d attempts\n", max_attempts);
+  g_wifi_state = WIFI_STATE_FAILED;
+  return false;
 }
 
 bool wifi_is_connected() {
@@ -99,6 +140,27 @@ void wifi_configure_power_save(bool enable) {
     WiFi.setSleep(WIFI_PS_MIN_MODEM);
   } else {
     WiFi.setSleep(WIFI_PS_NONE);
+  }
+}
+
+WiFiConnectionState wifi_get_state() {
+  // Update state based on actual connection status
+  if (WiFi.isConnected() && g_wifi_state != WIFI_STATE_CONNECTED) {
+    g_wifi_state = WIFI_STATE_CONNECTED;
+  } else if (!WiFi.isConnected() && g_wifi_state == WIFI_STATE_CONNECTED) {
+    g_wifi_state = WIFI_STATE_DISCONNECTED;
+  }
+  return g_wifi_state;
+}
+
+const char* wifi_state_to_string(WiFiConnectionState state) {
+  switch (state) {
+    case WIFI_STATE_IDLE: return "IDLE";
+    case WIFI_STATE_CONNECTING: return "CONNECTING";
+    case WIFI_STATE_CONNECTED: return "CONNECTED";
+    case WIFI_STATE_FAILED: return "FAILED";
+    case WIFI_STATE_DISCONNECTED: return "DISCONNECTED";
+    default: return "UNKNOWN";
   }
 }
 
