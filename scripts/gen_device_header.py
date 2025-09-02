@@ -84,9 +84,9 @@ def main():
         wake_interval = parse_duration(data.get("wake_interval", "2h"))
     full_refresh_every = int(data.get("full_refresh_every", 12) or 12)
     outside_source = str(data.get("outside_source", "mqtt"))
-    wifi = data.get("wifi", {})
-    mqtt = data.get("mqtt", {})
-    base_topics = mqtt.get("base_topics", {})
+    wifi = data.get("wifi", {}) or {}  # Ensure wifi is always a dict
+    mqtt = data.get("mqtt", {}) or {}  # Ensure mqtt is always a dict
+    base_topics = mqtt.get("base_topics", {}) if mqtt else {}
     # Prioritize environment variables over config file for sensitive data
     wifi_ssid = os.getenv('WIFI_SSID') or wifi.get("ssid", "")
     wifi_pass = os.getenv('WIFI_PASSWORD') or wifi.get("password", "")
