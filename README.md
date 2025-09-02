@@ -533,4 +533,9 @@ python3 scripts/mqtt_headless_check.py --host <MQTT_HOST> --user <USER> --passwo
   - Verify MQTT retained `status` and the last `debug` payload; confirm `rtc_wake_count` changes across cycles.
   - If issues persist, try disabling partial refresh (USB: `mode full`) to isolate e‑ink timing, or set `-DUSE_STATUS_PIXEL=0` to minimize rail load.
 
+### Credits
+
+- Phosphor Icons (Fill), MIT — weather symbols vendored for this project. See `web/icons/mdi/` and `web/icons/third_party/` if present. Source: https://phosphoricons.com/?q=weather&size=52
+- Icon pipeline inspired by esp32-weather-epd: https://github.com/lmarzen/esp32-weather-epd/tree/main/icons
+
 
