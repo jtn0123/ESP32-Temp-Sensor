@@ -107,6 +107,81 @@ Notes:
 - `sw_version` is published from the generated `FW_VERSION` define. You can override by setting `fw_version` in `config/device.yaml` or exporting `FW_VERSION` in the environment before building. Otherwise it falls back to `git describe`/short SHA or `dev`.
 ```
 
+### Security & Credential Management
+
+This project implements production-grade security practices to protect credentials:
+
+#### Credential Storage
+
+**Never commit credentials to version control!** This project uses environment variables to keep secrets safe:
+
+1. **Create `.env` file** (git-ignored):
+   ```bash
+   cp .env.example .env
+   # Edit .env with your actual credentials:
+   # WIFI_SSID, WIFI_PASSWORD, MQTT_USER, MQTT_PASSWORD
+   ```
+
+2. **Configuration files** (`config/device.yaml`) contain only non-sensitive settings. Credentials are loaded from environment variables by the build process.
+
+3. **Generated headers** (`firmware/arduino/src/generated_config.h`) are git-ignored to prevent accidental commits.
+
+#### Security Features
+
+- **Pre-commit Hook**: Automatically scans staged files for credentials before allowing commits
+  ```bash
+  # Enable the security hook (one-time setup)
+  ./scripts/setup_git_hooks.sh
+  ```
+
+- **Staged-Only Scanning**: The hook only checks files you're committing, not your entire repo
+- **Smart Exclusions**: Test files and examples are intelligently excluded from security scans
+- **CI Security Scanning**: GitHub Actions runs Gitleaks on all PRs to catch any missed credentials
+
+#### Credential Rotation
+
+If credentials are ever exposed:
+
+```bash
+# Use the rotation helper script
+./scripts/rotate_credentials.sh
+
+# This will guide you through:
+# 1. Changing passwords on your services
+# 2. Updating .env with new credentials
+# 3. Cleaning up any exposed files
+```
+
+#### Safe Logging
+
+The firmware includes credential sanitization to prevent accidental password logging:
+
+```cpp
+#include "credential_safe.h"
+
+// Logs "Bat***" instead of full SSID
+LOG_INFO("WiFi: %s", sanitize_ssid(WIFI_SSID).c_str());
+
+// Logs "**********" instead of password
+LOG_INFO("Pass: %s", sanitize_credential(WIFI_PASS).c_str());
+```
+
+#### Security Workflow
+
+1. **Development**: Keep credentials in `.env` (local only)
+2. **Commits**: Pre-commit hook blocks credential leaks
+3. **CI/CD**: GitHub Actions scans for secrets
+4. **Production**: Use secure credential storage on device
+
+#### Bypassing Security Checks
+
+In rare cases where you need to commit something flagged as a false positive:
+
+```bash
+# NOT RECOMMENDED - Use only when certain it's safe
+git commit --no-verify
+```
+
 ### Build — Arduino / PlatformIO
 
 See `firmware/arduino/platformio.ini`:

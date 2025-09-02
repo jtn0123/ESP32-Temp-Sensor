@@ -1,0 +1,113 @@
+name: Security Scan
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    # Run weekly security scan
+    - cron: '0 0 * * 0'
+
+jobs:
+  gitleaks:
+    name: Gitleaks Secret Scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch all history for scanning
+      
+      - name: Run Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Upload SARIF report
+        if: failure()
+        uses: github/codeql-action/upload-sarif@v2
+        with:
+          sarif_file: results.sarif
+
+  custom-audit:
+    name: Custom Security Audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pyyaml python-dotenv
+      
+      - name: Run staged files security audit
+        run: |
+          # For CI, check all changed files in the PR
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            # Get files changed in PR
+            git diff --name-only --diff-filter=ACM origin/${{ github.base_ref }}..HEAD > changed_files.txt
+            
+            # Mock git staged files for the script
+            export GIT_DIFF_CACHED_FILES=$(cat changed_files.txt | tr '\n' ' ')
+          fi
+          
+          python scripts/security_audit_staged.py
+
+  dependency-check:
+    name: Dependency Security Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+          severity: 'CRITICAL,HIGH'
+      
+      - name: Upload Trivy results to GitHub Security
+        uses: github/codeql-action/upload-sarif@v2
+        with:
+          sarif_file: 'trivy-results.sarif'
+
+  code-quality:
+    name: Code Quality & Security Patterns
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Check for hardcoded credentials
+        run: |
+          # Simple grep-based check for common credential patterns
+          # This supplements gitleaks with custom patterns
+          
+          FOUND=0
+          
+          # Check for actual passwords (not placeholders)
+          if grep -r --include="*.cpp" --include="*.h" --include="*.py" \
+                 -E 'password\s*=\s*"[^"]{8,}"' . 2>/dev/null | \
+                 grep -v -E '(example|placeholder|your_|YOUR_|changeme|\$\{)'; then
+            echo "❌ Found potential hardcoded passwords"
+            FOUND=1
+          fi
+          
+          # Check for API keys
+          if grep -r --include="*.cpp" --include="*.h" --include="*.py" \
+                 -E 'api_key\s*=\s*"[a-zA-Z0-9]{32,}"' . 2>/dev/null; then
+            echo "❌ Found potential API keys"
+            FOUND=1
+          fi
+          
+          if [ $FOUND -eq 0 ]; then
+            echo "✅ No hardcoded credentials found"
+          else
+            exit 1
+          fi
