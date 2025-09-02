@@ -191,9 +191,9 @@ void draw_weather_icon_region_at(int16_t x, int16_t y, int16_t w, int16_t h,
   // Map condition to icon ID
   IconId iconId = map_weather_to_icon(condition);
   
-  // Center the 24x24 icon within the region
-  int16_t icon_x = x + (w - 24) / 2;
-  int16_t icon_y = y + (h - 24) / 2;
+  // Center the baked icon within the region using generated dimensions
+  int16_t icon_x = x + (w - ICON_W) / 2;
+  int16_t icon_y = y + (h - ICON_H) / 2;
   
   // Draw the icon
   draw_icon(display, icon_x, icon_y, iconId, GxEPD_BLACK);

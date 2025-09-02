@@ -354,6 +354,40 @@
     }
     offCtx.putImageData(img, 0, 0);
   }
+  // Try drawing a baked 1-bit bitmap first to match device output exactly
+  function tryDrawBakedBitmap(category, x, y, w, h){
+    try{
+      const name = MDI_ICON_BY_CATEGORY[category];
+      if (!name) return false;
+      const url = new URL(`icons/device_baked/50x50/${name}.png`, (typeof window!== 'undefined'? window.location.href : ''));
+      const key = `baked::${name}::${w}x${h}`;
+      const entry = __mdiCache.get(key);
+      if (entry && entry.bitmaps && entry.bitmaps.get('img')){
+        const img = entry.bitmaps.get('img');
+        // Draw at native size centered within provided box
+        const dx = x + Math.floor((w - img.width)/2);
+        const dy = y + Math.floor((h - img.height)/2);
+        ctx.imageSmoothingEnabled = false;
+        ctx.drawImage(img, dx, dy);
+        return true;
+      }
+      // Begin async load
+      (async()=>{
+        try{
+          const img = new Image();
+          img.onload = ()=>{
+            let e = __mdiCache.get(key); if (!e) e = { bitmaps: new Map() };
+            e.bitmaps.set('img', img);
+            __mdiCache.set(key, e);
+            queueRedrawSoon();
+          };
+          img.src = url.href;
+        }catch(_){ }
+      })();
+      return false;
+    }catch(_){ return false; }
+  }
+
   function tryDrawMdiIcon(category, x, y, w, h){
     try{
       const mdiName = MDI_ICON_BY_CATEGORY[category];
@@ -1522,34 +1556,34 @@
     // Distinguish chrome/border lines by drawing them in green in overlay mode
     try {
       if (!labelsOnlyMode){
-        const spec = (typeof window !== 'undefined') ? window.UI_SPEC : null;
-        const chrome = (spec && spec.components && spec.components.chrome) ? spec.components.chrome : [];
-        ctx.strokeStyle = '#0a0';
-        ctx.lineWidth = 2;
-        chrome.forEach(op=>{
-          if (op && op.op === 'line' && Array.isArray(op.from) && Array.isArray(op.to)){
-            let fx = (op.from[0]|0);
-            let fy = (op.from[1]|0);
-            let tx = (op.to[0]|0);
-            let ty = (op.to[1]|0);
-            // Snap v2_grid overlay chrome to spec positions (header y=18, divider x=125 from 18..121, footer y=84)
-            try{
-              if (typeof window !== 'undefined' && window.__specMode === 'v2_grid'){
-                if (fy === 16 && ty === 16) { fy = ty = 18; }
-                if (fx === 128 && tx === 128) { fx = tx = 125; if (fy === 16) fy = 18; }
-                if (fy === 88 && ty === 88) { fy = ty = 84; }
-              }
-            }catch(e){}
-            fx += 0.5; fy += 0.5; tx += 0.5; ty += 0.5;
-            ctx.beginPath();
-            ctx.moveTo(fx, fy);
-            ctx.lineTo(tx, ty);
-            ctx.stroke();
-          }
-        });
-        // Also outline the full canvas as a green border
-        ctx.strokeRect(0.5, 0.5, WIDTH-1, HEIGHT-1);
-        // no extra issue highlighter
+      const spec = (typeof window !== 'undefined') ? window.UI_SPEC : null;
+      const chrome = (spec && spec.components && spec.components.chrome) ? spec.components.chrome : [];
+      ctx.strokeStyle = '#0a0';
+      ctx.lineWidth = 2;
+      chrome.forEach(op=>{
+        if (op && op.op === 'line' && Array.isArray(op.from) && Array.isArray(op.to)){
+          let fx = (op.from[0]|0);
+          let fy = (op.from[1]|0);
+          let tx = (op.to[0]|0);
+          let ty = (op.to[1]|0);
+          // Snap v2_grid overlay chrome to spec positions (header y=18, divider x=125 from 18..121, footer y=84)
+          try{
+            if (typeof window !== 'undefined' && window.__specMode === 'v2_grid'){
+              if (fy === 16 && ty === 16) { fy = ty = 18; }
+              if (fx === 128 && tx === 128) { fx = tx = 125; if (fy === 16) fy = 18; }
+              if (fy === 88 && ty === 88) { fy = ty = 84; }
+            }
+          }catch(e){}
+          fx += 0.5; fy += 0.5; tx += 0.5; ty += 0.5;
+          ctx.beginPath();
+          ctx.moveTo(fx, fy);
+          ctx.lineTo(tx, ty);
+          ctx.stroke();
+        }
+      });
+      // Also outline the full canvas as a green border
+      ctx.strokeRect(0.5, 0.5, WIDTH-1, HEIGHT-1);
+      // no extra issue highlighter
       }
     } catch(e){}
     ctx.restore();
@@ -1999,9 +2033,11 @@
                 const iconCy = startY + Math.floor(iconH/2);
                 ctx.strokeStyle = '#000'; ctx.fillStyle = '#000';
                 const category = classifyWeather(data.weather);
-                // Try high-fidelity icon; fallback to glyphs this frame
-                const drewSvg = tryDrawMdiIcon(category, startX, startY, iconW, iconH);
-                if (!drewSvg) drawWeatherGlyph(category, startX, startY, iconW, iconH);
+                // Try baked bitmap first (matches device), then SVG, then glyph
+                if (!tryDrawBakedBitmap(category, startX, startY, iconW, iconH)){
+                  const drewSvg = tryDrawMdiIcon(category, startX, startY, iconW, iconH);
+                  if (!drewSvg) drawWeatherGlyph(category, startX, startY, iconW, iconH);
+                }
                 // If FOOTER_WEATHER exists, draw text immediately to right inside its own rect left-aligned
                 // Draw label to the right of the inner icon box if quadrant label exists
                 const fw = rects.FOOTER_WEATHER;
@@ -2059,8 +2095,10 @@
               const iconCy2 = barY2 + Math.floor(iconH2/2);
               ctx.strokeStyle = '#000'; ctx.fillStyle = '#000';
               const category2 = classifyWeather(data.weather);
-              const drewSvg2 = tryDrawMdiIcon(category2, startX2, barY2, iconW2, iconH2);
-              if (!drewSvg2) drawWeatherGlyph(category2, startX2, barY2, iconW2, iconH2);
+              if (!tryDrawBakedBitmap(category2, startX2, barY2, iconW2, iconH2)){
+                const drewSvg2 = tryDrawMdiIcon(category2, startX2, barY2, iconW2, iconH2);
+                if (!drewSvg2) drawWeatherGlyph(category2, startX2, barY2, iconW2, iconH2);
+              }
               const labelTop2 = barY2 + Math.max(0, Math.floor((iconH2 - fpx2)/2)) + 1;
               text(startX2 + iconW2 + gap2, labelTop2, label2, fpx2);
               window.__layoutMetrics.weather = {
@@ -2769,7 +2807,7 @@
     // Set variant based on specMode (only force v2_grid when explicitly requested)
     const __specModeParam = (QS.get('specMode') || '').toLowerCase();
     if (__specModeParam === 'v2_grid') {
-      variantSel.value = 'v2_grid';
+    variantSel.value = 'v2_grid';
     } else {
       variantSel.value = (typeof window !== 'undefined' && window.UI_SPEC && window.UI_SPEC.defaultVariant) || 'v2';
     }
