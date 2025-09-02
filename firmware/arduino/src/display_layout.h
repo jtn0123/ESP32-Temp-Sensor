@@ -5,8 +5,8 @@
 
 // Layout identity for simulator ↔ firmware parity checks
 #define LAYOUT_VERSION 1
-#define LAYOUT_CRC 0x4468B097u
-#define LAYOUT_MD5 "c1499514fae83995181cef5ea96edd89"
+#define LAYOUT_CRC 0xBDE91F37u
+#define LAYOUT_MD5 "484b8f09dd047835c61ad624b4c7d0a5"
 
 // Display dimensions
 #define DISPLAY_WIDTH 250
@@ -15,7 +15,7 @@
 // Partial update windows (x, y, w, h) — generated from ui_spec.json
 static constexpr int RECT_HEADER_NAME[4] = {   6,   2,  94, 12};
 static constexpr int RECT_HEADER_TIME_CENTER[4] = { 100,   2,  50, 12};
-static constexpr int RECT_HEADER_VERSION[4] = { 172,   2,  72, 12};
+static constexpr int RECT_HEADER_VERSION[4] = { 156,   2,  90, 12};
 static constexpr int RECT_INSIDE_TEMP[4] = {   6,  30, 118, 20};
 static constexpr int RECT_INSIDE_HUMIDITY[4] = {   6,  50,  56, 12};
 static constexpr int RECT_INSIDE_PRESSURE[4] = {   6,  62, 115, 12};
@@ -23,9 +23,9 @@ static constexpr int RECT_OUT_TEMP[4] = { 130,  30, 118, 20};
 static constexpr int RECT_OUT_HUMIDITY[4] = { 130,  50,  58, 12};
 static constexpr int RECT_OUT_PRESSURE[4] = { 130,  62,  58, 12};
 static constexpr int RECT_OUT_WIND[4] = { 190,  50,  44, 12};
-static constexpr int RECT_WEATHER_ICON[4] = { 126,  92,  50, 50};
-static constexpr int RECT_FOOTER_STATUS[4] = {   6,  92, 118, 28};
-static constexpr int RECT_FOOTER_WEATHER[4] = { 202,  92,  46, 28};
+static constexpr int RECT_WEATHER_ICON[4] = { 126,  81,  50, 50};
+static constexpr int RECT_FOOTER_STATUS[4] = {   6,  81, 118, 38};
+static constexpr int RECT_FOOTER_WEATHER[4] = { 177,  81,  70, 40};
 
 enum WeatherIconId {
     ICON_CLEAR = 0,
@@ -45,7 +45,7 @@ static_assert(RECT_HEADER_TIME_CENTER[0] >= 0 && RECT_HEADER_TIME_CENTER[1] >= 0
 static_assert(100 + 50 <= DISPLAY_WIDTH,  "HEADER_TIME_CENTER width");
 static_assert(2 + 12 <= DISPLAY_HEIGHT, "HEADER_TIME_CENTER height");
 static_assert(RECT_HEADER_VERSION[0] >= 0 && RECT_HEADER_VERSION[1] >= 0, "HEADER_VERSION origin");
-static_assert(172 + 72 <= DISPLAY_WIDTH,  "HEADER_VERSION width");
+static_assert(156 + 90 <= DISPLAY_WIDTH,  "HEADER_VERSION width");
 static_assert(2 + 12 <= DISPLAY_HEIGHT, "HEADER_VERSION height");
 static_assert(RECT_INSIDE_TEMP[0] >= 0 && RECT_INSIDE_TEMP[1] >= 0, "INSIDE_TEMP origin");
 static_assert(6 + 118 <= DISPLAY_WIDTH,  "INSIDE_TEMP width");
@@ -70,11 +70,11 @@ static_assert(190 + 44 <= DISPLAY_WIDTH,  "OUT_WIND width");
 static_assert(50 + 12 <= DISPLAY_HEIGHT, "OUT_WIND height");
 static_assert(RECT_WEATHER_ICON[0] >= 0 && RECT_WEATHER_ICON[1] >= 0, "WEATHER_ICON origin");
 static_assert(126 + 50 <= DISPLAY_WIDTH,  "WEATHER_ICON width");
-static_assert(92 + 50 <= DISPLAY_HEIGHT, "WEATHER_ICON height");
+static_assert(81 + 50 <= DISPLAY_HEIGHT, "WEATHER_ICON height");
 static_assert(RECT_FOOTER_STATUS[0] >= 0 && RECT_FOOTER_STATUS[1] >= 0, "FOOTER_STATUS origin");
 static_assert(6 + 118 <= DISPLAY_WIDTH,  "FOOTER_STATUS width");
-static_assert(92 + 28 <= DISPLAY_HEIGHT, "FOOTER_STATUS height");
+static_assert(81 + 38 <= DISPLAY_HEIGHT, "FOOTER_STATUS height");
 static_assert(RECT_FOOTER_WEATHER[0] >= 0 && RECT_FOOTER_WEATHER[1] >= 0, "FOOTER_WEATHER origin");
-static_assert(202 + 46 <= DISPLAY_WIDTH,  "FOOTER_WEATHER width");
-static_assert(92 + 28 <= DISPLAY_HEIGHT, "FOOTER_WEATHER height");
+static_assert(177 + 70 <= DISPLAY_WIDTH,  "FOOTER_WEATHER width");
+static_assert(81 + 40 <= DISPLAY_HEIGHT, "FOOTER_WEATHER height");
 

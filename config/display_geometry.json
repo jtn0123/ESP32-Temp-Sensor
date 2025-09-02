@@ -1,6 +1,6 @@
 {
   "layout_version": 1,
-  "layout_crc": "0x4468B097",
+  "layout_crc": "0xBDE91F37",
   "canvas": {
     "w": 250,
     "h": 122
@@ -24,9 +24,9 @@
       12
     ],
     "HEADER_VERSION": [
-      172,
+      156,
       2,
-      72,
+      90,
       12
     ],
     "INSIDE_TEMP": [
@@ -73,21 +73,21 @@
     ],
     "WEATHER_ICON": [
       126,
-      92,
+      81,
       50,
       50
     ],
     "FOOTER_STATUS": [
       6,
-      92,
+      81,
       118,
-      28
+      38
     ],
     "FOOTER_WEATHER": [
-      202,
-      92,
-      46,
-      28
+      177,
+      81,
+      70,
+      40
     ]
   }
 }

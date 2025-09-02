@@ -63,7 +63,8 @@ def main():
     # Get the repository root
     script_path = Path(__file__).resolve()
     repo_root = script_path.parent.parent
-    sim_directory = repo_root / "web" / "sim"
+    # Serve from web root so absolute paths like /icons/mdi/... resolve
+    sim_directory = repo_root / "web"
 
     if not sim_directory.exists():
         print(f"❌ Error: Simulator directory not found at {sim_directory}")
@@ -114,7 +115,8 @@ def main():
 
         def open_browser():
             time.sleep(1)  # Give server time to start
-            webbrowser.open(f"http://localhost:{port}/index.html")
+            # Open simulator index under /sim
+            webbrowser.open(f"http://localhost:{port}/sim/index.html")
 
         browser_thread = threading.Thread(target=open_browser)
         browser_thread.daemon = True

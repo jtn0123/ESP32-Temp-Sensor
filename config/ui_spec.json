@@ -12,7 +12,7 @@
   "rects": {
     "HEADER_NAME": [6, 2, 94, 12],               // Left header: room name
     "HEADER_TIME_CENTER": [100, 2, 50, 12],      // Center header: time (centered)
-    "HEADER_VERSION": [172, 2, 72, 12],          // Right header: firmware version / time-right
+    "HEADER_VERSION": [156, 2, 90, 12],          // Right header: firmware version / time-right
     "INSIDE_TEMP": [6, 30, 118, 20],             // Inside temperature number box
     "INSIDE_HUMIDITY": [6, 50, 56, 12],          // Inside humidity text box
     "INSIDE_PRESSURE": [6, 62, 115, 12],         // Inside pressure text box (optional)
@@ -20,9 +20,9 @@
     "OUT_HUMIDITY":  [130, 50, 58, 12],          // Outside humidity text box
     "OUT_PRESSURE":  [130, 62, 58, 12],          // Outside pressure text box (optional)
     "OUT_WIND":  [190, 50, 44, 12],              // Outside wind speed text box
-    "WEATHER_ICON":    [126, 92, 50, 50],        // Footer-left: weather icon box (icon centered)
-    "FOOTER_STATUS": [6, 92, 118, 28],           // Footer-left: battery/IP/status stack
-    "FOOTER_WEATHER":    [202, 92, 46, 28]       // Footer-right: full weather condition text
+    "WEATHER_ICON":    [126, 81, 50, 50],        // Footer-left: weather icon box (icon centered)
+    "FOOTER_STATUS": [6, 81, 118, 38],           // Footer-left: battery/IP/status stack
+    "FOOTER_WEATHER":    [177, 81, 70, 40]       // Footer-right: full weather condition text
   },
   "iconMap": [
     { "match": ["storm", "thunder", "lightning"], "icon": "weather-lightning" },
@@ -73,10 +73,10 @@
       { "op": "text", "rect": "OUT_WIND", "font": "small", "align": "left", "text": "{wind_mps->mph:.1f} mph" }
     ],
     "footer_split": [
-      { "op": "batteryGlyph", "x": 9, "y": 93, "w": 13, "h": 7, "percent": "{battery_percent}" },
-      { "op": "text", "x": 26, "y": 93, "font": "small", "text": "Batt {battery_voltage:.2f}V {battery_percent}%" },
-      { "op": "text", "x": 26, "y": 101, "font": "small", "text": "~{days}d" },
-      { "op": "text", "x": 26, "y": 110, "font": "small", "text": "IP {ip}" },
+      { "op": "batteryGlyph", "x": 5, "y": 89, "w": 16, "h": 8, "percent": "{battery_percent}" },
+      { "op": "text", "x": 26, "y": 82, "font": "small", "text": "Batt {battery_voltage:.2f}V {battery_percent}%" },
+      { "op": "text", "x": 26, "y": 94, "font": "small", "text": "~{days}d" },
+      { "op": "text", "x": 26, "y": 106, "font": "small", "text": "IP {ip}" },
       { "op": "textCenteredIn", "rect": "FOOTER_WEATHER", "yOffset": 11, "font": "small", "text": "{weather}" }
     ]
   },
