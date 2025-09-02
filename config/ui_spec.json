@@ -20,7 +20,7 @@
     "OUT_HUMIDITY":  [130, 50, 58, 12],          // Outside humidity text box
     "OUT_PRESSURE":  [130, 62, 58, 12],          // Outside pressure text box (optional)
     "OUT_WIND":  [190, 50, 44, 12],              // Outside wind speed text box
-    "WEATHER_ICON":    [170, 92, 30, 28],        // Footer-left: weather icon box (icon centered)
+    "WEATHER_ICON":    [126, 92, 50, 50],        // Footer-left: weather icon box (icon centered)
     "FOOTER_STATUS": [6, 92, 118, 28],           // Footer-left: battery/IP/status stack
     "FOOTER_WEATHER":    [202, 92, 46, 28]       // Footer-right: full weather condition text
   },
@@ -45,7 +45,7 @@
       { "op": "line", "from": [0, 0],   "to": [0, 121] },   // left border
       { "op": "line", "from": [249, 0], "to": [249, 121] }, // right border
       { "op": "line", "from": [125, 14], "to": [125, 121] },// vertical split between inside/outside
-      { "op": "line", "from": [1, 90], "to": [249, 90] }    // footer separator line
+      { "op": "line", "from": [1, 80], "to": [249, 80] }    // footer separator line
     ],
     "header_centered": [
       { "op": "line", "from": [1, 14], "to": [249, 14] },
@@ -67,7 +67,7 @@
     "outside": [
       { "op": "text", "x": 145, "y": 20, "font": "label", "text": "OUTSIDE" },
       { "op": "tempGroupCentered", "rect": "OUT_TEMP", "value": "{outside_temp_f}" },
-      { "op": "iconIn", "rect": "WEATHER_ICON", "iconFromWeather": "{weather}" }, // weather icon centered in rect
+      { "op": "iconIn", "rect": "WEATHER_ICON", "iconFromWeather": "{weather}" },
       { "op": "text", "rect": "OUT_PRESSURE", "font": "small", "align": "left", "y": 3, "text": "{outside_pressure_hpa:.0f} hPa", "when": "has(outside_pressure_hpa)" },
       { "op": "text", "rect": "OUT_HUMIDITY", "font": "small", "align": "left", "text": "{outside_hum_pct}% RH" },
       { "op": "text", "rect": "OUT_WIND", "font": "small", "align": "left", "text": "{wind_mps->mph:.1f} mph" }
