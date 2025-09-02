@@ -442,6 +442,12 @@ IconId map_weather_to_icon(const char* w) {
     return ICON_WEATHER_NIGHT;
   if (s == "weather-night-partly-cloudy")
     return ICON_WEATHER_NIGHT_PARTLY_CLOUDY;
+  if (s.indexOf("tornado") >= 0)
+    return ICON_WEATHER_TORNADO;
+  if (s.indexOf("hurricane") >= 0)
+    return ICON_WEATHER_HURRICANE;
+  if (s.indexOf("drizzle") >= 0)
+    return ICON_WEATHER_RAINY;
   if (s.indexOf("storm") >= 0 || s.indexOf("thunder") >= 0 || s.indexOf("lightning") >= 0) {
     return ICON_WEATHER_LIGHTNING;
   }
@@ -477,15 +483,22 @@ IconId map_openweather_to_icon(const OutsideReadings& o) {
       if (strncmp(ic, "04", 2) == 0)
         return ICON_WEATHER_CLOUDY;
       if (strncmp(ic, "09", 2) == 0)
-        return ICON_WEATHER_POURING;
+        return ICON_WEATHER_RAINY; // showers/drizzle
       if (strncmp(ic, "10", 2) == 0)
-        return ICON_WEATHER_POURING;
+        return ICON_WEATHER_POURING; // rain
       if (strncmp(ic, "11", 2) == 0)
         return ICON_WEATHER_LIGHTNING;
       if (strncmp(ic, "13", 2) == 0)
         return ICON_WEATHER_SNOWY;
       if (strncmp(ic, "50", 2) == 0)
-        return ICON_WEATHER_FOG;
+        return ICON_WEATHER_FOG; // atmosphere group
+      // Edge codes often seen
+      if (strncmp(ic, "51", 2) == 0 || strncmp(ic, "53", 2) == 0)
+        return ICON_WEATHER_RAINY; // drizzle variants
+      if (strncmp(ic, "61", 2) == 0)
+        return ICON_WEATHER_RAINY; // light rain
+      if (strncmp(ic, "80", 2) == 0)
+        return ICON_WEATHER_POURING; // shower rain
     }
   }
   // Fallback: heuristics from free-form string

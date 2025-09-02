@@ -1,11 +1,25 @@
 #!/usr/bin/env python3
 import os
 import subprocess
+import sys
+from pathlib import Path
 
 try:
     import yaml  # type: ignore
 except Exception:
     yaml = None
+
+# Try to load environment variables from .env file
+try:
+    from dotenv import load_dotenv
+    # Look for .env in project root
+    env_path = Path(__file__).parent.parent / '.env'
+    if env_path.exists():
+        load_dotenv(env_path)
+        print(f"Loaded environment variables from {env_path}")
+except ImportError:
+    # dotenv not installed, will use environment variables only
+    pass
 
 
 def parse_duration(s: str) -> int:
@@ -73,16 +87,18 @@ def main():
     wifi = data.get("wifi", {})
     mqtt = data.get("mqtt", {})
     base_topics = mqtt.get("base_topics", {})
-    wifi_ssid = wifi.get("ssid", "")
-    wifi_pass = wifi.get("password", "")
+    # Prioritize environment variables over config file for sensitive data
+    wifi_ssid = os.getenv('WIFI_SSID') or wifi.get("ssid", "")
+    wifi_pass = os.getenv('WIFI_PASSWORD') or wifi.get("password", "")
     wifi_static = wifi.get("static", {}) or {}
     wifi_bssid = str(wifi.get("bssid", "") or "")
     wifi_channel = wifi.get("channel", None)
     wifi_country = str(wifi.get("country", "") or "")
-    mqtt_host = mqtt.get("host", "")
-    mqtt_port = int(mqtt.get("port", 1883) or 1883)
-    mqtt_user = str(mqtt.get("user", "") or "")
-    mqtt_pass = str(mqtt.get("password", "") or "")
+    # MQTT credentials from environment variables with fallback to config
+    mqtt_host = os.getenv('MQTT_HOST') or mqtt.get("host", "")
+    mqtt_port = int(os.getenv('MQTT_PORT') or mqtt.get("port", 1883) or 1883)
+    mqtt_user = str(os.getenv('MQTT_USER') or mqtt.get("user", "") or "")
+    mqtt_pass = str(os.getenv('MQTT_PASSWORD') or mqtt.get("password", "") or "")
     mqtt_pub = base_topics.get("publish", "sensors/" + room_name.lower())
     mqtt_sub = base_topics.get("subscribe", "home/outdoor")
     # battery
@@ -130,9 +146,16 @@ def main():
 
     out_dir = os.path.join(prj, "firmware", "arduino", "src")
     os.makedirs(out_dir, exist_ok=True)
+    # Validate critical configuration before generating
+    if not wifi_ssid:
+        print("WARNING: WiFi SSID not configured. Set WIFI_SSID env var or update config/device.yaml")
+    if not mqtt_host:
+        print("WARNING: MQTT host not configured. Set MQTT_HOST env var or update config/device.yaml")
+    
     out_path = os.path.join(out_dir, "generated_config.h")
     with open(out_path, "w") as f:
-        f.write("// Auto-generated from config/device.yaml by scripts/gen_device_header.py\n")
+        f.write("// Auto-generated from config/device.yaml and environment variables\n")
+        f.write("// by scripts/gen_device_header.py\n")
         f.write("#pragma once\n\n")
         f.write(f"#define ROOM_NAME {c_string(room_name)}\n")
         f.write(f"#define FW_VERSION {c_string(fw_version)}\n")
