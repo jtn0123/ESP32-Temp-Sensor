@@ -98,9 +98,54 @@
               <div class="muted">No validation issues detected</div>
             </div>
           </details>
+
+          <details id="mqttPanel" aria-label="MQTT integration panel">
+            <summary>MQTT Integration <span id="mqttBadge" class="badge" aria-live="polite"></span></summary>
+            <div class="mqtt-controls">
+              <div class="mqtt-connection">
+                <h4>Connection Settings</h4>
+                <div class="form-row">
+                  <label>Broker: <input type="text" id="mqttBroker" placeholder="127.0.0.1" value="127.0.0.1"></label>
+                  <label>Port: <input type="number" id="mqttPort" placeholder="9001" value="9001" min="1" max="65535"></label>
+                </div>
+                <div class="form-row">
+                  <label>Username: <input type="text" id="mqttUser" placeholder="(optional)"></label>
+                  <label>Password: <input type="password" id="mqttPass" placeholder="(optional)"></label>
+                </div>
+                <div class="form-row">
+                  <label>Device ID: <input type="text" id="mqttDeviceId" placeholder="sim-hostname"></label>
+                  <label>Room: <input type="text" id="mqttRoomName" placeholder="WebSim" value="WebSim"></label>
+                </div>
+                <div class="button-row">
+                  <button id="mqttConnect">Connect</button>
+                  <button id="mqttDisconnect" disabled>Disconnect</button>
+                </div>
+              </div>
+              
+              <div class="mqtt-publish">
+                <h4>Publishing</h4>
+                <div class="form-row">
+                  <label>Auto-publish interval (sec): 
+                    <input type="number" id="mqttInterval" value="30" min="0" max="3600">
+                  </label>
+                  <button id="mqttStartAuto">Start Auto</button>
+                  <button id="mqttStopAuto">Stop Auto</button>
+                </div>
+                <div class="button-row">
+                  <button id="mqttPublishNow" disabled>Publish Now</button>
+                  <button id="mqttPublishDiscovery" disabled>Republish Discovery</button>
+                </div>
+              </div>
+              
+              <div id="mqttStatus" class="mqtt-status">Not connected</div>
+            </div>
+          </details>
         </aside>
       </div>
     </div>
+    <!-- MQTT.js library from CDN -->
+    <script src="https://unpkg.com/mqtt@5.3.0/dist/mqtt.min.js"></script>
+    <script src="mqtt-client.js"></script>
     <script src="ui_generated.js?v=8"></script>
     <script src="sim.js?v=15"></script>
     <script src="debug-panel.js"></script>
