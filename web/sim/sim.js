@@ -1,5 +1,25 @@
 (function(){
   console.log('IIFE starting...');
+  
+  // Data state manager for decoupling data from rendering
+  const simDataState = {
+    current: {},
+    listeners: [],
+    update(newData) {
+      this.current = {...this.current, ...newData};
+      this.listeners.forEach(fn => fn(this.current));
+    },
+    subscribe(fn) {
+      this.listeners.push(fn);
+    },
+    unsubscribe(fn) {
+      this.listeners = this.listeners.filter(f => f !== fn);
+    }
+  };
+  
+  // Expose globally for MQTT client
+  window.simDataState = simDataState;
+  
   let WIDTH = 250, HEIGHT = 122;
   // Rectangles use [x, y, w, h] - from display_geometry.json
   let HEADER_NAME = [  6,  2, 160, 14];
@@ -2266,6 +2286,11 @@
   function draw(data){
     console.log('draw() called with data:', data);
     const __start = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+    
+    // Update state manager with new data
+    if (data && simDataState) {
+      simDataState.update(data);
+    }
     
     // Ensure canvas is initialized
     if (!ctx) {

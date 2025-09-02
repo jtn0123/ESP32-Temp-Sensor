@@ -153,6 +153,82 @@ button:hover{ border-color: #b9c0cc; }
 .badge{ margin-left: 8px; padding: 2px 6px; border-radius: 3px; font-size: 11px; border: 1px solid var(--color-border); }
 .muted{ color: var(--color-muted); }
 
+/* MQTT Panel Styles */
+.mqtt-controls {
+  padding: var(--space-3);
+}
+
+.mqtt-controls h4 {
+  margin: 0 0 var(--space-2) 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.mqtt-connection,
+.mqtt-publish {
+  margin-bottom: var(--space-3);
+}
+
+.form-row {
+  display: flex;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+
+.form-row label {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: 12px;
+}
+
+.form-row input {
+  flex: 1;
+  padding: 4px 8px;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  font-size: 12px;
+  background: var(--color-surface);
+}
+
+.button-row {
+  display: flex;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+.button-row button {
+  flex: 1;
+}
+
+.mqtt-status {
+  padding: var(--space-2);
+  border-radius: var(--radius-1);
+  background: var(--color-bg);
+  font-size: 12px;
+  color: var(--color-muted);
+  text-align: center;
+}
+
+.mqtt-status.error {
+  background: #fef2f2;
+  color: #dc2626;
+}
+
+#mqttPanel .badge.success {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+#mqttPanel .badge.error {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
 /* Region inspector */
 .region-browser{ margin-top: var(--space-2); }
 .region-controls{ display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; margin-bottom: var(--space-2); }

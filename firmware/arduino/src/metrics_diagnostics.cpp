@@ -4,6 +4,8 @@
 #include "display_layout.h"
 #include "net.h"
 #include "mqtt_client.h"
+#include "safe_strings.h"  // Add safe string operations
+#include "logging.h"       // Add logging infrastructure
 #include <time.h>
 
 #if USE_STATUS_PIXEL
@@ -62,8 +64,8 @@ void emit_metrics_json(float tempC, float rhPct, float pressHPa) {
     return;
   }
   
-  char json[256];
-  snprintf(json, sizeof(json),
+  mqtt_payload_t json;  // Use pre-sized buffer type
+  safe_snprintf(json,
            "{\"temp_c\":%.2f,\"rh_pct\":%.1f,\"press_hpa\":%.1f,\"ts\":%lu}",
            isfinite(tempC) ? tempC : 0.0f,
            isfinite(rhPct) ? rhPct : 0.0f,
@@ -79,11 +81,11 @@ void publish_layout_identity() {
     return;
   }
   
-  char topic[128];
-  snprintf(topic, sizeof(topic), "%s/layout", MQTT_PUB_BASE);
+  mqtt_topic_t topic;  // Use pre-sized buffer type
+  safe_snprintf(topic, "%s/layout", MQTT_PUB_BASE);
   
   char payload[96];
-  snprintf(payload, sizeof(payload), 
+  safe_snprintf(payload, 
            "{\"layout_version\":%u,\"layout_crc\":\"0x%08X\"}",
            static_cast<unsigned>(LAYOUT_VERSION), 
            static_cast<unsigned>(LAYOUT_CRC));

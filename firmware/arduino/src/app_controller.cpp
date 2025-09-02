@@ -96,12 +96,22 @@ void app_setup() {
   Serial.flush();
   
   // Initialize power management with error checking
-  Serial.println("[4] Initializing power management...");
-  Serial.flush();
+  LOG_INFO("[4] Initializing power management...");
   power_init();
   power_wake_from_sleep();
-  Serial.println("[4] Power management OK");
-  Serial.flush();
+  
+  // Check battery status
+  BatteryStatus bs = read_battery_status();
+  LOG_INFO("[4] Battery: %.0f%% (%.2fV)", bs.percentage, bs.voltage);
+  
+  // Check for critical battery
+  if (bs.percentage < 5.0f && !bs.is_charging) {
+    SET_ERROR(ERR_BATTERY_CRITICAL);
+    LOG_ERROR("Battery critical! Entering deep sleep");
+    esp_deep_sleep_start();
+  }
+  
+  LOG_INFO("[4] Power management OK");
   
   // Initialize sensors with error checking
   Serial.println("[5] Initializing sensors...");
@@ -118,17 +128,18 @@ void app_setup() {
                 ESP.getFreeHeap(), ESP.getMinFreeHeap());
   #endif
   
-  // Initialize network (but don't block on it)
-  Serial.println("[BOOT-3] Attempting WiFi connection...");
-  Serial.flush();
+  // Initialize network with exponential backoff
+  LOG_INFO("[BOOT-3] Attempting WiFi connection...");
   show_boot_stage(3);  // Blue for WiFi
-  if (!wifi_connect_with_timeout(5000)) {
-    Serial.println("[BOOT-3] WiFi connection failed - continuing anyway");
-    Serial.flush();
+  
+  // Use new exponential backoff connection
+  if (!wifi_connect_with_exponential_backoff(3, 1000)) {  // 3 attempts, 1s initial delay
+    SET_ERROR(ERR_WIFI_CONNECT_FAILED);
+    LOG_WARN("[BOOT-3] WiFi connection failed - continuing anyway");
     show_boot_stage(5);  // Purple for error
   } else {
-    Serial.println("[BOOT-4] WiFi connected");
-    Serial.flush();
+    LOG_INFO("[BOOT-4] WiFi connected - IP: %s, RSSI: %d", 
+             wifi_get_ip().c_str(), wifi_get_rssi());
     show_boot_stage(4);  // Green for ready
   }
   
