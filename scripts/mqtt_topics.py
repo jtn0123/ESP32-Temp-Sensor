@@ -7,6 +7,7 @@ Single source of truth matching firmware implementation.
 import json
 import os
 import re
+from math import isfinite
 
 
 def build_topic(device_id: str, suffix: str) -> str:
