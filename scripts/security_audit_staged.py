@@ -20,7 +20,7 @@ class Severity:
 # Credential patterns with severity
 CREDENTIAL_PATTERNS = [
     # CRITICAL - Actual passwords/keys
-    (Severity.CRITICAL, r'password\s*[=:]\s*["\'][^"\']*[a-zA-Z0-9!@#$%^&*()]{6,}["\']', "Password with value"),
+    (Severity.CRITICAL, r'password\s*[=:]\s*["\'][a-zA-Z0-9!@#$%^&*()]{6,}["\']', "Password with value"),
     (Severity.CRITICAL, r'api[_-]?key\s*[=:]\s*["\'][a-zA-Z0-9]{32,}["\']', "API key"),
     (Severity.CRITICAL, r'token\s*[=:]\s*["\'][a-zA-Z0-9]{20,}["\']', "Token"),
     (Severity.CRITICAL, r'secret\s*[=:]\s*["\'][a-zA-Z0-9]{16,}["\']', "Secret"),
