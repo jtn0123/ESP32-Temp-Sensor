@@ -113,14 +113,13 @@ def rasterize_1bit_centered(
             thr = max(0, min(255, thr - 5))
         if thr is None:
             thr = 160
-            # Binarize to 1-bit via threshold
-            def threshold_fn(p):
-                return 0 if p < thr else 255
-            bw_l = canvas.point(threshold_fn, "L")
-            # Optional bold (dilate black) using MinFilter on L-mode
-            for _ in range(max(0, int(bold_px))):
+        # Binarize to 1-bit via threshold
+        bw_l = canvas.point(lambda p, t=thr: 0 if p < t else 255, "L")
+        # Optional bold (dilate black) using MinFilter on L-mode
+        if isinstance(bold_px, int) and bold_px > 0:
+            for _ in range(bold_px):
                 bw_l = bw_l.filter(ImageFilter.MinFilter(3))
-            bw = bw_l.convert("1")
+        bw = bw_l.convert("1")
         if invert:
             bw = bw.point(lambda p: 255 - p, "1")
         return bw
@@ -129,10 +128,11 @@ def rasterize_1bit_centered(
 def pack_xbm_bits(img_1bit: Image.Image) -> bytes:
     assert img_1bit.mode == "1"
     out = bytearray()
-    for y in range(HEIGHT):
+    w, h = img_1bit.size
+    for y in range(h):
         byte = 0
         bit_count = 0
-        for x in range(WIDTH):
+        for x in range(w):
             # Pillow '1': 0=black, 255=white
             bit = 1 if img_1bit.getpixel((x, y)) == 0 else 0
             # XBM is LSB first within a byte
@@ -157,6 +157,8 @@ def main() -> None:
     parser.add_argument("--threshold", type=str, default="auto", help="'auto' (Otsu) or integer 0-255")
     parser.add_argument("--bold", type=int, default=0, help="Number of dilation passes to thicken lines (default 0)")
     parser.add_argument("--preview-dir", type=str, default="", help="Optional directory to write 1-bit PNG previews")
+    parser.add_argument("--width", type=int, default=24, help="Output icon width in pixels (default 24)")
+    parser.add_argument("--height", type=int, default=24, help="Output icon height in pixels (default 24)")
     args = parser.parse_args()
 
     thr_arg: Optional[int]
@@ -172,6 +174,11 @@ def main() -> None:
             thr_arg = None
             auto_thr = True
 
+    # Set global target dimensions
+    global WIDTH, HEIGHT
+    WIDTH = max(8, int(args.width))
+    HEIGHT = max(8, int(args.height))
+
     header_lines: list[str] = []
     header_lines.append("#pragma once")
     header_lines.append("// Copyright 2024 Justin")
@@ -183,8 +190,8 @@ def main() -> None:
     weather_tokens = [n for n in ICON_NAMES if n.startswith("weather-")]
     if weather_tokens:
         header_lines.append("// Icon tokens: " + " ".join(weather_tokens))
-    header_lines.append("#define ICON_W 24")
-    header_lines.append("#define ICON_H 24")
+    header_lines.append(f"#define ICON_W {WIDTH}")
+    header_lines.append(f"#define ICON_H {HEIGHT}")
     header_lines.append("")
     # Provide simple typedef/struct markers for tests
     header_lines.append("typedef struct __icon_data_marker { const uint8_t* p; }")
