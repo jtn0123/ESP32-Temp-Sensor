@@ -21,19 +21,19 @@
   window.simDataState = simDataState;
   
   let WIDTH = 250, HEIGHT = 122;
-  // Rectangles use [x, y, w, h] - from display_geometry.json
-  let HEADER_NAME = [  6,  2, 160, 14];
-  let HEADER_VERSION = [172,  2,  72, 14];
-  let HEADER_TIME_CENTER = [100,  2,  50, 14];
-  let INSIDE_TEMP = [  6, 36, 118, 28];
-  let INSIDE_HUMIDITY = [  6, 66, 115, 14];
-  let INSIDE_PRESSURE = [  6, 105, 115, 14];
-  let OUT_TEMP    = [129, 36,  94, 28];
-  let WEATHER_ICON = [170, 92,  30, 28];
-  // Outside metric regions with meaningful names
-  let OUT_PRESSURE = [177, 55,  64, 14]; // Outside pressure
-  let OUT_HUMIDITY = [131, 73,  44, 14]; // Outside humidity
-  let OUT_WIND     = [177, 73,  44, 14]; // Wind speed
+  // Rectangles loaded from geometry.json - no hardcoded fallbacks
+  // These will be initialized by loadCentralGeometry() before first draw
+  let HEADER_NAME = null;
+  let HEADER_VERSION = null;
+  let HEADER_TIME_CENTER = null;
+  let INSIDE_TEMP = null;
+  let INSIDE_HUMIDITY = null;
+  let INSIDE_PRESSURE = null;
+  let OUT_TEMP = null;
+  let WEATHER_ICON = null;
+  let OUT_PRESSURE = null;
+  let OUT_HUMIDITY = null;
+  let OUT_WIND = null;
 
   let canvas = null;
   let ctx = null;
@@ -1427,54 +1427,63 @@
     ctx.restore();
   }
   async function loadCentralGeometry(){
+    // Try window.UI_SPEC first (if embedded)
     try{
       if (typeof window !== 'undefined' && window.UI_SPEC){
         const gj = window.UI_SPEC;
         if (gj && gj.rects){
-          GJSON = gj;
-          WIDTH = (gj.canvas && gj.canvas.w) || WIDTH;
-          HEIGHT = (gj.canvas && gj.canvas.h) || HEIGHT;
-          const R = gj.rects;
-          HEADER_NAME = R.HEADER_NAME || HEADER_NAME;
-          HEADER_VERSION = R.HEADER_VERSION || HEADER_VERSION;
-          HEADER_TIME_CENTER = R.HEADER_TIME_CENTER || HEADER_TIME_CENTER;
-          INSIDE_TEMP = R.INSIDE_TEMP || INSIDE_TEMP;
-          INSIDE_HUMIDITY   = R.INSIDE_HUMIDITY   || INSIDE_HUMIDITY;
-          INSIDE_PRESSURE = R.INSIDE_PRESSURE || INSIDE_PRESSURE;
-          OUT_TEMP    = R.OUT_TEMP    || OUT_TEMP;
-          WEATHER_ICON = R.WEATHER_ICON || WEATHER_ICON;
-          // Use new meaningful names
-          OUT_PRESSURE = R.OUT_PRESSURE || OUT_PRESSURE;
-          OUT_HUMIDITY = R.OUT_HUMIDITY || OUT_HUMIDITY;
-          OUT_WIND     = R.OUT_WIND     || OUT_WIND;
+          applyGeometry(gj);
+          console.log('✅ Loaded geometry from window.UI_SPEC');
           return;
         }
       }
-    }catch(e){ }
+    }catch(e){
+      console.warn('Failed to load from window.UI_SPEC:', e);
+    }
+
+    // Load from geometry.json file
     try{
       const res = await fetch('geometry.json');
       if (res.ok){
         const gj = await res.json();
         if (gj && gj.rects){
-          GJSON = gj;
-          WIDTH = (gj.canvas && gj.canvas.w) || WIDTH;
-          HEIGHT = (gj.canvas && gj.canvas.h) || HEIGHT;
-          const R = gj.rects;
-          HEADER_NAME = R.HEADER_NAME || HEADER_NAME;
-          HEADER_VERSION = R.HEADER_VERSION || HEADER_VERSION;
-          HEADER_TIME_CENTER = R.HEADER_TIME_CENTER || HEADER_TIME_CENTER;
-          INSIDE_TEMP = R.INSIDE_TEMP || INSIDE_TEMP;
-          INSIDE_HUMIDITY   = R.INSIDE_HUMIDITY   || INSIDE_HUMIDITY;
-          INSIDE_PRESSURE = R.INSIDE_PRESSURE || INSIDE_PRESSURE;
-          OUT_TEMP    = R.OUT_TEMP    || OUT_TEMP;
-          WEATHER_ICON = R.WEATHER_ICON || WEATHER_ICON;
-          // Use new meaningful names
-          OUT_PRESSURE = R.OUT_PRESSURE || OUT_PRESSURE;
-          OUT_HUMIDITY = R.OUT_HUMIDITY || OUT_HUMIDITY;
-          OUT_WIND     = R.OUT_WIND     || OUT_WIND;
+          applyGeometry(gj);
+          console.log('✅ Loaded geometry from geometry.json', gj.layout_crc ? `(CRC: ${gj.layout_crc})` : '');
+          return;
         }
       }
-    }catch(e){ }
+      throw new Error('geometry.json missing or invalid');
+    }catch(e){
+      console.error('❌ CRITICAL: Failed to load geometry.json - simulator cannot render!', e);
+      throw e;
+    }
+  }
+
+  function applyGeometry(gj){
+    GJSON = gj;
+    WIDTH = (gj.canvas && gj.canvas.w) || WIDTH;
+    HEIGHT = (gj.canvas && gj.canvas.h) || HEIGHT;
+    const R = gj.rects;
+
+    // Apply all regions (no fallbacks - fail if missing)
+    HEADER_NAME = R.HEADER_NAME;
+    HEADER_VERSION = R.HEADER_VERSION;
+    HEADER_TIME_CENTER = R.HEADER_TIME_CENTER;
+    INSIDE_TEMP = R.INSIDE_TEMP;
+    INSIDE_HUMIDITY = R.INSIDE_HUMIDITY;
+    INSIDE_PRESSURE = R.INSIDE_PRESSURE;
+    OUT_TEMP = R.OUT_TEMP;
+    WEATHER_ICON = R.WEATHER_ICON;
+    OUT_PRESSURE = R.OUT_PRESSURE;
+    OUT_HUMIDITY = R.OUT_HUMIDITY;
+    OUT_WIND = R.OUT_WIND;
+
+    // Validate critical regions loaded
+    const required = ['HEADER_NAME', 'INSIDE_TEMP', 'OUT_TEMP', 'WEATHER_ICON'];
+    const missing = required.filter(name => !R[name]);
+    if (missing.length > 0) {
+      throw new Error(`Missing required regions: ${missing.join(', ')}`);
+    }
   }
 
   function applyOneBitThreshold(){
@@ -2742,7 +2751,8 @@
       if (bar){
         const issuesCount = (Array.isArray(validationIssues) ? validationIssues.length : 0);
         const ms = (Number(renderMs)||0).toFixed(1);
-        bar.textContent = `${ready ? '✓ Simulator ready' : '… Initializing'} | ⟳ ${ms}ms | Issues: ${issuesCount}`;
+        const crcInfo = (GJSON && GJSON.layout_crc) ? ` | CRC: ${GJSON.layout_crc}` : '';
+        bar.textContent = `${ready ? '✓ Simulator ready' : '… Initializing'} | ⟳ ${ms}ms | Issues: ${issuesCount}${crcInfo}`;
       }
     }catch(e){}
   }

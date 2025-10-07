@@ -293,7 +293,7 @@ void full_refresh() {
     if (outside.validWeather && outside.weather[0]) {
       char short_condition[24];
       make_short_condition_cstr(outside.weather, short_condition, sizeof(short_condition));
-      display.setCursor(OUT_WEATHER[0], OUT_WEATHER[1] + OUT_WEATHER[3] - 4);
+      display.setCursor(FOOTER_WEATHER[0], FOOTER_WEATHER[1] + FOOTER_WEATHER[3] - 4);
       display.print(short_condition);
     }
     
@@ -447,7 +447,7 @@ IconId map_weather_to_icon(const char* w) {
   if (s.indexOf("hurricane") >= 0)
     return ICON_WEATHER_HURRICANE;
   if (s.indexOf("drizzle") >= 0)
-    return ICON_WEATHER_RAINY;
+    return ICON_WEATHER_DRIZZLE;
   if (s.indexOf("storm") >= 0 || s.indexOf("thunder") >= 0 || s.indexOf("lightning") >= 0) {
     return ICON_WEATHER_LIGHTNING;
   }
@@ -483,7 +483,7 @@ IconId map_openweather_to_icon(const OutsideReadings& o) {
       if (strncmp(ic, "04", 2) == 0)
         return ICON_WEATHER_CLOUDY;
       if (strncmp(ic, "09", 2) == 0)
-        return ICON_WEATHER_RAINY; // showers/drizzle
+        return ICON_WEATHER_DRIZZLE; // showers/drizzle
       if (strncmp(ic, "10", 2) == 0)
         return ICON_WEATHER_POURING; // rain
       if (strncmp(ic, "11", 2) == 0)
@@ -494,9 +494,9 @@ IconId map_openweather_to_icon(const OutsideReadings& o) {
         return ICON_WEATHER_FOG; // atmosphere group
       // Edge codes often seen
       if (strncmp(ic, "51", 2) == 0 || strncmp(ic, "53", 2) == 0)
-        return ICON_WEATHER_RAINY; // drizzle variants
+        return ICON_WEATHER_DRIZZLE; // drizzle variants
       if (strncmp(ic, "61", 2) == 0)
-        return ICON_WEATHER_RAINY; // light rain
+        return ICON_WEATHER_DRIZZLE; // light rain
       if (strncmp(ic, "80", 2) == 0)
         return ICON_WEATHER_POURING; // shower rain
     }
@@ -557,7 +557,7 @@ const int* rect_ptr_by_id(uint8_t rid) {
     case ui::RECT_WEATHER_ICON:
       return WEATHER_ICON;
     case ui::RECT_OUT_WEATHER:
-      return OUT_WEATHER;
+      return FOOTER_WEATHER;
     case ui::RECT_OUT_PRESSURE:
       return OUT_PRESSURE;
     case ui::RECT_OUT_HUMIDITY:
