@@ -220,9 +220,9 @@ Examples:
     )
     parser.add_argument(
         "--mode",
-        choices=["3m", "1h", "2h", "always"],
+        choices=["3m", "30m", "1h", "2h", "always"],
         default="1h",
-        help="Sleep mode: 3m, 1h (default), 2h, or always (no sleep)",
+        help="Sleep mode: 3m, 30m, 1h (default), 2h, or always (no sleep)",
     )
 
     # Actions
@@ -265,6 +265,8 @@ Examples:
         # Use WAKE_INTERVAL to override generated_config via environment
         if args.mode == "3m":
             os.environ["WAKE_INTERVAL"] = "3m"
+        elif args.mode == "30m":
+            os.environ["WAKE_INTERVAL"] = "30m"
         elif args.mode == "1h":
             os.environ["WAKE_INTERVAL"] = "1h"
         elif args.mode == "2h":
