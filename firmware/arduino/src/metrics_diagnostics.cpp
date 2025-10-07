@@ -1,7 +1,9 @@
 // Metrics and diagnostics implementation
 #include "metrics_diagnostics.h"
 #include "generated_config.h"
+#if USE_DISPLAY
 #include "display_layout.h"
+#endif
 #include "net.h"
 #include "mqtt_client.h"
 #include "safe_strings.h"  // Add safe string operations
@@ -85,10 +87,17 @@ void publish_layout_identity() {
   safe_snprintf(topic, "%s/layout", MQTT_PUB_BASE);
   
   char payload[96];
+  #if USE_DISPLAY
   safe_snprintf(payload, 
            "{\"layout_version\":%u,\"layout_crc\":\"0x%08X\"}",
            static_cast<unsigned>(LAYOUT_VERSION), 
            static_cast<unsigned>(LAYOUT_CRC));
+  #else
+  safe_snprintf(payload, 
+           "{\"layout_version\":%u,\"layout_crc\":\"%s\"}",
+           0u,
+           "N/A");
+  #endif
   
   mqtt_publish_raw(topic, payload, true);
 }

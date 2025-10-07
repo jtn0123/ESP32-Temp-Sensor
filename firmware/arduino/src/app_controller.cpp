@@ -70,7 +70,7 @@ void app_setup() {
   Serial.flush();
   
   // Run diagnostic tests in DEV_NO_SLEEP mode
-  #ifdef DEV_NO_SLEEP
+  #if DEV_NO_SLEEP
   Serial.println("[BOOT-2a] Running hardware diagnostics...");
   diagnostic_test_init();
   Serial.println("[BOOT-2b] Diagnostics complete, continuing boot...");
@@ -96,22 +96,21 @@ void app_setup() {
   Serial.flush();
   
   // Initialize power management with error checking
-  LOG_INFO("[4] Initializing power management...");
+  Serial.println("[4] Initializing power management...");
   power_init();
   power_wake_from_sleep();
   
   // Check battery status
   BatteryStatus bs = read_battery_status();
-  LOG_INFO("[4] Battery: %.0f%% (%.2fV)", bs.percentage, bs.voltage);
+  Serial.printf("[4] Battery: %d%% (%.2fV)\n", bs.percent, bs.voltage);
   
   // Check for critical battery
-  if (bs.percentage < 5.0f && !bs.is_charging) {
-    SET_ERROR(ERR_BATTERY_CRITICAL);
-    LOG_ERROR("Battery critical! Entering deep sleep");
+  if (bs.percent >= 0 && bs.percent < 5) {
+    Serial.println("Battery critical! Entering deep sleep");
     esp_deep_sleep_start();
   }
   
-  LOG_INFO("[4] Power management OK");
+  Serial.println("[4] Power management OK");
   
   // Initialize sensors with error checking
   Serial.println("[5] Initializing sensors...");
@@ -129,16 +128,15 @@ void app_setup() {
   #endif
   
   // Initialize network with exponential backoff
-  LOG_INFO("[BOOT-3] Attempting WiFi connection...");
+  Serial.println("[BOOT-3] Attempting WiFi connection...");
   show_boot_stage(3);  // Blue for WiFi
   
   // Use new exponential backoff connection
   if (!wifi_connect_with_exponential_backoff(3, 1000)) {  // 3 attempts, 1s initial delay
-    SET_ERROR(ERR_WIFI_CONNECT_FAILED);
-    LOG_WARN("[BOOT-3] WiFi connection failed - continuing anyway");
+    Serial.println("[BOOT-3] WiFi connection failed - continuing anyway");
     show_boot_stage(5);  // Purple for error
   } else {
-    LOG_INFO("[BOOT-4] WiFi connected - IP: %s, RSSI: %d", 
+    Serial.printf("[BOOT-4] WiFi connected - IP: %s, RSSI: %d\n", 
              wifi_get_ip().c_str(), wifi_get_rssi());
     show_boot_stage(4);  // Green for ready
   }
@@ -162,7 +160,7 @@ void app_setup() {
 
 // Main application loop (for diagnostic mode)
 void app_loop() {
-  #ifdef DEV_NO_SLEEP
+  #if DEV_NO_SLEEP
   // In always-on mode, just print alive message periodically
   static uint32_t last_print = 0;
   if (millis() - last_print > 5000) {
@@ -339,7 +337,7 @@ void run_display_phase() {
 void run_sleep_phase() {
   Serial.println("=== Sleep Phase ===");
   
-  #ifdef DEV_NO_SLEEP
+  #if DEV_NO_SLEEP
   Serial.println("DEV_NO_SLEEP: Staying awake in loop()");
   Serial.println("Device will print [ALIVE] message every 5 seconds");
   Serial.flush();
