@@ -1,5 +1,7 @@
 {
   "version": 1,
+  "layout_version": 1,
+  "layout_crc": "0x5AD17E45",
   "canvas": { "w": 250, "h": 122 },
   "fonts": {
     "big_px": 22,

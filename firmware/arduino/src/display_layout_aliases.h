@@ -1,24 +1,14 @@
-// Alias non-RECT names to generated RECT_* constants
+// Legacy aliases file - no longer needed since display_layout.h now uses direct names
+// Kept for backward compatibility but all aliases removed (names match directly)
 #pragma once
 
 #include "display_layout.h"
 
-#define HEADER_NAME RECT_HEADER_NAME
-#define HEADER_VERSION RECT_HEADER_VERSION
-#define HEADER_TIME_CENTER RECT_HEADER_TIME_CENTER
-
-#define INSIDE_TEMP RECT_INSIDE_TEMP
-#define INSIDE_HUMIDITY RECT_INSIDE_HUMIDITY
-#define INSIDE_PRESSURE RECT_INSIDE_PRESSURE
-
-#define OUT_TEMP RECT_OUT_TEMP
-#define WEATHER_ICON RECT_WEATHER_ICON
-#define OUT_WEATHER RECT_FOOTER_WEATHER
-#define OUT_PRESSURE RECT_OUT_PRESSURE
-#define OUT_HUMIDITY RECT_OUT_HUMIDITY
-#define OUT_WIND RECT_OUT_WIND
-
-#define FOOTER_STATUS RECT_FOOTER_STATUS
-#define FOOTER_WEATHER RECT_FOOTER_WEATHER
+// All region names now match directly between display_layout.h and code
+// No aliases needed - display_layout.h defines:
+//   HEADER_NAME, HEADER_VERSION, HEADER_TIME_CENTER
+//   INSIDE_TEMP, INSIDE_HUMIDITY, INSIDE_PRESSURE
+//   OUT_TEMP, OUT_PRESSURE, OUT_HUMIDITY, OUT_WIND
+//   WEATHER_ICON, FOOTER_STATUS, FOOTER_WEATHER
 
 

@@ -70,15 +70,8 @@ def generate_header(data: Dict[str, Any]) -> str:
         lines.append(f"static constexpr int {var}[4] = {{ {x:3d}, {y:3d}, {rw:3d}, {rh:2d}}};")
 
     lines.append("")
-    lines.append("enum WeatherIconId {")
-    lines.append("    ICON_CLEAR = 0,")
-    lines.append("    ICON_PARTLY,")
-    lines.append("    ICON_CLOUDY,")
-    lines.append("    ICON_RAIN,")
-    lines.append("    ICON_STORM,")
-    lines.append("    ICON_SNOW,")
-    lines.append("    ICON_FOG,")
-    lines.append("};")
+    # Icon enum removed - use icons_generated.h instead
+    # lines.append("enum WeatherIconId { ... };")
     lines.append("")
     lines.append("// Compile-time layout sanity checks (widths/heights within bounds)")
     for name, xywh in rects.items():
