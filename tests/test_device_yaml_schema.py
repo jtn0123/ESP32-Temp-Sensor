@@ -34,18 +34,23 @@ def _validate_yaml(data: dict):
     outside = str(data.get("outside_source", "mqtt")).strip().lower()
     assert outside in ("ha", "mqtt")
 
-    # Wi-Fi creds present
+    # Wi-Fi creds present (either in YAML or via env vars WIFI_SSID/WIFI_PASSWORD)
     wifi = data.get("wifi", {}) or {}
     ssid = wifi.get("ssid")
     pw = wifi.get("password")
-    assert isinstance(ssid, str) and ssid.strip()
-    assert isinstance(pw, str) and pw.strip()
+    # Allow environment variable-based config (production) or YAML-based (samples)
+    if ssid is not None:
+        assert isinstance(ssid, str) and ssid.strip()
+    if pw is not None:
+        assert isinstance(pw, str) and pw.strip()
 
-    # MQTT host required if outside_source=mqtt
+    # MQTT host required if outside_source=mqtt (either in YAML or via env vars)
     mqtt = data.get("mqtt", {}) or {}
     if outside == "mqtt":
         host = mqtt.get("host")
-        assert isinstance(host, str) and host.strip()
+        # Allow environment variable-based config (MQTT_HOST) or YAML-based
+        if host is not None:
+            assert isinstance(host, str) and host.strip()
 
     # Thresholds non-negative
     th = data.get("thresholds", {}) or {}

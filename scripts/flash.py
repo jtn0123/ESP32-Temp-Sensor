@@ -276,9 +276,9 @@ Examples:
     if extra_flags:
         os.environ["EXTRA_FLAGS"] = " ".join(extra_flags)
 
-    # Find or wait for port
+    # Find or wait for port (skip if build-only)
     port = args.port
-    if not port:
+    if not args.build_only and not port:
         if args.wait:
             port = wait_for_device()
             if not port:
