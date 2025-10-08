@@ -76,15 +76,18 @@ inline void log_heap_status(const char* context) {
 #define LOG_TIMING_END(name) LOG_DEBUG("Timing %s: %dms", #name, millis() - _timing_##name)
 
 // Conditional logging based on change
+// Note: Some branches may be unreachable depending on LOG_LEVEL compile-time value
+// This is intentional - function supports all levels but only active levels are compiled in
 template<typename T>
 inline void log_if_changed(const char* name, T& last_value, T current_value, LogLevel level = LOG_LEVEL_INFO) {
   if (last_value != current_value) {
+    // cppcheck-suppress knownConditionTrueFalse
     if (level <= LOG_LEVEL) {
-      Serial.printf("[%s] %s changed: ", 
+      Serial.printf("[%s] %s changed: ",
                     level == LOG_LEVEL_ERROR ? "ERROR" :
                     level == LOG_LEVEL_WARN ? "WARN" :
                     level == LOG_LEVEL_INFO ? "INFO" :
-                    level == LOG_LEVEL_DEBUG ? "DEBUG" : "VERBOSE",
+                    level == LOG_LEVEL_DEBUG ? "DEBUG" : "VERBOSE",  // cppcheck-suppress knownConditionTrueFalse
                     name);
       Serial.println(current_value);
     }

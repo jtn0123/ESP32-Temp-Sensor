@@ -6,4 +6,5 @@ paho-mqtt>=1.6,<2.1
 cairosvg>=2.6,<3
 numpy>=1.24
 python-dotenv>=1.0.0  # For secure credential management
+playwright>=1.40.0  # For web simulator testing
 

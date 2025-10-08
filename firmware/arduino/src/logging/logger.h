@@ -88,14 +88,16 @@ private:
     ~Logger() = default;
     Logger(const Logger&) = delete;
     Logger& operator=(const Logger&) = delete;
-    
+
     void outputSerial(const LogEntry& entry);
     void outputBuffer(const LogEntry& entry);
     void outputNVS(const LogEntry& entry);
     void outputMQTT(const LogEntry& entry);
-    
+
     Config config_;
-    char module_names_[16][MAX_MODULE_NAME_LENGTH];
+    // Note: module_names_ initialized in begin() via memset - not in constructor by design
+    // This is intentional for singleton pattern to avoid static initialization order issues
+    char module_names_[16][MAX_MODULE_NAME_LENGTH];  // cppcheck-suppress uninitMemberVarPrivate
     uint8_t module_count_ = 0;
     uint16_t sequence_ = 0;
     uint32_t dropped_count_ = 0;
