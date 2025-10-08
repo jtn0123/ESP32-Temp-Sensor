@@ -45,7 +45,8 @@ def test_simulator_discovery_format(mosquitto_broker):
         messages[msg.topic] = json.loads(msg.payload.decode())
     
     subscriber.client.on_message = on_message
-    subscriber.subscribe_and_confirm(f"homeassistant/sensor/{device_id}_+/config")
+    # Subscribe to all discovery topics (+ wildcard must be entire level, not part of device_id)
+    subscriber.subscribe_and_confirm("homeassistant/sensor/+/config")
     
     # Connect publisher and wait for discovery
     publisher.connect()

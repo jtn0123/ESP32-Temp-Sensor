@@ -57,13 +57,12 @@ def test_web_sim_basic_pixels():
                 r, g, b, a = _canvas_rgba(page, x, y)
                 assert (r, g, b) == (0, 0, 0)
 
-            # Header underline at y=18 should be black
-            r, g, b, a = _canvas_rgba(page, 5, 18)
+            # Header underline at y=14 should be black (from ui_spec.json chrome)
+            r, g, b, a = _canvas_rgba(page, 5, 14)
             assert (r, g, b) == (0, 0, 0)
 
-            # In split3 layout, a horizontal rule above the status stack
-            # is drawn at y=84 (6 pixels above footer at y=90)
-            r, g, b, a = _canvas_rgba(page, 5, 84)
+            # Footer separator line at y=80 (from ui_spec.json chrome)
+            r, g, b, a = _canvas_rgba(page, 5, 80)
             assert (r, g, b) == (0, 0, 0)
 
             # Bottom-right weather area (split3) should contain some non-white pixels

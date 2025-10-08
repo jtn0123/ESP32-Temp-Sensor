@@ -200,7 +200,7 @@ def format_sensor_value(value: float, sensor_type: str) -> str:
     elif sensor_type == "battery_voltage":
         return f"{value:.2f}"
     elif sensor_type in ["battery_percent", "rssi"]:
-        return str(int(value))
+        return str(round(value))
     else:
         return str(value)
 
