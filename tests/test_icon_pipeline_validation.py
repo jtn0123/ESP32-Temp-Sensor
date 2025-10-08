@@ -199,23 +199,31 @@ def test_icon_conversion_pipeline():
     convert_script = os.path.join(scripts_dir, "convert_icons.py")
     if os.path.exists(convert_script):
         try:
+            # Test with dry-run by just checking if the script can be imported
+            # (convert_icons.py has hardcoded paths, doesn't accept --input/--output)
             result = subprocess.run(
-                [
-                    sys.executable,
-                    convert_script,
-                    "--input",
-                    os.path.join(os.path.dirname(scripts_dir), "web", "icons"),
-                    "--output",
-                    "/tmp/test_icons.h",
-                ],
+                [sys.executable, "-c", "import cairosvg"],
                 capture_output=True,
                 text=True,
-                cwd=scripts_dir,
+                timeout=5,
+            )
+
+            if result.returncode != 0:
+                # cairosvg not available - skip test
+                pytest.skip(f"Icon conversion dependencies missing: {result.stderr}")
+
+            # If cairosvg is available, run the actual converter
+            # (it will write to firmware/arduino/src/icons_generated.h)
+            result = subprocess.run(
+                [sys.executable, convert_script],
+                capture_output=True,
+                text=True,
+                cwd=os.path.dirname(scripts_dir),
                 timeout=30,
             )
 
             if result.returncode != 0:
-                # Check if it's missing dependencies or just missing input files
+                # Check if it's missing dependencies or input files
                 if (
                     "cairosvg" in result.stderr
                     or "cairo" in result.stderr
