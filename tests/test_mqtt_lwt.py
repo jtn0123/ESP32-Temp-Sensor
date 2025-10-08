@@ -40,7 +40,11 @@ import os, sys, time
 import paho.mqtt.client as mqtt
 host, port = sys.argv[1], int(sys.argv[2])
 avail = sys.argv[3]
-client = mqtt.Client(protocol=mqtt.MQTTv311)
+# Handle both paho-mqtt 1.x and 2.x
+if hasattr(mqtt, "CallbackAPIVersion"):
+    client = mqtt.Client(callback_api_version=mqtt.CallbackAPIVersion.VERSION1, protocol=mqtt.MQTTv311)
+else:
+    client = mqtt.Client(protocol=mqtt.MQTTv311)
 client.will_set(avail, payload="offline", retain=False, qos=0)
 client.connect(host, port, keepalive=30)
 client.loop_start()

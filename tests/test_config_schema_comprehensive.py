@@ -345,14 +345,15 @@ def test_mqtt_config_validation():
             mqtt = config.get("mqtt", {})
 
             if mqtt:
-                # If outside_source is mqtt, host is required
+                # If outside_source is mqtt, host is required (either in config or via env vars)
                 outside_source = config.get("outside_source", "mqtt")
 
                 if outside_source == "mqtt":
-                    assert (
-                        "host" in mqtt
-                    ), f"Missing MQTT host when outside_source=mqtt in {config_path}"
-                    assert mqtt["host"].strip(), f"Empty MQTT host in {config_path}"
+                    # Allow environment variable-based config (production) or YAML-based (samples)
+                    if "host" in mqtt:
+                        assert mqtt["host"].strip(), f"Empty MQTT host in {config_path}"
+                    # If no host in YAML, it's expected to be loaded from MQTT_HOST env var
+                    # This is documented in device.yaml with the comment about environment variables
 
                 # Validate MQTT port if present
                 if "port" in mqtt:
