@@ -1,26 +1,93 @@
 {
-  "version": 1,
   "layout_version": 1,
   "layout_crc": "0x5AD17E45",
-  "canvas": { "w": 250, "h": 122 },
+  "canvas": {
+    "w": 250,
+    "h": 122
+  },
   "fonts": {
     "big_px": 22,
     "mid_px": 11,
     "small_px": 10
   },
   "rects": {
-    "HEADER_NAME": [6, 2, 160, 14],
-    "HEADER_VERSION": [172, 2, 72, 14],
-    "HEADER_TIME_CENTER": [100, 2, 50, 14],
-    "INSIDE_TEMP": [6, 36, 118, 28],
-    "INSIDE_HUMIDITY": [6, 66, 118, 14],
-    "INSIDE_PRESSURE": [6, 78, 118, 12],
-    "OUT_TEMP": [129, 36, 94, 28],
-    "WEATHER_ICON": [168, 90, 30, 32],
-    "OUT_PRESSURE": [177, 68, 64, 12],
-    "OUT_HUMIDITY": [131, 78, 44, 12],
-    "OUT_WIND": [177, 78, 44, 12],
-    "FOOTER_STATUS": [6, 90, 160, 32],
-    "FOOTER_WEATHER": [200, 90, 44, 32]
+    "HEADER_NAME": [
+      6,
+      2,
+      160,
+      14
+    ],
+    "HEADER_VERSION": [
+      172,
+      2,
+      72,
+      14
+    ],
+    "HEADER_TIME_CENTER": [
+      100,
+      2,
+      50,
+      14
+    ],
+    "INSIDE_TEMP": [
+      6,
+      36,
+      118,
+      28
+    ],
+    "INSIDE_HUMIDITY": [
+      6,
+      66,
+      118,
+      14
+    ],
+    "INSIDE_PRESSURE": [
+      6,
+      78,
+      118,
+      12
+    ],
+    "OUT_TEMP": [
+      129,
+      36,
+      94,
+      28
+    ],
+    "WEATHER_ICON": [
+      168,
+      90,
+      30,
+      32
+    ],
+    "OUT_PRESSURE": [
+      177,
+      68,
+      64,
+      12
+    ],
+    "OUT_HUMIDITY": [
+      131,
+      78,
+      44,
+      12
+    ],
+    "OUT_WIND": [
+      177,
+      78,
+      44,
+      12
+    ],
+    "FOOTER_STATUS": [
+      6,
+      90,
+      160,
+      32
+    ],
+    "FOOTER_WEATHER": [
+      200,
+      90,
+      44,
+      32
+    ]
   }
 }
