@@ -95,6 +95,123 @@
   const SIZE_TIME = 10; // reduced from 11 to fit 14px header
   const SIZE_BIG = 22;
   const THRESH = 176;
+
+  /**
+   * Smart text truncation with ellipsis
+   * Handles various truncation strategies for different content types
+   */
+  function smartTruncate(text, maxWidth, fontSize, weight = 'normal') {
+    if (!text || !ctx) return text;
+    
+    const originalFont = ctx.font;
+    ctx.font = `${weight} ${fontSize}px ${FONT_STACK}`;
+    
+    const textWidth = ctx.measureText(text).width;
+    if (textWidth <= maxWidth) {
+      ctx.font = originalFont;
+      return text;
+    }
+    
+    const ellipsis = '...';
+    const ellipsisWidth = ctx.measureText(ellipsis).width;
+    const availableWidth = maxWidth - ellipsisWidth;
+    
+    if (availableWidth <= 0) {
+      ctx.font = originalFont;
+      return ellipsis;
+    }
+    
+    // Binary search for optimal truncation point
+    let left = 0;
+    let right = text.length;
+    
+    while (left < right) {
+      const mid = Math.ceil((left + right) / 2);
+      const testText = text.substring(0, mid);
+      const testWidth = ctx.measureText(testText).width;
+      
+      if (testWidth <= availableWidth) {
+        left = mid;
+      } else {
+        right = mid - 1;
+      }
+    }
+    
+    ctx.font = originalFont;
+    
+    // Avoid breaking in the middle of a word if possible
+    let truncatePoint = left;
+    const truncated = text.substring(0, truncatePoint);
+    
+    // If we broke in the middle of a word, try to back up to the last space
+    if (truncatePoint < text.length && text[truncatePoint] !== ' ') {
+      const lastSpace = truncated.lastIndexOf(' ');
+      if (lastSpace > truncatePoint * 0.5) { // Only use word break if we keep > 50%
+        truncatePoint = lastSpace;
+      }
+    }
+    
+    return text.substring(0, truncatePoint).trimEnd() + ellipsis;
+  }
+
+  /**
+   * Smart number formatting for temperatures
+   * Truncates decimals before truncating digits
+   */
+  function formatTemperature(value, maxWidth, fontSize) {
+    if (value === undefined || value === null || value === '') return '--';
+    
+    const num = parseFloat(value);
+    if (isNaN(num)) return String(value);
+    
+    ctx.font = `bold ${fontSize}px ${FONT_STACK}`;
+    
+    // Try full precision first
+    let formatted = num.toFixed(1);
+    if (ctx.measureText(formatted).width <= maxWidth) {
+      return formatted;
+    }
+    
+    // Try no decimals
+    formatted = Math.round(num).toString();
+    if (ctx.measureText(formatted).width <= maxWidth) {
+      return formatted;
+    }
+    
+    // Just return the integer (might overflow, but that's the minimum)
+    return formatted;
+  }
+
+  /**
+   * Smart value formatting with units
+   * Preserves units while truncating value if needed
+   */
+  function formatValueWithUnit(value, unit, maxWidth, fontSize) {
+    if (value === undefined || value === null || value === '') return '';
+    
+    const num = parseFloat(value);
+    if (isNaN(num)) return String(value) + unit;
+    
+    ctx.font = `${fontSize}px ${FONT_STACK}`;
+    const unitWidth = ctx.measureText(unit).width;
+    const availableWidth = maxWidth - unitWidth - 2; // 2px gap
+    
+    if (availableWidth <= 0) return unit; // Just show unit if no space
+    
+    // Try full precision
+    let formatted = num.toFixed(1) + unit;
+    if (ctx.measureText(formatted).width <= maxWidth) {
+      return formatted;
+    }
+    
+    // Try no decimals
+    formatted = Math.round(num).toString() + unit;
+    if (ctx.measureText(formatted).width <= maxWidth) {
+      return formatted;
+    }
+    
+    return formatted; // Return anyway, may overflow
+  }
   // Classify weather strings (HA states, MDI tokens, free-form) to canonical categories
   function classifyWeather(s){
     try{
@@ -374,6 +491,9 @@
     }
     offCtx.putImageData(img, 0, 0);
   }
+  // Standardized icon size for consistent rendering
+  const STANDARD_ICON_SIZE = 26; // Fits within 30x32 region with padding
+
   // Try drawing a baked 1-bit bitmap first to match device output exactly
   function tryDrawBakedBitmap(category, x, y, w, h){
     try{
@@ -384,11 +504,16 @@
       const entry = __mdiCache.get(key);
       if (entry && entry.bitmaps && entry.bitmaps.get('img')){
         const img = entry.bitmaps.get('img');
-        // Draw at native size centered within provided box
-        const dx = x + Math.floor((w - img.width)/2);
-        const dy = y + Math.floor((h - img.height)/2);
+        // Scale to fit the target size while maintaining aspect ratio
+        const targetSize = Math.min(w, h, STANDARD_ICON_SIZE);
+        const scale = targetSize / Math.max(img.width, img.height);
+        const drawW = Math.floor(img.width * scale);
+        const drawH = Math.floor(img.height * scale);
+        // Center within provided box
+        const dx = x + Math.floor((w - drawW)/2);
+        const dy = y + Math.floor((h - drawH)/2);
         ctx.imageSmoothingEnabled = false;
-        ctx.drawImage(img, dx, dy);
+        ctx.drawImage(img, dx, dy, drawW, drawH);
         return true;
       }
       // Begin async load
@@ -412,11 +537,20 @@
     try{
       const mdiName = MDI_ICON_BY_CATEGORY[category];
       if (!mdiName) return false;
-      const sizeKey = `${w}x${h}`;
+      // Use standardized icon size for consistent rendering
+      const targetW = Math.min(w, STANDARD_ICON_SIZE);
+      const targetH = Math.min(h, STANDARD_ICON_SIZE);
+      const sizeKey = `${targetW}x${targetH}`;
       const entry = __mdiCache.get(mdiName);
       if (entry){
         const c = entry.bitmaps && entry.bitmaps.get(sizeKey);
-        if (c){ ctx.drawImage(c, x, y); return true; }
+        if (c){
+          // Center the cached icon within the provided box
+          const dx = x + Math.floor((w - targetW)/2);
+          const dy = y + Math.floor((h - targetH)/2);
+          ctx.drawImage(c, dx, dy);
+          return true;
+        }
       }
       // Begin async load/rasterize; fallback glyph will draw now
       (async()=>{
@@ -430,8 +564,8 @@
             try{
               // Oversample at 4x for crisp 1-bit edges, then downscale without smoothing
               const SCALE = 4;
-              const hiW = Math.max(1, w * SCALE);
-              const hiH = Math.max(1, h * SCALE);
+              const hiW = Math.max(1, targetW * SCALE);
+              const hiH = Math.max(1, targetH * SCALE);
               const offHi = document.createElement('canvas'); offHi.width = hiW; offHi.height = hiH;
               const ocHi = offHi.getContext('2d'); if (!ocHi) return;
               ocHi.imageSmoothingEnabled = true;
@@ -440,7 +574,7 @@
               ocHi.fillRect(0,0,hiW,hiH);
               ocHi.drawImage(img, 0, 0, hiW, hiH);
               thresholdTo1Bit(ocHi, hiW, hiH, 150);
-              const off = document.createElement('canvas'); off.width = Math.max(1, w); off.height = Math.max(1, h);
+              const off = document.createElement('canvas'); off.width = Math.max(1, targetW); off.height = Math.max(1, targetH);
               const oc = off.getContext('2d'); if (!oc) return;
               oc.imageSmoothingEnabled = false;
               oc.clearRect(0,0,off.width,off.height);
@@ -1426,6 +1560,89 @@
     
     ctx.restore();
   }
+
+  // Draw region metrics overlay showing text widths and overflow indicators
+  function drawRegionMetricsOverlay() {
+    if (!window.__showRegionMetrics && !window.__highlightOverflow) return;
+    if (!GJSON || !GJSON.rects) return;
+
+    ctx.save();
+    
+    const fontStack = 'Menlo, Consolas, "DM Mono", "Roboto Mono", monospace';
+    
+    for (const [name, rect] of Object.entries(GJSON.rects)) {
+      // Skip internal helper regions
+      if (name.includes('_INNER') || name.includes('_BADGE') || name.includes('LABEL_BOX')) {
+        continue;
+      }
+
+      const [x, y, w, h] = rect;
+      const content = renderedContent[name];
+      
+      if (content && content.text && content.fontSize) {
+        // Calculate text metrics
+        ctx.font = `${content.weight || 'normal'} ${content.fontSize}px ${fontStack}`;
+        const textMetrics = ctx.measureText(content.text);
+        const textWidth = textMetrics.width;
+        const textHeight = textMetrics.actualBoundingBoxAscent + textMetrics.actualBoundingBoxDescent || content.fontSize * 1.2;
+        
+        const overflowX = textWidth - w;
+        const overflowY = textHeight - h;
+        const hasOverflow = overflowX > 0 || overflowY > 0;
+        const utilizationX = (textWidth / w) * 100;
+
+        // Highlight overflow regions
+        if (window.__highlightOverflow && hasOverflow) {
+          ctx.fillStyle = 'rgba(255, 0, 0, 0.15)';
+          ctx.fillRect(x, y, w, h);
+          ctx.strokeStyle = 'rgba(255, 0, 0, 0.8)';
+          ctx.lineWidth = 2;
+          ctx.strokeRect(x, y, w, h);
+        }
+
+        // Draw metrics labels
+        if (window.__showRegionMetrics) {
+          // Draw text width indicator bar
+          const barHeight = 3;
+          const barY = y + h - barHeight - 1;
+          
+          // Background bar (region width)
+          ctx.fillStyle = 'rgba(100, 100, 100, 0.5)';
+          ctx.fillRect(x, barY, w, barHeight);
+          
+          // Fill bar (text width, capped to region width for display)
+          const fillWidth = Math.min(textWidth, w);
+          ctx.fillStyle = hasOverflow ? 'rgba(255, 0, 0, 0.8)' : 
+                         utilizationX > 90 ? 'rgba(255, 165, 0, 0.8)' : 
+                         'rgba(0, 180, 0, 0.8)';
+          ctx.fillRect(x, barY, fillWidth, barHeight);
+          
+          // Draw overflow extension
+          if (overflowX > 0) {
+            ctx.fillStyle = 'rgba(255, 0, 0, 0.6)';
+            ctx.fillRect(x + w, barY, Math.min(overflowX, 20), barHeight);
+          }
+          
+          // Draw compact metrics label
+          const label = hasOverflow 
+            ? `${Math.round(textWidth)}px (+${Math.round(overflowX)})`
+            : `${Math.round(textWidth)}/${w}px`;
+          
+          ctx.font = '8px monospace';
+          ctx.fillStyle = hasOverflow ? '#c00' : '#333';
+          ctx.textAlign = 'left';
+          ctx.textBaseline = 'bottom';
+          ctx.fillText(label, x + 1, barY - 1);
+        }
+      }
+    }
+    
+    ctx.restore();
+    
+    // Store geometry globally for metrics system
+    window.__geometry = GJSON;
+  }
+
   async function loadCentralGeometry(){
     // Try window.UI_SPEC first (if embedded)
     try{
@@ -1824,6 +2041,13 @@
                 ctx.beginPath();
                 ctx.rect(r[0] - __pad_left, r[1] - __pad_top, r[2] + __pad_left + __pad_right, r[3] + __pad_top + __pad_bottom);
                 ctx.clip();
+                
+                // Apply smart truncation if specified
+                if (op.truncate === 'ellipsis') {
+                  const maxW = r[2] - 4; // Leave 2px padding on each side
+                  s = smartTruncate(s, maxW, fpx, weight);
+                }
+                
                 // Alignment within rect if provided
                 let x;
                 ctx.font = `${weight} ${fpx}px ${FONT_STACK}`; ctx.textBaseline='top';
@@ -1833,9 +2057,11 @@
                 } else if (op.align === 'center') {
                   const tw = ctx.measureText(s).width;
                   x = r[0] + Math.max(0, Math.floor((r[2] - tw)/2));
+                  if (s.includes('IP ')) console.log(`[DEBUG] Center align IP: rect=[${r}], tw=${tw}, x=${x}, text="${s}"`);
                 } else {
                   // Add 1px padding for left-aligned text to avoid touching the edge
                   x = (op.x !== undefined) ? (r[0] + op.x) : (r[0] + 1);
+                  if (s.includes('IP ')) console.log(`[DEBUG] Left align IP: rect=[${r}], op.align="${op.align}", op.x=${op.x}, x=${x}, text="${s}"`);
                 }
                 // Add 1px padding from top for better appearance
                 const y = (op.y !== undefined) ? (r[1] + op.y) : (r[1] + 1);
@@ -1868,15 +2094,8 @@
                 
                 if (op.maxWidth && op.truncate === 'ellipsis') {
                   const maxW = op.maxWidth;
-                  const textW = ctx.measureText(s).width;
-                  if (textW > maxW) {
-                    // Truncate with ellipsis
-                    let truncated = s;
-                    while (truncated.length > 0 && ctx.measureText(truncated + '...').width > maxW) {
-                      truncated = truncated.slice(0, -1);
-                    }
-                    s = truncated + '...';
-                  }
+                  // Use smart truncation for better word-break handling
+                  s = smartTruncate(s, maxW, fpx, weight);
                   // Clip to maxWidth to ensure nothing overflows
                   ctx.save();
                   ctx.beginPath();
@@ -2377,6 +2596,9 @@
     
     // Draw validation overlay (it checks its own conditions internally)
     drawValidationOverlay();
+
+    // Draw region metrics overlay if enabled
+    drawRegionMetricsOverlay();
 
     // Draw layout editor overlay (interactive editing)
     if (typeof window !== 'undefined' && window.layoutEditor && window.layoutEditor.drawOverlay) {
