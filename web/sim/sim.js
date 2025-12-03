@@ -1461,6 +1461,7 @@
 
   function applyGeometry(gj){
     GJSON = gj;
+    window.GJSON = gj; // Expose globally for layout editor
     WIDTH = (gj.canvas && gj.canvas.w) || WIDTH;
     HEIGHT = (gj.canvas && gj.canvas.h) || HEIGHT;
     const R = gj.rects;
@@ -2376,7 +2377,12 @@
     
     // Draw validation overlay (it checks its own conditions internally)
     drawValidationOverlay();
-    
+
+    // Draw layout editor overlay (interactive editing)
+    if (typeof window !== 'undefined' && window.layoutEditor && window.layoutEditor.drawOverlay) {
+      window.layoutEditor.drawOverlay(ctx);
+    }
+
     // Leave some tokens for tests to find in sim.js
     // weather-sunny weather-partly-cloudy weather-cloudy weather-fog
     // weather-pouring weather-snowy weather-lightning weather-night
