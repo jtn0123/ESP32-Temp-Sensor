@@ -59,7 +59,7 @@ void sensors_begin() {
 #if I2C_DEBUG_SCAN
   Serial.println("I2C: scanning...");
   const uint8_t candidates[] = {0x76, 0x77};
-  for (uint8_t i = 0; i < sizeof(candidates); i++) {
+  for (uint8_t i = 0; i < sizeof(candidates)/sizeof(candidates[0]); i++) {
     uint8_t addr = candidates[i];
     Wire.beginTransmission(addr);
     uint8_t err = Wire.endTransmission();

@@ -126,10 +126,7 @@ static void draw_from_spec_full_impl(uint8_t variantId) {
   int comp_count = 0;
   const ComponentOps* comps = get_variant_ops(variantId, &comp_count);
   display.drawRect(0, 0, EINK_WIDTH, EINK_HEIGHT, GxEPD_BLACK);
-  display.drawLine(1,
-                    18,
-                    EINK_WIDTH - 2,
-                    18,
+  display.drawLine(1, 18, EINK_WIDTH - 2, 18, GxEPD_BLACK);
   display.drawLine(125, 18, 125, EINK_HEIGHT - 2, GxEPD_BLACK);
   for (int ci = 0; ci < comp_count; ++ci) {
     const ComponentOps& co = comps[ci];
@@ -138,6 +135,9 @@ static void draw_from_spec_full_impl(uint8_t variantId) {
       switch (op.kind) {
         case ui::OP_LINE: {
           int16_t x0 = op.p0, y0 = op.p1, x1 = op.p2, y1 = op.p3;
+          // Ensure correct endpoint order for iteration
+          if (x0 > x1) { int16_t t = x0; x0 = x1; x1 = t; }
+          if (y0 > y1) { int16_t t = y0; y0 = y1; y1 = t; }
           if (y0 == y1) {
             for (int16_t x = x0; x <= x1; ++x) display.drawPixel(x, y0, GxEPD_BLACK);
           } else if (x0 == x1) {

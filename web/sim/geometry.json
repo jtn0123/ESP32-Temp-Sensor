@@ -1,6 +1,6 @@
 {
   "layout_version": 1,
-  "layout_crc": "0x9090973C",
+  "layout_crc": "0x76433171",
   "canvas": {
     "w": 250,
     "h": 122
@@ -73,9 +73,9 @@
     ],
     "OUT_WIND": [
       177,
-      78,
+      80,
       44,
-      12
+      10
     ],
     "FOOTER_STATUS": [
       6,
