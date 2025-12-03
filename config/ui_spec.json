@@ -43,21 +43,21 @@
     ],
     "INSIDE_TEMP": [
       6,
-      36,
+      34,
       118,
-      28
+      26
     ],
     "INSIDE_HUMIDITY": [
       6,
-      66,
+      60,
       118,
-      14
+      10
     ],
     "INSIDE_PRESSURE": [
       6,
-      78,
+      70,
       118,
-      12
+      10
     ],
     "OUT_TEMP": [
       129,
@@ -341,7 +341,6 @@
         "rect": "INSIDE_PRESSURE",
         "font": "small",
         "align": "left",
-        "y": 3,
         "text": "{pressure_hpa:.1f} hPa",
         "when": "has(pressure_hpa)"
       }
@@ -413,9 +412,10 @@
       },
       {
         "op": "text",
-        "x": 26,
-        "y": 106,
+        "rect": "FOOTER_STATUS",
         "font": "small",
+        "align": "center",
+        "y": 16,
         "text": "IP {ip}"
       },
       {

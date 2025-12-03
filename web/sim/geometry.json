@@ -1,6 +1,6 @@
 {
   "layout_version": 1,
-  "layout_crc": "0x5AD17E45",
+  "layout_crc": "0x9090973C",
   "canvas": {
     "w": 250,
     "h": 122
@@ -31,21 +31,21 @@
     ],
     "INSIDE_TEMP": [
       6,
-      36,
+      34,
       118,
-      28
+      26
     ],
     "INSIDE_HUMIDITY": [
       6,
-      66,
+      60,
       118,
-      14
+      10
     ],
     "INSIDE_PRESSURE": [
       6,
-      78,
+      70,
       118,
-      12
+      10
     ],
     "OUT_TEMP": [
       129,

@@ -238,6 +238,90 @@
           </fieldset>
 
           <fieldset class="fieldset">
+            <legend>🌡️ Live Simulation</legend>
+            <div style="margin-bottom:6px;">
+              <button id="liveSimStart" class="sim-btn">▶ Start</button>
+              <button id="liveSimStop" class="sim-btn" disabled>⏹ Stop</button>
+              <span id="liveSimStatus" class="muted" style="margin-left:8px;">Stopped</span>
+            </div>
+            <div class="form-row" style="margin-bottom:4px;">
+              <label style="font-size:11px;">Speed: 
+                <select id="liveSimSpeed" style="width:80px;">
+                  <option value="1">1x (Real)</option>
+                  <option value="60" selected>60x (1s = 1min)</option>
+                  <option value="600">600x (1s = 10min)</option>
+                  <option value="3600">3600x (1s = 1hr)</option>
+                </select>
+              </label>
+              <label style="font-size:11px;">Season:
+                <select id="liveSimSeason" style="width:80px;">
+                  <option value="spring">Spring</option>
+                  <option value="summer">Summer</option>
+                  <option value="fall">Fall</option>
+                  <option value="winter">Winter</option>
+                </select>
+              </label>
+            </div>
+            <div class="form-row" style="margin-bottom:4px;">
+              <label style="font-size:11px;">Geography:
+                <select id="liveSimGeo" style="width:90px;">
+                  <option value="midwest">Midwest</option>
+                  <option value="coastal">Coastal</option>
+                  <option value="desert">Desert</option>
+                  <option value="mountain">Mountain</option>
+                  <option value="tropical">Tropical</option>
+                </select>
+              </label>
+              <label style="font-size:11px;">Weather:
+                <select id="liveSimWeather" style="width:90px;">
+                  <option value="sunny">Sunny</option>
+                  <option value="partly-cloudy">Partly Cloudy</option>
+                  <option value="cloudy">Cloudy</option>
+                  <option value="rainy">Rainy</option>
+                  <option value="thunderstorm">Thunderstorm</option>
+                  <option value="snow">Snow</option>
+                  <option value="fog">Fog</option>
+                  <option value="windy">Windy</option>
+                </select>
+              </label>
+            </div>
+          </fieldset>
+
+          <fieldset class="fieldset">
+            <legend>🎬 Realistic Scenarios</legend>
+            <select id="realisticPreset" style="width:100%;margin-bottom:4px;">
+              <option value="">Select a preset...</option>
+              <optgroup label="Time of Day">
+                <option value="early_morning">Early Morning (6:15 AM, foggy)</option>
+                <option value="hot_afternoon">Hot Afternoon (2:30 PM, desert)</option>
+                <option value="rainy_evening">Rainy Evening (7:45 PM)</option>
+                <option value="cold_night">Cold Night (11:30 PM, winter)</option>
+              </optgroup>
+              <optgroup label="Weather Events">
+                <option value="thunderstorm">Thunderstorm</option>
+                <option value="snow_day">Snow Day (mountain)</option>
+                <option value="windy_day">Windy Day</option>
+              </optgroup>
+              <optgroup label="Battery States">
+                <option value="battery_critical">Battery Critical (5%)</option>
+                <option value="battery_charging">Battery Charging</option>
+              </optgroup>
+              <optgroup label="Geographic">
+                <option value="coastal_morning">Coastal Morning</option>
+                <option value="tropical_afternoon">Tropical Afternoon</option>
+                <option value="mountain_cabin">Mountain Cabin</option>
+              </optgroup>
+              <optgroup label="Extreme Conditions">
+                <option value="extreme_cold">Extreme Cold (-35°F)</option>
+                <option value="extreme_heat">Extreme Heat (118°F)</option>
+                <option value="high_humidity">High Humidity (98%)</option>
+              </optgroup>
+            </select>
+            <button id="applyRealisticPreset">Apply Preset</button>
+            <button id="randomRealisticPreset">Random</button>
+          </fieldset>
+
+          <fieldset class="fieldset">
             <legend>🧪 Test Scenarios</legend>
             <select id="scenarioCategory" style="width:100%;margin-bottom:4px;">
               <option value="">Select category...</option>
@@ -274,6 +358,26 @@
           </fieldset>
 
           <fieldset class="fieldset">
+            <legend>📷 Device Comparison</legend>
+            <div style="margin-bottom:6px;">
+              <input type="file" id="deviceScreenshot" accept="image/*" style="font-size:11px;max-width:150px;">
+              <button id="clearDeviceScreenshot" disabled>Clear</button>
+            </div>
+            <div id="deviceCompareContainer" style="display:none;">
+              <div style="margin-bottom:6px;display:flex;gap:8px;">
+                <button id="toggleCompareView">Toggle View</button>
+                <button id="compareWithDevice">Compare</button>
+                <label style="font-size:11px;display:flex;align-items:center;gap:4px;">
+                  <input type="range" id="deviceOpacity" min="0" max="100" value="50" style="width:60px;">
+                  Opacity
+                </label>
+              </div>
+              <div id="deviceCompareView" style="position:relative;display:inline-block;border:1px solid #ccc;"></div>
+              <div id="deviceCompareResults" style="margin-top:8px;font-size:11px;"></div>
+            </div>
+          </fieldset>
+
+          <fieldset class="fieldset">
             <legend>🎨 Icon Tester</legend>
             <div class="icon-grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px;">
               <button class="icon-test" data-weather="sunny">☀️</button>
@@ -291,6 +395,20 @@
             </div>
             <input type="text" id="customWeather" placeholder="Custom weather text">
             <button id="testCustomWeather">Test Custom</button>
+          </fieldset>
+
+          <fieldset class="fieldset">
+            <legend>📐 Region Metrics</legend>
+            <div style="margin-bottom:6px;">
+              <label><input type="checkbox" id="showRegionMetrics"> Show metrics overlay</label>
+              <label style="margin-left:8px;"><input type="checkbox" id="highlightOverflow"> Highlight overflow</label>
+            </div>
+            <div id="regionMetricsTable" style="max-height:200px;overflow-y:auto;font-size:10px;font-family:monospace;"></div>
+            <div style="margin-top:4px;">
+              <button id="refreshMetrics">Refresh</button>
+              <button id="exportMetrics">Export JSON</button>
+              <button id="copyMetrics">Copy</button>
+            </div>
           </fieldset>
 
           <fieldset class="fieldset">
@@ -408,7 +526,7 @@
     if (compareBtn) compareBtn.disabled = false;
   }
 
-  // Compare current with baseline
+  // Compare current with baseline with enhanced color-coded diff
   function compareVisual() {
     const canvas = document.getElementById('epd');
     if (!canvas || !baselineImage) return;
@@ -435,52 +553,131 @@
         ctx.drawImage(current, 0, 0);
         const currentData = ctx.getImageData(0, 0, canvas.width, canvas.height);
         
-        // Calculate diff
+        // Calculate diff with intensity tracking
         let differences = 0;
+        let slightDiffs = 0;
+        let majorDiffs = 0;
         const diffData = ctx.createImageData(canvas.width, canvas.height);
         
+        // Track regions with most differences
+        const regionDiffs = {};
+        const regionSize = 20; // 20x20 pixel regions
+        
         for (let i = 0; i < baselineData.data.length; i += 4) {
-          const diff = Math.abs(baselineData.data[i] - currentData.data[i]) +
-                       Math.abs(baselineData.data[i+1] - currentData.data[i+1]) +
-                       Math.abs(baselineData.data[i+2] - currentData.data[i+2]);
+          const pixelIndex = i / 4;
+          const x = pixelIndex % canvas.width;
+          const y = Math.floor(pixelIndex / canvas.width);
+          const regionKey = `${Math.floor(x / regionSize)},${Math.floor(y / regionSize)}`;
+          
+          // Calculate color difference (grayscale diff since eInk is 1-bit)
+          const baseGray = (baselineData.data[i] + baselineData.data[i+1] + baselineData.data[i+2]) / 3;
+          const currGray = (currentData.data[i] + currentData.data[i+1] + currentData.data[i+2]) / 3;
+          const diff = Math.abs(baseGray - currGray);
           
           if (diff > 0) {
             differences++;
-            // Highlight differences in red
-            diffData.data[i] = 255;
-            diffData.data[i+1] = 0;
-            diffData.data[i+2] = 0;
-            diffData.data[i+3] = 128;
+            regionDiffs[regionKey] = (regionDiffs[regionKey] || 0) + 1;
+            
+            // Color-code by intensity:
+            // Green = match, Yellow = slight diff (1-50), Orange = medium (51-150), Red = major (151+)
+            if (diff <= 50) {
+              slightDiffs++;
+              // Yellow for slight differences
+              diffData.data[i] = 255;
+              diffData.data[i+1] = 220;
+              diffData.data[i+2] = 0;
+              diffData.data[i+3] = 180;
+            } else if (diff <= 150) {
+              // Orange for medium differences
+              diffData.data[i] = 255;
+              diffData.data[i+1] = 120;
+              diffData.data[i+2] = 0;
+              diffData.data[i+3] = 200;
+            } else {
+              majorDiffs++;
+              // Red for major differences
+              diffData.data[i] = 255;
+              diffData.data[i+1] = 0;
+              diffData.data[i+2] = 0;
+              diffData.data[i+3] = 220;
+            }
           } else {
-            // Show unchanged in gray
-            diffData.data[i] = currentData.data[i];
-            diffData.data[i+1] = currentData.data[i+1];
-            diffData.data[i+2] = currentData.data[i+2];
-            diffData.data[i+3] = 64;
+            // Green tint for matching pixels
+            diffData.data[i] = Math.floor(currentData.data[i] * 0.7);
+            diffData.data[i+1] = Math.floor(currentData.data[i+1] * 0.85 + 40);
+            diffData.data[i+2] = Math.floor(currentData.data[i+2] * 0.7);
+            diffData.data[i+3] = 180;
           }
         }
         
+        // Find hotspot regions (most differences)
+        const sortedRegions = Object.entries(regionDiffs)
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 5);
+        
         ctx.putImageData(diffData, 0, 0);
         
-        // Display gallery (baseline/current/diff)
+        // Draw hotspot markers on diff canvas
+        ctx.strokeStyle = 'rgba(255, 0, 0, 0.8)';
+        ctx.lineWidth = 2;
+        for (const [regionKey, count] of sortedRegions) {
+          if (count > 10) { // Only mark significant hotspots
+            const [rx, ry] = regionKey.split(',').map(n => parseInt(n));
+            ctx.strokeRect(rx * regionSize, ry * regionSize, regionSize, regionSize);
+          }
+        }
+        
+        // Display gallery (baseline/current/diff) with enhanced stats
         const pixels = canvas.width * canvas.height;
         const percentage = ((differences / pixels) * 100).toFixed(2);
+        const matchPercentage = (100 - parseFloat(percentage)).toFixed(2);
         const gallery = document.getElementById('visualGallery');
         lastDiffImage = diffCanvas.toDataURL();
+        
+        // Build stats HTML
+        const statsHtml = `
+          <div style="margin-bottom:8px;padding:8px;background:#f8f8f8;border-radius:4px;font-size:11px;">
+            <div style="font-weight:bold;margin-bottom:4px;">Comparison Results:</div>
+            <div style="display:flex;gap:12px;flex-wrap:wrap;">
+              <span style="color:#0a0;">✓ Match: ${matchPercentage}%</span>
+              <span style="color:#c00;">✗ Diff: ${differences} px (${percentage}%)</span>
+            </div>
+            <div style="margin-top:4px;display:flex;gap:12px;flex-wrap:wrap;">
+              <span style="color:#db0;">▪ Slight: ${slightDiffs}</span>
+              <span style="color:#f80;">▪ Medium: ${differences - slightDiffs - majorDiffs}</span>
+              <span style="color:#c00;">▪ Major: ${majorDiffs}</span>
+            </div>
+            ${sortedRegions.length > 0 ? `
+            <div style="margin-top:4px;font-size:10px;color:#666;">
+              Hotspots: ${sortedRegions.map(([k, v]) => {
+                const [rx, ry] = k.split(',');
+                return `(${rx * regionSize},${ry * regionSize}): ${v}px`;
+              }).join(', ')}
+            </div>` : ''}
+          </div>
+        `;
+        
         if (gallery){
-          gallery.innerHTML = `
-            <div class="shot"><div class="muted">Baseline</div><img src="${baselineImage}"></div>
-            <div class="shot"><div class="muted">Current</div><img src="${currentImage}"></div>
-            <div class="shot"><div class="muted">Diff (${percentage}%)</div><img src="${lastDiffImage}"></div>
+          gallery.innerHTML = statsHtml + `
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+              <div class="shot"><div class="muted">Baseline</div><img src="${baselineImage}" style="border:1px solid #ddd;"></div>
+              <div class="shot"><div class="muted">Current</div><img src="${currentImage}" style="border:1px solid #ddd;"></div>
+              <div class="shot"><div class="muted">Diff</div><img src="${lastDiffImage}" style="border:1px solid #ddd;"></div>
+            </div>
+            <div style="margin-top:8px;font-size:10px;color:#666;">
+              <span style="display:inline-block;width:12px;height:12px;background:#0c0;margin-right:4px;vertical-align:middle;"></span>Match
+              <span style="display:inline-block;width:12px;height:12px;background:#dc0;margin-left:12px;margin-right:4px;vertical-align:middle;"></span>Slight
+              <span style="display:inline-block;width:12px;height:12px;background:#f80;margin-left:12px;margin-right:4px;vertical-align:middle;"></span>Medium
+              <span style="display:inline-block;width:12px;height:12px;background:#c00;margin-left:12px;margin-right:4px;vertical-align:middle;"></span>Major
+            </div>
           `;
         } else {
           // Fallback to legacy container
           const diffContainer = document.getElementById('visualDiff');
           if (diffContainer) {
             diffContainer.style.display = 'block';
-            diffContainer.innerHTML = `
-              <div>Differences: ${differences} pixels (${percentage}%)</div>
-              <img src="${lastDiffImage}">
+            diffContainer.innerHTML = statsHtml + `
+              <img src="${lastDiffImage}" style="border:1px solid #ddd;">
             `;
           }
         }
@@ -521,6 +718,161 @@
     `;
   }
 
+  // Gather region metrics from rendered content
+  function gatherRegionMetrics() {
+    const metrics = {
+      timestamp: new Date().toISOString(),
+      canvas: { width: 250, height: 122 },
+      regions: {},
+      summary: {
+        total: 0,
+        withContent: 0,
+        withOverflow: 0,
+        overflowPixels: 0
+      }
+    };
+
+    const renderedContent = window.renderedContent || {};
+    const geometry = window.__geometry || {};
+    const rects = geometry.rects || {};
+
+    for (const [name, rect] of Object.entries(rects)) {
+      // Skip internal helper regions
+      if (name.includes('_INNER') || name.includes('_BADGE') || name.includes('LABEL_BOX')) {
+        continue;
+      }
+
+      const [x, y, w, h] = rect;
+      const content = renderedContent[name] || {};
+      
+      const regionMetric = {
+        bounds: { x, y, w, h },
+        content: {
+          text: content.text || null,
+          fontSize: content.fontSize || null,
+          fontWeight: content.weight || 'normal'
+        },
+        textMetrics: null,
+        overflow: { horizontal: 0, vertical: 0, hasOverflow: false }
+      };
+
+      // Calculate text metrics if content exists
+      if (content.text && content.fontSize) {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        const fontStack = 'Menlo, Consolas, "DM Mono", "Roboto Mono", monospace';
+        ctx.font = `${content.weight || 'normal'} ${content.fontSize}px ${fontStack}`;
+        const textMetrics = ctx.measureText(content.text);
+        
+        const textWidth = textMetrics.width;
+        const textHeight = textMetrics.actualBoundingBoxAscent + textMetrics.actualBoundingBoxDescent || content.fontSize * 1.2;
+        
+        regionMetric.textMetrics = {
+          width: Math.round(textWidth * 10) / 10,
+          height: Math.round(textHeight * 10) / 10,
+          availableWidth: w,
+          availableHeight: h,
+          utilizationX: Math.round((textWidth / w) * 1000) / 10,
+          utilizationY: Math.round((textHeight / h) * 1000) / 10
+        };
+
+        const overflowX = Math.max(0, textWidth - w);
+        const overflowY = Math.max(0, textHeight - h);
+        
+        regionMetric.overflow = {
+          horizontal: Math.round(overflowX * 10) / 10,
+          vertical: Math.round(overflowY * 10) / 10,
+          hasOverflow: overflowX > 0 || overflowY > 0,
+          percentX: w > 0 ? Math.round((overflowX / w) * 1000) / 10 : 0,
+          percentY: h > 0 ? Math.round((overflowY / h) * 1000) / 10 : 0
+        };
+
+        metrics.summary.withContent++;
+        if (regionMetric.overflow.hasOverflow) {
+          metrics.summary.withOverflow++;
+          metrics.summary.overflowPixels += overflowX + overflowY;
+        }
+      }
+
+      metrics.regions[name] = regionMetric;
+      metrics.summary.total++;
+    }
+
+    metrics.summary.overflowPixels = Math.round(metrics.summary.overflowPixels * 10) / 10;
+    return metrics;
+  }
+
+  // Update the region metrics table in the UI
+  function updateRegionMetricsTable() {
+    const container = document.getElementById('regionMetricsTable');
+    if (!container) return;
+
+    const metrics = gatherRegionMetrics();
+    
+    // Build summary
+    let html = `<div style="margin-bottom:6px;padding:4px;background:#f0f0f0;border-radius:2px;">
+      <strong>Summary:</strong> ${metrics.summary.withContent}/${metrics.summary.total} regions with content, 
+      <span style="color:${metrics.summary.withOverflow > 0 ? '#c00' : '#0a0'}">
+        ${metrics.summary.withOverflow} with overflow
+      </span>
+    </div>`;
+
+    // Build table
+    html += `<table style="width:100%;border-collapse:collapse;font-size:9px;">
+      <thead>
+        <tr style="background:#eee;">
+          <th style="text-align:left;padding:2px;">Region</th>
+          <th style="text-align:right;padding:2px;">Text W</th>
+          <th style="text-align:right;padding:2px;">Avail W</th>
+          <th style="text-align:right;padding:2px;">Util %</th>
+          <th style="text-align:right;padding:2px;">Overflow</th>
+        </tr>
+      </thead>
+      <tbody>`;
+
+    // Sort regions: overflow first, then by name
+    const sortedRegions = Object.entries(metrics.regions)
+      .filter(([_, m]) => m.textMetrics !== null)
+      .sort((a, b) => {
+        const aOverflow = a[1].overflow.hasOverflow ? 1 : 0;
+        const bOverflow = b[1].overflow.hasOverflow ? 1 : 0;
+        if (bOverflow !== aOverflow) return bOverflow - aOverflow;
+        return a[0].localeCompare(b[0]);
+      });
+
+    for (const [name, m] of sortedRegions) {
+      const tm = m.textMetrics;
+      const overflow = m.overflow;
+      const rowColor = overflow.hasOverflow ? '#fee' : '#fff';
+      const overflowText = overflow.hasOverflow 
+        ? `<span style="color:#c00;">${overflow.horizontal}px</span>`
+        : '<span style="color:#0a0;">OK</span>';
+      
+      html += `<tr style="background:${rowColor};">
+        <td style="padding:2px;max-width:80px;overflow:hidden;text-overflow:ellipsis;" title="${name}">${name}</td>
+        <td style="text-align:right;padding:2px;">${tm.width}</td>
+        <td style="text-align:right;padding:2px;">${tm.availableWidth}</td>
+        <td style="text-align:right;padding:2px;color:${tm.utilizationX > 100 ? '#c00' : tm.utilizationX > 90 ? '#a50' : '#000'}">
+          ${tm.utilizationX}%
+        </td>
+        <td style="text-align:right;padding:2px;">${overflowText}</td>
+      </tr>`;
+    }
+
+    html += '</tbody></table>';
+    container.innerHTML = html;
+    
+    // Store metrics globally for the overlay
+    window.__regionMetrics = metrics;
+  }
+
+  // Expose globally
+  window.gatherRegionMetrics = gatherRegionMetrics;
+  window.updateRegionMetricsTable = updateRegionMetricsTable;
+
+  // Live simulation state
+  let liveSimulation = null;
+
   // Setup event handlers
   function setupEventHandlers() {
     // Performance reset
@@ -538,6 +890,135 @@
       if (countEl) countEl.textContent = '0';
       debugLog('Performance metrics reset', 'info');
     });
+
+    // Live Simulation controls
+    const liveStartBtn = document.getElementById('liveSimStart');
+    const liveStopBtn = document.getElementById('liveSimStop');
+    const liveStatus = document.getElementById('liveSimStatus');
+    const liveSpeedSelect = document.getElementById('liveSimSpeed');
+    const liveSeasonSelect = document.getElementById('liveSimSeason');
+    const liveGeoSelect = document.getElementById('liveSimGeo');
+    const liveWeatherSelect = document.getElementById('liveSimWeather');
+
+    if (liveStartBtn) {
+      liveStartBtn.addEventListener('click', () => {
+        if (window.LiveSimulation) {
+          const season = liveSeasonSelect ? liveSeasonSelect.value : 'summer';
+          const geography = liveGeoSelect ? liveGeoSelect.value : 'midwest';
+          const weather = liveWeatherSelect ? liveWeatherSelect.value : 'sunny';
+          const speed = liveSpeedSelect ? parseInt(liveSpeedSelect.value) : 60;
+
+          liveSimulation = new window.LiveSimulation({
+            season,
+            geography,
+            weather,
+            speed,
+            onUpdate: (data) => {
+              if (window.draw) {
+                window.draw(data);
+              }
+              if (liveStatus) {
+                liveStatus.textContent = `Running (${data.time_hhmm}, ${data.weather})`;
+              }
+            }
+          });
+          liveSimulation.start();
+          
+          if (liveStartBtn) liveStartBtn.disabled = true;
+          if (liveStopBtn) liveStopBtn.disabled = false;
+          debugLog('Live simulation started', 'success');
+        } else {
+          debugLog('LiveSimulation not available', 'error');
+        }
+      });
+    }
+
+    if (liveStopBtn) {
+      liveStopBtn.addEventListener('click', () => {
+        if (liveSimulation) {
+          liveSimulation.stop();
+          liveSimulation = null;
+        }
+        if (liveStartBtn) liveStartBtn.disabled = false;
+        if (liveStopBtn) liveStopBtn.disabled = true;
+        if (liveStatus) liveStatus.textContent = 'Stopped';
+        debugLog('Live simulation stopped', 'info');
+      });
+    }
+
+    // Live simulation parameter changes
+    if (liveSpeedSelect) {
+      liveSpeedSelect.addEventListener('change', () => {
+        if (liveSimulation) {
+          liveSimulation.setSpeed(parseInt(liveSpeedSelect.value));
+          debugLog(`Simulation speed: ${liveSpeedSelect.value}x`, 'info');
+        }
+      });
+    }
+
+    if (liveSeasonSelect) {
+      liveSeasonSelect.addEventListener('change', () => {
+        if (liveSimulation) {
+          liveSimulation.setSeason(liveSeasonSelect.value);
+          debugLog(`Season: ${liveSeasonSelect.value}`, 'info');
+        }
+      });
+    }
+
+    if (liveGeoSelect) {
+      liveGeoSelect.addEventListener('change', () => {
+        if (liveSimulation) {
+          liveSimulation.setGeography(liveGeoSelect.value);
+          debugLog(`Geography: ${liveGeoSelect.value}`, 'info');
+        }
+      });
+    }
+
+    if (liveWeatherSelect) {
+      liveWeatherSelect.addEventListener('change', () => {
+        if (liveSimulation) {
+          liveSimulation.setWeather(liveWeatherSelect.value);
+          debugLog(`Weather: ${liveWeatherSelect.value}`, 'info');
+        }
+      });
+    }
+
+    // Realistic scenario presets
+    const realisticPresetSelect = document.getElementById('realisticPreset');
+    const applyRealisticBtn = document.getElementById('applyRealisticPreset');
+    const randomRealisticBtn = document.getElementById('randomRealisticPreset');
+
+    if (applyRealisticBtn) {
+      applyRealisticBtn.addEventListener('click', () => {
+        const presetName = realisticPresetSelect ? realisticPresetSelect.value : '';
+        if (presetName && window.SCENARIO_PRESETS && window.SCENARIO_PRESETS[presetName]) {
+          const data = window.SCENARIO_PRESETS[presetName]();
+          if (window.draw) {
+            window.draw(data);
+            debugLog(`Applied preset: ${presetName}`, 'success');
+          }
+        } else {
+          debugLog('Select a preset first', 'warn');
+        }
+      });
+    }
+
+    if (randomRealisticBtn) {
+      randomRealisticBtn.addEventListener('click', () => {
+        if (window.SCENARIO_PRESETS) {
+          const presetNames = Object.keys(window.SCENARIO_PRESETS);
+          const randomName = presetNames[Math.floor(Math.random() * presetNames.length)];
+          const data = window.SCENARIO_PRESETS[randomName]();
+          if (window.draw) {
+            window.draw(data);
+            if (realisticPresetSelect) {
+              realisticPresetSelect.value = randomName;
+            }
+            debugLog(`Random preset: ${randomName}`, 'info');
+          }
+        }
+      });
+    }
     
     // Scenario selection
     const categorySelect = document.getElementById('scenarioCategory');
@@ -690,7 +1171,239 @@
         debugLog(`Testing custom weather: ${input.value}`, 'info');
       }
     });
+
+    // Device screenshot comparison
+    let deviceImage = null;
+    let showDeviceOverlay = false;
+    const deviceInput = document.getElementById('deviceScreenshot');
+    const clearDeviceBtn = document.getElementById('clearDeviceScreenshot');
+    const deviceContainer = document.getElementById('deviceCompareContainer');
+    const deviceCompareView = document.getElementById('deviceCompareView');
+    const deviceOpacitySlider = document.getElementById('deviceOpacity');
     
+    if (deviceInput) {
+      deviceInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = (ev) => {
+            deviceImage = new Image();
+            deviceImage.onload = () => {
+              if (deviceContainer) deviceContainer.style.display = 'block';
+              if (clearDeviceBtn) clearDeviceBtn.disabled = false;
+              updateDeviceCompareView();
+              debugLog(`Device screenshot loaded: ${file.name} (${deviceImage.width}x${deviceImage.height})`, 'success');
+            };
+            deviceImage.src = ev.target.result;
+          };
+          reader.readAsDataURL(file);
+        }
+      });
+    }
+
+    if (clearDeviceBtn) {
+      clearDeviceBtn.addEventListener('click', () => {
+        deviceImage = null;
+        if (deviceInput) deviceInput.value = '';
+        if (deviceContainer) deviceContainer.style.display = 'none';
+        clearDeviceBtn.disabled = true;
+        debugLog('Device screenshot cleared', 'info');
+      });
+    }
+
+    document.getElementById('toggleCompareView')?.addEventListener('click', () => {
+      showDeviceOverlay = !showDeviceOverlay;
+      updateDeviceCompareView();
+    });
+
+    if (deviceOpacitySlider) {
+      deviceOpacitySlider.addEventListener('input', () => {
+        updateDeviceCompareView();
+      });
+    }
+
+    document.getElementById('compareWithDevice')?.addEventListener('click', () => {
+      compareWithDeviceScreenshot();
+    });
+
+    function updateDeviceCompareView() {
+      if (!deviceCompareView || !deviceImage) return;
+      
+      const canvas = document.getElementById('epd');
+      if (!canvas) return;
+      
+      const opacity = deviceOpacitySlider ? deviceOpacitySlider.value / 100 : 0.5;
+      
+      // Scale device image to match canvas size
+      const scaleX = canvas.width / deviceImage.width;
+      const scaleY = canvas.height / deviceImage.height;
+      const scale = Math.min(scaleX, scaleY);
+      const scaledW = Math.round(deviceImage.width * scale);
+      const scaledH = Math.round(deviceImage.height * scale);
+      
+      if (showDeviceOverlay) {
+        // Show device image with sim overlay
+        deviceCompareView.innerHTML = `
+          <div style="position:relative;width:${canvas.width}px;height:${canvas.height}px;">
+            <img src="${deviceImage.src}" style="position:absolute;top:0;left:0;width:${scaledW}px;height:${scaledH}px;object-fit:contain;">
+            <img src="${canvas.toDataURL()}" style="position:absolute;top:0;left:0;width:${canvas.width}px;height:${canvas.height}px;opacity:${opacity};">
+          </div>
+          <div style="font-size:10px;color:#666;margin-top:4px;">Device with simulator overlay (${Math.round(opacity * 100)}% opacity)</div>
+        `;
+      } else {
+        // Show side by side
+        deviceCompareView.innerHTML = `
+          <div style="display:flex;gap:8px;">
+            <div>
+              <div style="font-size:10px;color:#666;margin-bottom:2px;">Simulator</div>
+              <img src="${canvas.toDataURL()}" style="border:1px solid #ddd;width:${canvas.width}px;height:${canvas.height}px;">
+            </div>
+            <div>
+              <div style="font-size:10px;color:#666;margin-bottom:2px;">Device (${deviceImage.width}x${deviceImage.height})</div>
+              <img src="${deviceImage.src}" style="border:1px solid #ddd;width:${scaledW}px;height:${scaledH}px;object-fit:contain;">
+            </div>
+          </div>
+        `;
+      }
+    }
+
+    function compareWithDeviceScreenshot() {
+      if (!deviceImage) {
+        debugLog('No device screenshot loaded', 'warn');
+        return;
+      }
+
+      const canvas = document.getElementById('epd');
+      if (!canvas) return;
+
+      // Create canvases for comparison
+      const simCanvas = document.createElement('canvas');
+      simCanvas.width = canvas.width;
+      simCanvas.height = canvas.height;
+      const simCtx = simCanvas.getContext('2d');
+      simCtx.drawImage(canvas, 0, 0);
+
+      // Scale device image to match
+      const devCanvas = document.createElement('canvas');
+      devCanvas.width = canvas.width;
+      devCanvas.height = canvas.height;
+      const devCtx = devCanvas.getContext('2d');
+      devCtx.fillStyle = '#fff';
+      devCtx.fillRect(0, 0, canvas.width, canvas.height);
+      
+      // Center and scale device image
+      const scale = Math.min(canvas.width / deviceImage.width, canvas.height / deviceImage.height);
+      const scaledW = deviceImage.width * scale;
+      const scaledH = deviceImage.height * scale;
+      const offsetX = (canvas.width - scaledW) / 2;
+      const offsetY = (canvas.height - scaledH) / 2;
+      devCtx.drawImage(deviceImage, offsetX, offsetY, scaledW, scaledH);
+
+      // Get image data and compare
+      const simData = simCtx.getImageData(0, 0, canvas.width, canvas.height);
+      const devData = devCtx.getImageData(0, 0, canvas.width, canvas.height);
+
+      // Create diff canvas
+      const diffCanvas = document.createElement('canvas');
+      diffCanvas.width = canvas.width;
+      diffCanvas.height = canvas.height;
+      const diffCtx = diffCanvas.getContext('2d');
+      const diffData = diffCtx.createImageData(canvas.width, canvas.height);
+
+      let differences = 0;
+      let totalPixels = canvas.width * canvas.height;
+
+      for (let i = 0; i < simData.data.length; i += 4) {
+        const simGray = (simData.data[i] + simData.data[i+1] + simData.data[i+2]) / 3;
+        const devGray = (devData.data[i] + devData.data[i+1] + devData.data[i+2]) / 3;
+        const diff = Math.abs(simGray - devGray);
+
+        if (diff > 30) { // Threshold for 1-bit comparison
+          differences++;
+          diffData.data[i] = 255;
+          diffData.data[i+1] = 0;
+          diffData.data[i+2] = 0;
+          diffData.data[i+3] = 200;
+        } else {
+          diffData.data[i] = Math.floor((simGray + devGray) / 2);
+          diffData.data[i+1] = diffData.data[i];
+          diffData.data[i+2] = diffData.data[i];
+          diffData.data[i+3] = 128;
+        }
+      }
+
+      diffCtx.putImageData(diffData, 0, 0);
+
+      const matchPercent = ((1 - differences / totalPixels) * 100).toFixed(2);
+      const resultsDiv = document.getElementById('deviceCompareResults');
+      if (resultsDiv) {
+        resultsDiv.innerHTML = `
+          <div style="padding:8px;background:#f8f8f8;border-radius:4px;">
+            <div style="font-weight:bold;margin-bottom:4px;">Device vs Simulator Comparison:</div>
+            <div style="color:${parseFloat(matchPercent) > 95 ? '#0a0' : parseFloat(matchPercent) > 85 ? '#a50' : '#c00'};">
+              Match: ${matchPercent}% (${differences} differing pixels)
+            </div>
+          </div>
+          <div style="margin-top:8px;">
+            <div style="font-size:10px;color:#666;margin-bottom:2px;">Diff (red = difference)</div>
+            <img src="${diffCanvas.toDataURL()}" style="border:1px solid #ddd;">
+          </div>
+        `;
+      }
+      debugLog(`Device comparison: ${matchPercent}% match`, parseFloat(matchPercent) > 90 ? 'success' : 'warn');
+    }
+    
+    // Region metrics
+    const showMetricsCheckbox = document.getElementById('showRegionMetrics');
+    const highlightOverflowCheckbox = document.getElementById('highlightOverflow');
+    
+    if (showMetricsCheckbox) {
+      showMetricsCheckbox.addEventListener('change', () => {
+        window.__showRegionMetrics = showMetricsCheckbox.checked;
+        if (window.draw && window.lastData) {
+          window.draw(window.lastData);
+        }
+        updateRegionMetricsTable();
+      });
+    }
+    
+    if (highlightOverflowCheckbox) {
+      highlightOverflowCheckbox.addEventListener('change', () => {
+        window.__highlightOverflow = highlightOverflowCheckbox.checked;
+        if (window.draw && window.lastData) {
+          window.draw(window.lastData);
+        }
+      });
+    }
+    
+    document.getElementById('refreshMetrics')?.addEventListener('click', () => {
+      updateRegionMetricsTable();
+      debugLog('Region metrics refreshed', 'info');
+    });
+    
+    document.getElementById('exportMetrics')?.addEventListener('click', () => {
+      const metrics = gatherRegionMetrics();
+      const json = JSON.stringify(metrics, null, 2);
+      const blob = new Blob([json], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `region-metrics-${Date.now()}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      debugLog('Metrics exported', 'success');
+    });
+    
+    document.getElementById('copyMetrics')?.addEventListener('click', () => {
+      const metrics = gatherRegionMetrics();
+      const text = JSON.stringify(metrics, null, 2);
+      navigator.clipboard.writeText(text).then(() => {
+        debugLog('Metrics copied to clipboard', 'success');
+      }).catch(() => {
+        debugLog('Failed to copy metrics', 'error');
+      });
+    });
+
     // State inspector
     document.getElementById('refreshState')?.addEventListener('click', updateStateInspector);
     

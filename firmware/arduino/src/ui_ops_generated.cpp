@@ -34,7 +34,7 @@ const UiOpHeader kOps_inside[] = {
     { OP_TEXT, 255, 1, 0, 30, 20, 0, 0, "INSIDE", NULL },
     { OP_TEMPGROUPCENTERED, 7, 0, 2, 0, 0, 0, 0, "inside_temp_f", NULL },
     { OP_TEXT, 5, 2, 0, 0, 0, 0, 0, "{inside_hum_pct}% RH", NULL },
-    { OP_TEXT, 6, 2, 0, 0, 3, 0, 0, "{pressure_hpa:.1f} hPa", NULL },
+    { OP_TEXT, 6, 2, 0, 0, 0, 0, 0, "{pressure_hpa:.1f} hPa", NULL },
 };
 const int kOps_inside_count = sizeof(kOps_inside)/sizeof(kOps_inside[0]);
 
@@ -52,7 +52,7 @@ const UiOpHeader kOps_footer_split[] = {
     { OP_BATTERYGLYPH, 255, 0, 0, 5, 89, 16, 8, "battery_percent", NULL },
     { OP_TEXT, 255, 2, 0, 26, 82, 0, 0, "Batt {battery_voltage:.2f}V {battery_percent}%", NULL },
     { OP_TEXT, 255, 2, 0, 26, 94, 0, 0, "~{days}d", NULL },
-    { OP_TEXT, 255, 2, 0, 26, 106, 0, 0, "IP {ip}", NULL },
+    { OP_TEXT, 0, 2, 2, 0, 16, 0, 0, "IP {ip}", NULL },
     { OP_TEXTCENTEREDIN, 1, 2, 2, 11, 0, 0, 0, "{weather}", NULL },
 };
 const int kOps_footer_split_count = sizeof(kOps_footer_split)/sizeof(kOps_footer_split[0]);

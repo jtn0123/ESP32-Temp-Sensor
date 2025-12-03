@@ -5,8 +5,8 @@
 
 // Layout identity for simulator ↔ firmware parity checks
 #define LAYOUT_VERSION 1
-#define LAYOUT_CRC 0x5AD17E45u
-#define LAYOUT_MD5 "8dbc6af2510531165c95a9098084689e"
+#define LAYOUT_CRC 0x9090973Cu
+#define LAYOUT_MD5 "4ff79c1dfb72c6678d415babf5366a6e"
 
 // Display dimensions
 #define DISPLAY_WIDTH 250
@@ -16,9 +16,9 @@
 static constexpr int RECT_HEADER_NAME[4] = {   6,   2, 160, 14};
 static constexpr int RECT_HEADER_VERSION[4] = { 172,   2,  72, 14};
 static constexpr int RECT_HEADER_TIME_CENTER[4] = { 100,   2,  50, 14};
-static constexpr int RECT_INSIDE_TEMP[4] = {   6,  36, 118, 28};
-static constexpr int RECT_INSIDE_HUMIDITY[4] = {   6,  66, 118, 14};
-static constexpr int RECT_INSIDE_PRESSURE[4] = {   6,  78, 118, 12};
+static constexpr int RECT_INSIDE_TEMP[4] = {   6,  34, 118, 26};
+static constexpr int RECT_INSIDE_HUMIDITY[4] = {   6,  60, 118, 10};
+static constexpr int RECT_INSIDE_PRESSURE[4] = {   6,  70, 118, 10};
 static constexpr int RECT_OUT_TEMP[4] = { 129,  36,  94, 28};
 static constexpr int RECT_WEATHER_ICON[4] = { 168,  90,  30, 32};
 static constexpr int RECT_OUT_PRESSURE[4] = { 177,  68,  64, 12};
@@ -49,13 +49,13 @@ static_assert(100 + 50 <= DISPLAY_WIDTH,  "HEADER_TIME_CENTER width");
 static_assert(2 + 14 <= DISPLAY_HEIGHT, "HEADER_TIME_CENTER height");
 static_assert(RECT_INSIDE_TEMP[0] >= 0 && RECT_INSIDE_TEMP[1] >= 0, "INSIDE_TEMP origin");
 static_assert(6 + 118 <= DISPLAY_WIDTH,  "INSIDE_TEMP width");
-static_assert(36 + 28 <= DISPLAY_HEIGHT, "INSIDE_TEMP height");
+static_assert(34 + 26 <= DISPLAY_HEIGHT, "INSIDE_TEMP height");
 static_assert(RECT_INSIDE_HUMIDITY[0] >= 0 && RECT_INSIDE_HUMIDITY[1] >= 0, "INSIDE_HUMIDITY origin");
 static_assert(6 + 118 <= DISPLAY_WIDTH,  "INSIDE_HUMIDITY width");
-static_assert(66 + 14 <= DISPLAY_HEIGHT, "INSIDE_HUMIDITY height");
+static_assert(60 + 10 <= DISPLAY_HEIGHT, "INSIDE_HUMIDITY height");
 static_assert(RECT_INSIDE_PRESSURE[0] >= 0 && RECT_INSIDE_PRESSURE[1] >= 0, "INSIDE_PRESSURE origin");
 static_assert(6 + 118 <= DISPLAY_WIDTH,  "INSIDE_PRESSURE width");
-static_assert(78 + 12 <= DISPLAY_HEIGHT, "INSIDE_PRESSURE height");
+static_assert(70 + 10 <= DISPLAY_HEIGHT, "INSIDE_PRESSURE height");
 static_assert(RECT_OUT_TEMP[0] >= 0 && RECT_OUT_TEMP[1] >= 0, "OUT_TEMP origin");
 static_assert(129 + 94 <= DISPLAY_WIDTH,  "OUT_TEMP width");
 static_assert(36 + 28 <= DISPLAY_HEIGHT, "OUT_TEMP height");
