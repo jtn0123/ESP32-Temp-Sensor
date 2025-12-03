@@ -556,7 +556,7 @@ const int* rect_ptr_by_id(uint8_t rid) {
       return OUT_TEMP;
     case ui::RECT_WEATHER_ICON:
       return WEATHER_ICON;
-    case ui::RECT_OUT_WEATHER:
+    case ui::RECT_FOOTER_WEATHER:
       return FOOTER_WEATHER;
     case ui::RECT_OUT_PRESSURE:
       return OUT_PRESSURE;

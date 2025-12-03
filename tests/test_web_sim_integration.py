@@ -91,10 +91,13 @@ def test_web_simulator_data_loading():
             # Should have expected structure
             assert isinstance(sample_data, dict), "Sample data should be dict"
 
+            # Sample data may have nested structure with "default" key
+            data_to_check = sample_data.get("default", sample_data)
+
             # Should have some basic fields
             expected_fields = ["inside_temp_f", "inside_hum_pct", "time_hhmm"]
             for field in expected_fields:
-                assert field in sample_data, f"Missing field in sample data: {field}"
+                assert field in data_to_check, f"Missing field in sample data: {field}"
 
         except json.JSONDecodeError as e:
             pytest.fail(f"Sample data JSON parsing error: {e}")
@@ -186,7 +189,9 @@ def test_web_simulator_sample_data_completeness():
                         referenced_fields.update(fields)
 
     # Sample data should cover all referenced fields
-    sample_fields = set(sample_data.keys())
+    # Handle nested structure - use "default" section if present
+    data_to_check = sample_data.get("default", sample_data)
+    sample_fields = set(data_to_check.keys())
 
     # At minimum, should have the basic fields
     essential_fields = {"inside_temp_f", "inside_hum_pct", "time_hhmm"}

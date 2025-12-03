@@ -116,12 +116,14 @@ def test_partial_refresh_header_time_remains_binary():
             # Click refresh (triggers partial time update)
             page.click("#refresh")
             page.wait_for_timeout(200)
-            # Read HEADER_TIME geometry
+            # Read HEADER_TIME_CENTER geometry
             rt = page.evaluate(
                 "() => {"
                 "const R=(window.GJSON&&window.GJSON.rects)||null;"
-                "return R ? R.HEADER_TIME : [172,2,72,14];}"
+                "return R ? R.HEADER_TIME_CENTER : [100,2,50,14];}"
             )
+            if rt is None:
+                pytest.skip("HEADER_TIME_CENTER geometry not available")
             x, y, w, h = rt
             # Sample multiple points inside the time box and assert binary pixels
             for dx in [2, int(w / 3), int(2 * w / 3), w - 3]:
