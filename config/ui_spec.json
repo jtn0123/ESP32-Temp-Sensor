@@ -460,9 +460,6 @@
       "HEADER_TIME_CENTER": [
         "textCenteredIn"
       ],
-      "HEADER_TIME": [
-        "textCenteredIn"
-      ],
       "HEADER_VERSION": [
         "text"
       ],
@@ -470,9 +467,6 @@
         "batteryGlyph",
         "text",
         "text",
-        "text"
-      ],
-      "FOOTER_L": [
         "text"
       ],
       "FOOTER_WEATHER": [

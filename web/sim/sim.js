@@ -2057,11 +2057,9 @@
                 } else if (op.align === 'center') {
                   const tw = ctx.measureText(s).width;
                   x = r[0] + Math.max(0, Math.floor((r[2] - tw)/2));
-                  if (s.includes('IP ')) console.log(`[DEBUG] Center align IP: rect=[${r}], tw=${tw}, x=${x}, text="${s}"`);
                 } else {
                   // Add 1px padding for left-aligned text to avoid touching the edge
                   x = (op.x !== undefined) ? (r[0] + op.x) : (r[0] + 1);
-                  if (s.includes('IP ')) console.log(`[DEBUG] Left align IP: rect=[${r}], op.align="${op.align}", op.x=${op.x}, x=${x}, text="${s}"`);
                 }
                 // Add 1px padding from top for better appearance
                 const y = (op.y !== undefined) ? (r[1] + op.y) : (r[1] + 1);

@@ -200,9 +200,9 @@ static void draw_from_spec_full_impl(uint8_t variantId) {
           char hhmm[8];
           net_time_hhmm(hhmm, sizeof(hhmm));
           int16_t tw = text_width_default_font(hhmm, 1);
-          int16_t rx = static_cast<int16_t>(HEADER_TIME[0] + HEADER_TIME[2] - 2 - tw) int16_t by =
-              static_cast<int16_t>(HEADER_TIME[1] + HEADER_TIME[3] - 2)
-                  display.setTextColor(GxEPD_BLACK);
+          int16_t rx = static_cast<int16_t>(HEADER_TIME_CENTER[0] + HEADER_TIME_CENTER[2] - 2 - tw);
+          int16_t by = static_cast<int16_t>(HEADER_TIME_CENTER[1] + HEADER_TIME_CENTER[3] - 2);
+          display.setTextColor(GxEPD_BLACK);
           display.setTextSize(1);
           display.setCursor(rx, by);
           display.print(hhmm);

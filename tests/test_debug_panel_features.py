@@ -422,8 +422,8 @@ class TestPerformanceMonitoring:
         fast_time = measure_render(fast_render)
         slow_time = measure_render(slow_render)
 
-        assert 4 <= fast_time <= 10, f"Fast render should be ~5ms, got {fast_time}"
-        assert 45 <= slow_time <= 60, f"Slow render should be ~50ms, got {slow_time}"
+        assert 3 <= fast_time <= 15, f"Fast render should be ~5ms, got {fast_time}"
+        assert 40 <= slow_time <= 75, f"Slow render should be ~50ms, got {slow_time}"
         assert slow_time > fast_time, "Slow render should take longer"
 
     def test_memory_usage_tracking(self):

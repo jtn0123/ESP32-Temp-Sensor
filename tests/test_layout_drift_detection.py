@@ -255,8 +255,8 @@ def test_partial_update_regions():
     expected_partial_rects = [
         "INSIDE_TEMP",
         "OUT_TEMP",
-        "HEADER_TIME",
-        "FOOTER_L",
+        "HEADER_TIME_CENTER",
+        "FOOTER_STATUS",
         "FOOTER_WEATHER",
     ]
 
