@@ -17,8 +17,13 @@
 #endif
 
 // Status LED/NeoPixel support
+// Inherits from USE_STATUS_PIXEL if defined in config.h
 #ifndef FEATURE_STATUS_PIXEL
-  #define FEATURE_STATUS_PIXEL 1
+  #ifdef USE_STATUS_PIXEL
+    #define FEATURE_STATUS_PIXEL USE_STATUS_PIXEL
+  #else
+    #define FEATURE_STATUS_PIXEL 0
+  #endif
 #endif
 
 // Pressure sensor (BME280/BMP280)

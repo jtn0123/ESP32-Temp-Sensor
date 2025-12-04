@@ -23,11 +23,12 @@ DebugCommands& DebugCommands::getInstance() {
 void DebugCommands::begin() {
     if (initialized_) return;
 
-    // Subscribe to debug command topic
+    // Subscribe to debug command topic using static buffer instead of String
     PubSubClient* client = mqtt_get_client();
     if (client && client->connected() && client_id_[0] != '\0') {
-        String debug_topic = String("espsensor/") + client_id_ + TOPIC_CMD_DEBUG;
-        client->subscribe(debug_topic.c_str());
+        char debug_topic[96];
+        snprintf(debug_topic, sizeof(debug_topic), "espsensor/%s%s", client_id_, TOPIC_CMD_DEBUG);
+        client->subscribe(debug_topic);
     }
 
     initialized_ = true;
@@ -366,8 +367,10 @@ void DebugCommands::cmdSmartRefresh(PubSubClient* client) {
 void DebugCommands::publishResponse(PubSubClient* client, const char* json) {
     if (!client || !client->connected()) return;
 
-    String topic = String("espsensor/") + client_id_ + TOPIC_DEBUG_RESPONSE;
-    client->publish(topic.c_str(), json, false);
+    // Use static buffer instead of String to reduce heap fragmentation
+    char topic[96];
+    snprintf(topic, sizeof(topic), "espsensor/%s%s", client_id_, TOPIC_DEBUG_RESPONSE);
+    client->publish(topic, json, false);
 }
 
 // C linkage for MQTT callback
