@@ -1166,7 +1166,19 @@
     const w = parseInt(document.getElementById('regionW').value);
     const h = parseInt(document.getElementById('regionH').value);
 
-    // Validate
+    // Validate parsed values are numbers
+    if (isNaN(x) || isNaN(y) || isNaN(w) || isNaN(h)) {
+      alert('Invalid input! All coordinates must be numbers.');
+      return;
+    }
+
+    // Validate canvas exists
+    if (!window.GJSON?.canvas) {
+      console.warn('Cannot apply coords: GJSON.canvas not loaded');
+      return;
+    }
+
+    // Validate bounds
     const canvas = window.GJSON.canvas;
     if (x < 0 || y < 0 || w < 1 || h < 1 || x + w > canvas.w || y + h > canvas.h) {
       alert('Invalid coordinates! Must be within canvas bounds.');

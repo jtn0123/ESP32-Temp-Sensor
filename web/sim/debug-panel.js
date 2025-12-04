@@ -547,6 +547,14 @@
     const baseline = new Image();
     const current = new Image();
     
+    // Handle image load errors
+    baseline.onerror = () => {
+      console.warn('Failed to load baseline image');
+    };
+    current.onerror = () => {
+      console.warn('Failed to load current image');
+    };
+    
     baseline.onload = () => {
       current.onload = () => {
         // Draw baseline
@@ -642,8 +650,11 @@
         ctx.lineWidth = 2;
         for (const [regionKey, count] of sortedRegions) {
           if (count > 10) { // Only mark significant hotspots
-            const [rx, ry] = regionKey.split(',').map(n => parseInt(n));
-            ctx.strokeRect(rx * regionSize, ry * regionSize, regionSize, regionSize);
+            const parts = regionKey.split(',').map(n => parseInt(n));
+            if (parts.length >= 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
+              const [rx, ry] = parts;
+              ctx.strokeRect(rx * regionSize, ry * regionSize, regionSize, regionSize);
+            }
           }
         }
         
