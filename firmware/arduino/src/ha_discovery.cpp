@@ -1,5 +1,9 @@
 // Home Assistant MQTT discovery implementation - extracted from net.h
 #include "ha_discovery.h"
+#include "feature_flags.h"
+
+#if FEATURE_HA_DISCOVERY
+
 #include "mqtt_client.h"
 #include "generated_config.h"
 #include "config.h"
@@ -186,3 +190,18 @@ void ha_discovery_publish_diagnostic_sensors() {
 void ha_discovery_set_diagnostic_mode(bool enable) {
   g_diagnostic_entities = enable;
 }
+
+#else  // !FEATURE_HA_DISCOVERY
+
+// No-op stubs when HA Discovery is disabled
+void ha_discovery_begin(const char*) {}
+void ha_discovery_publish_all() {}
+void ha_discovery_publish_temperature_sensor() {}
+void ha_discovery_publish_humidity_sensor() {}
+void ha_discovery_publish_pressure_sensor() {}
+void ha_discovery_publish_battery_sensor() {}
+void ha_discovery_publish_rssi_sensor() {}
+void ha_discovery_publish_diagnostic_sensors() {}
+void ha_discovery_set_diagnostic_mode(bool) {}
+
+#endif  // FEATURE_HA_DISCOVERY
