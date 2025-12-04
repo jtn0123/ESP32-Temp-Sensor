@@ -302,7 +302,11 @@ void update_boot_counters() {
   }
   
   // Update boot timestamp for rapid reset detection
-  rtc_last_boot_timestamp = static_cast<uint32_t>(time(nullptr));
+  // Check for time() failure (returns -1 on error)
+  time_t now = time(nullptr);
+  if (now != (time_t)-1) {
+    rtc_last_boot_timestamp = static_cast<uint32_t>(now);
+  }
 }
 
 uint32_t get_boot_count() {
