@@ -603,7 +603,12 @@
     const textWidth = metrics.width;
     
     // Use more accurate font metrics including ascent/descent
-    const actualHeight = metrics.actualBoundingBoxAscent + metrics.actualBoundingBoxDescent || fontSize * 1.2;
+    const actualHeight = (metrics.actualBoundingBoxAscent + metrics.actualBoundingBoxDescent) || (fontSize * 1.2);
+    
+    // Validate rect before destructuring
+    if (!Array.isArray(rect) || rect.length < 4) {
+      return [];
+    }
     const [_x, _y, w, h] = rect;
     
     const issues = [];

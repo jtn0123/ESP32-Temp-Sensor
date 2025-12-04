@@ -88,7 +88,7 @@ void test_logging_system() {
     
     // Test 8: Buffer overflow handling
     Serial.println("\nTEST 8: Buffer overflow");
-    for (int i = 0; i < 300; i++) {  // Exceeds buffer size of 256
+    for (int i = 0; i < 300; i++) {  // Exceeds buffer size of 64 (LogBuffer::BUFFER_SIZE)
         LOG_INFO("Overflow test %d", i);
     }
     

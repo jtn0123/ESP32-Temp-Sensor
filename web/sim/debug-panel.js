@@ -1303,6 +1303,12 @@
       const simData = simCtx.getImageData(0, 0, canvas.width, canvas.height);
       const devData = devCtx.getImageData(0, 0, canvas.width, canvas.height);
 
+      // Validate data exists and has matching lengths
+      if (!simData?.data || !devData?.data || simData.data.length !== devData.data.length) {
+        console.warn('Device comparison: image data mismatch or missing');
+        return;
+      }
+
       // Create diff canvas
       const diffCanvas = document.createElement('canvas');
       diffCanvas.width = canvas.width;
@@ -1312,6 +1318,12 @@
 
       let differences = 0;
       let totalPixels = canvas.width * canvas.height;
+
+      // Guard against division by zero
+      if (totalPixels === 0) {
+        console.warn('Device comparison: canvas has zero pixels');
+        return;
+      }
 
       for (let i = 0; i < simData.data.length; i += 4) {
         const simGray = (simData.data[i] + simData.data[i+1] + simData.data[i+2]) / 3;
