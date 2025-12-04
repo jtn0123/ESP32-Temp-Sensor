@@ -511,14 +511,8 @@
         : [...divider.topRegions, ...divider.bottomRegions];
 
       affectedRegions.forEach(name => {
-        const rect = window.GJSON.rects[name];
-        if (!Array.isArray(rect) || rect.length < 4) {
-          console.warn(`Invalid rect for region ${name}:`, rect);
-          return;
-        }
-        editorState.regionStartPos[name] = {
-          x: rect[0], y: rect[1], w: rect[2], h: rect[3]
-        };
+        const [x, y, w, h] = window.SafeUtils.getRect(window.GJSON?.rects, name);
+        editorState.regionStartPos[name] = { x, y, w, h };
       });
 
       event.preventDefault();
@@ -526,8 +520,8 @@
     }
 
     // PRIORITY 2: Check if clicking on selected region's handle
-    if (editorState.selectedRegion && window.GJSON.rects[editorState.selectedRegion]) {
-      const rect = window.GJSON.rects[editorState.selectedRegion];
+    if (editorState.selectedRegion && window.GJSON?.rects?.[editorState.selectedRegion]) {
+      const rect = window.SafeUtils.getRect(window.GJSON?.rects, editorState.selectedRegion);
       const handle = getResizeHandle(point, rect);
 
       if (handle) {
@@ -560,10 +554,8 @@
       selectRegion(regionName);
       editorState.isDragging = true;
       editorState.dragStartPos = point;
-      const rect = window.GJSON.rects[regionName];
-      editorState.regionStartPos = {
-        x: rect[0], y: rect[1], w: rect[2], h: rect[3]
-      };
+      const [x, y, w, h] = window.SafeUtils.getRect(window.GJSON?.rects, regionName);
+      editorState.regionStartPos = { x, y, w, h };
       event.preventDefault();
     } else {
       deselectRegion();
@@ -1161,16 +1153,10 @@
   function applyManualCoords() {
     if (!editorState.selectedRegion) return;
 
-    const x = parseInt(document.getElementById('regionX').value);
-    const y = parseInt(document.getElementById('regionY').value);
-    const w = parseInt(document.getElementById('regionW').value);
-    const h = parseInt(document.getElementById('regionH').value);
-
-    // Validate parsed values are numbers
-    if (isNaN(x) || isNaN(y) || isNaN(w) || isNaN(h)) {
-      alert('Invalid input! All coordinates must be numbers.');
-      return;
-    }
+    const x = window.SafeUtils.safeParseInt(document.getElementById('regionX')?.value, 0);
+    const y = window.SafeUtils.safeParseInt(document.getElementById('regionY')?.value, 0);
+    const w = window.SafeUtils.safeParseInt(document.getElementById('regionW')?.value, 0);
+    const h = window.SafeUtils.safeParseInt(document.getElementById('regionH')?.value, 0);
 
     // Validate canvas exists
     if (!window.GJSON?.canvas) {

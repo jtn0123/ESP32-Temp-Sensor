@@ -19,7 +19,61 @@
   
   // Expose globally for MQTT client
   window.simDataState = simDataState;
-  
+
+  // Safe access utilities to prevent runtime errors
+  const SafeUtils = {
+    /**
+     * Safely get a rect array, with fallback
+     * @param {Object} rects - The rects object (e.g., GJSON.rects)
+     * @param {string} name - Region name
+     * @param {number[]} fallback - Default if missing [x, y, w, h]
+     * @returns {number[]} The rect array
+     */
+    getRect(rects, name, fallback = [0, 0, 10, 10]) {
+      const r = rects?.[name];
+      return Array.isArray(r) && r.length >= 4 ? r : fallback;
+    },
+
+    /**
+     * Safely parse an integer with fallback
+     * @param {*} value - Value to parse
+     * @param {number} fallback - Default if NaN
+     * @returns {number}
+     */
+    safeParseInt(value, fallback = 0) {
+      const parsed = parseInt(value, 10);
+      return isNaN(parsed) ? fallback : parsed;
+    },
+
+    /**
+     * Safely parse a float with fallback
+     * @param {*} value - Value to parse
+     * @param {number} fallback - Default if NaN
+     * @returns {number}
+     */
+    safeParseFloat(value, fallback = 0) {
+      const parsed = parseFloat(value);
+      return isNaN(parsed) || !isFinite(parsed) ? fallback : parsed;
+    },
+
+    /**
+     * Validate canvas context exists
+     * @param {HTMLCanvasElement} canvas
+     * @returns {CanvasRenderingContext2D|null}
+     */
+    getContext2D(canvas) {
+      if (!canvas) return null;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        console.warn('Failed to get 2D context');
+      }
+      return ctx;
+    }
+  };
+
+  // Expose globally
+  window.SafeUtils = SafeUtils;
+
   let WIDTH = 250, HEIGHT = 122;
   // Rectangles loaded from geometry.json - no hardcoded fallbacks
   // These will be initialized by loadCentralGeometry() before first draw

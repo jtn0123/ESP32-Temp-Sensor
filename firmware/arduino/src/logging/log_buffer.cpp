@@ -1,4 +1,5 @@
 #include "log_buffer.h"
+#include "metrics_diagnostics.h"
 
 RTC_DATA_ATTR LogEntry LogBuffer::buffer_[LogBuffer::BUFFER_SIZE];
 RTC_DATA_ATTR size_t LogBuffer::head_ = 0;
@@ -33,6 +34,7 @@ void LogBuffer::begin() {
         // Check that indices are within bounds (could be corrupted)
         if (head_ >= BUFFER_SIZE || tail_ >= BUFFER_SIZE || count_ > BUFFER_SIZE) {
             Serial.println("[LogBuffer] WARN: RTC memory corruption detected, resetting");
+            increment_error_stat("rtc_corruption");
             head_ = 0;
             tail_ = 0;
             count_ = 0;
@@ -57,16 +59,11 @@ void LogBuffer::end() {
 
 bool LogBuffer::push(const LogEntry& entry) {
     if (!initialized_ || mutex_ == nullptr) return false;
-    
-    if (xSemaphoreTake(mutex_, portMAX_DELAY) != pdTRUE) {
-        return false;
-    }
-    
-    bool result = pushUnsafe(entry);
-    
-    xSemaphoreGive(mutex_);
-    
-    return result;
+
+    MutexGuard guard(mutex_);
+    if (!guard.acquired()) return false;
+
+    return pushUnsafe(entry);
 }
 
 bool LogBuffer::pushUnsafe(const LogEntry& entry) {
@@ -87,22 +84,16 @@ bool LogBuffer::pushUnsafe(const LogEntry& entry) {
 
 bool LogBuffer::pop(LogEntry& entry) {
     if (!initialized_ || mutex_ == nullptr) return false;
-    
-    if (xSemaphoreTake(mutex_, portMAX_DELAY) != pdTRUE) {
-        return false;
-    }
-    
+
+    MutexGuard guard(mutex_);
+    if (!guard.acquired()) return false;
+
     // Check isEmpty inside mutex to avoid race condition
     if (count_ == 0) {
-        xSemaphoreGive(mutex_);
         return false;
     }
-    
-    bool result = popUnsafe(entry);
-    
-    xSemaphoreGive(mutex_);
-    
-    return result;
+
+    return popUnsafe(entry);
 }
 
 bool LogBuffer::popUnsafe(LogEntry& entry) {
@@ -117,86 +108,70 @@ bool LogBuffer::popUnsafe(LogEntry& entry) {
 
 bool LogBuffer::getEntry(size_t index, LogEntry& entry) const {
     if (!initialized_ || mutex_ == nullptr) return false;
-    
-    if (xSemaphoreTake(mutex_, portMAX_DELAY) != pdTRUE) {
-        return false;
-    }
-    
+
+    MutexGuard guard(mutex_);
+    if (!guard.acquired()) return false;
+
     // Check index inside mutex to avoid race condition
     if (index >= count_) {
-        xSemaphoreGive(mutex_);
         return false;
     }
-    
+
     size_t actual_index = (tail_ + index) % BUFFER_SIZE;
     entry = buffer_[actual_index];
-    
-    xSemaphoreGive(mutex_);
-    
+
     return true;
 }
 
 size_t LogBuffer::getCount() const {
     if (!initialized_ || mutex_ == nullptr) return 0;
-    
-    if (xSemaphoreTake(mutex_, portMAX_DELAY) != pdTRUE) {
-        return 0;
-    }
-    size_t result = count_;
-    xSemaphoreGive(mutex_);
-    return result;
+
+    MutexGuard guard(mutex_);
+    if (!guard.acquired()) return 0;
+
+    return count_;
 }
 
 bool LogBuffer::isFull() const {
     if (!initialized_ || mutex_ == nullptr) return false;
-    
-    if (xSemaphoreTake(mutex_, portMAX_DELAY) != pdTRUE) {
-        return false;
-    }
-    bool result = count_ >= BUFFER_SIZE;
-    xSemaphoreGive(mutex_);
-    return result;
+
+    MutexGuard guard(mutex_);
+    if (!guard.acquired()) return false;
+
+    return count_ >= BUFFER_SIZE;
 }
 
 bool LogBuffer::isEmpty() const {
     if (!initialized_ || mutex_ == nullptr) return true;
-    
-    if (xSemaphoreTake(mutex_, portMAX_DELAY) != pdTRUE) {
-        return true;  // Fail-safe: assume empty if we can't get mutex
-    }
-    bool result = count_ == 0;
-    xSemaphoreGive(mutex_);
-    return result;
+
+    MutexGuard guard(mutex_);
+    if (!guard.acquired()) return true;  // Fail-safe: assume empty if we can't get mutex
+
+    return count_ == 0;
 }
 
 void LogBuffer::clear() {
     if (!initialized_ || mutex_ == nullptr) return;
-    
-    if (xSemaphoreTake(mutex_, portMAX_DELAY) != pdTRUE) {
-        return;
-    }
-    
+
+    MutexGuard guard(mutex_);
+    if (!guard.acquired()) return;
+
     head_ = 0;
     tail_ = 0;
     count_ = 0;
     overflow_count_ = 0;
     wrapped_ = false;
     memset(buffer_, 0, sizeof(buffer_));
-    
-    xSemaphoreGive(mutex_);
 }
 
 void LogBuffer::dump(void (*output_fn)(const LogEntry&)) {
     if (!initialized_ || mutex_ == nullptr || !output_fn) return;
-    
-    if (xSemaphoreTake(mutex_, portMAX_DELAY) != pdTRUE) {
-        return;
-    }
-    
+
+    MutexGuard guard(mutex_);
+    if (!guard.acquired()) return;
+
     for (size_t i = 0; i < count_; i++) {
         size_t index = (tail_ + i) % BUFFER_SIZE;
         output_fn(buffer_[index]);
     }
-    
-    xSemaphoreGive(mutex_);
 }

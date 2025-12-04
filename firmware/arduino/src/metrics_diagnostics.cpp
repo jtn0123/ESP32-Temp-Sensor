@@ -14,6 +14,9 @@
 #include <Adafruit_NeoPixel.h>
 #endif
 
+// Error statistics (persist across deep sleep)
+RTC_DATA_ATTR ErrorStats g_error_stats = {0};
+
 // Global diagnostic mode flag
 static bool g_diagnostic_mode = false;
 
@@ -39,6 +42,68 @@ bool is_diagnostic_mode_active() {
 void set_diagnostic_mode(bool active) {
   g_diagnostic_mode = active;
   mqtt_publish_diagnostic_mode(active);
+}
+
+// Error statistics functions
+void increment_error_stat(const char* stat_name) {
+  if (strcmp(stat_name, "mqtt_truncation") == 0) {
+    g_error_stats.mqtt_payload_truncations++;
+  } else if (strcmp(stat_name, "rtc_corruption") == 0) {
+    g_error_stats.rtc_memory_corruptions++;
+  } else if (strcmp(stat_name, "sensor_failure") == 0) {
+    g_error_stats.sensor_read_failures++;
+  } else if (strcmp(stat_name, "wifi_disconnect") == 0) {
+    g_error_stats.wifi_disconnects++;
+  } else if (strcmp(stat_name, "mqtt_publish_fail") == 0) {
+    g_error_stats.mqtt_publish_failures++;
+  }
+}
+
+void reset_error_stats() {
+  memset(&g_error_stats, 0, sizeof(g_error_stats));
+}
+
+void publish_error_stats() {
+  if (!mqtt_is_connected()) return;
+
+  char topic_buf[96];
+  char payload[32];
+
+  // Publish each stat
+  snprintf(payload, sizeof(payload), "%lu", (unsigned long)g_error_stats.mqtt_payload_truncations);
+  snprintf(topic_buf, sizeof(topic_buf), "espsensor/%s/debug/errors/truncations", mqtt_get_client_id());
+  mqtt_publish_raw(topic_buf, payload, false);
+
+  snprintf(payload, sizeof(payload), "%lu", (unsigned long)g_error_stats.rtc_memory_corruptions);
+  snprintf(topic_buf, sizeof(topic_buf), "espsensor/%s/debug/errors/rtc_corruptions", mqtt_get_client_id());
+  mqtt_publish_raw(topic_buf, payload, false);
+
+  snprintf(payload, sizeof(payload), "%lu", (unsigned long)g_error_stats.sensor_read_failures);
+  snprintf(topic_buf, sizeof(topic_buf), "espsensor/%s/debug/errors/sensor_failures", mqtt_get_client_id());
+  mqtt_publish_raw(topic_buf, payload, false);
+
+  snprintf(payload, sizeof(payload), "%lu", (unsigned long)g_error_stats.wifi_disconnects);
+  snprintf(topic_buf, sizeof(topic_buf), "espsensor/%s/debug/errors/wifi_disconnects", mqtt_get_client_id());
+  mqtt_publish_raw(topic_buf, payload, false);
+
+  snprintf(payload, sizeof(payload), "%lu", (unsigned long)g_error_stats.mqtt_publish_failures);
+  snprintf(topic_buf, sizeof(topic_buf), "espsensor/%s/debug/errors/mqtt_failures", mqtt_get_client_id());
+  mqtt_publish_raw(topic_buf, payload, false);
+}
+
+uint32_t get_error_stat(const char* stat_name) {
+  if (strcmp(stat_name, "mqtt_truncation") == 0) {
+    return g_error_stats.mqtt_payload_truncations;
+  } else if (strcmp(stat_name, "rtc_corruption") == 0) {
+    return g_error_stats.rtc_memory_corruptions;
+  } else if (strcmp(stat_name, "sensor_failure") == 0) {
+    return g_error_stats.sensor_read_failures;
+  } else if (strcmp(stat_name, "wifi_disconnect") == 0) {
+    return g_error_stats.wifi_disconnects;
+  } else if (strcmp(stat_name, "mqtt_publish_fail") == 0) {
+    return g_error_stats.mqtt_publish_failures;
+  }
+  return 0;
 }
 
 // Check for rapid reset diagnostic trigger
