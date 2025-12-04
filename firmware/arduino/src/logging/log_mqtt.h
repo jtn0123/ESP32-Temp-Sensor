@@ -17,6 +17,8 @@ public:
     static constexpr const char* TOPIC_LOGS = "/logs";
     static constexpr const char* TOPIC_CMD_CLEAR = "/cmd/clear_logs";
     static constexpr const char* TOPIC_CMD_LEVEL = "/cmd/log_level";
+    static constexpr const char* TOPIC_CMD_FILTER = "/cmd/log_filter";
+    static constexpr const char* TOPIC_STATUS_CONFIG = "/debug/log_config";
     
     static LogMQTT* getInstance();
     

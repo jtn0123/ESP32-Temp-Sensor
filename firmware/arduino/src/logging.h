@@ -4,8 +4,8 @@
 #include <Arduino.h>
 #include "generated_config.h"
 
-// Log levels - compile-time configurable
-enum LogLevel {
+// Log levels - compile-time configurable (legacy)
+enum OldLogLevel {
   LOG_LEVEL_ERROR = 0,
   LOG_LEVEL_WARN = 1,
   LOG_LEVEL_INFO = 2,
@@ -79,7 +79,7 @@ inline void log_heap_status(const char* context) {
 // Note: Some branches may be unreachable depending on LOG_LEVEL compile-time value
 // This is intentional - function supports all levels but only active levels are compiled in
 template<typename T>
-inline void log_if_changed(const char* name, T& last_value, T current_value, LogLevel level = LOG_LEVEL_INFO) {
+inline void log_if_changed(const char* name, T& last_value, T current_value, OldLogLevel level = LOG_LEVEL_INFO) {
   if (last_value != current_value) {
     // cppcheck-suppress knownConditionTrueFalse
     if (level <= LOG_LEVEL) {

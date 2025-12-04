@@ -14,10 +14,25 @@ struct BatteryStatus {
   int estimatedDays = -1;
 };
 
+// Adaptive sleep configuration
+struct SleepConfig {
+    uint32_t normal_interval_sec;      // Default: 300 (5 min)
+    uint32_t low_battery_interval_sec; // Default: 600 (10 min) for <20% battery
+    uint32_t critical_interval_sec;    // Default: 1800 (30 min) for <5% battery
+    uint32_t rapid_update_interval_sec; // Default: 60 (1 min) when data changing
+    uint8_t low_battery_threshold;     // Default: 20%
+    uint8_t critical_battery_threshold; // Default: 5%
+};
+
 // Core power functions
 BatteryStatus read_battery_status();
 int estimate_battery_percent(float voltage);
 int estimate_battery_days(int percent, float mah_capacity = 3000, float ma_average = 50);
+
+// Adaptive sleep scheduling
+SleepConfig get_default_sleep_config();
+uint32_t calculate_optimal_sleep_interval(const SleepConfig& config);
+bool is_temperature_changing_rapidly();
 
 // Power management
 void power_init();

@@ -238,6 +238,37 @@
           </fieldset>
 
           <fieldset class="fieldset">
+            <legend>🎯 Debug Overlay</legend>
+            <label>
+              <input type="checkbox" id="debugOverlayEnabled"> Enable Overlay
+            </label>
+            <label>
+              <input type="checkbox" id="debugOverlayBounds" disabled> Region Bounds
+            </label>
+            <label>
+              <input type="checkbox" id="debugOverlayTiming" disabled> Render Timing
+            </label>
+            <div style="margin-top:4px;font-size:11px;">
+              <label>Highlight Data:
+                <select id="debugOverlayHighlight" style="width:120px;" disabled>
+                  <option value="">None</option>
+                  <option value="room_name">Room Name</option>
+                  <option value="inside_temp">Inside Temp</option>
+                  <option value="outside_temp">Outside Temp</option>
+                  <option value="humidity">Humidity</option>
+                  <option value="pressure">Pressure</option>
+                  <option value="weather">Weather</option>
+                  <option value="battery">Battery</option>
+                  <option value="time">Time</option>
+                </select>
+              </label>
+            </div>
+            <div id="debugOverlayInfo" class="muted" style="font-size:10px;margin-top:4px;display:none;">
+              Keyboard: Ctrl+Shift+D to toggle
+            </div>
+          </fieldset>
+
+          <fieldset class="fieldset">
             <legend>🌡️ Live Simulation</legend>
             <div style="margin-bottom:6px;">
               <button id="liveSimStart" class="sim-btn">▶ Start</button>
@@ -921,6 +952,68 @@
       if (countEl) countEl.textContent = '0';
       debugLog('Performance metrics reset', 'info');
     });
+
+    // Debug Overlay controls
+    const debugOverlayEnabled = document.getElementById('debugOverlayEnabled');
+    const debugOverlayBounds = document.getElementById('debugOverlayBounds');
+    const debugOverlayTiming = document.getElementById('debugOverlayTiming');
+    const debugOverlayHighlight = document.getElementById('debugOverlayHighlight');
+    const debugOverlayInfo = document.getElementById('debugOverlayInfo');
+
+    if (debugOverlayEnabled) {
+      debugOverlayEnabled.addEventListener('change', (e) => {
+        const enabled = e.target.checked;
+        if (window.DebugOverlay) {
+          window.DebugOverlay.enabled = enabled;
+          // Enable/disable dependent controls
+          if (debugOverlayBounds) debugOverlayBounds.disabled = !enabled;
+          if (debugOverlayTiming) debugOverlayTiming.disabled = !enabled;
+          if (debugOverlayHighlight) debugOverlayHighlight.disabled = !enabled;
+          if (debugOverlayInfo) debugOverlayInfo.style.display = enabled ? 'block' : 'none';
+          // Default settings when enabling
+          if (enabled) {
+            if (debugOverlayBounds && !debugOverlayBounds.checked) {
+              debugOverlayBounds.checked = true;
+              window.DebugOverlay.showBounds = true;
+            }
+            if (debugOverlayTiming && !debugOverlayTiming.checked) {
+              debugOverlayTiming.checked = true;
+              window.DebugOverlay.showTiming = true;
+            }
+          }
+          // Redraw
+          if (typeof window.draw === 'function') window.draw(window.lastData);
+          debugLog(`Debug overlay ${enabled ? 'enabled' : 'disabled'}`, 'info');
+        }
+      });
+    }
+
+    if (debugOverlayBounds) {
+      debugOverlayBounds.addEventListener('change', (e) => {
+        if (window.DebugOverlay) {
+          window.DebugOverlay.showBounds = e.target.checked;
+          if (typeof window.draw === 'function') window.draw(window.lastData);
+        }
+      });
+    }
+
+    if (debugOverlayTiming) {
+      debugOverlayTiming.addEventListener('change', (e) => {
+        if (window.DebugOverlay) {
+          window.DebugOverlay.showTiming = e.target.checked;
+          if (typeof window.draw === 'function') window.draw(window.lastData);
+        }
+      });
+    }
+
+    if (debugOverlayHighlight) {
+      debugOverlayHighlight.addEventListener('change', (e) => {
+        if (window.DebugOverlay) {
+          window.DebugOverlay.highlightData = e.target.value || null;
+          if (typeof window.draw === 'function') window.draw(window.lastData);
+        }
+      });
+    }
 
     // Live Simulation controls
     const liveStartBtn = document.getElementById('liveSimStart');

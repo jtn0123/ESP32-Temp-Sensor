@@ -1,0 +1,75 @@
+#pragma once
+
+// Feature flags for conditional compilation
+// Override in platformio.ini build_flags to disable features
+//
+// Example in platformio.ini:
+//   build_flags = -D FEATURE_PROFILING=0 -D FEATURE_DEBUG_COMMANDS=0
+
+// Home Assistant Discovery
+#ifndef FEATURE_HA_DISCOVERY
+  #define FEATURE_HA_DISCOVERY 1
+#endif
+
+// Diagnostic mode support
+#ifndef FEATURE_DIAGNOSTIC_MODE
+  #define FEATURE_DIAGNOSTIC_MODE 1
+#endif
+
+// Status LED/NeoPixel support
+#ifndef FEATURE_STATUS_PIXEL
+  #define FEATURE_STATUS_PIXEL 1
+#endif
+
+// Pressure sensor (BME280/BMP280)
+#ifndef FEATURE_PRESSURE_SENSOR
+  #define FEATURE_PRESSURE_SENSOR 1
+#endif
+
+// Outdoor weather data via MQTT
+#ifndef FEATURE_OUTDOOR_WEATHER
+  #define FEATURE_OUTDOOR_WEATHER 1
+#endif
+
+// Battery monitoring (MAX17048/LC709203F)
+#ifndef FEATURE_BATTERY_MONITOR
+  #define FEATURE_BATTERY_MONITOR 1
+#endif
+
+// Debug commands via MQTT
+#ifndef FEATURE_DEBUG_COMMANDS
+  #define FEATURE_DEBUG_COMMANDS 1
+#endif
+
+// Performance profiling (enabled in debug builds by default)
+#ifndef FEATURE_PROFILING
+  #ifdef DEBUG
+    #define FEATURE_PROFILING 1
+  #else
+    #define FEATURE_PROFILING 0
+  #endif
+#endif
+
+// Memory tracking
+#ifndef FEATURE_MEMORY_TRACKING
+  #define FEATURE_MEMORY_TRACKING 1
+#endif
+
+// Crash handler
+#ifndef FEATURE_CRASH_HANDLER
+  #define FEATURE_CRASH_HANDLER 1
+#endif
+
+// Buffer pool
+#ifndef FEATURE_BUFFER_POOL
+  #define FEATURE_BUFFER_POOL 1
+#endif
+
+// Helper macros
+#define FEATURE_ENABLED(x) (FEATURE_##x == 1)
+#define FEATURE_DISABLED(x) (FEATURE_##x == 0)
+
+// Compile-time assertions for incompatible combinations
+#if FEATURE_HA_DISCOVERY && !FEATURE_OUTDOOR_WEATHER
+  #warning "HA Discovery without outdoor weather may have limited functionality"
+#endif

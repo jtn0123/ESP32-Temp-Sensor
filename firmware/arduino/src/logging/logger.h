@@ -34,14 +34,16 @@ public:
         bool nvs_enabled;
         bool mqtt_enabled;
         uint16_t mqtt_rate_limit_ms;
-        
-        Config() : 
+        uint16_t enabled_modules_mask;  // Bitmask of enabled modules (0xFFFF = all enabled)
+
+        Config() :
             min_level(LogLevel::INFO),
             serial_enabled(true),
             buffer_enabled(true),
             nvs_enabled(false),
             mqtt_enabled(false),
-            mqtt_rate_limit_ms(1000) {}
+            mqtt_rate_limit_ms(1000),
+            enabled_modules_mask(0xFFFF) {}  // All modules enabled by default
     };
     
     static Logger& getInstance();
@@ -63,12 +65,26 @@ public:
     
     void setLevel(LogLevel level);
     LogLevel getLevel() const { return config_.min_level; }
-    
+
     void enableSerial(bool enable) { config_.serial_enabled = enable; }
     void enableBuffer(bool enable) { config_.buffer_enabled = enable; }
     void enableNVS(bool enable) { config_.nvs_enabled = enable; }
     void enableMQTT(bool enable) { config_.mqtt_enabled = enable; }
-    
+
+    // Module filtering
+    void enableModule(uint8_t module_id);
+    void disableModule(uint8_t module_id);
+    void enableAllModules();
+    void disableAllModules();
+    bool isModuleEnabled(uint8_t module_id) const;
+    uint8_t getModuleId(const char* name) const;
+    const char* getModuleName(uint8_t module_id) const;
+    uint8_t getModuleCount() const { return module_count_; }
+
+    // Configuration via JSON (for MQTT commands)
+    bool applyConfigJson(const char* json);
+    void getConfigJson(char* out, size_t out_size) const;
+
     const char* levelToString(LogLevel level) const;
     LogLevel stringToLevel(const char* str) const;
     

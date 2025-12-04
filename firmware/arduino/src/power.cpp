@@ -212,3 +212,62 @@ void power_wake_from_sleep() {
   lc_quickstart_if_cold_boot(esp_reset_reason());
 #endif
 }
+
+// Adaptive sleep scheduling implementation
+#include "state_manager.h"
+
+static float g_last_temperature = NAN;
+static SleepConfig g_sleep_config = {
+    .normal_interval_sec = 300,           // 5 minutes
+    .low_battery_interval_sec = 600,      // 10 minutes
+    .critical_interval_sec = 1800,        // 30 minutes
+    .rapid_update_interval_sec = 60,      // 1 minute
+    .low_battery_threshold = 20,
+    .critical_battery_threshold = 5
+};
+
+SleepConfig get_default_sleep_config() {
+    return g_sleep_config;
+}
+
+bool is_temperature_changing_rapidly() {
+    // Get current inside temperature from state
+    float current_temp = get_last_inside_f();
+
+    if (isnan(g_last_temperature) || isnan(current_temp)) {
+        g_last_temperature = current_temp;
+        return false;
+    }
+
+    float delta = abs(current_temp - g_last_temperature);
+    g_last_temperature = current_temp;
+
+    return delta > 2.0f;  // More than 2°F change
+}
+
+uint32_t calculate_optimal_sleep_interval(const SleepConfig& config) {
+    BatteryStatus bs = read_battery_status();
+
+    // Critical battery - maximum conservation
+    if (bs.percent >= 0 && bs.percent < config.critical_battery_threshold) {
+        Serial.printf("[Power] Critical battery (%d%%), using %us interval\n",
+                      bs.percent, config.critical_interval_sec);
+        return config.critical_interval_sec;
+    }
+
+    // Low battery - extended interval
+    if (bs.percent >= 0 && bs.percent < config.low_battery_threshold) {
+        Serial.printf("[Power] Low battery (%d%%), using %us interval\n",
+                      bs.percent, config.low_battery_interval_sec);
+        return config.low_battery_interval_sec;
+    }
+
+    // Rapid temperature change - shorter interval for responsiveness
+    if (is_temperature_changing_rapidly()) {
+        Serial.println("[Power] Temperature changing rapidly, using short interval");
+        return config.rapid_update_interval_sec;
+    }
+
+    // Normal operation
+    return config.normal_interval_sec;
+}

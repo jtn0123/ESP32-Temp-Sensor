@@ -3,6 +3,7 @@
 #include "generated_config.h"
 #include "config.h"
 #include "metrics_diagnostics.h"
+#include "debug_commands.h"
 #include <Preferences.h>
 #if LOG_MQTT_ENABLED
 #include "logging/log_mqtt.h"
@@ -59,11 +60,19 @@ void mqtt_begin() {
     
     // Forward log commands to LogMQTT
     #if LOG_MQTT_ENABLED
-    if (topicStr.indexOf("/cmd/clear_logs") >= 0 || topicStr.indexOf("/cmd/log_level") >= 0) {
+    if (topicStr.indexOf("/cmd/clear_logs") >= 0 ||
+        topicStr.indexOf("/cmd/log_level") >= 0 ||
+        topicStr.indexOf("/cmd/log_filter") >= 0) {
       log_mqtt_handle_command(topic, (const uint8_t*)payload, length);
       return;
     }
     #endif
+
+    // Handle debug commands
+    if (topicStr.indexOf("/cmd/debug") >= 0) {
+      debug_commands_handle(topic, (const uint8_t*)payload, length);
+      return;
+    }
     
     // Handle outdoor weather data (alias topics)
     #ifdef MQTT_SUB_BASE
@@ -166,6 +175,10 @@ bool mqtt_connect() {
     char cmd_topic[96];
     build_topic_buf(cmd_topic, sizeof(cmd_topic), "cmd/+");
     g_mqtt.subscribe(cmd_topic);
+
+    // Initialize debug commands
+    DebugCommands::getInstance().setClientId(g_mqtt_client_id);
+    DebugCommands::getInstance().begin();
     
     // Subscribe to outdoor weather data (alias topics)
     #ifdef MQTT_SUB_BASE
