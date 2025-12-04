@@ -2,6 +2,7 @@
 // Copyright 2024 Justin
 
 #include "sensors.h"
+#include "profiling.h"
 #include <Wire.h>
 
 #if USE_BME280
@@ -94,6 +95,7 @@ void sensors_begin() {
 #endif
 
 InsideReadings read_inside_sensors() {
+  PROFILE_SCOPE("read_inside_sensors");
   InsideReadings r;
 #if USE_BME280
   sensors_begin();
@@ -112,8 +114,9 @@ InsideReadings read_inside_sensors() {
 
 // Initialize all sensors from setup()
 void sensors_init_all() {
+  PROFILE_SCOPE("sensors_init_all");
   Serial.println("Initializing sensors...");
-  
+
   // Initialize I2C and BME280
   sensors_begin();
   

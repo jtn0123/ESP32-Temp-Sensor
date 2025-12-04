@@ -4,6 +4,7 @@
 #include "config.h"
 #include "metrics_diagnostics.h"
 #include "debug_commands.h"
+#include "profiling.h"
 #include <Preferences.h>
 #if LOG_MQTT_ENABLED
 #include "logging/log_mqtt.h"
@@ -147,6 +148,7 @@ void mqtt_loop() {
 }
 
 bool mqtt_connect() {
+  PROFILE_SCOPE("mqtt_connect");
   // Assume caller has already checked WiFi connectivity
   // This removes WiFi dependency from mqtt module
 

@@ -21,6 +21,8 @@ using namespace ui;
 #include "common_types.h"
 #include "state_manager.h"
 #include "safe_strings.h"
+#include "display_smart_refresh.h"
+#include "profiling.h"
 
 // External display object from main.cpp
 #if EINK_PANEL_DEPG0213BN
@@ -211,17 +213,34 @@ void draw_weather_icon_region_at_from_outside(int16_t x, int16_t y, int16_t w, i
 
 // Full display refresh
 void full_refresh() {
+  PROFILE_SCOPE("full_refresh");
+  // Initialize SmartRefresh regions on first use
+  static bool regions_registered = false;
+  if (!regions_registered) {
+    SmartRefresh& sr = SmartRefresh::getInstance();
+    sr.registerRegion(0); // Inside temp
+    sr.registerRegion(1); // Inside humidity
+    sr.registerRegion(2); // Inside pressure
+    sr.registerRegion(3); // Outside temp
+    sr.registerRegion(4); // Outside humidity
+    sr.registerRegion(5); // Weather
+    sr.registerRegion(6); // Time
+    regions_registered = true;
+  }
+
   display.setFullWindow();
   display.firstPage();
   do {
     // Draw static chrome (borders, labels, room name, version)
     draw_static_chrome();
-    
+
     // Draw current time
     char time_str[6];
     net_time_hhmm(time_str, sizeof(time_str));
+    // Track time changes (though we always redraw in full refresh)
+    SmartRefresh::getInstance().hasContentChanged(6, time_str);
     draw_header_time_direct(time_str);
-    
+
     // Get current sensor readings
     InsideReadings inside = read_inside_sensors();
     OutsideReadings outside = net_get_outside();
@@ -234,7 +253,7 @@ void full_refresh() {
     } else {
       safe_strcpy(in_temp, "--");
     }
-    
+
     // Format inside humidity
     char in_rh[8];
     if (isfinite(inside.humidityPct)) {
@@ -242,7 +261,7 @@ void full_refresh() {
     } else {
       safe_strcpy(in_rh, "--");
     }
-    
+
     // Format outside temperature
     char out_temp[8];
     if (outside.validTemp && isfinite(outside.temperatureC)) {
@@ -251,7 +270,7 @@ void full_refresh() {
     } else {
       safe_strcpy(out_temp, "--");
     }
-    
+
     // Format outside humidity
     char out_rh[8];
     if (outside.validHum && isfinite(outside.humidityPct)) {
@@ -259,42 +278,51 @@ void full_refresh() {
     } else {
       safe_strcpy(out_rh, "--");
     }
-    
+
+    // Track content changes for smart refresh statistics
+    SmartRefresh& sr = SmartRefresh::getInstance();
+    sr.hasContentChanged(0, in_temp);     // Inside temp
+    sr.hasContentChanged(1, in_rh);       // Inside humidity
+    sr.hasContentChanged(3, out_temp);    // Outside temp
+    sr.hasContentChanged(4, out_rh);      // Outside humidity
+
     // Draw inside temperature (use coordinates directly from layout)
-    draw_temp_number_and_units_direct(INSIDE_TEMP[0], INSIDE_TEMP[1], 
+    draw_temp_number_and_units_direct(INSIDE_TEMP[0], INSIDE_TEMP[1],
                                       INSIDE_TEMP[2], INSIDE_TEMP[3], in_temp);
-    
+
     // Draw inside humidity
     display.setTextColor(GxEPD_BLACK);
     display.setTextSize(1);
     display.setCursor(INSIDE_HUMIDITY[0], INSIDE_HUMIDITY[1] + INSIDE_HUMIDITY[3] - 4);
     display.print(in_rh);
     display.print("% RH");
-    
+
     // Draw inside pressure if available
     if (isfinite(inside.pressureHPa)) {
       char pressure_str[12];
-      snprintf(pressure_str, sizeof(pressure_str), "%.0f hPa", inside.pressureHPa);
+      snprintf(pressure_str, sizeof(pressure_str), "%.0f", inside.pressureHPa);
+      sr.hasContentChanged(2, pressure_str); // Track pressure changes
       display.setCursor(INSIDE_PRESSURE[0], INSIDE_PRESSURE[1] + INSIDE_PRESSURE[3] - 4);
       display.print(pressure_str);
     }
-    
+
     // Draw outside temperature
     draw_temp_number_and_units_direct(OUT_TEMP[0], OUT_TEMP[1],
                                       OUT_TEMP[2], OUT_TEMP[3], out_temp);
-    
+
     // Draw outside humidity
     display.setCursor(OUT_HUMIDITY[0], OUT_HUMIDITY[1] + OUT_HUMIDITY[3] - 4);
     display.print(out_rh);
     display.print("% RH");
-    
+
     // Draw outside pressure if available (note: OutsideReadings doesn't have pressure field)
     // This would need to be added to the OutsideReadings struct if needed
-    
+
     // Draw weather condition text if available
     if (outside.validWeather && outside.weather[0]) {
       char short_condition[24];
       make_short_condition_cstr(outside.weather, short_condition, sizeof(short_condition));
+      sr.hasContentChanged(5, short_condition); // Track weather changes
       display.setCursor(FOOTER_WEATHER[0], FOOTER_WEATHER[1] + FOOTER_WEATHER[3] - 4);
       display.print(short_condition);
     }
