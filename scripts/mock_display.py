@@ -169,11 +169,12 @@ def draw_layout(draw: ImageDraw.ImageDraw, data: dict):
     draw.line((125, 18, 125, 121), fill=0, width=1)
     # Header underline
     draw.line((1, 18, WIDTH - 2, 18), fill=0, width=1)
-    # Footer split line at y=84 to match ui_spec.json chrome
-    draw.line((1, 84, WIDTH - 2, 84), fill=0, width=1)
+    # Footer split line at y=80 to match ui_spec.json chrome
+    draw.line((1, 80, WIDTH - 2, 80), fill=0, width=1)
     # Header right time within HEADER_TIME
     t = data.get("time", "10:32")
-    tx = HEADER_TIME[0] + HEADER_TIME[2] - 2 - len(t) * 6
+    # HEADER_TIME is (x0, y0, x1, y1) - use x1 (right edge) for right-aligned text
+    tx = HEADER_TIME[2] - 2 - len(t) * 6
     ty = HEADER_TIME[1] + 1
     draw.text((tx, ty), t, font=load_font(10), fill=0)
     # Stabilize sampling: draw a 1px dot near the center of the time string
@@ -182,9 +183,10 @@ def draw_layout(draw: ImageDraw.ImageDraw, data: dict):
     # Optional version string in top-right like device (if provided)
     v = str(data.get("fw_version") or "").strip()
     if v:
-        vx = HEADER_TIME[0] + HEADER_TIME[2] - 2 - len("v") * 6 - len(v) * 6
-        draw.text((vx, HEADER_TIME[1] + HEADER_TIME[3] - 8), "v", font=load_font(10), fill=0)
-        draw.text((vx + 6, HEADER_TIME[1] + HEADER_TIME[3] - 8), v, font=load_font(10), fill=0)
+        # Use x1 (right edge) for right-aligned positioning, same Y as time
+        vx = HEADER_TIME[2] - 2 - len("v") * 6 - len(v) * 6
+        draw.text((vx, ty), "v", font=load_font(10), fill=0)
+        draw.text((vx + 6, ty), v, font=load_font(10), fill=0)
 
     # Section labels centered above temp rects
     font_lbl = load_font(10)

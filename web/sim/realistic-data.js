@@ -276,7 +276,7 @@
       // Format time
       const hours = now.getHours();
       const minutes = now.getMinutes();
-      const timeStr = `${hours}:${minutes.toString().padStart(2, '0')}`;
+      const timeStr = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
       
       // Select weather condition for night
       let displayWeather = weather;
