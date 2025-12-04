@@ -173,62 +173,72 @@ void draw_header_time_direct(const char* time_str) {
 // draw_status_line uses draw_in_region - remains in main.cpp
 
 void draw_status_line_direct(const BatteryStatus& bs, const char* ip_cstr) {
-    #define STATUS_Y_ADJ -4  // Standardized with display_renderer.cpp
-    int16_t xx = FOOTER_STATUS[0];
-    int16_t yy = static_cast<int16_t>(FOOTER_STATUS[1] + STATUS_Y_ADJ);
-    int16_t ww = FOOTER_STATUS[2];
-    int16_t hh = FOOTER_STATUS[3];
+    // 3-row stacked footer layout matching ui_spec.json
+    // Row 1: Battery icon + "Batt X.XXV XX%"
+    // Row 2: "~XXXd" (days remaining)
+    // Row 3: "IP X.X.X.X" (centered in region)
+    
     display.setTextColor(GxEPD_BLACK);
     display.setTextSize(1);
-    int16_t cx = static_cast<int16_t>(xx + 2);
-    int16_t cy = static_cast<int16_t>(yy + hh - 4);
+    
+    // Footer content area starts after the divider line at y=84
+    // Using fixed coordinates to match ui_spec.json footer_split layout
+    const int16_t row1_y = 87;   // Battery row
+    const int16_t row2_y = 98;   // Days row  
+    const int16_t row3_y = 109;  // IP row
+    const int16_t left_x = 8;    // Left margin for battery group
+    
+    // Row 1: Battery icon + voltage/percent
+    const int16_t bw = 13;  // Battery icon width
+    const int16_t bh = 7;   // Battery icon height
+    const int16_t by = row1_y;
+    const int16_t bx = left_x;
+    
+    // Draw battery icon outline
+    display.drawRect(bx, by, bw, bh, GxEPD_BLACK);
+    // Draw battery nub
+    display.fillRect(static_cast<int16_t>(bx + bw), static_cast<int16_t>(by + 2), 2, 3, GxEPD_BLACK);
+    
+    // Fill battery level
     if (bs.percent >= 0) {
-        int16_t bx = cx;
-        int16_t by = static_cast<int16_t>(yy + 1);
-        int16_t bw2 = 13;
-        int16_t bh2 = 7;
-        display.drawRect(bx, by, bw2, bh2, GxEPD_BLACK);
-        display.fillRect(static_cast<int16_t>(bx + bw2), static_cast<int16_t>(by + 2), 2, 3,
-                       GxEPD_BLACK);
-        int16_t fillw = static_cast<int16_t>(((bw2 - 2) * (bs.percent / 100.0f) + 0.5f));
-        if (fillw > 0)
-            display.fillRect(static_cast<int16_t>(bx + 1), static_cast<int16_t>(by + 1), fillw,
-                           static_cast<int16_t>(bh2 - 2), GxEPD_BLACK);
-        cx = static_cast<int16_t>(cx + bw2 + 6);
-    }
-    char right[48];
-    snprintf(right, sizeof(right), "IP %s", ip_cstr);
-    int16_t bx, by2;
-    uint16_t bw3, bh3;
-    display.getTextBounds(right, 0, 0, &bx, &by2, &bw3, &bh3);
-    int16_t rx = static_cast<int16_t>(xx + ww - 2 - static_cast<int16_t>(bw3));
-    char left_full[64];
-    char left_nobatt[64];
-    char left_tail[32];
-    snprintf(left_full, sizeof(left_full), "Batt %.2fV %d%% | ~%dd", bs.voltage, bs.percent,
-             bs.estimatedDays);
-    snprintf(left_nobatt, sizeof(left_nobatt), "%.2fV %d%% | ~%dd", bs.voltage, bs.percent,
-             bs.estimatedDays);
-    snprintf(left_tail, sizeof(left_tail), "%d%% | ~%dd", bs.percent, bs.estimatedDays);
-    int16_t available = static_cast<int16_t>(rx - cx - 2);
-    const char* to_print = left_full;
-    display.getTextBounds(to_print, 0, 0, &bx, &by2, &bw3, &bh3);
-    if (static_cast<int16_t>(bw3) > available) {
-        to_print = left_nobatt;
-        display.getTextBounds(to_print, 0, 0, &bx, &by2, &bw3, &bh3);
-    }
-    if (static_cast<int16_t>(bw3) > available) {
-        display.getTextBounds(left_tail, 0, 0, &bx, &by2, &bw3, &bh3);
-        if (static_cast<int16_t>(bw3) <= available) {
-            to_print = left_tail;
-        } else {
-            to_print = "";
+        int16_t fillw = static_cast<int16_t>(((bw - 2) * (bs.percent / 100.0f) + 0.5f));
+        if (fillw > 0) {
+            display.fillRect(static_cast<int16_t>(bx + 1), static_cast<int16_t>(by + 1), 
+                           fillw, static_cast<int16_t>(bh - 2), GxEPD_BLACK);
         }
     }
-    display.setCursor(cx, cy);
-    display.print(to_print);
-    display.setCursor(rx, cy);
-    display.print(right);
+    
+    // Battery text next to icon
+    char batt_text[32];
+    if (bs.percent >= 0) {
+        snprintf(batt_text, sizeof(batt_text), "%.2fV %d%%", bs.voltage, bs.percent);
+    } else {
+        snprintf(batt_text, sizeof(batt_text), "--V --%% ");
+    }
+    display.setCursor(left_x + bw + 6, row1_y);
+    display.print(batt_text);
+    
+    // Row 2: Days remaining
+    char days_text[16];
+    if (bs.estimatedDays >= 0) {
+        snprintf(days_text, sizeof(days_text), "~%dd", bs.estimatedDays);
+    } else {
+        snprintf(days_text, sizeof(days_text), "~--d");
+    }
+    display.setCursor(left_x, row2_y);
+    display.print(days_text);
+    
+    // Row 3: IP address (centered in FOOTER_STATUS region)
+    char ip_text[32];
+    if (ip_cstr && ip_cstr[0] && strcmp(ip_cstr, "0.0.0.0") != 0) {
+        snprintf(ip_text, sizeof(ip_text), "IP %s", ip_cstr);
+    } else {
+        snprintf(ip_text, sizeof(ip_text), "IP --");
+    }
+    int16_t tw = text_width_default_font(ip_text, 1);
+    int16_t ip_x = FOOTER_STATUS[0] + (FOOTER_STATUS[2] - tw) / 2;
+    display.setCursor(ip_x, row3_y);
+    display.print(ip_text);
 }
 
 #endif // USE_DISPLAY

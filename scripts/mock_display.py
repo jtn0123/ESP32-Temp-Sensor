@@ -178,8 +178,8 @@ def draw_layout(draw: ImageDraw.ImageDraw, data: dict):
     draw.line((125, 18, 125, 121), fill=0, width=1)
     # Header underline - x extends to 249 per ui_spec.json
     draw.line((1, 18, WIDTH - 1, 18), fill=0, width=1)
-    # Footer split line at y=80 to match ui_spec.json chrome (1,80) to (249,80)
-    draw.line((1, 80, WIDTH - 1, 80), fill=0, width=1)
+    # Footer split line at y=84 to match ui_spec.json chrome (1,84) to (249,84)
+    draw.line((1, 84, WIDTH - 1, 84), fill=0, width=1)
     # Header right time within HEADER_TIME
     t = data.get("time", "10:32")
     # HEADER_TIME is (x0, y0, x1, y1) - use x1 (right edge) for right-aligned text
@@ -311,27 +311,35 @@ def draw_layout(draw: ImageDraw.ImageDraw, data: dict):
     label_y = bar_y + max(0, (icon_h - font_sm.size) // 2) + 1
     draw.text((label_x, label_y), cond_label, font=font_sm, fill=0)
 
-    # Status/footer split (match sim footer_split component)
-    # Battery glyph (x=8,y=92 with +4 offset in sim => y=96 effective)
+    # Status/footer split (match firmware draw_status_line_direct layout)
+    # 3-row stacked layout:
+    # Row 1: Battery glyph + voltage/percent at y=87
+    # Row 2: Days remaining at y=98
+    # Row 3: IP centered at y=109
     pct = int(str(data.get("percent", "76")))
-    bx, by, bw, bh = 8, 96, 13, 7
+    bx, by, bw, bh = 8, 87, 13, 7
     draw.rectangle(((bx, by), (bx + bw, by + bh)), outline=0, width=1)
     draw.rectangle(((bx + bw, by + 2), (bx + bw + 2, by + 6)), fill=0)
     fillw = max(0, min(bw - 2, int((bw - 2) * (pct / 100))))
     if fillw > 0:
         draw.rectangle(((bx + 1, by + 1), (bx + 1 + fillw, by + bh - 1)), fill=0)
-    # Left text above the split line
-    left = f"Batt {data.get('voltage','4.01')}V {pct}%"
-    draw.text((26, 90), left, font=font_sm, fill=0)
+    # Row 1: Battery text next to icon
+    left = f"{data.get('voltage','4.01')}V {pct}%"
+    draw.text((27, 87), left, font=font_sm, fill=0)
+    # Row 2: Days remaining
     eta = f"~{data.get('days','128')}d"
-    draw.text((26, 100), eta, font=font_sm, fill=0)
-    ip = f"IP {data.get('ip','192.168.1.42')}"
+    draw.text((8, 98), eta, font=font_sm, fill=0)
+    # Row 3: IP centered in FOOTER_STATUS region
+    ip_val = data.get('ip', '192.168.1.42')
+    if ip_val and ip_val != "0.0.0.0":
+        ip = f"IP {ip_val}"
+    else:
+        ip = "IP --"
     # Center IP within FOOTER_L
-    left_col_right = FOOTER_L[0] + (FOOTER_L[2])
-    left_col_left = FOOTER_L[0]
+    left_col_width = FOOTER_L[2] - FOOTER_L[0]
     ip_w = len(ip) * 6
-    ip_x = left_col_left + max(0, (left_col_right - left_col_left - ip_w) // 2)
-    draw.text((ip_x, FOOTER_L[1] + 22), ip, font=font_sm, fill=0)
+    ip_x = FOOTER_L[0] + max(0, (left_col_width - ip_w) // 2)
+    draw.text((ip_x, 109), ip, font=font_sm, fill=0)
 
 
 def render(data: dict) -> Image.Image:
