@@ -11,6 +11,10 @@
 #include "state_manager.h"
 #include "metrics_diagnostics.h"
 #include "display_manager.h"
+#include "crash_handler.h"
+#include "memory_tracking.h"
+#include "mqtt_batcher.h"
+#include "profiling.h"
 
 // Diagnostic test functions (from diagnostic_test.cpp)
 extern void diagnostic_test_init();
@@ -52,7 +56,24 @@ void app_setup() {
   Serial.println("[BOOT-1] Serial initialized");
   Serial.flush();
   show_boot_stage(1);  // Red for boot/serial
-  
+
+  // Initialize crash handler and memory tracking early
+  #if FEATURE_CRASH_HANDLER
+  CrashHandler::getInstance().begin();
+  // Check for crash info from previous boot
+  if (CrashHandler::getInstance().hasCrashInfo()) {
+    Serial.println("[BOOT-1a] ⚠️  Previous crash detected!");
+    char report[256];
+    CrashHandler::getInstance().formatCrashReport(report, sizeof(report));
+    Serial.println(report);
+    // Note: Will publish via MQTT after connection
+  }
+  #endif
+
+  #if FEATURE_MEMORY_TRACKING
+  MemoryTracker::getInstance().begin();
+  #endif
+
   // Show we're alive with neopixel if available
   #ifdef NEOPIXEL_PIN
   pinMode(NEOPIXEL_PIN, OUTPUT);
@@ -123,7 +144,10 @@ void app_setup() {
   
   #ifdef BOOT_DEBUG
   // In debug mode, show memory status after sensor init
-  Serial.printf("[MEMORY] After sensors - Free heap: %u, Min free: %u\n", 
+  #if FEATURE_MEMORY_TRACKING
+  MemoryTracker::getInstance().update();
+  #endif
+  Serial.printf("[MEMORY] After sensors - Free heap: %u, Min free: %u\n",
                 ESP.getFreeHeap(), ESP.getMinFreeHeap());
   #endif
   
@@ -264,6 +288,7 @@ void app_loop() {
 
 // Sensor reading phase
 void run_sensor_phase() {
+  PROFILE_SCOPE("run_sensor_phase");
   Serial.println("=== Sensor Phase ===");
   uint32_t phase_start = millis();
   
@@ -284,36 +309,73 @@ void run_sensor_phase() {
 
 // Network and MQTT publishing phase
 void run_network_phase() {
+  PROFILE_SCOPE("run_network_phase");
   Serial.println("=== Network Phase ===");
   uint32_t phase_start = millis();
-  
+
   if (!mqtt_is_connected()) {
     Serial.println("MQTT not connected, skipping publish");
     return;
   }
-  
-  // Publish sensor readings
+
+  // Use MQTTBatcher to batch sensor readings for efficient publishing
+  MQTTBatcher& batcher = MQTTBatcher::getInstance();
+  PubSubClient* client = mqtt_get_client();
+  const char* client_id = mqtt_get_client_id();
+
+  // Queue sensor readings
   float tempC = get_last_published_inside_tempC();
   float rhPct = get_last_published_inside_rh();
   float pressHPa = get_last_published_inside_pressureHPa();
-  
-  if (isfinite(tempC)) {
-    mqtt_publish_inside(tempC, rhPct);
-    net_publish_pressure(pressHPa);
+
+  if (isfinite(tempC) && client_id && client_id[0]) {
+    // Build topics and payloads, then queue for batched publish
+    char topic[64], payload[32];
+
+    // Temperature (Celsius)
+    snprintf(topic, sizeof(topic), "espsensor/%s/inside/temperature", client_id);
+    snprintf(payload, sizeof(payload), "%.1f", tempC);
+    batcher.queue(topic, payload, true);
+
+    // Humidity
+    snprintf(topic, sizeof(topic), "espsensor/%s/inside/humidity", client_id);
+    snprintf(payload, sizeof(payload), "%.0f", rhPct);
+    batcher.queue(topic, payload, true);
+
+    // Pressure
+    if (isfinite(pressHPa)) {
+      snprintf(topic, sizeof(topic), "espsensor/%s/inside/pressure", client_id);
+      snprintf(payload, sizeof(payload), "%.1f", pressHPa);
+      batcher.queue(topic, payload, true);
+    }
   }
-  
-  // Publish battery status
+
+  // Queue battery status
   BatteryStatus bs = read_battery_status();
-  if (bs.percent >= 0) {
-    net_publish_battery(bs.voltage, bs.percent);
+  if (bs.percent >= 0 && client_id && client_id[0]) {
+    char topic[64], payload[32];
+
+    // Battery voltage
+    snprintf(topic, sizeof(topic), "espsensor/%s/battery/voltage", client_id);
+    snprintf(payload, sizeof(payload), "%.2f", bs.voltage);
+    batcher.queue(topic, payload, true);
+
+    // Battery percent
+    snprintf(topic, sizeof(topic), "espsensor/%s/battery/percent", client_id);
+    snprintf(payload, sizeof(payload), "%d", bs.percent);
+    batcher.queue(topic, payload, true);
   }
-  
-  // Publish diagnostics
+
+  // Flush all queued messages in batch
+  size_t sent = batcher.flush(client);
+  Serial.printf("Batched publish: %u messages sent\n", sent);
+
+  // Publish diagnostics (these are less frequent, publish directly)
   publish_boot_diagnostics();
-  
+
   // Fetch any retained outside data
   pump_network_ms(FETCH_RETAINED_TIMEOUT_MS);
-  
+
   Serial.printf("Network phase took %lu ms\n", millis() - phase_start);
 }
 
@@ -323,12 +385,13 @@ void run_network_phase() {
 extern void full_refresh();
 
 void run_display_phase() {
+  PROFILE_SCOPE("run_display_phase");
   Serial.println("=== Display Phase ===");
   uint32_t phase_start = millis();
-  
+
   // Call the full refresh to update the display with current sensor data
   full_refresh();
-  
+
   Serial.printf("Display phase took %lu ms\n", millis() - phase_start);
 }
 #endif
@@ -344,19 +407,30 @@ void run_sleep_phase() {
   return;  // Return to setup(), then loop() will run continuously
   #endif
   
-  // Calculate wake interval based on mode
-  uint32_t wake_interval_sec = WAKE_INTERVAL_SEC;
-  
+  // Calculate adaptive wake interval based on battery level and sensor changes
+  SleepConfig config = get_default_sleep_config();
+  uint32_t wake_interval_sec = calculate_optimal_sleep_interval(config);
+
+  Serial.printf("Adaptive sleep: %u sec (battery: %d%%, temp changing: %s)\n",
+                wake_interval_sec,
+                read_battery_status().percent,
+                is_temperature_changing_rapidly() ? "YES" : "NO");
+
+  // Update memory tracking before sleep
+  #if FEATURE_MEMORY_TRACKING
+  MemoryTracker::getInstance().update();
+  #endif
+
   // Update cumulative uptime before sleep
   add_to_cumulative_uptime(millis() / 1000);
-  
+
   // Prepare for sleep
   power_prepare_sleep();
   net_prepare_for_sleep();
-  
+
   // Store state to NVS
   nvs_end_cache();
-  
+
   Serial.printf("Entering deep sleep for %u seconds\n", wake_interval_sec);
   go_deep_sleep_with_tracking(wake_interval_sec);
 }

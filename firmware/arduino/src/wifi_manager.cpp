@@ -2,6 +2,7 @@
 #include "wifi_manager.h"
 #include "generated_config.h"
 #include "config.h"
+#include "profiling.h"
 
 // Static storage for provisioning
 static Preferences g_wifi_prefs;
@@ -76,8 +77,9 @@ bool wifi_connect_with_timeout(uint32_t timeout_ms) {
 }
 
 bool wifi_connect_with_exponential_backoff(uint32_t max_attempts, uint32_t initial_delay_ms) {
+  PROFILE_SCOPE("wifi_connect_backoff");
   uint32_t retry_delay_ms = initial_delay_ms;
-  
+
   for (uint32_t attempt = 0; attempt < max_attempts; attempt++) {
     Serial.printf("[WiFi] Connection attempt %d/%d\n", attempt + 1, max_attempts);
     

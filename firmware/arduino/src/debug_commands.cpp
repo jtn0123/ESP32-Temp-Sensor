@@ -10,6 +10,7 @@
 #include "feature_flags.h"
 #include "mqtt_batcher.h"
 #include "display_smart_refresh.h"
+#include "sensors.h"
 #include <ArduinoJson.h>
 #include <esp_system.h>
 #include <esp_heap_caps.h>
@@ -220,9 +221,24 @@ void DebugCommands::cmdNetwork(PubSubClient* client) {
 }
 
 void DebugCommands::cmdSensors(PubSubClient* client) {
-    // This would require access to sensor data
-    // For now, just return a placeholder
-    publishResponse(client, "{\"cmd\":\"sensors\",\"status\":\"not_implemented\"}");
+    // Read current sensor values
+    InsideReadings readings = read_inside_sensors();
+
+    char response[256];
+    snprintf(response, sizeof(response),
+            "{\"cmd\":\"sensors\","
+            "\"temp_c\":%.1f,"
+            "\"temp_f\":%.1f,"
+            "\"humidity\":%.0f,"
+            "\"pressure\":%.1f,"
+            "\"valid\":%s}",
+            readings.temperatureC,
+            readings.temperatureC * 9.0f / 5.0f + 32.0f,  // Convert to F
+            readings.humidityPct,
+            readings.pressureHPa,
+            isfinite(readings.temperatureC) ? "true" : "false");
+
+    publishResponse(client, response);
 }
 
 void DebugCommands::cmdPerf(PubSubClient* client) {

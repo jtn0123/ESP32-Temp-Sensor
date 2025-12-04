@@ -3,6 +3,7 @@
 #include <Arduino.h>
 #include <esp_timer.h>
 #include "logging/logger.h"
+#include "feature_flags.h"
 
 // Performance profiling instrumentation
 // Provides automatic timing of code blocks and statistical tracking
@@ -14,15 +15,11 @@
 //   }
 //
 // Configuration:
-//   #define PROFILING_ENABLED 1    // Enable profiling (default: disabled in release)
-//   #define SLOW_THRESHOLD_US 1000 // Log warning if operation exceeds this (microseconds)
+//   FEATURE_PROFILING (from feature_flags.h) - Enable profiling
+//   #define SLOW_THRESHOLD_US 1000 - Log warning if operation exceeds this (microseconds)
 
 #ifndef PROFILING_ENABLED
-  #ifdef DEBUG
-    #define PROFILING_ENABLED 1
-  #else
-    #define PROFILING_ENABLED 0
-  #endif
+  #define PROFILING_ENABLED FEATURE_PROFILING
 #endif
 
 #ifndef SLOW_THRESHOLD_US
