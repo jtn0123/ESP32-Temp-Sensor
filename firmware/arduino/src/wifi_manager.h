@@ -63,3 +63,12 @@ bool is_all_zero_bssid(const uint8_t b[6]);
 // WiFi configuration
 void wifi_set_hostname(const char* hostname);
 void wifi_configure_power_save(bool enable);
+
+// Time sync functions
+// - wifi_sync_time_ntp(): Syncs time via NTP when WiFi connected (automatic)
+// - wifi_set_time_from_compile(): Uses compile timestamp as fallback when no WiFi
+// - Time persists in RTC during deep sleep, only needs initial sync
+void wifi_sync_time_ntp();
+void wifi_set_time_from_compile();
+bool wifi_is_time_synced();
+uint32_t wifi_get_last_ntp_sync();

@@ -251,65 +251,53 @@ def draw_layout(draw: ImageDraw.ImageDraw, data: dict):
     wind_text = f"{wind_mps*2.237:.1f} mph"
     draw.text((OUT_ROW2_R[0], OUT_ROW2_R[1]), wind_text, font=font_sm, fill=0)
 
-    # Footer weather bar (match sim.js 'iconIn' drawing)
-    bar_x = 130
-    bar_y = 95
-    bar_w = 114
-    bar_h = FOOTER_WEATHER[3]
-    icon_w = min(26, bar_w - 60)
-    icon_h = min(22, bar_h - 4)
-    gap = 8
+    # Weather icon in WEATHER_ICON region [168, 90, 30, 32]
+    # Weather text in FOOTER_WEATHER region [200, 90, 44, 32]
+    # These match the firmware display_renderer.cpp and ui_spec.json
+    icon_x, icon_y, icon_w, icon_h = 168, 90, 30, 32
+    weather_x, weather_y, weather_w, weather_h = 200, 90, 44, 32
+    
     cond_label = str(data.get("weather", "Cloudy")).split(" ")[0].split("-")[0]
-    tl_cond = int(ImageDraw.Draw(Image.new("1", (1, 1))).textlength(cond_label, font=font_sm))
-    total_w = icon_w + gap + tl_cond
-    start_x = bar_x + max(0, (bar_w - total_w) // 2)
-    icon_cx = start_x + icon_w // 2
-    icon_cy = bar_y + bar_h // 2
-    # Ensure left-side non-white area similar to sim
     cond_lower = str(data.get("weather", "")).lower()
-    left_box_w = 16
-    if "moon" in cond_lower:
-        left_box_w = 20
-    elif any(k in cond_lower for k in ["rain"]):
-        left_box_w = 22
-    elif any(k in cond_lower for k in ["snow"]):
-        left_box_w = 18
-    elif any(k in cond_lower for k in ["storm", "thunder", "lightning"]):
-        left_box_w = 24
-    # Draw filled rect inside icon box to guarantee black pixels
-    draw.rectangle(
-        (
-            (bar_x + 2, bar_y + 2),
-            (bar_x + 2 + max(8, min(left_box_w, icon_w - 4)), bar_y + 2 + max(8, icon_h - 6)),
-        ),
-        fill=0,
-    )
-    # Simplified icon strokes
-    # Removed border rectangle to match simulator behavior - no border around weather icon
-    if any(k in cond_lower for k in ["rain"]):
-        # diagonal raindrops
+    
+    # Draw weather icon centered in WEATHER_ICON region
+    icon_cx = icon_x + icon_w // 2
+    icon_cy = icon_y + icon_h // 2
+    
+    # Simple icon rendering
+    if any(k in cond_lower for k in ["rain", "shower"]):
+        # cloud with rain drops
+        draw.rounded_rectangle((icon_x + 2, icon_y + 8, icon_x + icon_w - 2, icon_y + 20), radius=4, outline=0, width=1)
         for i in range(3):
-            x0 = start_x + 6 + i * 6
-            draw.line((x0, icon_cy + 2, x0 - 3, icon_cy + 8), fill=0, width=1)
+            x0 = icon_x + 8 + i * 6
+            draw.line((x0, icon_y + 22, x0 - 2, icon_y + 28), fill=0, width=1)
     elif any(k in cond_lower for k in ["snow"]):
+        draw.rounded_rectangle((icon_x + 2, icon_y + 8, icon_x + icon_w - 2, icon_y + 20), radius=4, outline=0, width=1)
         for i in range(2):
-            draw.text((start_x + 6 + i * 8, icon_cy + 2), "*", font=load_font(10), fill=0)
+            draw.text((icon_x + 6 + i * 10, icon_y + 20), "*", font=load_font(10), fill=0)
     elif any(k in cond_lower for k in ["storm", "thunder", "lightning"]):
-        draw.line((icon_cx - 6, icon_cy + 2, icon_cx, icon_cy - 2), fill=0, width=1)
-        draw.line((icon_cx, icon_cy - 2, icon_cx - 2, icon_cy + 6), fill=0, width=1)
-        draw.line((icon_cx - 2, icon_cy + 6, icon_cx + 6, icon_cy + 2), fill=0, width=1)
+        draw.rounded_rectangle((icon_x + 2, icon_y + 6, icon_x + icon_w - 2, icon_y + 18), radius=4, outline=0, width=1)
+        draw.line((icon_cx - 4, icon_cy + 4, icon_cx + 2, icon_cy), fill=0, width=1)
+        draw.line((icon_cx + 2, icon_cy, icon_cx - 2, icon_cy + 8), fill=0, width=1)
     elif any(k in cond_lower for k in ["fog", "mist", "haze"]):
         for i in range(3):
-            y0 = bar_y + 6 + i * 6
-            draw.line((start_x + 2, y0, start_x + icon_w - 2, y0), fill=0, width=1)
-    else:
-        # circle (sun)
-        r0 = min(icon_w, icon_h) // 3
+            y0 = icon_y + 10 + i * 6
+            draw.line((icon_x + 4, y0, icon_x + icon_w - 4, y0), fill=0, width=1)
+    elif any(k in cond_lower for k in ["cloud", "overcast"]):
+        draw.rounded_rectangle((icon_x + 2, icon_y + 10, icon_x + icon_w - 2, icon_y + 24), radius=6, outline=0, width=1)
+    elif any(k in cond_lower for k in ["sun", "clear"]):
+        r0 = min(icon_w, icon_h) // 4
         draw.ellipse((icon_cx - r0, icon_cy - r0, icon_cx + r0, icon_cy + r0), outline=0, width=1)
-    # Label to the right of the icon, vertically centered
-    label_x = start_x + icon_w + gap
-    label_y = bar_y + max(0, (icon_h - font_sm.size) // 2) + 1
-    draw.text((label_x, label_y), cond_label, font=font_sm, fill=0)
+    else:
+        # Default: simple circle
+        r0 = min(icon_w, icon_h) // 4
+        draw.ellipse((icon_cx - r0, icon_cy - r0, icon_cx + r0, icon_cy + r0), outline=0, width=1)
+    
+    # Draw weather text centered in FOOTER_WEATHER region at y=109
+    tl_cond = int(ImageDraw.Draw(Image.new("1", (1, 1))).textlength(cond_label, font=font_sm))
+    text_x = weather_x + max(0, (weather_w - tl_cond) // 2)
+    text_y = weather_y + 19  # y=90+19=109, matches firmware
+    draw.text((text_x, text_y), cond_label, font=font_sm, fill=0)
 
     # Status/footer split (match firmware draw_status_line_direct layout)
     # 3-row stacked layout:

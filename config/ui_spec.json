@@ -421,7 +421,7 @@
       {
         "op": "textCenteredIn",
         "rect": "FOOTER_WEATHER",
-        "yOffset": 11,
+        "yOffset": 19,
         "font": "small",
         "text": "{weather}"
       }

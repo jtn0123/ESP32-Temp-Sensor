@@ -53,7 +53,7 @@ const UiOpHeader kOps_footer_split[] = {
     { OP_TEXT, 255, 2, 0, 27, 87, 0, 0, "{battery_voltage:.2f}V {battery_percent}%", NULL },
     { OP_TEXT, 255, 2, 0, 8, 98, 0, 0, "~{days}d", NULL },
     { OP_TEXT, 0, 2, 2, 0, 19, 0, 0, "IP {ip}", NULL },
-    { OP_TEXTCENTEREDIN, 1, 2, 2, 11, 0, 0, 0, "{weather}", NULL },
+    { OP_TEXTCENTEREDIN, 1, 2, 2, 19, 0, 0, 0, "{weather}", NULL },
 };
 const int kOps_footer_split_count = sizeof(kOps_footer_split)/sizeof(kOps_footer_split[0]);
 
