@@ -8,6 +8,9 @@ RTC_DATA_ATTR size_t LogBuffer::count_ = 0;
 RTC_DATA_ATTR uint32_t LogBuffer::overflow_count_ = 0;
 RTC_DATA_ATTR bool LogBuffer::wrapped_ = false;
 
+// Guard against race condition in begin() - static ensures single initialization
+static volatile bool s_begin_in_progress = false;
+
 LogBuffer* LogBuffer::getInstance() {
     static LogBuffer instance;
     return &instance;
@@ -16,10 +19,22 @@ LogBuffer* LogBuffer::getInstance() {
 void LogBuffer::begin() {
     if (initialized_) return;
     
+    // Simple race condition guard - not fully atomic but prevents most issues
+    // In practice, begin() is only called from setup() which is single-threaded
+    if (s_begin_in_progress) return;
+    s_begin_in_progress = true;
+    
+    // Double-check after acquiring guard
+    if (initialized_) {
+        s_begin_in_progress = false;
+        return;
+    }
+    
     mutex_ = xSemaphoreCreateMutex();
     if (mutex_ == nullptr) {
         // Mutex creation failed - cannot proceed safely
         Serial.println("[LogBuffer] FATAL: Failed to create mutex");
+        s_begin_in_progress = false;
         return;
     }
     
@@ -44,6 +59,7 @@ void LogBuffer::begin() {
     }
     
     initialized_ = true;
+    s_begin_in_progress = false;
 }
 
 void LogBuffer::end() {

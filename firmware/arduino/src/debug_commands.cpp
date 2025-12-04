@@ -177,7 +177,7 @@ void DebugCommands::cmdModules(PubSubClient* client) {
     char response[512];
     int pos = snprintf(response, sizeof(response), "{\"cmd\":\"modules\",\"count\":%u,\"modules\":[", count);
 
-    for (uint8_t i = 0; i < count; i++) {
+    for (uint8_t i = 0; i < count && pos < (int)(sizeof(response) - 64); i++) {
         if (i > 0) {
             pos += snprintf(response + pos, sizeof(response) - pos, ",");
         }
@@ -185,12 +185,25 @@ void DebugCommands::cmdModules(PubSubClient* client) {
         const char* name = logger.getModuleName(i);
         bool enabled = logger.isModuleEnabled(i);
 
+        // Bounds check before writing - reserve space for closing brackets
+        if (pos >= (int)(sizeof(response) - 64)) {
+            break;  // Stop if we're running out of space
+        }
+
         pos += snprintf(response + pos, sizeof(response) - pos,
                        "{\"id\":%u,\"name\":\"%s\",\"enabled\":%s}",
-                       i, name, enabled ? "true" : "false");
+                       i, name ? name : "null", enabled ? "true" : "false");
     }
 
-    snprintf(response + pos, sizeof(response) - pos, "]}");
+    // Ensure we have space for closing brackets
+    if (pos < (int)(sizeof(response) - 3)) {
+        snprintf(response + pos, sizeof(response) - pos, "]}");
+    } else {
+        // Truncate and close - find safe spot
+        response[sizeof(response) - 3] = ']';
+        response[sizeof(response) - 2] = '}';
+        response[sizeof(response) - 1] = '\0';
+    }
     publishResponse(client, response);
 }
 
@@ -258,7 +271,9 @@ void DebugCommands::cmdBufPool(PubSubClient* client) {
     BufferPool::getInstance().formatStatsJson(stats, sizeof(stats));
 
     char response[384];
-    snprintf(response, sizeof(response), "{\"cmd\":\"bufpool\",%s}", stats + 1);  // Skip opening brace
+    // Safely merge JSON: skip opening brace only if stats starts with '{'
+    const char* stats_content = (stats[0] == '{') ? stats + 1 : stats;
+    snprintf(response, sizeof(response), "{\"cmd\":\"bufpool\",%s}", stats_content);
     publishResponse(client, response);
 }
 
@@ -281,7 +296,9 @@ void DebugCommands::cmdMemory(PubSubClient* client) {
     MemoryTracker::getInstance().formatStatsJson(stats, sizeof(stats));
 
     char response[512];
-    snprintf(response, sizeof(response), "{\"cmd\":\"memory\",%s}", stats + 1);  // Skip opening brace
+    // Safely merge JSON: skip opening brace only if stats starts with '{'
+    const char* stats_content = (stats[0] == '{') ? stats + 1 : stats;
+    snprintf(response, sizeof(response), "{\"cmd\":\"memory\",%s}", stats_content);
     publishResponse(client, response);
 }
 
@@ -349,7 +366,9 @@ void DebugCommands::cmdMqttBatch(PubSubClient* client) {
     MQTTBatcher::getInstance().formatStatsJson(stats, sizeof(stats));
 
     char response[256];
-    snprintf(response, sizeof(response), "{\"cmd\":\"mqtt_batch\",%s}", stats + 1);
+    // Safely merge JSON: skip opening brace only if stats starts with '{'
+    const char* stats_content = (stats[0] == '{') ? stats + 1 : stats;
+    snprintf(response, sizeof(response), "{\"cmd\":\"mqtt_batch\",%s}", stats_content);
     publishResponse(client, response);
 }
 
@@ -358,9 +377,11 @@ void DebugCommands::cmdSmartRefresh(PubSubClient* client) {
     SmartRefresh::getInstance().formatStatsJson(stats, sizeof(stats));
 
     char response[256];
+    // Safely merge JSON: skip opening brace only if stats starts with '{'
+    const char* stats_content = (stats[0] == '{') ? stats + 1 : stats;
     snprintf(response, sizeof(response),
             "{\"cmd\":\"smart_refresh\",\"dirty_mask\":\"0x%04X\",%s}",
-            SmartRefresh::getInstance().getDirtyMask(), stats + 1);
+            SmartRefresh::getInstance().getDirtyMask(), stats_content);
     publishResponse(client, response);
 }
 
