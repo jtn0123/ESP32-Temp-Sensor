@@ -918,7 +918,11 @@
     const selectionInfo = document.getElementById('selectionInfo');
     if (!selectionInfo || !editorState.selectedRegion) return;
 
-    const rect = window.GJSON.rects[editorState.selectedRegion];
+    const rect = window.GJSON?.rects?.[editorState.selectedRegion];
+    if (!rect || !Array.isArray(rect) || rect.length < 4) {
+      selectionInfo.style.display = 'none';
+      return;
+    }
     selectionInfo.style.display = 'block';
 
     document.getElementById('selectedRegionName').textContent = editorState.selectedRegion;
