@@ -2041,7 +2041,13 @@
                 const fmt = k.match(/:(.*)$/);
                 if (fmt){
                   const m = fmt[1].match(/\.(\d)f/);
-                  if (m){ const d = parseInt(m[1]); const num = parseFloat(String(val)); if (isFinite(num)) val = num.toFixed(d); }
+                  if (m){ 
+                    const d = parseInt(m[1]); 
+                    if (!isNaN(d) && d >= 0 && d <= 20) {
+                      const num = parseFloat(String(val)); 
+                      if (isFinite(num)) val = num.toFixed(d); 
+                    }
+                  }
                 }
                 return String(val);
               });

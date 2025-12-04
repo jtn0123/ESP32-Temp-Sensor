@@ -254,20 +254,26 @@
       this.indoorTemp = this.indoorTemp + (thermostatTarget - this.indoorTemp) * 0.1;
       this.indoorTemp = this.addNoise(this.indoorTemp, 0.3);
       
-      // Humidity
-      const [humMin, humMax] = weatherData.humidityRange;
+      // Humidity - with fallback defaults
+      const humidityRange = Array.isArray(weatherData.humidityRange) && weatherData.humidityRange.length >= 2 
+        ? weatherData.humidityRange : [30, 70];
+      const [humMin, humMax] = humidityRange;
       const baseHumidity = (humMin + humMax) / 2 + (geoData.humidityBase - 50) * 0.3;
       const outdoorHumidity = Math.min(100, Math.max(0, this.addNoise(baseHumidity, 5)));
       const indoorHumidity = Math.min(100, Math.max(0, this.addNoise(45 + (outdoorHumidity - 50) * 0.2, 3)));
       
-      // Pressure (with trend)
-      const [pressMin, pressMax] = weatherData.pressureRange;
+      // Pressure (with trend) - with fallback defaults
+      const pressureRange = Array.isArray(weatherData.pressureRange) && weatherData.pressureRange.length >= 2
+        ? weatherData.pressureRange : [1010, 1020];
+      const [pressMin, pressMax] = pressureRange;
       let basePressure = geoData.pressureBase + (this._pressureTrend * 3);
       basePressure = Math.min(pressMax, Math.max(pressMin, basePressure));
       const pressure = this.addNoise(basePressure, 2);
       
-      // Wind
-      const [windMin, windMax] = weatherData.windRange;
+      // Wind - with fallback defaults
+      const windRange = Array.isArray(weatherData.windRange) && weatherData.windRange.length >= 2
+        ? weatherData.windRange : [0, 10];
+      const [windMin, windMax] = windRange;
       const windMph = this.addNoise((windMin + windMax) / 2, (windMax - windMin) / 4);
       
       // Battery voltage from percentage

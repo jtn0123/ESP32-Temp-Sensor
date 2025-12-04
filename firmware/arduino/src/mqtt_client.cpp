@@ -73,7 +73,11 @@ void mqtt_begin() {
       memcpy(value_str, payload, length);
       value_str[length] = '\0';
     } else {
-      value_str[0] = '\0';
+      // Payload too large - truncate and log warning
+      memcpy(value_str, payload, sizeof(value_str) - 1);
+      value_str[sizeof(value_str) - 1] = '\0';
+      Serial.printf("[MQTT] WARN: Payload truncated (%u bytes > %u max)\n", 
+                    (unsigned)length, (unsigned)(sizeof(value_str) - 1));
     }
     
     // Handle temperature in Fahrenheit
