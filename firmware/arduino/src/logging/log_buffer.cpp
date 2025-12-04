@@ -16,6 +16,11 @@ void LogBuffer::begin() {
     if (initialized_) return;
     
     mutex_ = xSemaphoreCreateMutex();
+    if (mutex_ == nullptr) {
+        // Mutex creation failed - cannot proceed safely
+        Serial.println("[LogBuffer] FATAL: Failed to create mutex");
+        return;
+    }
     
     if (!wrapped_) {
         head_ = 0;
@@ -39,7 +44,7 @@ void LogBuffer::end() {
 }
 
 bool LogBuffer::push(const LogEntry& entry) {
-    if (!initialized_) return false;
+    if (!initialized_ || mutex_ == nullptr) return false;
     
     if (xSemaphoreTake(mutex_, portMAX_DELAY) != pdTRUE) {
         return false;
@@ -69,9 +74,15 @@ bool LogBuffer::pushUnsafe(const LogEntry& entry) {
 }
 
 bool LogBuffer::pop(LogEntry& entry) {
-    if (!initialized_ || isEmpty()) return false;
+    if (!initialized_ || mutex_ == nullptr) return false;
     
     if (xSemaphoreTake(mutex_, portMAX_DELAY) != pdTRUE) {
+        return false;
+    }
+    
+    // Check isEmpty inside mutex to avoid race condition
+    if (count_ == 0) {
+        xSemaphoreGive(mutex_);
         return false;
     }
     
@@ -93,9 +104,15 @@ bool LogBuffer::popUnsafe(LogEntry& entry) {
 }
 
 bool LogBuffer::getEntry(size_t index, LogEntry& entry) const {
-    if (!initialized_ || index >= count_) return false;
+    if (!initialized_ || mutex_ == nullptr) return false;
     
     if (xSemaphoreTake(mutex_, portMAX_DELAY) != pdTRUE) {
+        return false;
+    }
+    
+    // Check index inside mutex to avoid race condition
+    if (index >= count_) {
+        xSemaphoreGive(mutex_);
         return false;
     }
     
@@ -108,19 +125,40 @@ bool LogBuffer::getEntry(size_t index, LogEntry& entry) const {
 }
 
 size_t LogBuffer::getCount() const {
-    return count_;
+    if (!initialized_ || mutex_ == nullptr) return 0;
+    
+    if (xSemaphoreTake(mutex_, portMAX_DELAY) != pdTRUE) {
+        return 0;
+    }
+    size_t result = count_;
+    xSemaphoreGive(mutex_);
+    return result;
 }
 
 bool LogBuffer::isFull() const {
-    return count_ >= BUFFER_SIZE;
+    if (!initialized_ || mutex_ == nullptr) return false;
+    
+    if (xSemaphoreTake(mutex_, portMAX_DELAY) != pdTRUE) {
+        return false;
+    }
+    bool result = count_ >= BUFFER_SIZE;
+    xSemaphoreGive(mutex_);
+    return result;
 }
 
 bool LogBuffer::isEmpty() const {
-    return count_ == 0;
+    if (!initialized_ || mutex_ == nullptr) return true;
+    
+    if (xSemaphoreTake(mutex_, portMAX_DELAY) != pdTRUE) {
+        return true;  // Fail-safe: assume empty if we can't get mutex
+    }
+    bool result = count_ == 0;
+    xSemaphoreGive(mutex_);
+    return result;
 }
 
 void LogBuffer::clear() {
-    if (!initialized_) return;
+    if (!initialized_ || mutex_ == nullptr) return;
     
     if (xSemaphoreTake(mutex_, portMAX_DELAY) != pdTRUE) {
         return;
@@ -137,7 +175,7 @@ void LogBuffer::clear() {
 }
 
 void LogBuffer::dump(void (*output_fn)(const LogEntry&)) {
-    if (!initialized_ || !output_fn) return;
+    if (!initialized_ || mutex_ == nullptr || !output_fn) return;
     
     if (xSemaphoreTake(mutex_, portMAX_DELAY) != pdTRUE) {
         return;

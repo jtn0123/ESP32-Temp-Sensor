@@ -309,6 +309,7 @@
 
   // Check if point is inside a region
   function isPointInRegion(point, rect) {
+    if (!Array.isArray(rect) || rect.length < 4) return false;
     const [x, y, w, h] = rect;
     return point.x >= x && point.x < x + w &&
            point.y >= y && point.y < y + h;
@@ -316,6 +317,7 @@
 
   // Get resize handle at point (if any)
   function getResizeHandle(point, rect) {
+    if (!Array.isArray(rect) || rect.length < 4) return null;
     const [x, y, w, h] = rect;
     const margin = 6; // Detection margin for handles
 
@@ -510,6 +512,10 @@
 
       affectedRegions.forEach(name => {
         const rect = window.GJSON.rects[name];
+        if (!Array.isArray(rect) || rect.length < 4) {
+          console.warn(`Invalid rect for region ${name}:`, rect);
+          return;
+        }
         editorState.regionStartPos[name] = {
           x: rect[0], y: rect[1], w: rect[2], h: rect[3]
         };
