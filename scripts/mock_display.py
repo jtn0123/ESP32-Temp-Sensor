@@ -139,7 +139,8 @@ def draw_layout(draw: ImageDraw.ImageDraw, data: dict):
         return fallback_xywh
 
     _HEADER_NAME = R("HEADER_NAME", (6, 2, 6 + 160, 2 + 14))
-    HEADER_TIME = R("HEADER_TIME", (172, 2, 172 + 72, 2 + 14))
+    # Use HEADER_TIME_CENTER (current layout) with correct fallback coords
+    HEADER_TIME = R("HEADER_TIME_CENTER", (100, 2, 100 + 50, 2 + 14))
 
     INSIDE_TEMP = R("INSIDE_TEMP", (6, 36, 6 + 118, 36 + 28))
     INSIDE_RH = R("INSIDE_RH", (6, 66, 6 + 118, 66 + 14))
