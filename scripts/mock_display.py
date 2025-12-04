@@ -168,10 +168,10 @@ def draw_layout(draw: ImageDraw.ImageDraw, data: dict):
     # Header rules
     # Column separator
     draw.line((125, 18, 125, 121), fill=0, width=1)
-    # Header underline
-    draw.line((1, 18, WIDTH - 2, 18), fill=0, width=1)
-    # Footer split line at y=80 to match ui_spec.json chrome
-    draw.line((1, 80, WIDTH - 2, 80), fill=0, width=1)
+    # Header underline - x extends to 249 per ui_spec.json
+    draw.line((1, 18, WIDTH - 1, 18), fill=0, width=1)
+    # Footer split line at y=80 to match ui_spec.json chrome (1,80) to (249,80)
+    draw.line((1, 80, WIDTH - 1, 80), fill=0, width=1)
     # Header right time within HEADER_TIME
     t = data.get("time", "10:32")
     # HEADER_TIME is (x0, y0, x1, y1) - use x1 (right edge) for right-aligned text
