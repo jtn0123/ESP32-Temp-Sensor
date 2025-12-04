@@ -1266,8 +1266,13 @@
 
     for (const name in current) {
       if (!original[name]) return true;
+      const currRect = current[name];
+      const origRect = original[name];
+      // Validate both are arrays with at least 4 elements
+      if (!Array.isArray(currRect) || currRect.length < 4) continue;
+      if (!Array.isArray(origRect) || origRect.length < 4) return true;
       for (let i = 0; i < 4; i++) {
-        if (current[name][i] !== original[name][i]) return true;
+        if (currRect[i] !== origRect[i]) return true;
       }
     }
 

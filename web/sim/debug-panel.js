@@ -538,6 +538,10 @@
     diffCanvas.width = canvas.width;
     diffCanvas.height = canvas.height;
     const ctx = diffCanvas.getContext('2d');
+    if (!ctx) {
+      console.warn('Failed to create 2D context for baseline comparison');
+      return;
+    }
     
     // Load images
     const baseline = new Image();
@@ -552,6 +556,22 @@
         // Draw current
         ctx.drawImage(current, 0, 0);
         const currentData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        
+        // Validate data arrays exist and match
+        if (!baselineData?.data || !currentData?.data) {
+          console.warn('Baseline comparison: missing image data');
+          return;
+        }
+        if (baselineData.data.length !== currentData.data.length) {
+          console.warn('Baseline comparison: data length mismatch');
+          return;
+        }
+        
+        // Guard against zero-dimension canvas
+        if (canvas.width === 0 || canvas.height === 0) {
+          console.warn('Baseline comparison: canvas has zero dimensions');
+          return;
+        }
         
         // Calculate diff with intensity tracking
         let differences = 0;
@@ -1281,6 +1301,10 @@
       simCanvas.width = canvas.width;
       simCanvas.height = canvas.height;
       const simCtx = simCanvas.getContext('2d');
+      if (!simCtx) {
+        console.warn('Failed to create simulator canvas context');
+        return;
+      }
       simCtx.drawImage(canvas, 0, 0);
 
       // Scale device image to match
@@ -1288,6 +1312,10 @@
       devCanvas.width = canvas.width;
       devCanvas.height = canvas.height;
       const devCtx = devCanvas.getContext('2d');
+      if (!devCtx) {
+        console.warn('Failed to create device canvas context');
+        return;
+      }
       devCtx.fillStyle = '#fff';
       devCtx.fillRect(0, 0, canvas.width, canvas.height);
       
@@ -1314,6 +1342,10 @@
       diffCanvas.width = canvas.width;
       diffCanvas.height = canvas.height;
       const diffCtx = diffCanvas.getContext('2d');
+      if (!diffCtx) {
+        console.warn('Failed to create diff canvas context');
+        return;
+      }
       const diffData = diffCtx.createImageData(canvas.width, canvas.height);
 
       let differences = 0;
