@@ -19,6 +19,7 @@ using namespace ui;
 #include "sensors.h"
 #include "power.h"
 #include "common_types.h"
+#include "state_manager.h"
 
 // External display object from main.cpp
 #if EINK_PANEL_DEPG0213BN
@@ -331,7 +332,7 @@ void full_refresh() {
   } while (display.nextPage());
   
   // Reset partial counter after full refresh
-  partial_counter = 0;
+  reset_partial_counter();
 }
 
 // Smoke test for display

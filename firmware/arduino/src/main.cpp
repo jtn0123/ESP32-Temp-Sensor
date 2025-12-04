@@ -417,7 +417,7 @@ static bool init_full_mode_at_start = []() {
 static uint32_t g_display_deadline_ms = 0;
 // TOP_Y_OFFSET removed for spec alignment
 #ifndef HEADER_NAME_Y_ADJ
-#define HEADER_NAME_Y_ADJ -6
+#define HEADER_NAME_Y_ADJ -8  // Standardized with display_renderer.cpp and display_manager.cpp
 #endif
 #ifndef TEMP_Y_ADJ
 #define TEMP_Y_ADJ -40

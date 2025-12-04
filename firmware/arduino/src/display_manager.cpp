@@ -173,7 +173,7 @@ void draw_header_time_direct(const char* time_str) {
 // draw_status_line uses draw_in_region - remains in main.cpp
 
 void draw_status_line_direct(const BatteryStatus& bs, const char* ip_cstr) {
-    #define STATUS_Y_ADJ 0  // Temporary until we refactor this properly
+    #define STATUS_Y_ADJ -4  // Standardized with display_renderer.cpp
     int16_t xx = FOOTER_STATUS[0];
     int16_t yy = static_cast<int16_t>(FOOTER_STATUS[1] + STATUS_Y_ADJ);
     int16_t ww = FOOTER_STATUS[2];
