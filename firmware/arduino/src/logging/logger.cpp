@@ -3,6 +3,7 @@
 #include "log_storage.h"
 #include "log_mqtt.h"
 #include "../config.h"
+#include "../safe_strings.h"
 #include <esp_system.h>
 
 static LogBuffer* g_log_buffer = nullptr;
@@ -82,8 +83,7 @@ uint8_t Logger::registerModule(const char* name) {
         return 0;
     }
     
-    strncpy(module_names_[module_count_], name, MAX_MODULE_NAME_LENGTH - 1);
-    module_names_[module_count_][MAX_MODULE_NAME_LENGTH - 1] = '\0';
+    safe_strcpy(module_names_[module_count_], name);
     
     return module_count_++;
 }

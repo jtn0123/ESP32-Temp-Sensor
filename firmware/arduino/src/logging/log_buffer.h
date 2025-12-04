@@ -4,6 +4,32 @@
 #include <freertos/FreeRTOS.h>
 #include <freertos/semphr.h>
 
+// RAII wrapper for FreeRTOS mutex
+class MutexGuard {
+public:
+    explicit MutexGuard(SemaphoreHandle_t mutex) : mutex_(mutex), acquired_(false) {
+        if (mutex_ && xSemaphoreTake(mutex_, portMAX_DELAY) == pdTRUE) {
+            acquired_ = true;
+        }
+    }
+
+    ~MutexGuard() {
+        if (acquired_ && mutex_) {
+            xSemaphoreGive(mutex_);
+        }
+    }
+
+    bool acquired() const { return acquired_; }
+
+    // Prevent copying
+    MutexGuard(const MutexGuard&) = delete;
+    MutexGuard& operator=(const MutexGuard&) = delete;
+
+private:
+    SemaphoreHandle_t mutex_;
+    bool acquired_;
+};
+
 class LogBuffer {
 public:
     static constexpr size_t BUFFER_SIZE = 64;  // Reduced from 256 to fit in RTC memory

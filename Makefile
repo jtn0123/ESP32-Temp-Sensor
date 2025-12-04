@@ -1,6 +1,6 @@
 PY=python3
 
-.PHONY: test test-web browsers rebaseline lint lint-python lint-cpp lint-fix lint-all fw
+.PHONY: test test-web browsers rebaseline lint lint-python lint-cpp lint-fix lint-all check-banned fw
 
 test:
 	$(PY) -m pytest
@@ -15,7 +15,7 @@ browsers:
 rebaseline:
 	@echo "Rebaseline functionality temporarily disabled - use scripts directly"
 
-lint: lint-python lint-cpp
+lint: lint-python lint-cpp check-banned
 
 lint-python:
 	@echo "Running Python linters..."
@@ -25,6 +25,10 @@ lint-python:
 lint-cpp:
 	@echo "Running C++ linters..."
 	@python3 -m cpplint firmware/arduino/src/*.{h,cpp}
+
+check-banned:
+	@echo "Checking for banned C functions..."
+	@$(PY) scripts/check_banned_functions.py
 
 lint-fix:
 	@echo "Auto-fixing Python linting issues..."

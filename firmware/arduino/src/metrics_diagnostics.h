@@ -6,6 +6,22 @@
 #include <Arduino.h>
 #include "common_types.h"
 
+// Error statistics tracking (persisted in RTC memory across deep sleep)
+struct ErrorStats {
+  uint32_t mqtt_payload_truncations;
+  uint32_t rtc_memory_corruptions;
+  uint32_t sensor_read_failures;
+  uint32_t wifi_disconnects;
+  uint32_t mqtt_publish_failures;
+};
+
+// Error statistics management
+extern RTC_DATA_ATTR ErrorStats g_error_stats;
+void increment_error_stat(const char* stat_name);
+void reset_error_stats();
+void publish_error_stats();
+uint32_t get_error_stat(const char* stat_name);
+
 // Diagnostic mode management
 bool is_diagnostic_mode_active();
 void set_diagnostic_mode(bool active);

@@ -20,6 +20,7 @@
 // MQTT client management
 void mqtt_begin();
 void mqtt_set_client_id(const char* client_id);
+const char* mqtt_get_client_id();
 void mqtt_loop();
 bool mqtt_connect();
 bool mqtt_is_connected();

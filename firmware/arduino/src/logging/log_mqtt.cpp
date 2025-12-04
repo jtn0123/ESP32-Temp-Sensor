@@ -1,5 +1,6 @@
 #include "log_mqtt.h"
 #include "../mqtt_client.h"
+#include "../safe_strings.h"
 
 extern PubSubClient* mqtt_get_client();
 
@@ -33,8 +34,7 @@ void LogMQTT::end() {
 
 void LogMQTT::setClientId(const char* id) {
     if (id) {
-        strncpy(client_id_, id, sizeof(client_id_) - 1);
-        client_id_[sizeof(client_id_) - 1] = '\0';
+        safe_strcpy(client_id_, id);
     }
 }
 
@@ -48,8 +48,7 @@ bool LogMQTT::publish(const LogEntry& entry, const char* module_name) {
     
     QueuedEntry queued;
     queued.entry = entry;
-    strncpy(queued.module_name, module_name, sizeof(queued.module_name) - 1);
-    queued.module_name[sizeof(queued.module_name) - 1] = '\0';
+    safe_strcpy(queued.module_name, module_name);
     
     queue_.push(queued);
     
