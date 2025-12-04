@@ -23,10 +23,22 @@ void LogBuffer::begin() {
     }
     
     if (!wrapped_) {
+        // First boot - initialize to clean state
         head_ = 0;
         tail_ = 0;
         count_ = 0;
         overflow_count_ = 0;
+    } else {
+        // Waking from deep sleep - validate RTC memory integrity
+        // Check that indices are within bounds (could be corrupted)
+        if (head_ >= BUFFER_SIZE || tail_ >= BUFFER_SIZE || count_ > BUFFER_SIZE) {
+            Serial.println("[LogBuffer] WARN: RTC memory corruption detected, resetting");
+            head_ = 0;
+            tail_ = 0;
+            count_ = 0;
+            overflow_count_ = 0;
+            wrapped_ = false;
+        }
     }
     
     initialized_ = true;
