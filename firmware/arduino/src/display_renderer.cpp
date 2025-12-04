@@ -20,6 +20,7 @@ using namespace ui;
 #include "power.h"
 #include "common_types.h"
 #include "state_manager.h"
+#include "safe_strings.h"
 
 // External display object from main.cpp
 #if EINK_PANEL_DEPG0213BN
@@ -231,7 +232,7 @@ void full_refresh() {
       float tempF = inside.temperatureC * 9.0f / 5.0f + 32.0f;
       snprintf(in_temp, sizeof(in_temp), "%.0f", tempF);
     } else {
-      strcpy(in_temp, "--");
+      safe_strcpy(in_temp, "--");
     }
     
     // Format inside humidity
@@ -239,7 +240,7 @@ void full_refresh() {
     if (isfinite(inside.humidityPct)) {
       snprintf(in_rh, sizeof(in_rh), "%.0f", inside.humidityPct);
     } else {
-      strcpy(in_rh, "--");
+      safe_strcpy(in_rh, "--");
     }
     
     // Format outside temperature
@@ -248,7 +249,7 @@ void full_refresh() {
       float tempF = outside.temperatureC * 9.0f / 5.0f + 32.0f;
       snprintf(out_temp, sizeof(out_temp), "%.0f", tempF);
     } else {
-      strcpy(out_temp, "--");
+      safe_strcpy(out_temp, "--");
     }
     
     // Format outside humidity
@@ -256,7 +257,7 @@ void full_refresh() {
     if (outside.validHum && isfinite(outside.humidityPct)) {
       snprintf(out_rh, sizeof(out_rh), "%.0f", outside.humidityPct);
     } else {
-      strcpy(out_rh, "--");
+      safe_strcpy(out_rh, "--");
     }
     
     // Draw inside temperature (use coordinates directly from layout)

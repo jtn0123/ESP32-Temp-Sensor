@@ -138,9 +138,20 @@ inline int safe_append_format(char (&buffer)[N], const char* format, ...) {
 // Bounds-checked character search
 template<size_t N>
 inline char* safe_strchr(char (&str)[N], int c) {
-  // Ensure string is null-terminated within bounds
+  // Search for character within bounds, stopping at null or buffer end
+  for (size_t i = 0; i < N; ++i) {
+    if (str[i] == '\0') {
+      return nullptr;  // End of string, character not found
+    }
+    if (str[i] == static_cast<char>(c)) {
+      return &str[i];  // Found character
+    }
+  }
+  // Buffer not null-terminated within bounds - this is a usage error
+  // Force null-terminate and return nullptr for safety
   str[N-1] = '\0';
-  return strchr(str, c);
+  LOG_WARN("safe_strchr: buffer not null-terminated");
+  return nullptr;
 }
 
 // Safe integer to string conversion

@@ -42,19 +42,29 @@ void set_diagnostic_mode(bool active) {
 }
 
 // Check for rapid reset diagnostic trigger
+// Uses RTC memory to track reset frequency across deep sleep cycles
 bool check_rapid_reset_diagnostic_trigger() {
   // Check if we've had 3+ resets within a short time window
-  // This would require tracking reset times in RTC memory
-  // For now, simplified implementation
+  // Uses RTC-persisted boot tracking variables
   
-  static uint32_t last_reset_time = 0;
-  uint32_t now = millis();
+  constexpr uint32_t RAPID_RESET_THRESHOLD_SEC = 30;  // Rapid reset = within 30 seconds
+  constexpr uint32_t RAPID_RESET_COUNT_TRIGGER = 3;   // Trigger after 3 rapid resets
   
-  // If reset within 10 seconds of boot, consider it rapid
-  if (now < 10000) {
-    // Would need to check RTC memory for previous reset times
-    // Simplified: always return false for now
-    return false;
+  uint32_t current_time = (uint32_t)(esp_timer_get_time() / 1000000ULL);
+  
+  // Check if last boot was recent (rapid reset indicator)
+  if (rtc_last_boot_timestamp > 0) {
+    uint32_t time_since_last_boot = current_time - rtc_last_boot_timestamp;
+    
+    // Check both time-based and count-based triggers
+    bool is_rapid_boot = (time_since_last_boot < RAPID_RESET_THRESHOLD_SEC);
+    bool has_many_crashes = (rtc_crash_count >= RAPID_RESET_COUNT_TRIGGER);
+    
+    if (is_rapid_boot && has_many_crashes) {
+      LOG_WARN("Rapid reset trigger: %u crashes in %u seconds", 
+               rtc_crash_count, time_since_last_boot);
+      return true;
+    }
   }
   
   return false;
@@ -133,16 +143,29 @@ void net_time_hhmm(char* out, size_t out_size) {
 #if USE_STATUS_PIXEL
 
 void status_pixel_begin() {
+  if (g_status_pixel) return;  // Already initialized
+  
+  #ifdef STATUS_PIXEL_PIN
+  g_status_pixel = new Adafruit_NeoPixel(1, STATUS_PIXEL_PIN, NEO_GRB + NEO_KHZ800);
   if (!g_status_pixel) {
-    #ifdef STATUS_PIXEL_PIN
-    g_status_pixel = new Adafruit_NeoPixel(1, STATUS_PIXEL_PIN, NEO_GRB + NEO_KHZ800);
-    #else
-    // If no pin defined, use a default or skip
+    LOG_ERROR("Failed to allocate NeoPixel");
     return;
-    #endif
-    g_status_pixel->begin();
-    g_status_pixel->setBrightness(20);
+  }
+  g_status_pixel->begin();
+  g_status_pixel->setBrightness(20);
+  g_status_pixel->show();
+  #else
+  // No STATUS_PIXEL_PIN defined - skip initialization
+  LOG_DEBUG("Status pixel disabled - no pin defined");
+  #endif
+}
+
+void status_pixel_end() {
+  if (g_status_pixel) {
+    g_status_pixel->clear();
     g_status_pixel->show();
+    delete g_status_pixel;
+    g_status_pixel = nullptr;
   }
 }
 

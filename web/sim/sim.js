@@ -1380,6 +1380,7 @@
       
       if (content.actualBounds && GJSON.rects[regionName]) {
         const rect = GJSON.rects[regionName];
+        if (!Array.isArray(rect) || rect.length < 4) continue;
         const [rx, ry, rw, rh] = rect;
         const {x, y, width, height} = content.actualBounds;
         
