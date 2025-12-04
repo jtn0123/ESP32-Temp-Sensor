@@ -153,9 +153,12 @@ static void draw_from_spec_full_impl(uint8_t variantId) {
             if (key == "room_name")
               return String(ROOM_NAME);
             if (key == "ip") {
+              // Use static buffer to avoid heap fragmentation from String concat
+              static char ip_buf[40];
               char ip_c[32];
               net_ip_cstr(ip_c, sizeof(ip_c));
-              return String("IP ") + ip_c;
+              snprintf(ip_buf, sizeof(ip_buf), "IP %s", ip_c);
+              return String(ip_buf);
             }
             if (key == "fw_version")
               return String(FW_VERSION);
