@@ -137,37 +137,60 @@ String LogMQTT::formatEntry(const LogEntry& entry, const char* module_name) {
 void LogMQTT::subscribeToCommands() {
     PubSubClient* client = getMQTTClient();
     if (!client || !client->connected()) return;
-    
+
     String clear_topic = String(TOPIC_PREFIX) + client_id_ + TOPIC_CMD_CLEAR;
     String level_topic = String(TOPIC_PREFIX) + client_id_ + TOPIC_CMD_LEVEL;
-    
+    String filter_topic = String(TOPIC_PREFIX) + client_id_ + TOPIC_CMD_FILTER;
+
     client->subscribe(clear_topic.c_str());
     client->subscribe(level_topic.c_str());
+    client->subscribe(filter_topic.c_str());
 }
 
 void LogMQTT::handleCommand(const char* topic, const uint8_t* payload, size_t length) {
     if (!initialized_) return;
-    
+
     String topic_str(topic);
-    
+
     if (topic_str.endsWith(TOPIC_CMD_CLEAR)) {
         Logger::getInstance().clearCrashLog();
-        
+
         while (!queue_.empty()) {
             queue_.pop();
         }
-        
+
         resetCounters();
-        
+
     } else if (topic_str.endsWith(TOPIC_CMD_LEVEL)) {
         if (length > 0 && length < 10) {
             char level_str[10];
             memcpy(level_str, payload, length);
             level_str[length] = '\0';
-            
+
             LogLevel level = Logger::getInstance().stringToLevel(level_str);
             if (level != LogLevel::NONE) {
                 Logger::getInstance().setLevel(level);
+            }
+        }
+
+    } else if (topic_str.endsWith(TOPIC_CMD_FILTER)) {
+        // Handle log filter configuration
+        // Payload format: {"level":"DEBUG","modules":["MQTT","DISPLAY"],"serial":true}
+        if (length > 0 && length < 512) {
+            char config_json[512];
+            memcpy(config_json, payload, length);
+            config_json[length] = '\0';
+
+            if (Logger::getInstance().applyConfigJson(config_json)) {
+                // Publish current config as confirmation
+                char response[256];
+                Logger::getInstance().getConfigJson(response, sizeof(response));
+
+                PubSubClient* client = getMQTTClient();
+                if (client && client->connected()) {
+                    String status_topic = String(TOPIC_PREFIX) + client_id_ + TOPIC_STATUS_CONFIG;
+                    client->publish(status_topic.c_str(), response, false);
+                }
             }
         }
     }

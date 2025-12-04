@@ -13,7 +13,12 @@ except Exception:
 try:
     from dotenv import load_dotenv
     # Look for .env in project root
-    env_path = Path(__file__).parent.parent / '.env'
+    # Handle case where __file__ is not defined (e.g., when run from PlatformIO)
+    try:
+        script_dir = Path(__file__).parent
+    except NameError:
+        script_dir = Path(os.getcwd())
+    env_path = script_dir.parent / '.env'
     if env_path.exists():
         load_dotenv(env_path)
         print(f"Loaded environment variables from {env_path}")

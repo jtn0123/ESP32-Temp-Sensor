@@ -97,13 +97,16 @@ void Logger::log(LogLevel level, uint8_t module, const char* format, ...) {
 
 void Logger::logv(LogLevel level, uint8_t module, const char* format, va_list args) {
     if (level < config_.min_level) return;
-    
+
+    // Check if module is enabled
+    if (!isModuleEnabled(module)) return;
+
     LogEntry entry;
     entry.timestamp = esp_timer_get_time() / 1000;
     entry.level = level;
     entry.module_id = module;
     entry.sequence = sequence_++;
-    
+
     vsnprintf(entry.message, sizeof(entry.message), format, args);
     
     if (config_.serial_enabled) {
@@ -274,9 +277,147 @@ void Logger::outputNVS(const LogEntry& entry) {
 }
 
 void Logger::outputMQTT(const LogEntry& entry) {
-    const char* module_name = (entry.module_id < module_count_) 
-                              ? module_names_[entry.module_id] 
+    const char* module_name = (entry.module_id < module_count_)
+                              ? module_names_[entry.module_id]
                               : "UNKNOWN";
-    
+
     g_log_mqtt->publish(entry, module_name);
+}
+
+// Module filtering implementation
+void Logger::enableModule(uint8_t module_id) {
+    if (module_id < 16) {
+        config_.enabled_modules_mask |= (1 << module_id);
+    }
+}
+
+void Logger::disableModule(uint8_t module_id) {
+    if (module_id < 16) {
+        config_.enabled_modules_mask &= ~(1 << module_id);
+    }
+}
+
+void Logger::enableAllModules() {
+    config_.enabled_modules_mask = 0xFFFF;
+}
+
+void Logger::disableAllModules() {
+    config_.enabled_modules_mask = 0x0000;
+}
+
+bool Logger::isModuleEnabled(uint8_t module_id) const {
+    if (module_id >= 16) return false;
+    return (config_.enabled_modules_mask & (1 << module_id)) != 0;
+}
+
+uint8_t Logger::getModuleId(const char* name) const {
+    for (uint8_t i = 0; i < module_count_; i++) {
+        if (strcasecmp(module_names_[i], name) == 0) {
+            return i;
+        }
+    }
+    return 0xFF;  // Not found
+}
+
+const char* Logger::getModuleName(uint8_t module_id) const {
+    if (module_id < module_count_) {
+        return module_names_[module_id];
+    }
+    return "UNKNOWN";
+}
+
+// JSON configuration support
+bool Logger::applyConfigJson(const char* json) {
+    // Simple JSON parsing without ArduinoJson to avoid dependencies
+    // Format: {"level":"DEBUG","modules":["MQTT","DISPLAY"],"serial":true}
+
+    // Parse level
+    const char* level_pos = strstr(json, "\"level\"");
+    if (level_pos) {
+        const char* value_start = strchr(level_pos, ':');
+        if (value_start) {
+            value_start = strchr(value_start, '"');
+            if (value_start) {
+                value_start++;
+                const char* value_end = strchr(value_start, '"');
+                if (value_end) {
+                    char level_str[16];
+                    size_t len = value_end - value_start;
+                    if (len < sizeof(level_str)) {
+                        memcpy(level_str, value_start, len);
+                        level_str[len] = '\0';
+                        config_.min_level = stringToLevel(level_str);
+                    }
+                }
+            }
+        }
+    }
+
+    // Parse modules array
+    const char* modules_pos = strstr(json, "\"modules\"");
+    if (modules_pos) {
+        const char* array_start = strchr(modules_pos, '[');
+        const char* array_end = strchr(modules_pos, ']');
+        if (array_start && array_end) {
+            // Disable all modules first
+            disableAllModules();
+
+            // Parse each module name in the array
+            const char* pos = array_start + 1;
+            while (pos < array_end) {
+                const char* name_start = strchr(pos, '"');
+                if (!name_start || name_start >= array_end) break;
+                name_start++;
+
+                const char* name_end = strchr(name_start, '"');
+                if (!name_end || name_end >= array_end) break;
+
+                char module_name[MAX_MODULE_NAME_LENGTH];
+                size_t len = name_end - name_start;
+                if (len < sizeof(module_name)) {
+                    memcpy(module_name, name_start, len);
+                    module_name[len] = '\0';
+
+                    uint8_t module_id = getModuleId(module_name);
+                    if (module_id != 0xFF) {
+                        enableModule(module_id);
+                    }
+                }
+
+                pos = name_end + 1;
+            }
+        }
+    }
+
+    // Parse serial flag
+    const char* serial_pos = strstr(json, "\"serial\"");
+    if (serial_pos) {
+        const char* value_pos = strchr(serial_pos, ':');
+        if (value_pos) {
+            while (*value_pos == ':' || *value_pos == ' ') value_pos++;
+            config_.serial_enabled = (*value_pos == 't' || *value_pos == 'T' || *value_pos == '1');
+        }
+    }
+
+    return true;
+}
+
+void Logger::getConfigJson(char* out, size_t out_size) const {
+    // Build JSON string
+    int pos = snprintf(out, out_size, "{\"level\":\"%s\",\"serial\":%s,\"modules\":[",
+                      levelToString(config_.min_level),
+                      config_.serial_enabled ? "true" : "false");
+
+    bool first = true;
+    for (uint8_t i = 0; i < module_count_; i++) {
+        if (isModuleEnabled(i)) {
+            if (!first) {
+                pos += snprintf(out + pos, out_size - pos, ",");
+            }
+            pos += snprintf(out + pos, out_size - pos, "\"%s\"", module_names_[i]);
+            first = false;
+        }
+    }
+
+    snprintf(out + pos, out_size - pos, "]}");
 }

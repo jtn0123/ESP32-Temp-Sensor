@@ -1,0 +1,360 @@
+#include "debug_commands.h"
+#include "mqtt_client.h"
+#include "safe_strings.h"
+#include "logging/logger.h"
+#include "profiling.h"
+#include "buffer_pool.h"
+#include "crash_handler.h"
+#include "memory_tracking.h"
+#include "power.h"
+#include "feature_flags.h"
+#include "mqtt_batcher.h"
+#include "display_smart_refresh.h"
+#include <ArduinoJson.h>
+#include <esp_system.h>
+#include <esp_heap_caps.h>
+
+DebugCommands& DebugCommands::getInstance() {
+    static DebugCommands instance;
+    return instance;
+}
+
+void DebugCommands::begin() {
+    if (initialized_) return;
+
+    // Subscribe to debug command topic
+    PubSubClient* client = mqtt_get_client();
+    if (client && client->connected() && client_id_[0] != '\0') {
+        String debug_topic = String("espsensor/") + client_id_ + TOPIC_CMD_DEBUG;
+        client->subscribe(debug_topic.c_str());
+    }
+
+    initialized_ = true;
+}
+
+void DebugCommands::setClientId(const char* client_id) {
+    if (client_id) {
+        safe_strcpy(client_id_, client_id);
+    }
+}
+
+void DebugCommands::handleCommand(const char* topic, const uint8_t* payload, size_t length) {
+    if (!initialized_) return;
+
+    PubSubClient* client = mqtt_get_client();
+    if (!client || !client->connected()) return;
+
+    // Parse JSON command
+    JsonDocument doc;
+    DeserializationError error = deserializeJson(doc, payload, length);
+
+    if (error) {
+        // Invalid JSON
+        char response[128];
+        snprintf(response, sizeof(response),
+                "{\"error\":\"Invalid JSON\",\"code\":\"%s\"}",
+                error.c_str());
+        publishResponse(client, response);
+        return;
+    }
+
+    const char* cmd = doc["cmd"];
+    if (!cmd) {
+        publishResponse(client, "{\"error\":\"Missing 'cmd' field\"}");
+        return;
+    }
+
+    // Dispatch to appropriate handler
+    if (strcmp(cmd, "heap") == 0) {
+        cmdHeap(client);
+    } else if (strcmp(cmd, "state") == 0) {
+        cmdState(client);
+    } else if (strcmp(cmd, "config") == 0) {
+        cmdConfig(client);
+    } else if (strcmp(cmd, "restart") == 0) {
+        cmdRestart(client);
+    } else if (strcmp(cmd, "modules") == 0) {
+        cmdModules(client);
+    } else if (strcmp(cmd, "uptime") == 0) {
+        cmdUptime(client);
+    } else if (strcmp(cmd, "network") == 0) {
+        cmdNetwork(client);
+    } else if (strcmp(cmd, "sensors") == 0) {
+        cmdSensors(client);
+    } else if (strcmp(cmd, "perf") == 0) {
+        cmdPerf(client);
+    } else if (strcmp(cmd, "perf_reset") == 0) {
+        cmdPerfReset(client);
+    } else if (strcmp(cmd, "bufpool") == 0) {
+        cmdBufPool(client);
+    } else if (strcmp(cmd, "crash") == 0) {
+        cmdCrash(client);
+    } else if (strcmp(cmd, "crash_clear") == 0) {
+        cmdCrashClear(client);
+    } else if (strcmp(cmd, "memory") == 0) {
+        cmdMemory(client);
+    } else if (strcmp(cmd, "memory_reset") == 0) {
+        cmdMemoryReset(client);
+    } else if (strcmp(cmd, "sleep") == 0) {
+        cmdSleep(client);
+    } else if (strcmp(cmd, "features") == 0) {
+        cmdFeatures(client);
+    } else if (strcmp(cmd, "mqtt_batch") == 0) {
+        cmdMqttBatch(client);
+    } else if (strcmp(cmd, "smart_refresh") == 0) {
+        cmdSmartRefresh(client);
+    } else {
+        char response[128];
+        snprintf(response, sizeof(response),
+                "{\"error\":\"Unknown command '%s'\"}", cmd);
+        publishResponse(client, response);
+    }
+}
+
+void DebugCommands::cmdHeap(PubSubClient* client) {
+    uint32_t free_heap = esp_get_free_heap_size();
+    uint32_t min_heap = esp_get_minimum_free_heap_size();
+    uint32_t largest_block = heap_caps_get_largest_free_block(MALLOC_CAP_DEFAULT);
+
+    // Calculate fragmentation percentage
+    float fragmentation = 0.0f;
+    if (free_heap > 0) {
+        fragmentation = 100.0f * (1.0f - (float)largest_block / (float)free_heap);
+    }
+
+    char response[256];
+    snprintf(response, sizeof(response),
+            "{\"cmd\":\"heap\",\"free\":%u,\"min\":%u,\"largest\":%u,\"frag\":%.1f}",
+            free_heap, min_heap, largest_block, fragmentation);
+
+    publishResponse(client, response);
+}
+
+void DebugCommands::cmdState(PubSubClient* client) {
+    // Get outside readings from MQTT
+    OutsideReadings outside = mqtt_get_outside_readings();
+
+    char response[384];
+    snprintf(response, sizeof(response),
+            "{\"cmd\":\"state\",\"outside\":{\"temp_c\":%.1f,\"humidity\":%.0f,\"valid_temp\":%s,\"valid_humidity\":%s}}",
+            outside.temperatureC,
+            outside.humidityPct,
+            outside.validTemp ? "true" : "false",
+            outside.validHum ? "true" : "false");
+
+    publishResponse(client, response);
+}
+
+void DebugCommands::cmdConfig(PubSubClient* client) {
+    // Get logging configuration
+    char log_config[256];
+    Logger::getInstance().getConfigJson(log_config, sizeof(log_config));
+
+    char response[384];
+    snprintf(response, sizeof(response),
+            "{\"cmd\":\"config\",\"logging\":%s}",
+            log_config);
+
+    publishResponse(client, response);
+}
+
+void DebugCommands::cmdRestart(PubSubClient* client) {
+    publishResponse(client, "{\"cmd\":\"restart\",\"status\":\"restarting\"}");
+
+    // Allow time for message to be sent
+    delay(100);
+
+    // Perform soft restart
+    esp_restart();
+}
+
+void DebugCommands::cmdModules(PubSubClient* client) {
+    Logger& logger = Logger::getInstance();
+    uint8_t count = logger.getModuleCount();
+
+    char response[512];
+    int pos = snprintf(response, sizeof(response), "{\"cmd\":\"modules\",\"count\":%u,\"modules\":[", count);
+
+    for (uint8_t i = 0; i < count; i++) {
+        if (i > 0) {
+            pos += snprintf(response + pos, sizeof(response) - pos, ",");
+        }
+
+        const char* name = logger.getModuleName(i);
+        bool enabled = logger.isModuleEnabled(i);
+
+        pos += snprintf(response + pos, sizeof(response) - pos,
+                       "{\"id\":%u,\"name\":\"%s\",\"enabled\":%s}",
+                       i, name, enabled ? "true" : "false");
+    }
+
+    snprintf(response + pos, sizeof(response) - pos, "]}");
+    publishResponse(client, response);
+}
+
+void DebugCommands::cmdUptime(PubSubClient* client) {
+    uint32_t uptime_ms = millis();
+    uint32_t uptime_sec = uptime_ms / 1000;
+
+    char response[128];
+    snprintf(response, sizeof(response),
+            "{\"cmd\":\"uptime\",\"ms\":%u,\"sec\":%u}",
+            uptime_ms, uptime_sec);
+
+    publishResponse(client, response);
+}
+
+void DebugCommands::cmdNetwork(PubSubClient* client) {
+    bool wifi_connected = (WiFi.status() == WL_CONNECTED);
+    int rssi = wifi_connected ? WiFi.RSSI() : 0;
+    bool mqtt_connected = mqtt_is_connected();
+
+    char response[256];
+    snprintf(response, sizeof(response),
+            "{\"cmd\":\"network\",\"wifi\":{\"connected\":%s,\"rssi\":%d},\"mqtt\":{\"connected\":%s}}",
+            wifi_connected ? "true" : "false",
+            rssi,
+            mqtt_connected ? "true" : "false");
+
+    publishResponse(client, response);
+}
+
+void DebugCommands::cmdSensors(PubSubClient* client) {
+    // This would require access to sensor data
+    // For now, just return a placeholder
+    publishResponse(client, "{\"cmd\":\"sensors\",\"status\":\"not_implemented\"}");
+}
+
+void DebugCommands::cmdPerf(PubSubClient* client) {
+    char response[1024];
+    PerformanceMonitor::getInstance().formatJson(response, sizeof(response));
+    publishResponse(client, response);
+}
+
+void DebugCommands::cmdPerfReset(PubSubClient* client) {
+    PerformanceMonitor::getInstance().reset();
+    publishResponse(client, "{\"cmd\":\"perf_reset\",\"status\":\"ok\"}");
+}
+
+void DebugCommands::cmdBufPool(PubSubClient* client) {
+    char stats[256];
+    BufferPool::getInstance().formatStatsJson(stats, sizeof(stats));
+
+    char response[384];
+    snprintf(response, sizeof(response), "{\"cmd\":\"bufpool\",%s}", stats + 1);  // Skip opening brace
+    publishResponse(client, response);
+}
+
+void DebugCommands::cmdCrash(PubSubClient* client) {
+    char report[512];
+    CrashHandler::getInstance().formatCrashReport(report, sizeof(report));
+    publishResponse(client, report);
+}
+
+void DebugCommands::cmdCrashClear(PubSubClient* client) {
+    CrashHandler::getInstance().clearCrashInfo();
+    publishResponse(client, "{\"cmd\":\"crash_clear\",\"status\":\"ok\"}");
+}
+
+void DebugCommands::cmdMemory(PubSubClient* client) {
+    // Update tracking before reading
+    MemoryTracker::getInstance().update();
+
+    char stats[384];
+    MemoryTracker::getInstance().formatStatsJson(stats, sizeof(stats));
+
+    char response[512];
+    snprintf(response, sizeof(response), "{\"cmd\":\"memory\",%s}", stats + 1);  // Skip opening brace
+    publishResponse(client, response);
+}
+
+void DebugCommands::cmdMemoryReset(PubSubClient* client) {
+    MemoryTracker::getInstance().resetAll();
+    publishResponse(client, "{\"cmd\":\"memory_reset\",\"status\":\"ok\"}");
+}
+
+void DebugCommands::cmdSleep(PubSubClient* client) {
+    SleepConfig config = get_default_sleep_config();
+    uint32_t optimal = calculate_optimal_sleep_interval(config);
+    BatteryStatus bs = read_battery_status();
+
+    char response[384];
+    snprintf(response, sizeof(response),
+            "{\"cmd\":\"sleep\","
+            "\"optimal_sec\":%u,"
+            "\"battery_pct\":%d,"
+            "\"normal\":%u,"
+            "\"low_battery\":%u,"
+            "\"critical\":%u,"
+            "\"rapid_update\":%u,"
+            "\"thresholds\":{\"low\":%u,\"critical\":%u}}",
+            optimal, bs.percent,
+            config.normal_interval_sec,
+            config.low_battery_interval_sec,
+            config.critical_interval_sec,
+            config.rapid_update_interval_sec,
+            config.low_battery_threshold,
+            config.critical_battery_threshold);
+    publishResponse(client, response);
+}
+
+void DebugCommands::cmdFeatures(PubSubClient* client) {
+    char response[512];
+    snprintf(response, sizeof(response),
+            "{\"cmd\":\"features\","
+            "\"ha_discovery\":%d,"
+            "\"diagnostic_mode\":%d,"
+            "\"status_pixel\":%d,"
+            "\"pressure_sensor\":%d,"
+            "\"outdoor_weather\":%d,"
+            "\"battery_monitor\":%d,"
+            "\"debug_commands\":%d,"
+            "\"profiling\":%d,"
+            "\"memory_tracking\":%d,"
+            "\"crash_handler\":%d,"
+            "\"buffer_pool\":%d}",
+            FEATURE_HA_DISCOVERY,
+            FEATURE_DIAGNOSTIC_MODE,
+            FEATURE_STATUS_PIXEL,
+            FEATURE_PRESSURE_SENSOR,
+            FEATURE_OUTDOOR_WEATHER,
+            FEATURE_BATTERY_MONITOR,
+            FEATURE_DEBUG_COMMANDS,
+            FEATURE_PROFILING,
+            FEATURE_MEMORY_TRACKING,
+            FEATURE_CRASH_HANDLER,
+            FEATURE_BUFFER_POOL);
+    publishResponse(client, response);
+}
+
+void DebugCommands::cmdMqttBatch(PubSubClient* client) {
+    char stats[192];
+    MQTTBatcher::getInstance().formatStatsJson(stats, sizeof(stats));
+
+    char response[256];
+    snprintf(response, sizeof(response), "{\"cmd\":\"mqtt_batch\",%s}", stats + 1);
+    publishResponse(client, response);
+}
+
+void DebugCommands::cmdSmartRefresh(PubSubClient* client) {
+    char stats[128];
+    SmartRefresh::getInstance().formatStatsJson(stats, sizeof(stats));
+
+    char response[256];
+    snprintf(response, sizeof(response),
+            "{\"cmd\":\"smart_refresh\",\"dirty_mask\":\"0x%04X\",%s}",
+            SmartRefresh::getInstance().getDirtyMask(), stats + 1);
+    publishResponse(client, response);
+}
+
+void DebugCommands::publishResponse(PubSubClient* client, const char* json) {
+    if (!client || !client->connected()) return;
+
+    String topic = String("espsensor/") + client_id_ + TOPIC_DEBUG_RESPONSE;
+    client->publish(topic.c_str(), json, false);
+}
+
+// C linkage for MQTT callback
+extern "C" void debug_commands_handle(const char* topic, const uint8_t* payload, size_t length) {
+    DebugCommands::getInstance().handleCommand(topic, payload, length);
+}

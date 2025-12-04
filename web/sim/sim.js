@@ -2674,6 +2674,15 @@
       window.layoutEditor.drawOverlay(ctx);
     }
 
+    // Draw debug overlay last (on top of everything)
+    if (typeof window !== 'undefined' && window.DebugOverlay && window.DebugOverlay.enabled) {
+      window.DebugOverlay.drawRegionBounds(ctx);
+      if (window.__renderTimings) {
+        window.DebugOverlay.drawRenderTiming(ctx, window.__renderTimings);
+      }
+      window.DebugOverlay.highlightDataFlow(ctx);
+    }
+
     // Leave some tokens for tests to find in sim.js
     // weather-sunny weather-partly-cloudy weather-cloudy weather-fog
     // weather-pouring weather-snowy weather-lightning weather-night
@@ -2721,10 +2730,17 @@
       ctx.putImageData(img,0,0);
       applyOneBitThreshold();
     }
-    // Update status UI
+    // Update status UI and timing data
     try {
       const renderMs = (typeof performance !== 'undefined' && performance.now) ? (performance.now() - __start) : (Date.now() - window.__lastDrawAt);
       window.__lastRenderMs = renderMs;
+
+      // Store detailed timing for debug overlay
+      if (!window.__renderTimings) window.__renderTimings = {};
+      window.__renderTimings.lastFrameMs = renderMs;
+      window.__renderTimings.timestamp = Date.now();
+      window.__renderTimings.fps = renderMs > 0 ? (1000 / renderMs) : 0;
+
       if (typeof updateStatusUI === 'function') updateStatusUI(renderMs);
     } catch (e) {}
   }
@@ -3530,6 +3546,132 @@ Keyboard Shortcuts:
       wire('validationPanel');
     }catch(e){}
   })();
+
+  // Debug overlay system for visual debugging
+  const DebugOverlay = {
+    enabled: false,
+    showBounds: true,
+    showLabels: true,
+    showTiming: false,
+    highlightData: null,
+
+    toggle() {
+      this.enabled = !this.enabled;
+      // Sync with UI checkbox if it exists
+      const checkbox = document.getElementById('debugOverlayEnabled');
+      if (checkbox) checkbox.checked = this.enabled;
+      // Enable/disable dependent controls
+      const boundsCheckbox = document.getElementById('debugOverlayBounds');
+      const timingCheckbox = document.getElementById('debugOverlayTiming');
+      const highlightSelect = document.getElementById('debugOverlayHighlight');
+      const infoDiv = document.getElementById('debugOverlayInfo');
+      if (boundsCheckbox) boundsCheckbox.disabled = !this.enabled;
+      if (timingCheckbox) timingCheckbox.disabled = !this.enabled;
+      if (highlightSelect) highlightSelect.disabled = !this.enabled;
+      if (infoDiv) infoDiv.style.display = this.enabled ? 'block' : 'none';
+      // Redraw
+      if (window.draw && window.lastData) {
+        window.draw(window.lastData);
+      }
+      console.log(`Debug overlay: ${this.enabled ? 'ON' : 'OFF'}`);
+    },
+
+    // Draw region boundaries with labels
+    drawRegionBounds(ctx) {
+      if (!this.enabled || !this.showBounds || !window.GJSON?.rects) return;
+
+      ctx.save();
+      ctx.strokeStyle = 'rgba(255, 0, 0, 0.5)';
+      ctx.fillStyle = 'rgba(255, 0, 0, 0.7)';
+      ctx.font = '8px monospace';
+      ctx.lineWidth = 1;
+
+      for (const [name, rect] of Object.entries(window.GJSON.rects)) {
+        if (!rect || rect.length < 4) continue;
+        const [x, y, w, h] = rect;
+
+        // Draw rectangle
+        ctx.strokeRect(x + 0.5, y + 0.5, w - 1, h - 1);
+
+        // Draw label if enabled
+        if (this.showLabels) {
+          const shortName = name.replace(/^RECT_/, '').substring(0, 12);
+          ctx.fillText(shortName, x + 2, y + 8);
+        }
+      }
+
+      ctx.restore();
+    },
+
+    // Show render timing per region
+    drawRenderTiming(ctx, timings) {
+      if (!this.enabled || !this.showTiming || !timings) return;
+
+      ctx.save();
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+      ctx.fillRect(0, 0, 150, Object.keys(timings).length * 10 + 10);
+
+      ctx.fillStyle = '#0f0';
+      ctx.font = '8px monospace';
+
+      let y = 10;
+      for (const [name, ms] of Object.entries(timings)) {
+        const shortName = name.substring(0, 12);
+        ctx.fillText(`${shortName}: ${ms.toFixed(1)}ms`, 2, y);
+        y += 10;
+      }
+
+      ctx.restore();
+    },
+
+    // Highlight data flow for a specific field
+    highlightDataFlow(ctx, fieldName) {
+      if (!this.enabled || !this.highlightData) return;
+
+      // Highlight regions based on field name (comprehensive mapping)
+      const fieldRegionMap = {
+        'room_name': ['RECT_HEADER_NAME'],
+        'inside_temp': ['RECT_INSIDE_TEMP_F'],
+        'outside_temp': ['RECT_OUTSIDE_TEMP_F'],
+        'humidity': ['RECT_INSIDE_RH', 'RECT_OUTSIDE_RH'],
+        'pressure': ['RECT_PRESS_HPA'],
+        'weather': ['RECT_WEATHER_ICON', 'RECT_WEATHER'],
+        'battery': ['RECT_BATT_LEVEL', 'RECT_BATT_VOLT'],
+        'time': ['RECT_TIME']
+      };
+
+      const regions = fieldRegionMap[this.highlightData] || [];
+      if (regions.length === 0) return;
+
+      ctx.save();
+      ctx.strokeStyle = '#0ff';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([5, 5]);
+
+      for (const regionName of regions) {
+        const rect = window.GJSON?.rects?.[regionName];
+        if (rect && rect.length >= 4) {
+          ctx.strokeRect(rect[0], rect[1], rect[2], rect[3]);
+        }
+      }
+
+      ctx.restore();
+    }
+  };
+
+  // Keyboard shortcut: Ctrl+Shift+D toggles debug overlay
+  document.addEventListener('keydown', (e) => {
+    if (e.ctrlKey && e.shiftKey && e.key === 'D') {
+      e.preventDefault();
+      DebugOverlay.toggle();
+    }
+  });
+
+  // Export for global access
+  window.DebugOverlay = DebugOverlay;
+
+  // Initialize render timings storage
+  window.__renderTimings = {};
 
   // Wait for DOM to be ready before initializing
   if (document.readyState === 'loading') {
