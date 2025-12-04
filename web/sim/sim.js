@@ -1688,6 +1688,11 @@
     WIDTH = (gj.canvas && gj.canvas.w) || WIDTH;
     HEIGHT = (gj.canvas && gj.canvas.h) || HEIGHT;
     const R = gj.rects;
+    
+    // Validate rects object exists before accessing properties
+    if (!R || typeof R !== 'object') {
+      throw new Error('Geometry file missing rects object');
+    }
 
     // Apply all regions (no fallbacks - fail if missing)
     HEADER_NAME = R.HEADER_NAME;
