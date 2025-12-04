@@ -2292,10 +2292,8 @@
               const s = raw.replace(/\{([^}]+)\}/g, (_,k)=>String(data[k]||''));
               ctx.font = `${weight} ${fpx}px ${FONT_STACK}`; ctx.textBaseline='top';
               const tw = ctx.measureText(s).width;
-              // Left-align FOOTER_WEATHER; center others
-              const x = (op.rect === 'FOOTER_WEATHER')
-                ? (r[0] + 2)
-                : (r[0] + Math.max(0, Math.floor((r[2]-tw)/2)));
+              // Center text horizontally in rect (matches firmware behavior)
+              const x = r[0] + Math.max(0, Math.floor((r[2]-tw)/2));
               const yTop = (op.yOffset? (r[1]+op.yOffset) : r[1]);
               text(x, yTop, s, fpx, weight, op.rect);
               if (raw.includes('IP ')){

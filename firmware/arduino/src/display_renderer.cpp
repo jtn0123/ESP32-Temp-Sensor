@@ -318,15 +318,6 @@ void full_refresh() {
     // Draw outside pressure if available (note: OutsideReadings doesn't have pressure field)
     // This would need to be added to the OutsideReadings struct if needed
 
-    // Draw weather condition text if available
-    if (outside.validWeather && outside.weather[0]) {
-      char short_condition[24];
-      make_short_condition_cstr(outside.weather, short_condition, sizeof(short_condition));
-      sr.hasContentChanged(5, short_condition); // Track weather changes
-      display.setCursor(FOOTER_WEATHER[0], FOOTER_WEATHER[1] + FOOTER_WEATHER[3] - 4);
-      display.print(short_condition);
-    }
-    
     // Draw wind speed if available (convert from m/s to mph)
     if (outside.validWind && isfinite(outside.windMps)) {
       char wind_str[12];
@@ -336,20 +327,24 @@ void full_refresh() {
       display.print(wind_str);
     }
     
-    // Draw weather icon
+    // Draw weather icon and text
     if (outside.validWeather && outside.weather[0]) {
+      // Draw icon in WEATHER_ICON region
       draw_weather_icon_region_at(WEATHER_ICON[0], WEATHER_ICON[1],
                                   WEATHER_ICON[2], WEATHER_ICON[3], outside.weather);
       
-      // Draw full weather text in FOOTER_WEATHER region
+      // Draw weather text centered in FOOTER_WEATHER region (y=109)
+      // This matches the simulator's ui_spec.json layout
+      char short_condition[24];
+      make_short_condition_cstr(outside.weather, short_condition, sizeof(short_condition));
+      sr.hasContentChanged(5, short_condition); // Track weather changes
       display.setTextColor(GxEPD_BLACK);
       display.setTextSize(1);
-      // Center the weather text in the FOOTER_WEATHER region
-      int16_t tw = text_width_default_font(outside.weather, 1);
+      int16_t tw = text_width_default_font(short_condition, 1);
       int16_t tx = FOOTER_WEATHER[0] + (FOOTER_WEATHER[2] - tw) / 2;
-      int16_t ty = FOOTER_WEATHER[1] + FOOTER_WEATHER[3] / 2 + 3;
+      int16_t ty = FOOTER_WEATHER[1] + 19; // y=90+19=109, matches ui_spec.json
       display.setCursor(tx, ty);
-      display.print(outside.weather);
+      display.print(short_condition);
     }
     
     // Draw battery status and IP

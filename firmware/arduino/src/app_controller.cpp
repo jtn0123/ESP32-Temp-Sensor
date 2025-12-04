@@ -158,6 +158,8 @@ void app_setup() {
   // Use new exponential backoff connection
   if (!wifi_connect_with_exponential_backoff(3, 1000)) {  // 3 attempts, 1s initial delay
     Serial.println("[BOOT-3] WiFi connection failed - continuing anyway");
+    // Set time from compile timestamp as fallback (better than epoch)
+    wifi_set_time_from_compile();
     show_boot_stage(5);  // Purple for error
   } else {
     Serial.printf("[BOOT-4] WiFi connected - IP: %s, RSSI: %d\n", 

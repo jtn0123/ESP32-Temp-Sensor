@@ -3,9 +3,15 @@
 #include "generated_config.h"
 #include "config.h"
 #include "profiling.h"
+#include <time.h>
+#include <sys/time.h>
 
 // Static storage for provisioning
 static Preferences g_wifi_prefs;
+
+// Track if time has been synced (persists in RTC during deep sleep)
+RTC_DATA_ATTR static bool g_time_synced = false;
+RTC_DATA_ATTR static uint32_t g_last_ntp_sync_timestamp = 0;
 
 // WiFi connection state tracking
 static WiFiConnectionState g_wifi_state = WIFI_STATE_IDLE;
@@ -68,6 +74,10 @@ bool wifi_connect_with_timeout(uint32_t timeout_ms) {
     g_wifi_state = WIFI_STATE_CONNECTED;
     Serial.printf("[WiFi] Connected! IP: %s, RSSI: %d\n", 
                   WiFi.localIP().toString().c_str(), WiFi.RSSI());
+    
+    // Sync time via NTP (only if not already synced this session)
+    wifi_sync_time_ntp();
+    
     return true;
   } else {
     g_wifi_state = WIFI_STATE_FAILED;
@@ -201,3 +211,128 @@ bool wifi_is_provisioning_active() {
   return false;
 }
 #endif
+
+// ============================================================================
+// Time Sync Functions
+// ============================================================================
+
+// Parse compile-time __DATE__ and __TIME__ into a tm struct
+// __DATE__ format: "Dec  4 2025"
+// __TIME__ format: "10:32:15"
+static bool parse_compile_time(struct tm* tm_out) {
+  static const char* months[] = {"Jan", "Feb", "Mar", "Apr", "May", "Jun",
+                                  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
+  
+  char month_str[4];
+  int day, year, hour, minute, second;
+  
+  // Parse __DATE__
+  if (sscanf(__DATE__, "%3s %d %d", month_str, &day, &year) != 3) {
+    return false;
+  }
+  
+  // Parse __TIME__
+  if (sscanf(__TIME__, "%d:%d:%d", &hour, &minute, &second) != 3) {
+    return false;
+  }
+  
+  // Find month index
+  int month = -1;
+  for (int i = 0; i < 12; i++) {
+    if (strcmp(month_str, months[i]) == 0) {
+      month = i;
+      break;
+    }
+  }
+  if (month < 0) return false;
+  
+  // Fill tm struct
+  tm_out->tm_year = year - 1900;  // Years since 1900
+  tm_out->tm_mon = month;          // 0-11
+  tm_out->tm_mday = day;
+  tm_out->tm_hour = hour;
+  tm_out->tm_min = minute;
+  tm_out->tm_sec = second;
+  tm_out->tm_isdst = -1;           // Let system determine DST
+  
+  return true;
+}
+
+void wifi_set_time_from_compile() {
+  // Only set if time is clearly invalid (before 2024)
+  time_t now = time(nullptr);
+  struct tm tm_check;
+  localtime_r(&now, &tm_check);
+  
+  if (tm_check.tm_year >= 124) {  // 2024 or later - time already set
+    Serial.println("[Time] RTC already has valid time, skipping compile-time fallback");
+    return;
+  }
+  
+  // Parse compile timestamp
+  struct tm compile_tm = {};
+  if (!parse_compile_time(&compile_tm)) {
+    Serial.println("[Time] Failed to parse compile time");
+    return;
+  }
+  
+  // Convert to time_t and set system time
+  time_t compile_time = mktime(&compile_tm);
+  if (compile_time == (time_t)-1) {
+    Serial.println("[Time] Failed to convert compile time");
+    return;
+  }
+  
+  struct timeval tv = { .tv_sec = compile_time, .tv_usec = 0 };
+  settimeofday(&tv, nullptr);
+  
+  Serial.printf("[Time] Set to compile time: %s", asctime(&compile_tm));
+}
+
+void wifi_sync_time_ntp() {
+  // Skip if already synced this boot cycle and time looks valid
+  time_t now = time(nullptr);
+  struct tm tm_check;
+  localtime_r(&now, &tm_check);
+  
+  if (g_time_synced && tm_check.tm_year >= 124) {
+    Serial.println("[Time] Already synced via NTP this session");
+    return;
+  }
+  
+  Serial.println("[Time] Syncing via NTP...");
+  
+  // Configure timezone (EST/EDT - adjust for your location)
+  // Format: "STD+offset" or "STD+offset DST" 
+  // EST5EDT = Eastern Standard Time, 5 hours behind UTC, with DST
+  configTzTime("EST5EDT,M3.2.0,M11.1.0", "pool.ntp.org", "time.nist.gov", "time.google.com");
+  
+  // Wait for time sync (max 5 seconds to not delay boot too much)
+  uint32_t start = millis();
+  const uint32_t NTP_TIMEOUT_MS = 5000;
+  
+  while (time(nullptr) < 1700000000 && (millis() - start) < NTP_TIMEOUT_MS) {
+    delay(100);
+  }
+  
+  now = time(nullptr);
+  if (now > 1700000000) {  // After Nov 2023 = valid
+    g_time_synced = true;
+    g_last_ntp_sync_timestamp = static_cast<uint32_t>(now);
+    
+    struct tm tm_now;
+    localtime_r(&now, &tm_now);
+    Serial.printf("[Time] NTP sync successful: %02d:%02d:%02d\n", 
+                  tm_now.tm_hour, tm_now.tm_min, tm_now.tm_sec);
+  } else {
+    Serial.println("[Time] NTP sync failed, using existing time");
+  }
+}
+
+bool wifi_is_time_synced() {
+  return g_time_synced;
+}
+
+uint32_t wifi_get_last_ntp_sync() {
+  return g_last_ntp_sync_timestamp;
+}
