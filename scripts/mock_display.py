@@ -139,7 +139,7 @@ def draw_layout(draw: ImageDraw.ImageDraw, data: dict):
         return fallback_xywh
 
     # Fallback coords updated to match ui_spec.json (format: x, y, x+w, y+h)
-    _HEADER_NAME = R("HEADER_NAME", (6, 2, 6 + 160, 2 + 14))
+    _HEADER_NAME = R("HEADER_NAME", (6, 2, 6 + 90, 2 + 14))
     # Use HEADER_TIME_CENTER (current layout) with correct fallback coords
     HEADER_TIME = R("HEADER_TIME_CENTER", (100, 2, 100 + 50, 2 + 14))
 
