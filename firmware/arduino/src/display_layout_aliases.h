@@ -4,12 +4,21 @@
 
 #include "display_layout.h"
 
-// display_layout.h defines the canonical rectangle names:
-//   HEADER_NAME, HEADER_VERSION, HEADER_TIME_CENTER
-//   INSIDE_TEMP, INSIDE_HUMIDITY, INSIDE_PRESSURE
-//   OUT_TEMP, OUT_PRESSURE, OUT_HUMIDITY, OUT_WIND
-//   WEATHER_ICON, FOOTER_STATUS, FOOTER_WEATHER
-//
-// Additional aliases are defined in display_renderer.h for legacy code
+// display_layout.h defines the canonical rectangle names with RECT_ prefix
+// These aliases remove the RECT_ prefix for backward compatibility
 
+// Main region aliases - map from non-RECT_ names to RECT_ prefixed names
+#define HEADER_NAME RECT_HEADER_NAME
+#define HEADER_VERSION RECT_HEADER_VERSION
+#define HEADER_TIME_CENTER RECT_HEADER_TIME_CENTER
+#define INSIDE_TEMP RECT_INSIDE_TEMP
+#define INSIDE_HUMIDITY RECT_INSIDE_HUMIDITY
+#define INSIDE_PRESSURE RECT_INSIDE_PRESSURE
+#define OUT_TEMP RECT_OUT_TEMP
+#define OUT_PRESSURE RECT_OUT_PRESSURE
+#define OUT_HUMIDITY RECT_OUT_HUMIDITY
+#define OUT_WIND RECT_OUT_WIND
+#define WEATHER_ICON RECT_WEATHER_ICON
+#define FOOTER_STATUS RECT_FOOTER_STATUS
+#define FOOTER_WEATHER RECT_FOOTER_WEATHER
 

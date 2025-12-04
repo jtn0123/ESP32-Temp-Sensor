@@ -11,7 +11,7 @@ const UiOpHeader kOps_chrome[] = {
     { OP_LINE, 255, 0, 0, 0, 0, 0, 121, NULL, NULL },
     { OP_LINE, 255, 0, 0, 249, 0, 249, 121, NULL, NULL },
     { OP_LINE, 255, 0, 0, 125, 14, 125, 121, NULL, NULL },
-    { OP_LINE, 255, 0, 0, 1, 80, 249, 80, NULL, NULL },
+    { OP_LINE, 255, 0, 0, 1, 84, 249, 84, NULL, NULL },
 };
 const int kOps_chrome_count = sizeof(kOps_chrome)/sizeof(kOps_chrome[0]);
 
@@ -49,10 +49,10 @@ const UiOpHeader kOps_outside[] = {
 const int kOps_outside_count = sizeof(kOps_outside)/sizeof(kOps_outside[0]);
 
 const UiOpHeader kOps_footer_split[] = {
-    { OP_BATTERYGLYPH, 255, 0, 0, 5, 89, 16, 8, "battery_percent", NULL },
-    { OP_TEXT, 255, 2, 0, 26, 82, 0, 0, "Batt {battery_voltage:.2f}V {battery_percent}%", NULL },
-    { OP_TEXT, 255, 2, 0, 26, 94, 0, 0, "~{days}d", NULL },
-    { OP_TEXT, 0, 2, 2, 0, 16, 0, 0, "IP {ip}", NULL },
+    { OP_BATTERYGLYPH, 255, 0, 0, 8, 87, 13, 7, "battery_percent", NULL },
+    { OP_TEXT, 255, 2, 0, 27, 87, 0, 0, "{battery_voltage:.2f}V {battery_percent}%", NULL },
+    { OP_TEXT, 255, 2, 0, 8, 98, 0, 0, "~{days}d", NULL },
+    { OP_TEXT, 0, 2, 2, 0, 19, 0, 0, "IP {ip}", NULL },
     { OP_TEXTCENTEREDIN, 1, 2, 2, 11, 0, 0, 0, "{weather}", NULL },
 };
 const int kOps_footer_split_count = sizeof(kOps_footer_split)/sizeof(kOps_footer_split[0]);

@@ -246,11 +246,11 @@
         "op": "line",
         "from": [
           1,
-          80
+          84
         ],
         "to": [
           249,
-          80
+          84
         ]
       }
     ],
@@ -390,23 +390,23 @@
     "footer_split": [
       {
         "op": "batteryGlyph",
-        "x": 5,
-        "y": 89,
-        "w": 16,
-        "h": 8,
+        "x": 8,
+        "y": 87,
+        "w": 13,
+        "h": 7,
         "percent": "{battery_percent}"
       },
       {
         "op": "text",
-        "x": 26,
-        "y": 82,
+        "x": 27,
+        "y": 87,
         "font": "small",
-        "text": "Batt {battery_voltage:.2f}V {battery_percent}%"
+        "text": "{battery_voltage:.2f}V {battery_percent}%"
       },
       {
         "op": "text",
-        "x": 26,
-        "y": 94,
+        "x": 8,
+        "y": 98,
         "font": "small",
         "text": "~{days}d"
       },
@@ -415,7 +415,7 @@
         "rect": "FOOTER_STATUS",
         "font": "small",
         "align": "center",
-        "y": 16,
+        "y": 19,
         "text": "IP {ip}"
       },
       {
