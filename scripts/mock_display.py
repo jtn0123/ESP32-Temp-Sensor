@@ -138,22 +138,30 @@ def draw_layout(draw: ImageDraw.ImageDraw, data: dict):
             return (x, y, x + w, y + h)
         return fallback_xywh
 
+    # Fallback coords updated to match ui_spec.json (format: x, y, x+w, y+h)
     _HEADER_NAME = R("HEADER_NAME", (6, 2, 6 + 160, 2 + 14))
     # Use HEADER_TIME_CENTER (current layout) with correct fallback coords
     HEADER_TIME = R("HEADER_TIME_CENTER", (100, 2, 100 + 50, 2 + 14))
 
-    INSIDE_TEMP = R("INSIDE_TEMP", (6, 36, 6 + 118, 36 + 28))
-    INSIDE_RH = R("INSIDE_RH", (6, 66, 6 + 118, 66 + 14))
-    _INSIDE_TIME = R("INSIDE_TIME", (6, 82, 6 + 118, 82 + 12))
+    # Updated to match current geometry: y=34, h=26
+    INSIDE_TEMP = R("INSIDE_TEMP", (6, 34, 6 + 118, 34 + 26))
+    # Renamed from INSIDE_RH, updated coords: y=60, h=10
+    INSIDE_RH = R("INSIDE_HUMIDITY", (6, 60, 6 + 118, 60 + 10))
+    # Renamed from INSIDE_TIME to INSIDE_PRESSURE: y=70, h=10
+    _INSIDE_PRESSURE = R("INSIDE_PRESSURE", (6, 70, 6 + 118, 70 + 10))
     OUT_TEMP = R("OUT_TEMP", (129, 36, 129 + 94, 36 + 28))
-    R("WEATHER_ICON", (210, 22, 210 + 28, 22 + 28))
-    R("OUT_ROW1_L", (131, 68, 131 + 44, 68 + 12))
-    R("OUT_ROW1_R", (177, 68, 177 + 64, 68 + 12))
-    OUT_ROW2_L = R("OUT_ROW2_L", (131, 78, 131 + 44, 78 + 12))
-    OUT_ROW2_R = R("OUT_ROW2_R", (177, 78, 177 + 44, 78 + 12))
-    FOOTER_L = R("FOOTER_L", (6, 90, 6 + 160, 90 + 32))
-    FOOTER_WEATHER = R("FOOTER_WEATHER", (170, 90, 170 + 74, 90 + 32))
-    R("STATUS", (6, 112, 6 + 238, 112 + 10))
+    # Updated coords: x=168, y=90, w=30, h=32
+    R("WEATHER_ICON", (168, 90, 168 + 30, 90 + 32))
+    # OUT_PRESSURE: x=177, y=68, w=64, h=12
+    R("OUT_PRESSURE", (177, 68, 177 + 64, 68 + 12))
+    # OUT_HUMIDITY: x=131, y=78, w=44, h=12 (alias OUT_ROW2_L for backward compat)
+    OUT_ROW2_L = R("OUT_HUMIDITY", (131, 78, 131 + 44, 78 + 12))
+    # OUT_WIND: x=177, y=80, w=44, h=10 (alias OUT_ROW2_R for backward compat)
+    OUT_ROW2_R = R("OUT_WIND", (177, 80, 177 + 44, 80 + 10))
+    # FOOTER_STATUS (alias FOOTER_L for backward compat)
+    FOOTER_L = R("FOOTER_STATUS", (6, 90, 6 + 160, 90 + 32))
+    # Updated coords: x=200, y=90, w=44, h=32
+    FOOTER_WEATHER = R("FOOTER_WEATHER", (200, 90, 200 + 44, 90 + 32))
 
     # Frame and header
     draw.rectangle(((0, 0), (WIDTH - 1, HEIGHT - 1)), outline=0, width=1)

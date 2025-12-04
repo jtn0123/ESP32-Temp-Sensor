@@ -183,14 +183,17 @@ static void draw_from_spec_full_impl(uint8_t variantId) {
           }
           display.setTextColor(GxEPD_BLACK);
           display.setTextSize(1);
-          if (r && tx == 0 && (op.align == ALIGN_RIGHT || op.align == ALIGN_CENTER)) {
+          // Handle rect-based positioning for all alignments (LEFT, RIGHT, CENTER)
+          if (r && tx == 0) {
             int16_t tw = text_width_default_font(out.c_str(), 1);
-            tx = r[0] + 1;
-            if (op.align == ALIGN_RIGHT)
+            if (op.align == ALIGN_LEFT)
+              tx = r[0] + 1;  // Left-align: start at rect's left edge
+            else if (op.align == ALIGN_RIGHT)
               tx = r[0] + r[2] - 2 - tw;
             else if (op.align == ALIGN_CENTER)
               tx = r[0] + (r[2] - tw) / 2;
-            ty = r[1] + 1;
+            // Use y-offset (p1) if provided, otherwise default to +1
+            ty = r[1] + (op.p1 != 0 ? op.p1 : 1);
           }
           display.setCursor(tx, ty);
           display.print(out.c_str());
