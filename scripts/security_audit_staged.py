@@ -46,7 +46,6 @@ EXCLUSIONS = {
         'device.sample.yaml': [Severity.CRITICAL, Severity.HIGH, Severity.MEDIUM, Severity.LOW],
         'security_audit.py': [Severity.CRITICAL, Severity.HIGH, Severity.MEDIUM, Severity.LOW],
         'security_audit_staged.py': [Severity.CRITICAL, Severity.HIGH, Severity.MEDIUM, Severity.LOW],
-        'PRODUCTION_IMPROVEMENTS.md': [Severity.CRITICAL, Severity.HIGH, Severity.MEDIUM],
         'README.md': [Severity.MEDIUM, Severity.LOW],
     },
     # Path patterns

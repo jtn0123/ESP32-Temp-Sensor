@@ -4,12 +4,21 @@ validation_reports/
 
 # PlatformIO build artifacts
 .pio/
+.pioenvs/
+.piolibdeps/
+compile_commands.json
 
-/.pio
-/.venv
-/out
+# Python
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
+.Python
+.venv/
+venv/
+ENV/
+env/
+
 # Python caches and tooling
 .pytest_cache/
 .mypy_cache/
@@ -18,17 +27,27 @@ __pycache__/
 htmlcov/
 coverage.xml
 *.log
+
 # macOS
 .DS_Store
+.AppleDouble
+.LSOverride
 
 # Editors
 .vscode/
 .idea/
+*.swp
+*.swo
+*~
+*.sublime-*
 
-# PlatformIO
-.pio/
-.pioenvs/
-.piolibdeps/
+# Backup and temporary files
+*.bak
+*.backup
+*.orig
+*.tmp
+*.temp
+nohup.out
 
 # ESPHome
 firmware/esphome/.esphome/
@@ -37,11 +56,6 @@ firmware/esphome/secrets.yaml
 # Rust
 firmware/rust/target/
 Cargo.lock
-
-# Python
-__pycache__/
-*.pyc
-.venv/
 
 # Local config
 config/device.yaml
@@ -61,5 +75,3 @@ tests/visual_output/
 
 # Claude.md project-specific instructions
 CLAUDE.md
-
-

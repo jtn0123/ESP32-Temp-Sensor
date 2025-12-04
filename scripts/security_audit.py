@@ -41,7 +41,6 @@ ALLOWED_FILES = [
     'device.sample.yaml',
     'secrets.example.yaml',
     'README.md',
-    'PRODUCTION_IMPROVEMENTS.md',
     'security_audit.py',
     'generated_config.h',  # Generated from .env, expected to have them
 ]
