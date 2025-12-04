@@ -566,8 +566,7 @@ const int* rect_ptr_by_id(uint8_t rid) {
       return OUT_WIND;
     case ui::RECT_FOOTER_STATUS:
       return FOOTER_STATUS;
-    case ui::RECT_FOOTER_WEATHER:
-      return FOOTER_WEATHER;
+    // Note: RECT_FOOTER_WEATHER case already handled above (line 559)
     case ui::RECT_STATUS:
       return STATUS_;
     default:
