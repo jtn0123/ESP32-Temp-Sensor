@@ -40,8 +40,11 @@
   };
 
   // Handle size in pixels
-  const HANDLE_SIZE = 8;
+  const HANDLE_SIZE = 10;
   const HANDLE_HALF = HANDLE_SIZE / 2;
+  
+  // Divider hit tolerance (pixels) - increased for easier targeting
+  const DIVIDER_TOLERANCE = 6;
 
   // Initialize editor
   function initLayoutEditor() {
@@ -57,6 +60,9 @@
 
     // Add UI controls
     addEditorUI();
+    
+    // Add drag indicator element
+    addDragIndicator();
 
     // Set up event listeners
     setupEventListeners();
@@ -73,6 +79,53 @@
       console.log('[Layout Editor Debug] Vertical dividers found:', vDividers.length, vDividers);
       console.log('[Layout Editor Debug] Horizontal dividers found:', hDividers.length, hDividers);
     }, 500);
+  }
+  
+  // Add drag indicator element to page
+  function addDragIndicator() {
+    if (document.getElementById('dragIndicator')) return;
+    
+    const indicator = document.createElement('div');
+    indicator.id = 'dragIndicator';
+    indicator.className = 'drag-indicator';
+    document.body.appendChild(indicator);
+  }
+  
+  // Update canvas classes for cursor states
+  function updateCanvasClasses() {
+    const canvas = document.getElementById('epd');
+    if (!canvas) return;
+    
+    // Reset all editor classes
+    canvas.classList.remove('editor-enabled', 'region-hover', 'dragging', 'resizing');
+    
+    if (editorState.enabled) {
+      canvas.classList.add('editor-enabled');
+      
+      if (editorState.isDragging || editorState.isDraggingDivider) {
+        canvas.classList.add('dragging');
+      } else if (editorState.isResizing) {
+        canvas.classList.add('resizing');
+      } else if (editorState.hoveredRegion || editorState.hoveredDivider) {
+        canvas.classList.add('region-hover');
+      }
+    }
+  }
+  
+  // Show/hide drag indicator with message
+  function showDragIndicator(message) {
+    const indicator = document.getElementById('dragIndicator');
+    if (indicator) {
+      indicator.textContent = message;
+      indicator.classList.add('visible');
+    }
+  }
+  
+  function hideDragIndicator() {
+    const indicator = document.getElementById('dragIndicator');
+    if (indicator) {
+      indicator.classList.remove('visible');
+    }
   }
 
   // Add editor UI panel to the page
@@ -184,7 +237,12 @@
         editorState.enabled = e.target.checked;
         updateEditorBadge();
         updateInstructionVisibility();
-        if (!editorState.enabled) {
+        
+        if (editorState.enabled) {
+          // When enabling the editor, ensure we're showing the actual UI content
+          // by exiting labels-only mode if it's active
+          resetToNormalDisplayMode();
+        } else {
           deselectRegion();
         }
 
@@ -468,12 +526,10 @@
    * Returns divider object or null
    */
   function findDividerAtPoint(point) {
-    const tolerance = 3; // pixels
-
     // Check vertical dividers
     const verticalDividers = findVerticalDividers();
     for (const divider of verticalDividers) {
-      if (Math.abs(point.x - divider.position) <= tolerance) {
+      if (Math.abs(point.x - divider.position) <= DIVIDER_TOLERANCE) {
         return divider;
       }
     }
@@ -481,7 +537,7 @@
     // Check horizontal dividers
     const horizontalDividers = findHorizontalDividers();
     for (const divider of horizontalDividers) {
-      if (Math.abs(point.y - divider.position) <= tolerance) {
+      if (Math.abs(point.y - divider.position) <= DIVIDER_TOLERANCE) {
         return divider;
       }
     }
@@ -495,7 +551,41 @@
 
     const point = getCanvasCoords(event);
 
-    // PRIORITY 1: Check for divider (before region selection)
+    // PRIORITY 1: Check if clicking on selected region's handle or body FIRST
+    // This ensures resize handles take priority over dividers when a region is selected
+    if (editorState.selectedRegion && window.GJSON?.rects?.[editorState.selectedRegion]) {
+      const rect = window.SafeUtils.getRect(window.GJSON?.rects, editorState.selectedRegion);
+      const handle = getResizeHandle(point, rect);
+
+      if (handle) {
+        // Start resize
+        editorState.isResizing = true;
+        editorState.resizeHandle = handle;
+        editorState.dragStartPos = point;
+        editorState.regionStartPos = {
+          x: rect[0], y: rect[1], w: rect[2], h: rect[3]
+        };
+        showDragIndicator(`⤡ Resizing: ${editorState.selectedRegion}`);
+        updateCanvasClasses();
+        event.preventDefault();
+        return;
+      }
+
+      if (isPointInRegion(point, rect)) {
+        // Start drag
+        editorState.isDragging = true;
+        editorState.dragStartPos = point;
+        editorState.regionStartPos = {
+          x: rect[0], y: rect[1], w: rect[2], h: rect[3]
+        };
+        showDragIndicator(`✋ Moving: ${editorState.selectedRegion}`);
+        updateCanvasClasses();
+        event.preventDefault();
+        return;
+      }
+    }
+
+    // PRIORITY 2: Check for divider (only if not interacting with selected region)
     const divider = findDividerAtPoint(point);
     if (divider) {
       // Start divider dragging
@@ -515,37 +605,13 @@
         editorState.regionStartPos[name] = { x, y, w, h };
       });
 
+      // Show visual feedback
+      const direction = divider.type === 'vertical' ? '↔' : '↕';
+      showDragIndicator(`${direction} Drag divider to resize ${affectedRegions.length} regions`);
+      updateCanvasClasses();
+
       event.preventDefault();
       return;
-    }
-
-    // PRIORITY 2: Check if clicking on selected region's handle
-    if (editorState.selectedRegion && window.GJSON?.rects?.[editorState.selectedRegion]) {
-      const rect = window.SafeUtils.getRect(window.GJSON?.rects, editorState.selectedRegion);
-      const handle = getResizeHandle(point, rect);
-
-      if (handle) {
-        // Start resize
-        editorState.isResizing = true;
-        editorState.resizeHandle = handle;
-        editorState.dragStartPos = point;
-        editorState.regionStartPos = {
-          x: rect[0], y: rect[1], w: rect[2], h: rect[3]
-        };
-        event.preventDefault();
-        return;
-      }
-
-      if (isPointInRegion(point, rect)) {
-        // Start drag
-        editorState.isDragging = true;
-        editorState.dragStartPos = point;
-        editorState.regionStartPos = {
-          x: rect[0], y: rect[1], w: rect[2], h: rect[3]
-        };
-        event.preventDefault();
-        return;
-      }
     }
 
     // PRIORITY 3: Select new region
@@ -556,6 +622,8 @@
       editorState.dragStartPos = point;
       const [x, y, w, h] = window.SafeUtils.getRect(window.GJSON?.rects, regionName);
       editorState.regionStartPos = { x, y, w, h };
+      showDragIndicator(`✋ Moving: ${regionName}`);
+      updateCanvasClasses();
       event.preventDefault();
     } else {
       deselectRegion();
@@ -571,46 +639,60 @@
 
     // Update cursor based on hover
     if (!editorState.isDragging && !editorState.isResizing && !editorState.isDraggingDivider) {
-      // PRIORITY 1: Check for divider hover
+      // PRIORITY 1: Check for resize handle hover FIRST (if region selected)
+      // This ensures handles take visual priority over dividers
+      if (editorState.selectedRegion) {
+        const rect = window.GJSON.rects[editorState.selectedRegion];
+        const handle = getResizeHandle(point, rect);
+
+        if (handle) {
+          const cursors = {
+            'nw': 'nw-resize', 'ne': 'ne-resize',
+            'sw': 'sw-resize', 'se': 'se-resize',
+            'n': 'n-resize', 's': 's-resize',
+            'e': 'e-resize', 'w': 'w-resize'
+          };
+          canvas.style.cursor = cursors[handle];
+          editorState.hoveredDivider = null; // Clear divider hover when on handle
+          return; // Don't check dividers if on a handle
+        } else if (isPointInRegion(point, rect)) {
+          canvas.style.cursor = 'grab';
+          editorState.hoveredDivider = null;
+          return;
+        }
+      }
+      
+      // PRIORITY 2: Check for divider hover
       const hoveredDivider = findDividerAtPoint(point);
       if (hoveredDivider) {
         canvas.style.cursor = hoveredDivider.type === 'vertical' ? 'ew-resize' : 'ns-resize';
         editorState.hoveredDivider = hoveredDivider;
+        updateCanvasClasses();
         requestAnimationFrame(() => window.draw && window.draw(window.lastData));
       } else {
         editorState.hoveredDivider = null;
 
-        // PRIORITY 2: Check for resize handle hover (if region selected)
-        if (editorState.selectedRegion) {
-          const rect = window.GJSON.rects[editorState.selectedRegion];
-          const handle = getResizeHandle(point, rect);
-
-          if (handle) {
-            const cursors = {
-              'nw': 'nw-resize', 'ne': 'ne-resize',
-              'sw': 'sw-resize', 'se': 'se-resize',
-              'n': 'n-resize', 's': 's-resize',
-              'e': 'e-resize', 'w': 'w-resize'
-            };
-            canvas.style.cursor = cursors[handle];
-          } else if (isPointInRegion(point, rect)) {
-            canvas.style.cursor = 'move';
-          } else {
-            canvas.style.cursor = 'default';
-          }
-        } else {
-          // PRIORITY 3: Check for region hover
+        // PRIORITY 3: Check for region hover (no region selected)
+        if (!editorState.selectedRegion) {
           const hoveredRegion = findRegionAtPoint(point);
           canvas.style.cursor = hoveredRegion ? 'pointer' : 'default';
 
           // Update hover state for tooltip
+          const prevHovered = editorState.hoveredRegion;
           editorState.hoveredRegion = hoveredRegion;
           editorState.hoverPos = point;
+          
+          // Update canvas classes for hover state
+          if (hoveredRegion !== prevHovered) {
+            updateCanvasClasses();
+          }
 
           // Trigger redraw to show/hide tooltip
-          if (hoveredRegion || editorState.hoveredRegion) {
+          if (hoveredRegion || prevHovered) {
             requestAnimationFrame(() => window.draw && window.draw(window.lastData));
           }
+        } else {
+          canvas.style.cursor = 'default';
         }
       }
     }
@@ -812,6 +894,10 @@
 
       const canvas = document.getElementById('epd');
       canvas.style.cursor = 'default';
+
+      // Hide drag indicator and update visual state
+      hideDragIndicator();
+      updateCanvasClasses();
 
       updateModifiedState();
       event.preventDefault();
@@ -1364,10 +1450,32 @@
       badge.className = editorState.enabled ? 'badge badge-success' : 'badge';
     }
   }
+  
+  // Reset to normal display mode (exit labels-only mode)
+  // This ensures the layout editor always shows the actual UI content
+  function resetToNormalDisplayMode() {
+    // Uncheck the "Label regions" and "Show geometry rects" checkboxes
+    const labelsCheckbox = document.getElementById('showLabels');
+    const rectsCheckbox = document.getElementById('showRects');
+    
+    if (labelsCheckbox && labelsCheckbox.checked) {
+      labelsCheckbox.checked = false;
+      // Dispatch change event to trigger the sim.js handler
+      labelsCheckbox.dispatchEvent(new Event('change'));
+    }
+    
+    if (rectsCheckbox && rectsCheckbox.checked) {
+      rectsCheckbox.checked = false;
+      rectsCheckbox.dispatchEvent(new Event('change'));
+    }
+  }
 
   // Draw editor overlays (selection, handles, etc.)
   function drawEditorOverlay(ctx) {
     if (!editorState.enabled) return;
+
+    // Draw all divider lines subtly when editor is enabled
+    drawAllDividers(ctx);
 
     // DIVIDER HIGHLIGHTS (draw first, underneath everything else)
     if (editorState.hoveredDivider || editorState.isDraggingDivider) {
@@ -1377,8 +1485,8 @@
 
         // Visual style: bright highlight when dragging, subtle when hovering
         const isDragging = editorState.isDraggingDivider;
-        ctx.strokeStyle = isDragging ? '#ff6600' : '#0066ff';
-        ctx.lineWidth = isDragging ? 3 : 2;
+        ctx.strokeStyle = isDragging ? '#f97316' : '#3b82f6';
+        ctx.lineWidth = isDragging ? 4 : 3;
         ctx.setLineDash([]);
 
         if (divider.type === 'vertical') {
@@ -1389,12 +1497,14 @@
           ctx.lineTo(x, window.GJSON.canvas.h);
           ctx.stroke();
 
-          // Add subtle glow effect when dragging
-          if (isDragging) {
-            ctx.shadowColor = 'rgba(255, 102, 0, 0.5)';
-            ctx.shadowBlur = 6;
-            ctx.stroke();
-          }
+          // Add glow effect
+          ctx.shadowColor = isDragging ? 'rgba(249, 115, 22, 0.7)' : 'rgba(59, 130, 246, 0.5)';
+          ctx.shadowBlur = isDragging ? 10 : 6;
+          ctx.stroke();
+          
+          // Draw drag handle indicators at top and bottom
+          drawDividerHandle(ctx, x, 0, 'vertical', isDragging);
+          drawDividerHandle(ctx, x, window.GJSON.canvas.h, 'vertical', isDragging);
         } else {
           // Draw horizontal line
           const y = divider.position;
@@ -1403,12 +1513,14 @@
           ctx.lineTo(window.GJSON.canvas.w, y);
           ctx.stroke();
 
-          // Add subtle glow effect when dragging
-          if (isDragging) {
-            ctx.shadowColor = 'rgba(255, 102, 0, 0.5)';
-            ctx.shadowBlur = 6;
-            ctx.stroke();
-          }
+          // Add glow effect
+          ctx.shadowColor = isDragging ? 'rgba(249, 115, 22, 0.7)' : 'rgba(59, 130, 246, 0.5)';
+          ctx.shadowBlur = isDragging ? 10 : 6;
+          ctx.stroke();
+          
+          // Draw drag handle indicators at left and right
+          drawDividerHandle(ctx, 0, y, 'horizontal', isDragging);
+          drawDividerHandle(ctx, window.GJSON.canvas.w, y, 'horizontal', isDragging);
         }
 
         ctx.restore();
@@ -1577,6 +1689,61 @@
     ctx.fillStyle = '#ffffff';
     ctx.textBaseline = 'middle';
     ctx.fillText(dimText, x + w/2 - dimMetrics.width/2, y - 12);
+    ctx.restore();
+  }
+  
+  // Helper: Draw all dividers subtly when editor is enabled
+  function drawAllDividers(ctx) {
+    if (!window.GJSON || !window.GJSON.canvas) return;
+    
+    ctx.save();
+    ctx.strokeStyle = 'rgba(59, 130, 246, 0.25)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([4, 4]);
+    
+    // Draw vertical dividers
+    const vDividers = findVerticalDividers();
+    for (const divider of vDividers) {
+      ctx.beginPath();
+      ctx.moveTo(divider.position, 0);
+      ctx.lineTo(divider.position, window.GJSON.canvas.h);
+      ctx.stroke();
+    }
+    
+    // Draw horizontal dividers  
+    const hDividers = findHorizontalDividers();
+    for (const divider of hDividers) {
+      ctx.beginPath();
+      ctx.moveTo(0, divider.position);
+      ctx.lineTo(window.GJSON.canvas.w, divider.position);
+      ctx.stroke();
+    }
+    
+    ctx.restore();
+  }
+  
+  // Helper: Draw divider handle indicator at endpoints
+  function drawDividerHandle(ctx, x, y, type, isDragging) {
+    const size = 10;
+    const color = isDragging ? '#f97316' : '#3b82f6';
+    
+    ctx.save();
+    ctx.fillStyle = color;
+    ctx.shadowColor = isDragging ? 'rgba(249, 115, 22, 0.5)' : 'rgba(59, 130, 246, 0.5)';
+    ctx.shadowBlur = 4;
+    
+    if (type === 'vertical') {
+      // Draw small grab handle at top/bottom
+      ctx.beginPath();
+      ctx.roundRect(x - size/2, y - 3, size, 6, 2);
+      ctx.fill();
+    } else {
+      // Draw small grab handle at left/right
+      ctx.beginPath();
+      ctx.roundRect(x - 3, y - size/2, 6, size, 2);
+      ctx.fill();
+    }
+    
     ctx.restore();
   }
 

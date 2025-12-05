@@ -2435,8 +2435,17 @@
               break;
             }
             case 'batteryGlyph': {
-              // Keep battery icon within bounds by not adding extra y offset
-              const x = op.x||0, y = op.y||0, bw = op.w||13, bh = op.h||7;
+              // Support both direct coordinates and rect-based positioning
+              let x, y, bw = op.w || 13, bh = op.h || 7;
+              if (op.rect && rects[op.rect]) {
+                const r = rects[op.rect];
+                // Position battery icon at left of rect, vertically centered
+                x = r[0] + 2;
+                y = r[1] + Math.floor((r[3] - bh) / 2);
+              } else {
+                x = op.x || 0;
+                y = op.y || 0;
+              }
               // Prefer battery_percent; fall back to op.percent template or 0
               let pct = 0;
               try{
@@ -2464,13 +2473,14 @@
               // Track battery icon for validation
               if (validationEnabled) {
                 // Just track that we rendered the battery icon
-                renderedContent['BATTERY_ICON'] = {
+                const trackRect = op.rect || 'FOOTER_BATTERY';
+                renderedContent[trackRect] = {
                   text: 'battery',
                   fontSize: 0,
                   actualBounds: { x, y, width: bw + 2, height: bh }
                 };
-                // Also mark FOOTER_STATUS as having content since battery is part of it
-                if (!renderedContent['FOOTER_STATUS']) {
+                // Also mark FOOTER_STATUS as having content for backwards compat
+                if (!renderedContent['FOOTER_STATUS'] && !op.rect) {
                   renderedContent['FOOTER_STATUS'] = {
                     text: 'battery_area',
                     fontSize: 0,
@@ -2754,6 +2764,10 @@
       const c = document.getElementById('epd');
       if (!c) return;
       c.addEventListener('click', (ev)=>{
+        // Skip this handler if layout editor is enabled - it handles its own clicks
+        if (window.layoutEditor && window.layoutEditor.state && window.layoutEditor.state.enabled) {
+          return;
+        }
         if (!GJSON || !GJSON.rects) return;
         const rect = c.getBoundingClientRect();
         const zoom = Math.max(1, parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--zoom')) || 2);

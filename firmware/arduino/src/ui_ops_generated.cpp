@@ -17,43 +17,43 @@ const int kOps_chrome_count = sizeof(kOps_chrome)/sizeof(kOps_chrome[0]);
 
 const UiOpHeader kOps_header_centered[] = {
     { OP_LINE, 255, 0, 0, 1, 14, 249, 14, NULL, NULL },
-    { OP_TEXT, 2, 1, 0, 0, 0, 0, 0, "{room_name}", NULL },
-    { OP_TEXTCENTEREDIN, 3, 3, 2, 1, 0, 0, 0, "{time_hhmm}", NULL },
-    { OP_TEXT, 4, 3, 1, 0, 0, 0, 0, "v{fw_version}", NULL },
+    { OP_TEXT, 4, 1, 0, 0, 0, 0, 0, "{room_name}", NULL },
+    { OP_TEXTCENTEREDIN, 5, 3, 2, 1, 0, 0, 0, "{time_hhmm}", NULL },
+    { OP_TEXT, 6, 3, 1, 0, 0, 0, 0, "v{fw_version}", NULL },
 };
 const int kOps_header_centered_count = sizeof(kOps_header_centered)/sizeof(kOps_header_centered[0]);
 
 const UiOpHeader kOps_header[] = {
     { OP_LINE, 255, 0, 0, 1, 14, 249, 14, NULL, NULL },
-    { OP_TEXT, 2, 1, 0, 0, 0, 0, 0, "{room_name}", NULL },
-    { OP_TIMERIGHT, 4, 3, 1, 0, 0, 0, 0, "time_hhmm", NULL },
+    { OP_TEXT, 4, 1, 0, 0, 0, 0, 0, "{room_name}", NULL },
+    { OP_TIMERIGHT, 6, 3, 1, 0, 0, 0, 0, "time_hhmm", NULL },
 };
 const int kOps_header_count = sizeof(kOps_header)/sizeof(kOps_header[0]);
 
 const UiOpHeader kOps_inside[] = {
-    { OP_TEXT, 255, 1, 0, 30, 20, 0, 0, "INSIDE", NULL },
-    { OP_TEMPGROUPCENTERED, 7, 0, 2, 0, 0, 0, 0, "inside_temp_f", NULL },
-    { OP_TEXT, 5, 2, 0, 0, 0, 0, 0, "{inside_hum_pct}% RH", NULL },
-    { OP_TEXT, 6, 2, 0, 0, 0, 0, 0, "{pressure_hpa:.1f} hPa", NULL },
+    { OP_TEXT, 8, 1, 2, 0, 0, 0, 0, "INSIDE", NULL },
+    { OP_TEMPGROUPCENTERED, 10, 0, 2, 0, 0, 0, 0, "inside_temp_f", NULL },
+    { OP_TEXT, 7, 2, 0, 0, 0, 0, 0, "{inside_hum_pct}% RH", NULL },
+    { OP_TEXT, 9, 2, 0, 0, 0, 0, 0, "{pressure_hpa:.1f} hPa", NULL },
 };
 const int kOps_inside_count = sizeof(kOps_inside)/sizeof(kOps_inside[0]);
 
 const UiOpHeader kOps_outside[] = {
-    { OP_TEXT, 255, 1, 0, 145, 20, 0, 0, "OUTSIDE", NULL },
-    { OP_TEMPGROUPCENTERED, 10, 0, 2, 0, 0, 0, 0, "outside_temp_f", NULL },
-    { OP_ICONIN, 12, 0, 0, 0, 0, 0, 0, "weather", NULL },
-    { OP_TEXT, 9, 2, 0, 0, 3, 0, 0, "{outside_pressure_hpa:.0f} hPa", NULL },
-    { OP_TEXT, 8, 2, 0, 0, 0, 0, 0, "{outside_hum_pct}% RH", NULL },
-    { OP_TEXT, 11, 2, 0, 0, 0, 0, 0, "{wind_mps->mph:.1f} mph", NULL },
+    { OP_TEXT, 11, 1, 2, 0, 0, 0, 0, "OUTSIDE", NULL },
+    { OP_TEMPGROUPCENTERED, 14, 0, 2, 0, 0, 0, 0, "outside_temp_f", NULL },
+    { OP_ICONIN, 16, 0, 0, 0, 0, 0, 0, "weather", NULL },
+    { OP_TEXT, 13, 2, 0, 0, 3, 0, 0, "{outside_pressure_hpa:.0f} hPa", NULL },
+    { OP_TEXT, 12, 2, 0, 0, 0, 0, 0, "{outside_hum_pct}% RH", NULL },
+    { OP_TEXT, 15, 2, 0, 0, 0, 0, 0, "{wind_mps->mph:.1f} mph", NULL },
 };
 const int kOps_outside_count = sizeof(kOps_outside)/sizeof(kOps_outside[0]);
 
 const UiOpHeader kOps_footer_split[] = {
-    { OP_BATTERYGLYPH, 255, 0, 0, 8, 87, 13, 7, "battery_percent", NULL },
-    { OP_TEXT, 255, 2, 0, 27, 87, 0, 0, "{battery_voltage:.2f}V {battery_percent}%", NULL },
-    { OP_TEXT, 255, 2, 0, 8, 98, 0, 0, "~{days}d", NULL },
-    { OP_TEXT, 0, 2, 2, 0, 19, 0, 0, "IP {ip}", NULL },
-    { OP_TEXTCENTEREDIN, 1, 2, 2, 19, 0, 0, 0, "{weather}", NULL },
+    { OP_BATTERYGLYPH, 0, 0, 0, 0, 0, 0, 0, "battery_percent", NULL },
+    { OP_TEXT, 0, 2, 1, 0, 0, 0, 0, "{battery_voltage:.2f}V {battery_percent}%", NULL },
+    { OP_TEXT, 1, 2, 0, 0, 0, 0, 0, "~{days}d", NULL },
+    { OP_TEXT, 2, 2, 2, 0, 0, 0, 0, "IP {ip}", NULL },
+    { OP_TEXTCENTEREDIN, 3, 2, 2, 10, 0, 0, 0, "{weather}", NULL },
 };
 const int kOps_footer_split_count = sizeof(kOps_footer_split)/sizeof(kOps_footer_split[0]);
 

@@ -1,5 +1,5 @@
 {
-  "layout_version": 1,
+  "layout_version": 2,
   "layout_crc": "0x76433171",
   "canvas": {
     "w": 250,
@@ -29,6 +29,12 @@
       50,
       14
     ],
+    "INSIDE_LABEL": [
+      6,
+      18,
+      60,
+      14
+    ],
     "INSIDE_TEMP": [
       6,
       34,
@@ -46,6 +52,12 @@
       70,
       118,
       10
+    ],
+    "OUTSIDE_LABEL": [
+      129,
+      18,
+      70,
+      14
     ],
     "OUT_TEMP": [
       129,
@@ -77,16 +89,28 @@
       44,
       10
     ],
-    "FOOTER_STATUS": [
+    "FOOTER_BATTERY": [
       6,
+      85,
       90,
-      160,
-      32
+      12
+    ],
+    "FOOTER_DAYS": [
+      6,
+      97,
+      50,
+      12
+    ],
+    "FOOTER_IP": [
+      6,
+      107,
+      120,
+      14
     ],
     "FOOTER_WEATHER": [
-      200,
+      168,
       90,
-      44,
+      76,
       32
     ]
   }

@@ -5,8 +5,8 @@
 
 // Layout identity for simulator ↔ firmware parity checks
 #define LAYOUT_VERSION 1
-#define LAYOUT_CRC 0x01F7F0AEu
-#define LAYOUT_MD5 "0e365461d24e08706cfc647a790d5ed1"
+#define LAYOUT_CRC 0x16636A90u
+#define LAYOUT_MD5 "c5997bb0dfbba9ae616bb851437be2bd"
 
 // Display dimensions
 #define DISPLAY_WIDTH 250
@@ -16,16 +16,20 @@
 static constexpr int RECT_HEADER_NAME[4] = {   6,   2,  90, 14};
 static constexpr int RECT_HEADER_VERSION[4] = { 172,   2,  72, 14};
 static constexpr int RECT_HEADER_TIME_CENTER[4] = { 100,   2,  50, 14};
+static constexpr int RECT_INSIDE_LABEL[4] = {   6,  18,  60, 14};
 static constexpr int RECT_INSIDE_TEMP[4] = {   6,  34, 118, 26};
 static constexpr int RECT_INSIDE_HUMIDITY[4] = {   6,  60, 118, 10};
 static constexpr int RECT_INSIDE_PRESSURE[4] = {   6,  70, 118, 10};
+static constexpr int RECT_OUTSIDE_LABEL[4] = { 129,  18,  70, 14};
 static constexpr int RECT_OUT_TEMP[4] = { 129,  36,  94, 28};
 static constexpr int RECT_WEATHER_ICON[4] = { 168,  90,  30, 32};
 static constexpr int RECT_OUT_PRESSURE[4] = { 177,  68,  64, 12};
 static constexpr int RECT_OUT_HUMIDITY[4] = { 131,  78,  44, 12};
 static constexpr int RECT_OUT_WIND[4] = { 177,  80,  44, 10};
-static constexpr int RECT_FOOTER_STATUS[4] = {   6,  90, 160, 32};
-static constexpr int RECT_FOOTER_WEATHER[4] = { 200,  90,  44, 32};
+static constexpr int RECT_FOOTER_BATTERY[4] = {   6,  85,  90, 12};
+static constexpr int RECT_FOOTER_DAYS[4] = {   6,  97,  50, 12};
+static constexpr int RECT_FOOTER_IP[4] = {   6, 107, 120, 14};
+static constexpr int RECT_FOOTER_WEATHER[4] = { 168,  90,  76, 32};
 
 enum WeatherIconId {
     ICON_CLEAR = 0,
@@ -47,6 +51,9 @@ static_assert(2 + 14 <= DISPLAY_HEIGHT, "HEADER_VERSION height");
 static_assert(RECT_HEADER_TIME_CENTER[0] >= 0 && RECT_HEADER_TIME_CENTER[1] >= 0, "HEADER_TIME_CENTER origin");
 static_assert(100 + 50 <= DISPLAY_WIDTH,  "HEADER_TIME_CENTER width");
 static_assert(2 + 14 <= DISPLAY_HEIGHT, "HEADER_TIME_CENTER height");
+static_assert(RECT_INSIDE_LABEL[0] >= 0 && RECT_INSIDE_LABEL[1] >= 0, "INSIDE_LABEL origin");
+static_assert(6 + 60 <= DISPLAY_WIDTH,  "INSIDE_LABEL width");
+static_assert(18 + 14 <= DISPLAY_HEIGHT, "INSIDE_LABEL height");
 static_assert(RECT_INSIDE_TEMP[0] >= 0 && RECT_INSIDE_TEMP[1] >= 0, "INSIDE_TEMP origin");
 static_assert(6 + 118 <= DISPLAY_WIDTH,  "INSIDE_TEMP width");
 static_assert(34 + 26 <= DISPLAY_HEIGHT, "INSIDE_TEMP height");
@@ -56,6 +63,9 @@ static_assert(60 + 10 <= DISPLAY_HEIGHT, "INSIDE_HUMIDITY height");
 static_assert(RECT_INSIDE_PRESSURE[0] >= 0 && RECT_INSIDE_PRESSURE[1] >= 0, "INSIDE_PRESSURE origin");
 static_assert(6 + 118 <= DISPLAY_WIDTH,  "INSIDE_PRESSURE width");
 static_assert(70 + 10 <= DISPLAY_HEIGHT, "INSIDE_PRESSURE height");
+static_assert(RECT_OUTSIDE_LABEL[0] >= 0 && RECT_OUTSIDE_LABEL[1] >= 0, "OUTSIDE_LABEL origin");
+static_assert(129 + 70 <= DISPLAY_WIDTH,  "OUTSIDE_LABEL width");
+static_assert(18 + 14 <= DISPLAY_HEIGHT, "OUTSIDE_LABEL height");
 static_assert(RECT_OUT_TEMP[0] >= 0 && RECT_OUT_TEMP[1] >= 0, "OUT_TEMP origin");
 static_assert(129 + 94 <= DISPLAY_WIDTH,  "OUT_TEMP width");
 static_assert(36 + 28 <= DISPLAY_HEIGHT, "OUT_TEMP height");
@@ -71,10 +81,16 @@ static_assert(78 + 12 <= DISPLAY_HEIGHT, "OUT_HUMIDITY height");
 static_assert(RECT_OUT_WIND[0] >= 0 && RECT_OUT_WIND[1] >= 0, "OUT_WIND origin");
 static_assert(177 + 44 <= DISPLAY_WIDTH,  "OUT_WIND width");
 static_assert(80 + 10 <= DISPLAY_HEIGHT, "OUT_WIND height");
-static_assert(RECT_FOOTER_STATUS[0] >= 0 && RECT_FOOTER_STATUS[1] >= 0, "FOOTER_STATUS origin");
-static_assert(6 + 160 <= DISPLAY_WIDTH,  "FOOTER_STATUS width");
-static_assert(90 + 32 <= DISPLAY_HEIGHT, "FOOTER_STATUS height");
+static_assert(RECT_FOOTER_BATTERY[0] >= 0 && RECT_FOOTER_BATTERY[1] >= 0, "FOOTER_BATTERY origin");
+static_assert(6 + 90 <= DISPLAY_WIDTH,  "FOOTER_BATTERY width");
+static_assert(85 + 12 <= DISPLAY_HEIGHT, "FOOTER_BATTERY height");
+static_assert(RECT_FOOTER_DAYS[0] >= 0 && RECT_FOOTER_DAYS[1] >= 0, "FOOTER_DAYS origin");
+static_assert(6 + 50 <= DISPLAY_WIDTH,  "FOOTER_DAYS width");
+static_assert(97 + 12 <= DISPLAY_HEIGHT, "FOOTER_DAYS height");
+static_assert(RECT_FOOTER_IP[0] >= 0 && RECT_FOOTER_IP[1] >= 0, "FOOTER_IP origin");
+static_assert(6 + 120 <= DISPLAY_WIDTH,  "FOOTER_IP width");
+static_assert(107 + 14 <= DISPLAY_HEIGHT, "FOOTER_IP height");
 static_assert(RECT_FOOTER_WEATHER[0] >= 0 && RECT_FOOTER_WEATHER[1] >= 0, "FOOTER_WEATHER origin");
-static_assert(200 + 44 <= DISPLAY_WIDTH,  "FOOTER_WEATHER width");
+static_assert(168 + 76 <= DISPLAY_WIDTH,  "FOOTER_WEATHER width");
 static_assert(90 + 32 <= DISPLAY_HEIGHT, "FOOTER_WEATHER height");
 
