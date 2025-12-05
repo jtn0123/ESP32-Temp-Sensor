@@ -872,9 +872,9 @@
           if (issue.type === 'text_overflow' && issue.severity !== 'info') {
             html += `<div style="margin-left:20px;margin-top:2px;">
               <button onclick="window.applyValidationFix('truncate', '${issue.region}')" 
-                      style="font-size:10px;padding:1px 4px;">Apply Truncation</button>
+                      style="font-size:10px;padding:1px 4px;color:var(--color-text);background:var(--color-surface);">Apply Truncation</button>
               <button onclick="window.applyValidationFix('smaller_font', '${issue.region}')" 
-                      style="font-size:10px;padding:1px 4px;">Reduce Font</button>
+                      style="font-size:10px;padding:1px 4px;color:var(--color-text);background:var(--color-surface);">Reduce Font</button>
             </div>`;
           }
           

@@ -65,14 +65,8 @@ template <typename DrawFnFwd>
 static inline void draw_in_region(const int rect[4], DrawFnFwd drawFn);
 // Forward decls used by spec renderer - function moved to display_renderer module
 #if USE_UI_SPEC
-// Minimal spec interpreter (full-window only) for variant rendering
-static void draw_from_spec_full(uint8_t variantId);
-
-// UI spec functions moved to display_renderer module
-
-// Forward to implementation placed after display declaration
-static void draw_from_spec_full_impl(uint8_t variantId);
-static void draw_from_spec_full(uint8_t variantId) { draw_from_spec_full_impl(variantId); }
+// Spec implementation is draw_from_spec_full_impl() below
+// draw_from_spec_full() is in display_renderer.cpp and calls our impl
 #endif
 #endif
 
@@ -111,17 +105,20 @@ GxEPD2_BW<GxEPD2_213_GDEY0213B74, GxEPD2_213_GDEY0213B74::HEIGHT> display(
 
 // Now that display exists, provide the implementation using it
 #if USE_UI_SPEC
-static void draw_from_spec_full_impl(uint8_t variantId) {
+// Non-static so display_renderer.cpp can call it
+void draw_from_spec_full_impl(uint8_t variantId) {
   // TOP_Y_OFFSET removed for spec alignment
   using ui::ALIGN_CENTER;
   using ui::ALIGN_LEFT;
   using ui::ALIGN_RIGHT;
   using ui::ComponentOps;
-  using ui::OP_LABELCENTERED;
   using ui::OP_LINE;
   using ui::OP_TEMPGROUPCENTERED;
   using ui::OP_TEXT;
   using ui::OP_TIMERIGHT;
+  using ui::OP_TEXTCENTEREDIN;
+  using ui::OP_BATTERYGLYPH;
+  using ui::OP_ICONIN;
   using ui::UiOpHeader;
   int comp_count = 0;
   const ComponentOps* comps = get_variant_ops(variantId, &comp_count);
@@ -150,19 +147,64 @@ static void draw_from_spec_full_impl(uint8_t variantId) {
           int16_t tx = op.p0;
           int16_t ty = op.p1;
           auto fmt_field = [&](const String& key) -> String {
+            static char buf[32];
             if (key == "room_name")
               return String(ROOM_NAME);
             if (key == "ip") {
-              // Use static buffer to avoid heap fragmentation from String concat
-              static char ip_buf[40];
               char ip_c[32];
               net_ip_cstr(ip_c, sizeof(ip_c));
-              snprintf(ip_buf, sizeof(ip_buf), "IP %s", ip_c);
-              return String(ip_buf);
+              return String(ip_c);
             }
             if (key == "fw_version")
               return String(FW_VERSION);
-            return String("");
+            // Battery fields
+            if (key == "battery_percent" || key.startsWith("battery_voltage")) {
+              BatteryStatus bs = read_battery_status();
+              if (key == "battery_percent") {
+                snprintf(buf, sizeof(buf), "%d", bs.percent);
+                return String(buf);
+              }
+              // Handle battery_voltage:.2f format
+              snprintf(buf, sizeof(buf), "%.2f", bs.voltage);
+              return String(buf);
+            }
+            if (key == "days") {
+              BatteryStatus bs = read_battery_status();
+              snprintf(buf, sizeof(buf), "%d", bs.estimatedDays);
+              return String(buf);
+            }
+            // Inside sensor fields
+            if (key == "inside_hum_pct") {
+              InsideReadings ir = read_inside_sensors();
+              snprintf(buf, sizeof(buf), "%.0f", ir.humidityPct);
+              return String(buf);
+            }
+            if (key.startsWith("pressure_hpa")) {
+              InsideReadings ir = read_inside_sensors();
+              snprintf(buf, sizeof(buf), "%.1f", ir.pressureHPa);
+              return String(buf);
+            }
+            // Outside sensor fields
+            if (key == "outside_hum_pct") {
+              OutsideReadings o = net_get_outside();
+              snprintf(buf, sizeof(buf), "%.0f", o.humidityPct);
+              return String(buf);
+            }
+            if (key.startsWith("wind_mps")) {
+              OutsideReadings o = net_get_outside();
+              float mph = o.windMps * 2.237f;
+              snprintf(buf, sizeof(buf), "%.1f", mph);
+              return String(buf);
+            }
+            if (key == "weather") {
+              OutsideReadings o = net_get_outside();
+              return String(o.weather);
+            }
+            if (key == "time_hhmm") {
+              net_time_hhmm(buf, sizeof(buf));
+              return String(buf);
+            }
+            return String("--");
           };
           String templ = op.s0 ? op.s0 : "";
           String out;
@@ -203,37 +245,28 @@ static void draw_from_spec_full_impl(uint8_t variantId) {
           break;
         }
         case OP_TIMERIGHT: {
+          const int* r = rect_ptr_by_id(op.rect);
+          if (!r) break;
           char hhmm[8];
           net_time_hhmm(hhmm, sizeof(hhmm));
           int16_t tw = text_width_default_font(hhmm, 1);
-          int16_t rx = static_cast<int16_t>(HEADER_TIME_CENTER[0] + HEADER_TIME_CENTER[2] - 2 - tw);
-          int16_t by = static_cast<int16_t>(HEADER_TIME_CENTER[1] + HEADER_TIME_CENTER[3] - 2);
+          int16_t rx = static_cast<int16_t>(r[0] + r[2] - 2 - tw);
+          int16_t by = static_cast<int16_t>(r[1] + r[3] - 2);
           display.setTextColor(GxEPD_BLACK);
           display.setTextSize(1);
           display.setCursor(rx, by);
           display.print(hhmm);
           break;
         }
-        case OP_LABELCENTERED: {
-          const int* r = rect_ptr_by_id(op.rect);
-          if (!r)
-            break;
-          display.setTextColor(GxEPD_BLACK);
-          display.setTextSize(1);
-          int16_t tw = text_width_default_font(op.s0 ? op.s0 : "", 1);
-          int16_t tx = r[0] + (r[2] - tw) / 2;
-          int16_t ty = r[1] - 14 + op.p0;
-          display.setCursor(tx, ty);
-          display.print(op.s0 ? op.s0 : "");
-          break;
-        }
+        // OP_LABELCENTERED removed - no longer in ui_spec.json
         case OP_TEMPGROUPCENTERED: {
           const int* r = rect_ptr_by_id(op.rect);
           if (!r)
             break;
           char temp_buf[16];
           temp_buf[0] = 0;
-          if (r == INSIDE_TEMP) {
+          // Check by rect ID, not pointer comparison
+          if (op.rect == ui::RECT_INSIDE_TEMP) {
             InsideReadings ir = read_inside_sensors();
             if (isfinite(ir.temperatureC)) {
               float tempF = ir.temperatureC * 9.0f / 5.0f + 32.0f;
@@ -241,7 +274,7 @@ static void draw_from_spec_full_impl(uint8_t variantId) {
             } else {
               snprintf(temp_buf, sizeof(temp_buf), "--");
             }
-          } else if (r == OUT_TEMP) {
+          } else if (op.rect == ui::RECT_OUT_TEMP) {
             OutsideReadings orr = net_get_outside();
             if (orr.validTemp && isfinite(orr.temperatureC)) {
               float tempF = orr.temperatureC * 9.0f / 5.0f + 32.0f;
@@ -260,39 +293,12 @@ static void draw_from_spec_full_impl(uint8_t variantId) {
           if (!r)
             break;
           OutsideReadings o = net_get_outside();
-          if (o.validWeather) {
-          draw_weather_icon_region_at_from_outside(r[0],
-                                                    r[1],
-                                                    r[2],
-                                                    r[3],
-          } else {
-            const char* weather = o.validWeather ? o.weather : "";
-          draw_weather_icon_region_at(r[0],
-                                       r[1] + TOP_Y_OFFSET,
-                                       r[2],
-                                       r[3],
+          if (o.validWeather && o.weather[0]) {
+            draw_weather_icon_region_at(r[0], r[1], r[2], r[3], o.weather);
           }
           break;
         }
-        case OP_SHORTCONDITION: {
-          const int* r = rect_ptr_by_id(op.rect);
-          if (!r)
-            break;
-          OutsideReadings o = net_get_outside();
-          if (o.validWeather) {
-            char sc[24];
-            if (o.validWeather && o.weather[0]) {
-              make_short_condition_cstr(o.weather, sc, sizeof(sc));
-            } else {
-              make_short_condition_cstr(o.weather, sc, sizeof(sc));
-            }
-            display.setTextColor(GxEPD_BLACK);
-            display.setTextSize(1);
-            display.setCursor(r[0] + op.p0, r[1] + r[3] / 2 + 2);
-            display.print(sc);
-          }
-          break;
-        }
+        // OP_SHORTCONDITION removed - no longer in ui_spec.json
         case OP_TEXTCENTEREDIN: {
           const int* r = rect_ptr_by_id(op.rect);
           if (!r)

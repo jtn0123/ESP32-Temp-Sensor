@@ -211,9 +211,28 @@ void draw_weather_icon_region_at_from_outside(int16_t x, int16_t y, int16_t w, i
   }
 }
 
+// Forward declaration for spec-based rendering (implemented in main.cpp)
+#if USE_UI_SPEC
+extern void draw_from_spec_full_impl(uint8_t variantId);
+#endif
+
 // Full display refresh
 void full_refresh() {
   PROFILE_SCOPE("full_refresh");
+  
+#if USE_UI_SPEC
+  // Use spec-based rendering for simulator/device parity
+  display.setFullWindow();
+  display.firstPage();
+  do {
+    display.fillScreen(GxEPD_WHITE);
+    draw_from_spec_full_impl(0); // variantId 0 = "v2"
+  } while (display.nextPage());
+  reset_partial_counter();
+  return;
+#endif
+
+  // Legacy hardcoded rendering (USE_UI_SPEC=0)
   // Initialize SmartRefresh regions on first use
   static bool regions_registered = false;
   if (!regions_registered) {
@@ -387,29 +406,13 @@ void dev_display_tick() {
 }
 
 // Draw from UI spec (generated UI)
+// Note: Full implementation is in main.cpp (draw_from_spec_full_impl)
+// This stub is kept for backward compatibility
 void draw_from_spec_full(uint8_t variantId) {
   #if USE_UI_SPEC
-  // TOP_Y_OFFSET removed for spec alignment
-  
-  using ui::ALIGN_CENTER;
-  using ui::ALIGN_LEFT;
-  using ui::ALIGN_RIGHT;
-  using ui::ComponentOps;
-  using ui::OP_LABELCENTERED;
-  using ui::OP_LINE;
-  using ui::OP_TEMPGROUPCENTERED;
-  using ui::OP_TEXT;
-  using ui::OP_TIMERIGHT;
-  using ui::UiOpHeader;
-  
-  int comp_count = 0;
-  const ComponentOps* comps = get_variant_ops(variantId, &comp_count);
-  display.drawRect(0, 0, EINK_WIDTH, EINK_HEIGHT, GxEPD_BLACK);
-  display.drawLine(1, 18, EINK_WIDTH - 2, 18, GxEPD_BLACK);
-  display.drawLine(125, 18, 125, EINK_HEIGHT - 2, GxEPD_BLACK);
-  
-  // Process all UI operations from the spec
-  // (Full implementation would continue here - keeping minimal for now)
+  // Delegate to the full implementation in main.cpp
+  extern void draw_from_spec_full_impl(uint8_t variantId);
+  draw_from_spec_full_impl(variantId);
   #endif
 }
 
@@ -591,9 +594,7 @@ const int* rect_ptr_by_id(uint8_t rid) {
       return OUT_WIND;
     case ui::RECT_FOOTER_STATUS:
       return FOOTER_STATUS;
-    // Note: RECT_FOOTER_WEATHER case already handled above (line 559)
-    case ui::RECT_STATUS:
-      return STATUS_;
+    // Note: RECT_FOOTER_WEATHER case already handled above
     default:
       return nullptr;
   }

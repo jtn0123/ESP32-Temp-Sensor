@@ -42,7 +42,7 @@ body{
 .wrap{ max-width: 1040px; margin: 0 auto; }
 
 .page-header{ margin-bottom: var(--space-2); }
-.page-header h1{ font-size: 18px; margin: 0; display: flex; align-items: center; gap: var(--space-2); }
+.page-header h1{ font-size: 18px; margin: 0; display: flex; align-items: center; gap: var(--space-2); color: var(--color-text); }
 .page-header .subtitle{ color: var(--color-muted); font-size: 12px; margin-top: 2px; }
 
 .layout{
@@ -101,8 +101,45 @@ canvas#epd{
 
 .toolbar-row{ display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; }
 .toolbar-row label{ display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--color-text); }
-button{ padding: 6px 12px; border: 1px solid var(--color-border); border-radius: 6px; background: var(--color-surface); cursor: pointer; }
+button{ padding: 6px 12px; border: 1px solid var(--color-border); border-radius: 6px; background: var(--color-surface); color: var(--color-text); cursor: pointer; }
 button:hover{ border-color: #b9c0cc; }
+button.sim-btn{ color: var(--color-text); }
+button.icon-test{ color: var(--color-text); background: var(--color-surface); }
+/* Ensure buttons in various contexts have readable text */
+.toolbar button,
+.toolbar-row button,
+.fieldset button,
+.validation-controls button,
+.validation-results button,
+.region-controls button,
+.mqtt-controls button,
+.debug-body button,
+.card button,
+.editor-controls button,
+.diff-panel button{ color: var(--color-text); background: var(--color-surface); }
+/* Explicit rules for specific button IDs - ensure they're always readable */
+#refresh,
+#resetUI,
+#resetRegionFilters,
+#screenshot,
+#copyShot,
+#resetData,
+#refreshMetrics,
+#refreshState,
+#perfReset,
+#resetRegion,
+#resetCodeBtn,
+#resetLayout,
+button#refresh,
+button#resetUI,
+button#resetRegionFilters{ 
+  color: var(--color-text) !important; 
+  background: var(--color-surface) !important; 
+}
+select{ padding: 4px 8px; border: 1px solid var(--color-border); border-radius: 4px; background: var(--color-surface); color: var(--color-text); font-size: 12px; cursor: pointer; }
+select option{ background: var(--color-surface); color: var(--color-text); }
+input[type="number"], input[type="password"], input[type="file"], textarea{ background: var(--color-surface); color: var(--color-text); border: 1px solid var(--color-border); border-radius: 4px; }
+legend{ color: var(--color-text); font-weight: 600; }
 
 .toggles label{ font-size: 12px; color: var(--color-text); }
 /* Light mode checkbox styling */
@@ -149,8 +186,10 @@ button:hover{ border-color: #b9c0cc; }
 .inspector-pane{ position: sticky; top: var(--space-3); align-self: start; height: fit-content; }
 .inspector-pane details{ background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-1); padding: var(--space-2); box-shadow: var(--shadow-1); }
 .inspector-pane details+details{ margin-top: var(--space-2); }
-.inspector-pane summary{ cursor: pointer; font-weight: 600; }
-.badge{ margin-left: 8px; padding: 2px 6px; border-radius: 3px; font-size: 11px; border: 1px solid var(--color-border); }
+.inspector-pane summary{ cursor: pointer; font-weight: 600; color: var(--color-text); }
+.inspector-pane button,
+.inspector-pane details button{ color: var(--color-text); background: var(--color-surface); }
+.badge{ margin-left: 8px; padding: 2px 6px; border-radius: 3px; font-size: 11px; border: 1px solid var(--color-border); background: var(--color-surface); color: var(--color-text); }
 .muted{ color: var(--color-muted); }
 
 /* MQTT Panel Styles */
@@ -184,6 +223,7 @@ button:hover{ border-color: #b9c0cc; }
   align-items: center;
   gap: var(--space-1);
   font-size: 12px;
+  color: var(--color-text);
 }
 
 .form-row input {
@@ -193,6 +233,7 @@ button:hover{ border-color: #b9c0cc; }
   border-radius: 4px;
   font-size: 12px;
   background: var(--color-surface);
+  color: var(--color-text);
 }
 
 .button-row {
@@ -203,6 +244,7 @@ button:hover{ border-color: #b9c0cc; }
 
 .button-row button {
   flex: 1;
+  color: var(--color-text);
 }
 
 .mqtt-status {
@@ -232,25 +274,40 @@ button:hover{ border-color: #b9c0cc; }
 /* Region inspector */
 .region-browser{ margin-top: var(--space-2); }
 .region-controls{ display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; margin-bottom: var(--space-2); }
-.region-controls input[type="text"]{ padding: 2px 6px; height: 26px; border: 1px solid var(--color-border); border-radius: 4px; }
-.legend{ font-size: 12px; margin-bottom: var(--space-2); display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.region-controls label{ color: var(--color-text); font-size: 12px; }
+.region-controls input[type="text"]{ padding: 2px 6px; height: 26px; border: 1px solid var(--color-border); border-radius: 4px; background: var(--color-surface); color: var(--color-text); }
+.legend{ font-size: 12px; margin-bottom: var(--space-2); display: flex; align-items: center; gap: 10px; flex-wrap: wrap; color: var(--color-text); }
 .legend-box{ display: inline-block; width: 10px; height: 10px; border: 1px solid #333; vertical-align: middle; margin-right: 4px; }
 .legend-header{ background: #ff6b6b; }
 .legend-temp{ background: #4ecdc4; }
 .legend-label{ background: #45b7d1; }
 .legend-footer{ background: #96ceb4; }
-.region-list{ display: grid; grid-template-columns: repeat(auto-fill,minmax(160px,1fr)); gap: 4px; }
+.region-list{ display: grid; grid-template-columns: repeat(auto-fill,minmax(160px,1fr)); gap: 4px; color: var(--color-text); }
+
+/* Validation panel */
+.validation-controls{ display: flex; flex-direction: column; gap: var(--space-2); margin-bottom: var(--space-2); }
+.validation-controls label{ display: flex; align-items: center; gap: var(--space-1); font-size: 12px; color: var(--color-text); }
+.validation-controls button{ margin-top: var(--space-1); }
+.validation-results{ margin-top: var(--space-2); padding: var(--space-2); background: var(--color-bg); border-radius: var(--radius-1); font-size: 12px; color: var(--color-text); }
+.validation-results .issue-item{ color: var(--color-text); }
+.validation-results button{ color: var(--color-text); }
 
 /* Debug panel (shared classes) */
-.fieldset{ margin-bottom: var(--space-2); padding: var(--space-2); border: 1px solid var(--color-border); border-radius: 6px; }
-.console{ font-family: monospace; font-size: 10px; max-height: 120px; overflow-y: auto; background: #f0f2f5; padding: 4px; border: 1px solid var(--color-border); border-radius: 4px; }
+.card{ background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-1); color: var(--color-text); }
+.debug-body{ color: var(--color-text); }
+.fieldset{ margin-bottom: var(--space-2); padding: var(--space-2); border: 1px solid var(--color-border); border-radius: 6px; background: var(--color-surface); color: var(--color-text); }
+.fieldset legend{ color: var(--color-text); }
+.fieldset button{ color: var(--color-text); }
+.icon-grid{ color: var(--color-text); }
+.icon-grid button{ color: var(--color-text); background: var(--color-surface); }
+.console{ font-family: monospace; font-size: 10px; max-height: 120px; overflow-y: auto; background: #f0f2f5; padding: 4px; border: 1px solid var(--color-border); border-radius: 4px; color: var(--color-text); }
 .data-field{ display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
 .data-label{ display: inline-block; width: 120px; font-size: 11px; color: var(--color-muted); }
-.data-input{ width: 140px; font-size: 11px; }
+.data-input{ width: 140px; font-size: 11px; background: var(--color-surface); color: var(--color-text); border: 1px solid var(--color-border); border-radius: 4px; padding: 2px 6px; }
 
 /* Visual diff gallery */
 #visualGallery{ margin-top: var(--space-2); display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-2); }
-#visualGallery .shot{ border: 1px solid var(--color-border); padding: var(--space-1); background: var(--color-surface); border-radius: 4px; text-align: center; }
+#visualGallery .shot{ border: 1px solid var(--color-border); padding: var(--space-1); background: var(--color-surface); border-radius: 4px; text-align: center; color: var(--color-text); }
 #visualGallery .shot img{ max-width: 100%; border: 1px solid var(--color-border); }
 
 /* Layout Editor Styles */
@@ -269,6 +326,7 @@ button:hover{ border-color: #b9c0cc; }
   gap: var(--space-1);
   font-size: 12px;
   margin-bottom: var(--space-1);
+  color: var(--color-text);
 }
 
 .editor-instruction {
@@ -301,6 +359,7 @@ button:hover{ border-color: #b9c0cc; }
   background: #f0f9ff;
   border: 1px solid #bae6fd;
   border-radius: var(--radius-1);
+  color: var(--color-text);
 }
 
 .selection-info h4 {
@@ -333,6 +392,7 @@ button:hover{ border-color: #b9c0cc; }
   gap: 4px;
   font-size: 11px;
   font-weight: 600;
+  color: var(--color-text);
 }
 
 .coord-editor input {
@@ -342,6 +402,7 @@ button:hover{ border-color: #b9c0cc; }
   font-size: 11px;
   width: 60px;
   background: #fff;
+  color: var(--color-text);
 }
 
 .collision-warning {
@@ -351,6 +412,7 @@ button:hover{ border-color: #b9c0cc; }
   border: 1px solid #fecaca;
   border-radius: var(--radius-1);
   font-size: 12px;
+  color: var(--color-text);
 }
 
 .collision-warning strong {
@@ -377,6 +439,7 @@ button:hover{ border-color: #b9c0cc; }
 
 .editor-actions button {
   width: 100%;
+  color: var(--color-text);
 }
 
 .editor-actions button:disabled {
@@ -398,6 +461,7 @@ button:hover{ border-color: #b9c0cc; }
   margin: 0 0 var(--space-2) 0;
   font-size: 13px;
   font-weight: 600;
+  color: var(--color-text);
 }
 
 .diff-table {
@@ -417,11 +481,13 @@ button:hover{ border-color: #b9c0cc; }
   text-align: left;
   font-weight: 600;
   border-bottom: 2px solid var(--color-border);
+  color: var(--color-text);
 }
 
 .diff-table td {
   padding: 6px;
   border-bottom: 1px solid var(--color-border);
+  color: var(--color-text);
 }
 
 .diff-table tr:hover {
