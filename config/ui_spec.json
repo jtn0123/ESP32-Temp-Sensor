@@ -104,13 +104,7 @@
     "FOOTER_BATTERY": [
       6,
       85,
-      90,
-      12
-    ],
-    "FOOTER_DAYS": [
-      6,
-      97,
-      50,
+      118,
       12
     ],
     "FOOTER_IP": [
@@ -422,14 +416,7 @@
         "rect": "FOOTER_BATTERY",
         "font": "small",
         "align": "right",
-        "text": "{battery_voltage:.2f}V {battery_percent}%"
-      },
-      {
-        "op": "text",
-        "rect": "FOOTER_DAYS",
-        "font": "small",
-        "align": "left",
-        "text": "~{days}d"
+        "text": "{battery_voltage:.2f}V {battery_percent}% ~{days}d"
       },
       {
         "op": "text",
@@ -491,9 +478,6 @@
       ],
       "FOOTER_BATTERY": [
         "batteryGlyph",
-        "text"
-      ],
-      "FOOTER_DAYS": [
         "text"
       ],
       "FOOTER_IP": [

@@ -17,6 +17,7 @@
   // Editor state
   const editorState = {
     enabled: false,
+    editMode: 'regions', // 'regions' or 'dividers' - which editing mode is active
     selectedRegion: null,
     hoveredRegion: null, // Track which region mouse is over
     hoverPos: { x: 0, y: 0 }, // Mouse position for tooltip
@@ -36,7 +37,10 @@
     hoveredDivider: null, // { type: 'vertical'|'horizontal', position: number, affectedRegions: [...] }
     activeDivider: null,
     dividerStartPos: 0,
-    alignmentGuides: [] // Array of { type: 'horizontal'|'vertical', position: number }
+    alignmentGuides: [], // Array of { type: 'horizontal'|'vertical', position: number }
+    // Divider detection settings
+    dividerTolerance: 8, // Pixels tolerance for finding edge alignments
+    showDividerDebug: false // Show debug info for divider detection
   };
 
   // Handle size in pixels
@@ -74,10 +78,17 @@
 
     // Debug: Log dividers after geometry loads
     setTimeout(() => {
+      const allLines = getAllUISpecLines();
       const vDividers = findVerticalDividers();
       const hDividers = findHorizontalDividers();
-      console.log('[Layout Editor Debug] Vertical dividers found:', vDividers.length, vDividers);
-      console.log('[Layout Editor Debug] Horizontal dividers found:', hDividers.length, hDividers);
+      console.log('[Layout Editor] Lines from UI_SPEC:', allLines.length, allLines.map(l => `${l.source}: (${l.from[0]},${l.from[1]})→(${l.to[0]},${l.to[1]})`));
+      console.log('[Layout Editor] Movable dividers: ', vDividers.length, 'vertical,', hDividers.length, 'horizontal');
+      if (vDividers.length > 0) {
+        console.log('  Vertical lines:', vDividers.map(d => `x=${d.position} (affects ${d.leftRegions.length}L, ${d.rightRegions.length}R regions)`).join(', '));
+      }
+      if (hDividers.length > 0) {
+        console.log('  Horizontal lines:', hDividers.map(d => `y=${d.position} (affects ${d.topRegions.length}T, ${d.bottomRegions.length}B regions)`).join(', '));
+      }
     }, 500);
   }
   
@@ -149,6 +160,15 @@
             <input type="checkbox" id="snapToGrid" checked> Snap to 4px grid
           </label>
         </div>
+        
+        <div id="editModeToggle" class="edit-mode-toggle" style="display: none;">
+          <span class="mode-label">Edit Mode:</span>
+          <div class="mode-buttons">
+            <button id="modeRegions" class="mode-btn active" title="Edit individual regions">📦 Regions</button>
+            <button id="modeDividers" class="mode-btn" title="Move divider lines to resize multiple regions at once">📏 Dividers</button>
+          </div>
+          <div id="dividerStatus" class="divider-status"></div>
+        </div>
 
         <div id="editorInstruction" class="editor-instruction" style="display: none;">
           <div class="instruction-box">
@@ -159,14 +179,14 @@
 
         <div id="selectionInfo" class="selection-info" style="display: none;">
           <h4>Selected: <span id="selectedRegionName"></span></h4>
-          <div class="keyboard-hint">
-            ⌨️ Arrow keys: move 1px | Shift+Arrow: move 4px
+          <div class="coord-display">
+            <span class="coord-group"><span class="coord-label">X</span><input type="number" id="regionX" step="1" min="0"></span>
+            <span class="coord-group"><span class="coord-label">Y</span><input type="number" id="regionY" step="1" min="0"></span>
+            <span class="coord-group"><span class="coord-label">W</span><input type="number" id="regionW" step="1" min="1"></span>
+            <span class="coord-group"><span class="coord-label">H</span><input type="number" id="regionH" step="1" min="1"></span>
           </div>
-          <div class="coord-editor">
-            <label>X: <input type="number" id="regionX" step="1" min="0"></label>
-            <label>Y: <input type="number" id="regionY" step="1" min="0"></label>
-            <label>W: <input type="number" id="regionW" step="1" min="1"></label>
-            <label>H: <input type="number" id="regionH" step="1" min="1"></label>
+          <div class="keyboard-hint">
+            ⌨️ Arrow: 1px | Shift+Arrow: 4px
           </div>
           <div class="button-row">
             <button id="applyCoords">Apply</button>
@@ -204,8 +224,15 @@
 
         <div class="editor-actions">
           <button id="exportLayout" disabled>Export Layout JSON</button>
+          <button id="importLayout">Import Layout JSON</button>
           <button id="showDiff" disabled>Show Changes</button>
+          <button id="saveToStorage" disabled title="Save current layout to browser storage (persists across page reloads)">Save to Browser</button>
           <button id="resetLayout">Reset All Changes</button>
+          <button id="clearStorage" title="Clear saved layout from browser storage">Clear Saved</button>
+        </div>
+        <div id="storageStatus" class="storage-status" style="display: none;">
+          <span class="storage-icon">💾</span>
+          <span id="storageStatusText">Layout loaded from browser storage</span>
         </div>
 
         <div id="diffPanel" class="diff-panel" style="display: none;">
@@ -237,11 +264,13 @@
         editorState.enabled = e.target.checked;
         updateEditorBadge();
         updateInstructionVisibility();
+        updateEditModeVisibility();
         
         if (editorState.enabled) {
           // When enabling the editor, ensure we're showing the actual UI content
           // by exiting labels-only mode if it's active
           resetToNormalDisplayMode();
+          updateDividerStatus();
         } else {
           deselectRegion();
         }
@@ -251,6 +280,17 @@
           requestAnimationFrame(() => window.draw(window.lastData || {}));
         }
       });
+    }
+    
+    // Edit mode toggle buttons
+    const modeRegionsBtn = document.getElementById('modeRegions');
+    const modeDividersBtn = document.getElementById('modeDividers');
+    
+    if (modeRegionsBtn) {
+      modeRegionsBtn.addEventListener('click', () => setEditMode('regions'));
+    }
+    if (modeDividersBtn) {
+      modeDividersBtn.addEventListener('click', () => setEditMode('dividers'));
     }
 
     // Snap to grid toggle
@@ -306,6 +346,24 @@
       resetAllButton.addEventListener('click', resetAllChanges);
     }
 
+    // Import layout
+    const importButton = document.getElementById('importLayout');
+    if (importButton) {
+      importButton.addEventListener('click', importLayout);
+    }
+
+    // Save to localStorage
+    const saveStorageButton = document.getElementById('saveToStorage');
+    if (saveStorageButton) {
+      saveStorageButton.addEventListener('click', saveToLocalStorage);
+    }
+
+    // Clear localStorage
+    const clearStorageButton = document.getElementById('clearStorage');
+    if (clearStorageButton) {
+      clearStorageButton.addEventListener('click', clearLocalStorage);
+    }
+
     // Close diff
     const closeDiffButton = document.getElementById('closeDiff');
     if (closeDiffButton) {
@@ -348,6 +406,19 @@
       .then(data => {
         editorState.originalGeometry = JSON.parse(JSON.stringify(data));
         console.log('Original geometry loaded');
+        
+        // Check if there's a saved layout in localStorage
+        const savedLayout = loadFromLocalStorage();
+        if (savedLayout) {
+          console.log('📁 Found saved layout in browser storage, applying...');
+          applyImportedLayout(savedLayout);
+          showStorageStatus(true);
+        } else {
+          showStorageStatus(false);
+        }
+        
+        // Update UI state
+        updateModifiedState();
       })
       .catch(err => console.error('Failed to load geometry:', err));
   }
@@ -416,109 +487,225 @@
   }
 
   // === DIVIDER LINE DETECTION ===
+  // Dividers are based on ACTUAL lines drawn in UI_SPEC.components.chrome,
+  // NOT on region edge alignments.
 
   /**
-   * Find all vertical dividers (shared left/right edges)
-   * Returns array of { position: x, leftRegions: [...], rightRegions: [...] }
+   * Get all lines from UI_SPEC components (chrome, header, etc.)
+   * Returns array of { from: [x,y], to: [x,y], source: 'chrome'|'header'|etc }
    */
-  function findVerticalDividers() {
-    if (!window.GJSON || !window.GJSON.rects) return [];
-
-    const dividers = new Map(); // position -> { left: [], right: [] }
-    const regions = Object.entries(window.GJSON.rects);
-    const canvas = window.GJSON.canvas;
-
-    for (const [name, rect] of regions) {
-      const [x, y, w, h] = rect;
-      const rightEdge = x + w;
-
-      // Skip canvas edges
-      if (rightEdge > 0 && rightEdge < canvas.w) {
-        // Track right edges (potential dividers)
-        if (!dividers.has(rightEdge)) {
-          dividers.set(rightEdge, { left: [], right: [] });
-        }
-        dividers.get(rightEdge).left.push(name);
-      }
-    }
-
-    // Now find regions to the right of each divider
-    for (const [position, info] of dividers.entries()) {
-      for (const [name, rect] of regions) {
-        const [x] = rect;
-        // If this region's left edge matches the divider position
-        if (x === position && !info.left.includes(name)) {
-          info.right.push(name);
+  function getAllUISpecLines() {
+    const lines = [];
+    const spec = window.UI_SPEC;
+    if (!spec || !spec.components) return lines;
+    
+    // Scan all components for line operations
+    for (const [componentName, operations] of Object.entries(spec.components)) {
+      if (!Array.isArray(operations)) continue;
+      
+      for (const op of operations) {
+        if (op && op.op === 'line' && Array.isArray(op.from) && Array.isArray(op.to)) {
+          lines.push({
+            from: [op.from[0], op.from[1]],
+            to: [op.to[0], op.to[1]],
+            source: componentName
+          });
         }
       }
     }
-
-    // Only keep dividers that have regions on both sides
-    const result = [];
-    for (const [position, info] of dividers.entries()) {
-      if (info.left.length > 0 && info.right.length > 0) {
-        result.push({
-          type: 'vertical',
-          position,
-          leftRegions: info.left,
-          rightRegions: info.right
-        });
-      }
-    }
-
-    return result;
+    
+    return lines;
   }
 
   /**
-   * Find all horizontal dividers (shared top/bottom edges)
-   * Returns array of { position: y, topRegions: [...], bottomRegions: [...] }
+   * Find all vertical dividers from actual UI_SPEC lines
+   * Returns array of { type: 'vertical', position: x, line: {...}, affectedRegions: {...} }
    */
-  function findHorizontalDividers() {
-    if (!window.GJSON || !window.GJSON.rects) return [];
-
-    const dividers = new Map(); // position -> { top: [], bottom: [] }
-    const regions = Object.entries(window.GJSON.rects);
-    const canvas = window.GJSON.canvas;
-
-    for (const [name, rect] of regions) {
-      const [x, y, w, h] = rect;
-      const bottomEdge = y + h;
-
-      // Skip canvas edges
-      if (bottomEdge > 0 && bottomEdge < canvas.h) {
-        // Track bottom edges (potential dividers)
-        if (!dividers.has(bottomEdge)) {
-          dividers.set(bottomEdge, { top: [], bottom: [] });
-        }
-        dividers.get(bottomEdge).top.push(name);
-      }
-    }
-
-    // Now find regions below each divider
-    for (const [position, info] of dividers.entries()) {
-      for (const [name, rect] of regions) {
-        const [,y] = rect;
-        // If this region's top edge matches the divider position
-        if (y === position && !info.top.includes(name)) {
-          info.bottom.push(name);
-        }
-      }
-    }
-
-    // Only keep dividers that have regions on both sides
-    const result = [];
-    for (const [position, info] of dividers.entries()) {
-      if (info.top.length > 0 && info.bottom.length > 0) {
-        result.push({
-          type: 'horizontal',
-          position,
-          topRegions: info.top,
-          bottomRegions: info.bottom
+  function findVerticalDividers() {
+    const lines = getAllUISpecLines();
+    const canvas = window.GJSON?.canvas;
+    if (!canvas) return [];
+    
+    const dividers = [];
+    const tolerance = editorState.dividerTolerance;
+    
+    for (const line of lines) {
+      const [fx, fy] = line.from;
+      const [tx, ty] = line.to;
+      
+      // Vertical line: same x coordinate
+      if (fx === tx) {
+        const x = fx;
+        
+        // Skip canvas border lines (x=0 or x=canvas.w-1)
+        if (x <= 1 || x >= canvas.w - 2) continue;
+        
+        // Find regions affected by this line (touching left or right)
+        const affectedRegions = findRegionsTouchingVerticalLine(x, Math.min(fy, ty), Math.max(fy, ty), tolerance);
+        
+        dividers.push({
+          type: 'vertical',
+          position: x,
+          line: line,
+          yStart: Math.min(fy, ty),
+          yEnd: Math.max(fy, ty),
+          leftRegions: affectedRegions.left,
+          rightRegions: affectedRegions.right
         });
       }
     }
+    
+    return dividers;
+  }
 
-    return result;
+  /**
+   * Find all horizontal dividers from actual UI_SPEC lines
+   * Returns array of { type: 'horizontal', position: y, line: {...}, affectedRegions: {...} }
+   */
+  function findHorizontalDividers() {
+    const lines = getAllUISpecLines();
+    const canvas = window.GJSON?.canvas;
+    if (!canvas) return [];
+    
+    const dividers = [];
+    const tolerance = editorState.dividerTolerance;
+    
+    for (const line of lines) {
+      const [fx, fy] = line.from;
+      const [tx, ty] = line.to;
+      
+      // Horizontal line: same y coordinate
+      if (fy === ty) {
+        const y = fy;
+        
+        // Skip canvas border lines (y=0 or y=canvas.h-1)
+        if (y <= 1 || y >= canvas.h - 2) continue;
+        
+        // Find regions affected by this line (touching top or bottom)
+        const affectedRegions = findRegionsTouchingHorizontalLine(y, Math.min(fx, tx), Math.max(fx, tx), tolerance);
+        
+        dividers.push({
+          type: 'horizontal',
+          position: y,
+          line: line,
+          xStart: Math.min(fx, tx),
+          xEnd: Math.max(fx, tx),
+          topRegions: affectedRegions.top,
+          bottomRegions: affectedRegions.bottom
+        });
+      }
+    }
+    
+    return dividers;
+  }
+
+  /**
+   * Find regions that touch a vertical line (for moving them with the divider)
+   */
+  function findRegionsTouchingVerticalLine(x, yStart, yEnd, tolerance) {
+    const left = [];   // Regions whose right edge is near the line
+    const right = [];  // Regions whose left edge is near the line
+    
+    if (!window.GJSON?.rects) return { left, right };
+    
+    for (const [name, rect] of Object.entries(window.GJSON.rects)) {
+      const [rx, ry, rw, rh] = rect;
+      const rightEdge = rx + rw;
+      
+      // Check if region overlaps vertically with the line
+      const regionBottom = ry + rh;
+      const overlapsY = !(regionBottom < yStart || ry > yEnd);
+      if (!overlapsY) continue;
+      
+      // Right edge touches line (region is to the left)
+      if (Math.abs(rightEdge - x) <= tolerance) {
+        left.push(name);
+      }
+      // Left edge touches line (region is to the right)
+      if (Math.abs(rx - x) <= tolerance) {
+        right.push(name);
+      }
+    }
+    
+    return { left, right };
+  }
+
+  /**
+   * Find regions that touch a horizontal line (for moving them with the divider)
+   */
+  function findRegionsTouchingHorizontalLine(y, xStart, xEnd, tolerance) {
+    const top = [];     // Regions whose bottom edge is near the line
+    const bottom = [];  // Regions whose top edge is near the line
+    
+    if (!window.GJSON?.rects) return { top, bottom };
+    
+    for (const [name, rect] of Object.entries(window.GJSON.rects)) {
+      const [rx, ry, rw, rh] = rect;
+      const bottomEdge = ry + rh;
+      
+      // Check if region overlaps horizontally with the line
+      const regionRight = rx + rw;
+      const overlapsX = !(regionRight < xStart || rx > xEnd);
+      if (!overlapsX) continue;
+      
+      // Bottom edge touches line (region is above)
+      if (Math.abs(bottomEdge - y) <= tolerance) {
+        top.push(name);
+      }
+      // Top edge touches line (region is below)
+      if (Math.abs(ry - y) <= tolerance) {
+        bottom.push(name);
+      }
+    }
+    
+    return { top, bottom };
+  }
+
+  /**
+   * Update a line in UI_SPEC to a new position
+   * @param {Object} lineRef - The line object reference from getAllUISpecLines
+   * @param {number} newPosition - The new position (x for vertical, y for horizontal)
+   * @param {string} type - 'vertical' or 'horizontal'
+   */
+  function updateUISpecLine(lineRef, newPosition, type) {
+    if (!window.UI_SPEC || !lineRef || !lineRef.source) return;
+    
+    const spec = window.UI_SPEC;
+    const component = spec.components?.[lineRef.source];
+    if (!Array.isArray(component)) return;
+    
+    // Find the matching line operation in the component
+    for (const op of component) {
+      if (op && op.op === 'line' && 
+          op.from[0] === lineRef.from[0] && op.from[1] === lineRef.from[1] &&
+          op.to[0] === lineRef.to[0] && op.to[1] === lineRef.to[1]) {
+        
+        if (type === 'vertical') {
+          // Update x coordinate for both from and to
+          op.from[0] = newPosition;
+          op.to[0] = newPosition;
+        } else {
+          // Update y coordinate for both from and to
+          op.from[1] = newPosition;
+          op.to[1] = newPosition;
+        }
+        
+        console.log(`📏 Updated ${type} line in ${lineRef.source}: ${type === 'vertical' ? 'x' : 'y'}=${newPosition}`);
+        
+        // Also update the lineRef so subsequent updates use the new position
+        if (type === 'vertical') {
+          lineRef.from[0] = newPosition;
+          lineRef.to[0] = newPosition;
+        } else {
+          lineRef.from[1] = newPosition;
+          lineRef.to[1] = newPosition;
+        }
+        
+        return;
+      }
+    }
+    
+    console.warn('Could not find matching line in UI_SPEC to update');
   }
 
   /**
@@ -551,6 +738,45 @@
 
     const point = getCanvasCoords(event);
 
+    // === DIVIDERS MODE ===
+    if (editorState.editMode === 'dividers') {
+      const divider = findDividerAtPoint(point);
+      if (divider) {
+        // Start divider dragging
+        editorState.isDraggingDivider = true;
+        editorState.activeDivider = divider;
+        editorState.dividerStartPos = divider.position; // Use actual line position
+        editorState.dragStartPos = point;
+
+        // Store original positions of all affected regions
+        editorState.regionStartPos = {};
+        const affectedRegions = divider.type === 'vertical'
+          ? [...divider.leftRegions, ...divider.rightRegions]
+          : [...divider.topRegions, ...divider.bottomRegions];
+
+        affectedRegions.forEach(name => {
+          const [x, y, w, h] = window.SafeUtils.getRect(window.GJSON?.rects, name);
+          editorState.regionStartPos[name] = { x, y, w, h };
+        });
+
+        // Store original line position from UI_SPEC for updating
+        editorState.originalLinePos = {
+          from: [...divider.line.from],
+          to: [...divider.line.to]
+        };
+
+        // Show visual feedback
+        const direction = divider.type === 'vertical' ? '↔' : '↕';
+        const regionCount = affectedRegions.length;
+        showDragIndicator(`${direction} Drag line at ${divider.type === 'vertical' ? 'x' : 'y'}=${divider.position} (${regionCount} regions)`);
+        updateCanvasClasses();
+
+        event.preventDefault();
+      }
+      return; // In dividers mode, only handle dividers
+    }
+
+    // === REGIONS MODE ===
     // PRIORITY 1: Check if clicking on selected region's handle or body FIRST
     // This ensures resize handles take priority over dividers when a region is selected
     if (editorState.selectedRegion && window.GJSON?.rects?.[editorState.selectedRegion]) {
@@ -585,36 +811,7 @@
       }
     }
 
-    // PRIORITY 2: Check for divider (only if not interacting with selected region)
-    const divider = findDividerAtPoint(point);
-    if (divider) {
-      // Start divider dragging
-      editorState.isDraggingDivider = true;
-      editorState.activeDivider = divider;
-      editorState.dividerStartPos = divider.type === 'vertical' ? point.x : point.y;
-      editorState.dragStartPos = point;
-
-      // Store original positions of all affected regions
-      editorState.regionStartPos = {};
-      const affectedRegions = divider.type === 'vertical'
-        ? [...divider.leftRegions, ...divider.rightRegions]
-        : [...divider.topRegions, ...divider.bottomRegions];
-
-      affectedRegions.forEach(name => {
-        const [x, y, w, h] = window.SafeUtils.getRect(window.GJSON?.rects, name);
-        editorState.regionStartPos[name] = { x, y, w, h };
-      });
-
-      // Show visual feedback
-      const direction = divider.type === 'vertical' ? '↔' : '↕';
-      showDragIndicator(`${direction} Drag divider to resize ${affectedRegions.length} regions`);
-      updateCanvasClasses();
-
-      event.preventDefault();
-      return;
-    }
-
-    // PRIORITY 3: Select new region
+    // PRIORITY 2: Select new region
     const regionName = findRegionAtPoint(point);
     if (regionName) {
       selectRegion(regionName);
@@ -639,6 +836,23 @@
 
     // Update cursor based on hover
     if (!editorState.isDragging && !editorState.isResizing && !editorState.isDraggingDivider) {
+      
+      // === DIVIDERS MODE ===
+      if (editorState.editMode === 'dividers') {
+        const hoveredDivider = findDividerAtPoint(point);
+        if (hoveredDivider) {
+          canvas.style.cursor = hoveredDivider.type === 'vertical' ? 'ew-resize' : 'ns-resize';
+          editorState.hoveredDivider = hoveredDivider;
+          updateCanvasClasses();
+          requestAnimationFrame(() => window.draw && window.draw(window.lastData));
+        } else {
+          canvas.style.cursor = 'default';
+          editorState.hoveredDivider = null;
+        }
+        return; // In dividers mode, only check dividers
+      }
+      
+      // === REGIONS MODE ===
       // PRIORITY 1: Check for resize handle hover FIRST (if region selected)
       // This ensures handles take visual priority over dividers
       if (editorState.selectedRegion) {
@@ -662,38 +876,27 @@
         }
       }
       
-      // PRIORITY 2: Check for divider hover
-      const hoveredDivider = findDividerAtPoint(point);
-      if (hoveredDivider) {
-        canvas.style.cursor = hoveredDivider.type === 'vertical' ? 'ew-resize' : 'ns-resize';
-        editorState.hoveredDivider = hoveredDivider;
-        updateCanvasClasses();
-        requestAnimationFrame(() => window.draw && window.draw(window.lastData));
+      // PRIORITY 2: Check for region hover (in regions mode)
+      const hoveredRegion = findRegionAtPoint(point);
+      const prevHovered = editorState.hoveredRegion;
+      editorState.hoveredRegion = hoveredRegion;
+      editorState.hoverPos = point;
+      editorState.hoveredDivider = null;
+      
+      if (hoveredRegion) {
+        canvas.style.cursor = editorState.selectedRegion ? 'default' : 'pointer';
       } else {
-        editorState.hoveredDivider = null;
+        canvas.style.cursor = 'default';
+      }
+      
+      // Update canvas classes for hover state
+      if (hoveredRegion !== prevHovered) {
+        updateCanvasClasses();
+      }
 
-        // PRIORITY 3: Check for region hover (no region selected)
-        if (!editorState.selectedRegion) {
-          const hoveredRegion = findRegionAtPoint(point);
-          canvas.style.cursor = hoveredRegion ? 'pointer' : 'default';
-
-          // Update hover state for tooltip
-          const prevHovered = editorState.hoveredRegion;
-          editorState.hoveredRegion = hoveredRegion;
-          editorState.hoverPos = point;
-          
-          // Update canvas classes for hover state
-          if (hoveredRegion !== prevHovered) {
-            updateCanvasClasses();
-          }
-
-          // Trigger redraw to show/hide tooltip
-          if (hoveredRegion || prevHovered) {
-            requestAnimationFrame(() => window.draw && window.draw(window.lastData));
-          }
-        } else {
-          canvas.style.cursor = 'default';
-        }
+      // Trigger redraw to show/hide tooltip
+      if (hoveredRegion || prevHovered) {
+        requestAnimationFrame(() => window.draw && window.draw(window.lastData));
       }
     }
 
@@ -749,7 +952,11 @@
             window.GJSON.rects[name][2] = orig.w - delta; // width
           }
 
+          // Update the actual line in UI_SPEC
+          updateUISpecLine(divider.line, newPosition, 'vertical');
+
           checkCollisions();
+          updateModifiedState();
           requestAnimationFrame(() => window.draw && window.draw(window.lastData || {}));
         }
       } else {
@@ -798,7 +1005,11 @@
             window.GJSON.rects[name][3] = orig.h - delta; // height
           }
 
+          // Update the actual line in UI_SPEC
+          updateUISpecLine(divider.line, newPosition, 'horizontal');
+
           checkCollisions();
+          updateModifiedState();
           requestAnimationFrame(() => window.draw && window.draw(window.lastData || {}));
         }
       }
@@ -975,6 +1186,11 @@
     updateInstructionVisibility();
     checkCollisions();
     requestAnimationFrame(() => window.draw && window.draw(window.lastData || {}));
+    
+    // Ensure focus is not on input fields so arrow keys work for movement
+    if (document.activeElement && document.activeElement.tagName === 'INPUT') {
+      document.activeElement.blur();
+    }
   }
 
   // Deselect current region
@@ -1236,9 +1452,12 @@
   }
 
   // Apply manual coordinate changes
+  // NOTE: Manual entry does NOT snap to grid - the user typed those specific values intentionally.
+  // Grid snapping only applies to mouse-based drag/resize operations.
   function applyManualCoords() {
     if (!editorState.selectedRegion) return;
 
+    const regionName = editorState.selectedRegion;
     const x = window.SafeUtils.safeParseInt(document.getElementById('regionX')?.value, 0);
     const y = window.SafeUtils.safeParseInt(document.getElementById('regionY')?.value, 0);
     const w = window.SafeUtils.safeParseInt(document.getElementById('regionW')?.value, 0);
@@ -1257,11 +1476,11 @@
       return;
     }
 
-    // Apply with optional snapping
-    window.GJSON.rects[editorState.selectedRegion][0] = editorState.snapToGrid ? snapToGrid(x) : x;
-    window.GJSON.rects[editorState.selectedRegion][1] = editorState.snapToGrid ? snapToGrid(y) : y;
-    window.GJSON.rects[editorState.selectedRegion][2] = editorState.snapToGrid ? snapToGrid(w) : w;
-    window.GJSON.rects[editorState.selectedRegion][3] = editorState.snapToGrid ? snapToGrid(h) : h;
+    // Apply the exact values - no snapping for manual entry
+    window.GJSON.rects[regionName][0] = x;
+    window.GJSON.rects[regionName][1] = y;
+    window.GJSON.rects[regionName][2] = w;
+    window.GJSON.rects[regionName][3] = h;
 
     updateSelectionInfo();
     checkCollisions();
@@ -1336,9 +1555,11 @@
 
     const exportButton = document.getElementById('exportLayout');
     const diffButton = document.getElementById('showDiff');
+    const saveStorageButton = document.getElementById('saveToStorage');
 
     if (exportButton) exportButton.disabled = !hasChanges;
     if (diffButton) diffButton.disabled = !hasChanges;
+    if (saveStorageButton) saveStorageButton.disabled = !hasChanges;
   }
 
   // Check if any changes have been made
@@ -1363,6 +1584,9 @@
     return false;
   }
 
+  // localStorage key for saved geometry
+  const STORAGE_KEY = 'sim_layout_geometry';
+
   // Export modified layout as JSON
   function exportLayout() {
     if (!window.GJSON) return;
@@ -1380,11 +1604,192 @@
     URL.revokeObjectURL(url);
 
     // Show toast
+    showToast('Layout exported! To make permanent, run: python3 scripts/apply_layout_changes.py ~/Downloads/display_geometry_modified.json', 'success');
+  }
+
+  // Import layout from JSON file
+  function importLayout() {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json,application/json';
+    
+    input.onchange = (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        try {
+          const importedData = JSON.parse(event.target.result);
+          
+          // Validate the imported JSON structure
+          const validation = validateLayoutJSON(importedData);
+          if (!validation.valid) {
+            showToast(`Import failed: ${validation.error}`, 'error');
+            return;
+          }
+          
+          // Apply the imported layout
+          applyImportedLayout(importedData);
+          showToast(`Layout imported successfully! ${validation.regions} regions loaded.`, 'success');
+          
+        } catch (err) {
+          showToast(`Import error: ${err.message}`, 'error');
+        }
+      };
+      reader.readAsText(file);
+    };
+    
+    input.click();
+  }
+
+  // Validate imported layout JSON for backwards compatibility
+  function validateLayoutJSON(data) {
+    // Check basic structure
+    if (!data || typeof data !== 'object') {
+      return { valid: false, error: 'Invalid JSON structure' };
+    }
+    
+    // Must have rects object
+    if (!data.rects || typeof data.rects !== 'object') {
+      return { valid: false, error: 'Missing "rects" object' };
+    }
+    
+    // Validate each rect
+    const regionCount = Object.keys(data.rects).length;
+    if (regionCount === 0) {
+      return { valid: false, error: 'No regions defined in "rects"' };
+    }
+    
+    for (const [name, rect] of Object.entries(data.rects)) {
+      if (!Array.isArray(rect) || rect.length < 4) {
+        return { valid: false, error: `Invalid rect for "${name}": must be array [x, y, w, h]` };
+      }
+      for (let i = 0; i < 4; i++) {
+        if (typeof rect[i] !== 'number' || !Number.isFinite(rect[i])) {
+          return { valid: false, error: `Invalid coordinate in "${name}": must be numbers` };
+        }
+      }
+      if (rect[2] <= 0 || rect[3] <= 0) {
+        return { valid: false, error: `Invalid size in "${name}": width and height must be > 0` };
+      }
+    }
+    
+    // Check for canvas dimensions (optional but helpful)
+    if (data.canvas) {
+      if (typeof data.canvas.w !== 'number' || typeof data.canvas.h !== 'number') {
+        return { valid: false, error: 'Invalid canvas dimensions' };
+      }
+    }
+    
+    return { valid: true, regions: regionCount };
+  }
+
+  // Apply imported layout to the simulator
+  function applyImportedLayout(data) {
+    // Preserve canvas and fonts from original if not in imported data
+    const mergedData = {
+      layout_version: data.layout_version || (window.GJSON?.layout_version) || 1,
+      layout_crc: data.layout_crc || 'imported',
+      canvas: data.canvas || window.GJSON?.canvas || { w: 250, h: 122 },
+      fonts: data.fonts || window.GJSON?.fonts || { big_px: 22, mid_px: 11, small_px: 10 },
+      rects: data.rects
+    };
+    
+    // Apply to global
+    window.GJSON = mergedData;
+    
+    // Update state
+    deselectRegion();
+    checkCollisions();
+    updateModifiedState();
+    
+    // Redraw
+    if (typeof window.draw === 'function') {
+      requestAnimationFrame(() => window.draw(window.lastData || {}));
+    }
+  }
+
+  // Save current layout to localStorage
+  function saveToLocalStorage() {
+    if (!window.GJSON) {
+      showToast('No layout to save', 'error');
+      return;
+    }
+    
+    try {
+      const json = JSON.stringify(window.GJSON);
+      localStorage.setItem(STORAGE_KEY, json);
+      showStorageStatus(true);
+      showToast('Layout saved to browser storage! It will persist across page reloads.', 'success');
+    } catch (err) {
+      showToast(`Failed to save: ${err.message}`, 'error');
+    }
+  }
+
+  // Load layout from localStorage (called on init)
+  function loadFromLocalStorage() {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        const data = JSON.parse(saved);
+        const validation = validateLayoutJSON(data);
+        if (validation.valid) {
+          return data;
+        }
+        console.warn('Saved layout invalid, ignoring:', validation.error);
+      }
+    } catch (err) {
+      console.warn('Failed to load saved layout:', err);
+    }
+    return null;
+  }
+
+  // Clear saved layout from localStorage
+  function clearLocalStorage() {
+    if (!confirm('Clear saved layout from browser storage? This will revert to the default geometry.json on next page load.')) {
+      return;
+    }
+    
+    try {
+      localStorage.removeItem(STORAGE_KEY);
+      showStorageStatus(false);
+      showToast('Saved layout cleared. Reload the page to use default geometry.', 'success');
+    } catch (err) {
+      showToast(`Failed to clear: ${err.message}`, 'error');
+    }
+  }
+
+  // Show/hide storage status indicator
+  function showStorageStatus(hasSaved) {
+    const status = document.getElementById('storageStatus');
+    const clearBtn = document.getElementById('clearStorage');
+    
+    if (status) {
+      status.style.display = hasSaved ? 'flex' : 'none';
+    }
+    if (clearBtn) {
+      clearBtn.style.display = hasSaved ? 'inline-block' : 'none';
+    }
+  }
+
+  // Helper to show toast notifications
+  function showToast(message, type = 'info') {
     const toast = document.getElementById('globalToast');
     if (toast) {
-      toast.textContent = 'Layout exported! Apply with: python3 scripts/apply_layout_changes.py';
-      toast.classList.add('show');
-      setTimeout(() => toast.classList.remove('show'), 5000);
+      toast.textContent = message;
+      toast.className = 'toast show';
+      if (type === 'error') {
+        toast.style.background = '#dc3545';
+      } else if (type === 'success') {
+        toast.style.background = '#198754';
+      } else {
+        toast.style.background = '#333';
+      }
+      setTimeout(() => {
+        toast.classList.remove('show');
+        toast.style.background = '';
+      }, 5000);
     }
   }
 
@@ -1431,7 +1836,7 @@
 
   // Reset all changes
   function resetAllChanges() {
-    if (!confirm('Reset all layout changes to original?')) return;
+    if (!confirm('Reset all layout changes to original geometry.json? (This does not clear browser storage - use "Clear Saved" for that)')) return;
 
     if (editorState.originalGeometry) {
       window.GJSON = JSON.parse(JSON.stringify(editorState.originalGeometry));
@@ -1439,6 +1844,7 @@
       checkCollisions();
       updateModifiedState();
       requestAnimationFrame(() => window.draw && window.draw(window.lastData || {}));
+      showToast('Layout reset to original geometry.json', 'success');
     }
   }
 
@@ -1448,6 +1854,70 @@
     if (badge) {
       badge.textContent = editorState.enabled ? 'ON' : 'OFF';
       badge.className = editorState.enabled ? 'badge badge-success' : 'badge';
+    }
+  }
+  
+  // Show/hide edit mode toggle based on editor enabled state
+  function updateEditModeVisibility() {
+    const toggle = document.getElementById('editModeToggle');
+    if (toggle) {
+      toggle.style.display = editorState.enabled ? 'block' : 'none';
+    }
+  }
+  
+  // Set the active edit mode
+  function setEditMode(mode) {
+    editorState.editMode = mode;
+    
+    // Update button states
+    const regionsBtn = document.getElementById('modeRegions');
+    const dividersBtn = document.getElementById('modeDividers');
+    
+    if (regionsBtn) {
+      regionsBtn.classList.toggle('active', mode === 'regions');
+    }
+    if (dividersBtn) {
+      dividersBtn.classList.toggle('active', mode === 'dividers');
+    }
+    
+    // Deselect region when switching to dividers mode
+    if (mode === 'dividers') {
+      deselectRegion();
+    }
+    
+    // Update status and redraw
+    updateDividerStatus();
+    if (typeof window.draw === 'function') {
+      requestAnimationFrame(() => window.draw(window.lastData || {}));
+    }
+    
+    console.log(`[Layout Editor] Mode switched to: ${mode}`);
+  }
+  
+  // Update divider status display
+  function updateDividerStatus() {
+    const statusEl = document.getElementById('dividerStatus');
+    if (!statusEl) return;
+    
+    const vDividers = findVerticalDividers();
+    const hDividers = findHorizontalDividers();
+    
+    if (editorState.editMode === 'dividers') {
+      if (vDividers.length === 0 && hDividers.length === 0) {
+        statusEl.innerHTML = `
+          <div class="divider-warning">
+            ⚠️ No dividers detected!<br>
+            <small>Regions need aligned edges. Try the Regions mode to adjust.</small>
+          </div>`;
+      } else {
+        statusEl.innerHTML = `
+          <div class="divider-info">
+            Found: ${vDividers.length} vertical, ${hDividers.length} horizontal dividers<br>
+            <small>Click and drag a divider line to resize adjacent regions</small>
+          </div>`;
+      }
+    } else {
+      statusEl.innerHTML = '';
     }
   }
   

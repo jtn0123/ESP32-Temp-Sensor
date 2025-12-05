@@ -1,6 +1,6 @@
 {
   "layout_version": 1,
-  "layout_crc": "0x16636A90",
+  "layout_crc": "0xD601B413",
   "canvas": {
     "w": 250,
     "h": 122
@@ -92,13 +92,7 @@
     "FOOTER_BATTERY": [
       6,
       85,
-      90,
-      12
-    ],
-    "FOOTER_DAYS": [
-      6,
-      97,
-      50,
+      118,
       12
     ],
     "FOOTER_IP": [
