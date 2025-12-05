@@ -5,8 +5,8 @@
 
 // Layout identity for simulator ↔ firmware parity checks
 #define LAYOUT_VERSION 1
-#define LAYOUT_CRC 0x16636A90u
-#define LAYOUT_MD5 "c5997bb0dfbba9ae616bb851437be2bd"
+#define LAYOUT_CRC 0xD601B413u
+#define LAYOUT_MD5 "3a67bd81077867cf3fea668af6cc7e6f"
 
 // Display dimensions
 #define DISPLAY_WIDTH 250
@@ -26,8 +26,7 @@ static constexpr int RECT_WEATHER_ICON[4] = { 168,  90,  30, 32};
 static constexpr int RECT_OUT_PRESSURE[4] = { 177,  68,  64, 12};
 static constexpr int RECT_OUT_HUMIDITY[4] = { 131,  78,  44, 12};
 static constexpr int RECT_OUT_WIND[4] = { 177,  80,  44, 10};
-static constexpr int RECT_FOOTER_BATTERY[4] = {   6,  85,  90, 12};
-static constexpr int RECT_FOOTER_DAYS[4] = {   6,  97,  50, 12};
+static constexpr int RECT_FOOTER_BATTERY[4] = {   6,  85, 118, 12};
 static constexpr int RECT_FOOTER_IP[4] = {   6, 107, 120, 14};
 static constexpr int RECT_FOOTER_WEATHER[4] = { 168,  90,  76, 32};
 
@@ -82,11 +81,8 @@ static_assert(RECT_OUT_WIND[0] >= 0 && RECT_OUT_WIND[1] >= 0, "OUT_WIND origin")
 static_assert(177 + 44 <= DISPLAY_WIDTH,  "OUT_WIND width");
 static_assert(80 + 10 <= DISPLAY_HEIGHT, "OUT_WIND height");
 static_assert(RECT_FOOTER_BATTERY[0] >= 0 && RECT_FOOTER_BATTERY[1] >= 0, "FOOTER_BATTERY origin");
-static_assert(6 + 90 <= DISPLAY_WIDTH,  "FOOTER_BATTERY width");
+static_assert(6 + 118 <= DISPLAY_WIDTH,  "FOOTER_BATTERY width");
 static_assert(85 + 12 <= DISPLAY_HEIGHT, "FOOTER_BATTERY height");
-static_assert(RECT_FOOTER_DAYS[0] >= 0 && RECT_FOOTER_DAYS[1] >= 0, "FOOTER_DAYS origin");
-static_assert(6 + 50 <= DISPLAY_WIDTH,  "FOOTER_DAYS width");
-static_assert(97 + 12 <= DISPLAY_HEIGHT, "FOOTER_DAYS height");
 static_assert(RECT_FOOTER_IP[0] >= 0 && RECT_FOOTER_IP[1] >= 0, "FOOTER_IP origin");
 static_assert(6 + 120 <= DISPLAY_WIDTH,  "FOOTER_IP width");
 static_assert(107 + 14 <= DISPLAY_HEIGHT, "FOOTER_IP height");
