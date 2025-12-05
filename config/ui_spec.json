@@ -41,6 +41,12 @@
       50,
       14
     ],
+    "INSIDE_LABEL": [
+      6,
+      18,
+      60,
+      14
+    ],
     "INSIDE_TEMP": [
       6,
       34,
@@ -58,6 +64,12 @@
       70,
       118,
       10
+    ],
+    "OUTSIDE_LABEL": [
+      129,
+      18,
+      70,
+      14
     ],
     "OUT_TEMP": [
       129,
@@ -89,16 +101,28 @@
       44,
       10
     ],
-    "FOOTER_STATUS": [
+    "FOOTER_BATTERY": [
       6,
+      85,
       90,
-      160,
-      32
+      12
+    ],
+    "FOOTER_DAYS": [
+      6,
+      97,
+      50,
+      12
+    ],
+    "FOOTER_IP": [
+      6,
+      107,
+      120,
+      14
     ],
     "FOOTER_WEATHER": [
-      200,
+      168,
       90,
-      44,
+      76,
       32
     ]
   },
@@ -319,9 +343,9 @@
     "inside": [
       {
         "op": "text",
-        "x": 30,
-        "y": 20,
+        "rect": "INSIDE_LABEL",
         "font": "label",
+        "align": "center",
         "text": "INSIDE"
       },
       {
@@ -348,9 +372,9 @@
     "outside": [
       {
         "op": "text",
-        "x": 145,
-        "y": 20,
+        "rect": "OUTSIDE_LABEL",
         "font": "label",
+        "align": "center",
         "text": "OUTSIDE"
       },
       {
@@ -390,38 +414,34 @@
     "footer_split": [
       {
         "op": "batteryGlyph",
-        "x": 8,
-        "y": 87,
-        "w": 13,
-        "h": 7,
+        "rect": "FOOTER_BATTERY",
         "percent": "{battery_percent}"
       },
       {
         "op": "text",
-        "x": 27,
-        "y": 87,
+        "rect": "FOOTER_BATTERY",
         "font": "small",
+        "align": "right",
         "text": "{battery_voltage:.2f}V {battery_percent}%"
       },
       {
         "op": "text",
-        "x": 8,
-        "y": 98,
+        "rect": "FOOTER_DAYS",
         "font": "small",
+        "align": "left",
         "text": "~{days}d"
       },
       {
         "op": "text",
-        "rect": "FOOTER_STATUS",
+        "rect": "FOOTER_IP",
         "font": "small",
         "align": "center",
-        "y": 19,
         "text": "IP {ip}"
       },
       {
         "op": "textCenteredIn",
         "rect": "FOOTER_WEATHER",
-        "yOffset": 19,
+        "yOffset": 10,
         "font": "small",
         "text": "{weather}"
       }
@@ -439,8 +459,14 @@
   "defaultVariant": "v2",
   "regions": {
     "partial": {
+      "INSIDE_LABEL": [
+        "text"
+      ],
       "INSIDE_TEMP": [
         "tempGroupCentered"
+      ],
+      "OUTSIDE_LABEL": [
+        "text"
       ],
       "OUT_TEMP": [
         "tempGroupCentered"
@@ -463,10 +489,14 @@
       "HEADER_VERSION": [
         "text"
       ],
-      "FOOTER_STATUS": [
+      "FOOTER_BATTERY": [
         "batteryGlyph",
-        "text",
-        "text",
+        "text"
+      ],
+      "FOOTER_DAYS": [
+        "text"
+      ],
+      "FOOTER_IP": [
         "text"
       ],
       "FOOTER_WEATHER": [
