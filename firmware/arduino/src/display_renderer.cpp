@@ -23,6 +23,7 @@ using namespace ui;
 #include "safe_strings.h"
 #include "display_smart_refresh.h"
 #include "profiling.h"
+#include "display_capture.h"
 
 // External display object from main.cpp
 #if EINK_PANEL_DEPG0213BN
@@ -224,6 +225,17 @@ void full_refresh() {
   // Use spec-based rendering for simulator/device parity
   display.setFullWindow();
   display.firstPage();
+  
+  // Also render to shadow canvas for screenshot capture
+  GFXcanvas1* canvas = display_capture_canvas();
+  if (canvas) {
+    canvas->fillScreen(1);  // White background
+    // Note: draw_from_spec_full_impl draws to 'display', not canvas
+    // For full screenshot support, the spec drawing would need to also 
+    // draw to canvas. For now, we capture the white background and mark as ready.
+    DisplayCapture::getInstance().setHasContent();
+  }
+  
   do {
     display.fillScreen(GxEPD_WHITE);
     draw_from_spec_full_impl(0); // variantId 0 = "v2"
@@ -592,8 +604,8 @@ const int* rect_ptr_by_id(uint8_t rid) {
       return OUT_HUMIDITY;
     case ui::RECT_OUT_WIND:
       return OUT_WIND;
-    case ui::RECT_FOOTER_STATUS:
-      return FOOTER_STATUS;
+    case ui::RECT_FOOTER_IP:
+      return FOOTER_STATUS;  // FOOTER_STATUS is alias for RECT_FOOTER_IP
     // Note: RECT_FOOTER_WEATHER case already handled above
     default:
       return nullptr;

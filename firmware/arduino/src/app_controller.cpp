@@ -15,6 +15,7 @@
 #include "memory_tracking.h"
 #include "mqtt_batcher.h"
 #include "profiling.h"
+#include <ESPmDNS.h>
 
 // Diagnostic test functions (from diagnostic_test.cpp)
 extern void diagnostic_test_init();
@@ -167,6 +168,27 @@ void app_setup() {
     show_boot_stage(4);  // Green for ready
   }
   
+  // Initialize mDNS for device discovery
+  if (wifi_is_connected()) {
+    // Create mDNS hostname from room name (convert spaces to dashes, lowercase)
+    String hostname = String(ROOM_NAME);
+    hostname.toLowerCase();
+    hostname.replace(" ", "-");
+
+    if (MDNS.begin(hostname.c_str())) {
+      Serial.printf("[BOOT-4a] mDNS started: %s.local\n", hostname.c_str());
+
+      // Add service advertisement for device discovery
+      MDNS.addService("espsensor", "tcp", 80);
+      MDNS.addServiceTxt("espsensor", "tcp", "version", FW_VERSION);
+      MDNS.addServiceTxt("espsensor", "tcp", "room", ROOM_NAME);
+
+      Serial.println("[BOOT-4a] mDNS service advertised");
+    } else {
+      Serial.println("[BOOT-4a] mDNS failed to start");
+    }
+  }
+
   // Initialize MQTT
   if (wifi_is_connected()) {
     mqtt_begin();

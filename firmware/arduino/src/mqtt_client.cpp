@@ -5,6 +5,7 @@
 #include "metrics_diagnostics.h"
 #include "debug_commands.h"
 #include "profiling.h"
+#include "safe_strings.h"
 #include <Preferences.h>
 #if LOG_MQTT_ENABLED
 #include "logging/log_mqtt.h"
@@ -172,6 +173,29 @@ bool mqtt_connect() {
   if (connected) {
     // Publish online status
     g_mqtt.publish(lwt_topic, "online", true);
+
+    // Publish device discovery message
+    char discovery_topic[96];
+    snprintf(discovery_topic, sizeof(discovery_topic), "espsensor/discovery/%s", g_mqtt_client_id);
+
+    // Build discovery payload with device info
+    char discovery_payload[256];
+    char ip_buf[16];
+    #if FEATURE_WIFI
+    // Get IP address from WiFi manager
+    extern String wifi_get_ip();
+    String ip_str = wifi_get_ip();
+    safe_strcpy(ip_buf, ip_str.c_str());
+    #else
+    strcpy(ip_buf, "0.0.0.0");
+    #endif
+
+    snprintf(discovery_payload, sizeof(discovery_payload),
+             "{\"device_id\":\"%s\",\"ip\":\"%s\",\"version\":\"%s\",\"room\":\"%s\",\"uptime\":%lu}",
+             g_mqtt_client_id, ip_buf, FW_VERSION, ROOM_NAME, millis() / 1000);
+
+    // Publish discovery (not retained - will clear on disconnect via LWT)
+    g_mqtt.publish(discovery_topic, discovery_payload, false);
 
     // Subscribe to command topics
     char cmd_topic[96];

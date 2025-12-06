@@ -14,6 +14,11 @@
   let roomName = localStorage.getItem('mqttRoomName') || 'WebSim';
   let publishInterval = null;
   let lastPublishedData = {};
+
+  // Mirror mode state
+  let mirrorMode = 'emulate'; // 'emulate', 'mirror', 'control', 'sync'
+  let mirroredDeviceId = null;
+  let mirrorTopics = [];
   
   // Default connection settings
   const DEFAULT_BROKER = '127.0.0.1';
@@ -269,6 +274,12 @@
       
       mqttClient.on('message', (topic, message) => {
         console.log(`MQTT message: ${topic} = ${message.toString()}`);
+
+        // Handle mirror mode messages
+        if (mirrorMode === 'mirror' || mirrorMode === 'sync') {
+          handleMirrorMessage(topic, message.toString());
+        }
+
         // Handle commands if needed
       });
       
@@ -317,7 +328,160 @@
       publishInterval = null;
     }
   }
-  
+
+  // Handle incoming mirror messages from real device
+  function handleMirrorMessage(topic, message) {
+    if (!mirroredDeviceId || !topic.includes(mirroredDeviceId)) return;
+
+    // Parse topic to extract sensor type and value
+    const parts = topic.split('/');
+    if (parts.length < 4) return;
+
+    const sensorPath = parts.slice(2).join('/'); // e.g., "inside/temperature"
+
+    // Update simDataState if available
+    if (window.simDataState && window.simDataState.update) {
+      const value = message.trim();
+
+      // Map MQTT topics to simDataState fields
+      const updates = {};
+
+      if (sensorPath === 'inside/temperature') {
+        // Convert Celsius to Fahrenheit for display
+        const tempC = parseFloat(value);
+        if (!isNaN(tempC)) {
+          updates.inside_temp_f = ((tempC * 9 / 5) + 32).toFixed(1);
+        }
+      } else if (sensorPath === 'inside/humidity') {
+        updates.inside_hum_pct = parseFloat(value).toFixed(1);
+      } else if (sensorPath === 'inside/pressure') {
+        updates.pressure_hpa = parseFloat(value).toFixed(1);
+      } else if (sensorPath === 'battery/percent') {
+        updates.battery_percent = parseInt(value);
+      } else if (sensorPath === 'battery/voltage') {
+        updates.battery_voltage = parseFloat(value).toFixed(2);
+      } else if (sensorPath === 'wifi/rssi') {
+        updates.wifi_rssi = parseInt(value);
+      } else if (sensorPath === 'outside/temperature') {
+        const tempC = parseFloat(value);
+        if (!isNaN(tempC)) {
+          updates.outside_temp_f = ((tempC * 9 / 5) + 32).toFixed(1);
+        }
+      } else if (sensorPath === 'outside/humidity') {
+        updates.outside_hum_pct = parseFloat(value).toFixed(1);
+      } else if (sensorPath === 'outside/pressure') {
+        updates.outside_pressure_hpa = parseFloat(value).toFixed(1);
+      } else if (sensorPath === 'outside/condition') {
+        updates.weather = value;
+      }
+
+      // Apply updates if any
+      if (Object.keys(updates).length > 0) {
+        window.simDataState.update(updates);
+        console.log(`Mirror mode updated: ${sensorPath} = ${value}`, updates);
+
+        // Trigger redraw if available
+        if (window.draw) {
+          window.draw();
+        }
+      }
+    }
+  }
+
+  // Start mirroring a real device
+  function mirrorDevice(targetDeviceId, mode = 'mirror') {
+    if (!mqttClient || !isConnected) {
+      console.error('MQTT client not connected');
+      return false;
+    }
+
+    // Stop current mirror if any
+    stopMirror();
+
+    mirrorMode = mode;
+    mirroredDeviceId = targetDeviceId;
+
+    // Subscribe to device topics
+    mirrorTopics = [
+      `espsensor/${targetDeviceId}/inside/+`,
+      `espsensor/${targetDeviceId}/outside/+`,
+      `espsensor/${targetDeviceId}/battery/+`,
+      `espsensor/${targetDeviceId}/wifi/+`,
+      `espsensor/${targetDeviceId}/availability`
+    ];
+
+    // If in control or sync mode, also subscribe to debug topics
+    if (mode === 'control' || mode === 'sync') {
+      mirrorTopics.push(`espsensor/${targetDeviceId}/debug/+`);
+    }
+
+    mqttClient.subscribe(mirrorTopics, (err) => {
+      if (err) {
+        console.error('Failed to subscribe to mirror topics:', err);
+        mirrorMode = 'emulate';
+        mirroredDeviceId = null;
+        mirrorTopics = [];
+        return;
+      }
+
+      console.log(`Mirror mode started for device ${targetDeviceId} (mode: ${mode})`);
+      updateStatus(`Mirroring device: ${targetDeviceId} (${mode} mode)`);
+    });
+
+    return true;
+  }
+
+  // Stop mirroring
+  function stopMirror() {
+    if (!mqttClient || !isConnected) return;
+
+    if (mirrorTopics.length > 0) {
+      mqttClient.unsubscribe(mirrorTopics, (err) => {
+        if (err) {
+          console.error('Failed to unsubscribe from mirror topics:', err);
+        }
+      });
+    }
+
+    mirrorMode = 'emulate';
+    mirroredDeviceId = null;
+    mirrorTopics = [];
+
+    console.log('Mirror mode stopped');
+    updateStatus('Emulate mode (local simulation only)');
+  }
+
+  // Send command to mirrored device
+  function sendCommand(cmd, params = {}) {
+    if (!mqttClient || !isConnected) {
+      console.error('MQTT client not connected');
+      return false;
+    }
+
+    if (mirrorMode !== 'control' && mirrorMode !== 'sync') {
+      console.error('Not in control mode. Switch to control or sync mode first.');
+      return false;
+    }
+
+    if (!mirroredDeviceId) {
+      console.error('No device being mirrored');
+      return false;
+    }
+
+    const cmdTopic = `espsensor/${mirroredDeviceId}/cmd/debug`;
+    const payload = JSON.stringify({ cmd, ...params });
+
+    mqttClient.publish(cmdTopic, payload, { qos: 0 }, (err) => {
+      if (err) {
+        console.error('Failed to send command:', err);
+      } else {
+        console.log(`Command sent to ${mirroredDeviceId}: ${cmd}`, params);
+      }
+    });
+
+    return true;
+  }
+
   // Export API
   window.SimMQTT = {
     connect,
@@ -325,7 +489,12 @@
     publishSensorData,
     startAutoPublish,
     stopAutoPublish,
+    mirrorDevice,
+    stopMirror,
+    sendCommand,
     isConnected: () => isConnected,
+    getMode: () => mirrorMode,
+    getMirroredDevice: () => mirroredDeviceId,
     setDeviceId: (id) => {
       deviceId = id;
       localStorage.setItem('mqttDeviceId', id);

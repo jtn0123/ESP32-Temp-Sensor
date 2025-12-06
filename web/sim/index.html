@@ -121,7 +121,31 @@
                   <button id="mqttDisconnect" disabled>Disconnect</button>
                 </div>
               </div>
-              
+
+              <div class="mqtt-mirror">
+                <h4>Device Mirror</h4>
+                <div class="form-row">
+                  <label for="mqttMirrorMode">Mode:
+                    <select id="mqttMirrorMode">
+                      <option value="emulate">Emulate (Local Only)</option>
+                      <option value="mirror">Mirror (Read Device Data)</option>
+                      <option value="control">Control (Send Commands)</option>
+                      <option value="sync">Sync (Mirror + Control)</option>
+                    </select>
+                  </label>
+                </div>
+                <div class="form-row">
+                  <label>Target Device ID:
+                    <input type="text" id="mqttMirrorDeviceId" placeholder="device-id">
+                  </label>
+                </div>
+                <div class="button-row">
+                  <button id="mqttStartMirror" disabled>Start Mirror</button>
+                  <button id="mqttStopMirror" disabled>Stop Mirror</button>
+                </div>
+                <div id="mqttMirrorStatus" class="mqtt-status" style="margin-top:8px;">Emulate mode (local simulation only)</div>
+              </div>
+
               <div class="mqtt-publish">
                 <h4>Publishing</h4>
                 <div class="form-row">
@@ -147,6 +171,7 @@
     <script src="https://unpkg.com/mqtt@5.3.0/dist/mqtt.min.js"></script>
     <script src="mqtt-client.js"></script>
     <script src="mqtt-ui.js"></script>
+    <script src="device-bridge.js"></script>
     <script src="ui_generated.js?v=9"></script>
     <script src="realistic-data.js?v=1"></script>
     <script src="sim.js?v=17"></script>
