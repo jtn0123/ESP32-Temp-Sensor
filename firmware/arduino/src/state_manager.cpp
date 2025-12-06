@@ -184,8 +184,11 @@ void nvs_load_cache_if_unset() {
     last_outside_f = nvs_load_float("lo_f", NAN);
   if (!isfinite(last_outside_rh))
     last_outside_rh = nvs_load_float("lo_rh", NAN);
-  if (last_icon_id < 0)
-    last_icon_id = static_cast<int32_t>(nvs_load_uint("icon", -1));
+  if (last_icon_id < 0) {
+    // Use UINT32_MAX (0xFFFFFFFF) as sentinel which becomes -1 when cast to int32_t
+    uint32_t loaded = nvs_load_uint("icon", UINT32_MAX);
+    last_icon_id = (loaded == UINT32_MAX) ? -1 : static_cast<int32_t>(loaded);
+  }
   if (last_status_crc == 0)
     last_status_crc = nvs_load_uint("st_crc", 0);
   if (!isfinite(last_published_inside_tempC))

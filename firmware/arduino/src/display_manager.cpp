@@ -199,9 +199,12 @@ void draw_status_line_direct(const BatteryStatus& bs, const char* ip_cstr) {
     // Draw battery nub
     display.fillRect(static_cast<int16_t>(bx + bw), static_cast<int16_t>(by + 2), 2, 3, GxEPD_BLACK);
     
-    // Fill battery level
-    if (bs.percent >= 0) {
-        int16_t fillw = static_cast<int16_t>(((bw - 2) * (bs.percent / 100.0f) + 0.5f));
+    // Fill battery level (clamp percent to 0-100 to prevent overflow)
+    if (bs.percent >= 0 && bw > 2) {
+        int pct_clamped = (bs.percent > 100) ? 100 : bs.percent;
+        int16_t max_fillw = static_cast<int16_t>(bw - 2);
+        int16_t fillw = static_cast<int16_t>(((max_fillw) * (pct_clamped / 100.0f) + 0.5f));
+        if (fillw > max_fillw) fillw = max_fillw;  // Safety clamp
         if (fillw > 0) {
             display.fillRect(static_cast<int16_t>(bx + 1), static_cast<int16_t>(by + 1), 
                            fillw, static_cast<int16_t>(bh - 2), GxEPD_BLACK);

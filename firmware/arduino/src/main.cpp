@@ -27,6 +27,8 @@
 #include "icons.h"
 #include "ui_ops_generated.h"
 #include "ui_generated.h"
+#include "display_capture.h"
+#include "dual_gfx.h"
 using namespace ui;
 #endif
 #include "generated_config.h"
@@ -120,11 +122,20 @@ void draw_from_spec_full_impl(uint8_t variantId) {
   using ui::OP_BATTERYGLYPH;
   using ui::OP_ICONIN;
   using ui::UiOpHeader;
+  
+  // Set up dual drawing to both display and screenshot canvas
+  GFXcanvas1* canvas = display_capture_canvas();
+  DualGFX gfx(&display, canvas);
+  DualGFXScope gfx_scope(&gfx);  // Set global context for helper functions
+  if (canvas) {
+    DisplayCapture::getInstance().setHasContent();
+  }
+  
   int comp_count = 0;
   const ComponentOps* comps = get_variant_ops(variantId, &comp_count);
-  display.drawRect(0, 0, EINK_WIDTH, EINK_HEIGHT, GxEPD_BLACK);
-  display.drawLine(1, 18, EINK_WIDTH - 2, 18, GxEPD_BLACK);
-  display.drawLine(125, 18, 125, EINK_HEIGHT - 2, GxEPD_BLACK);
+  gfx.drawRect(0, 0, EINK_WIDTH, EINK_HEIGHT, GxEPD_BLACK);
+  gfx.drawLine(1, 18, EINK_WIDTH - 2, 18, GxEPD_BLACK);
+  gfx.drawLine(125, 18, 125, EINK_HEIGHT - 2, GxEPD_BLACK);
   for (int ci = 0; ci < comp_count; ++ci) {
     const ComponentOps& co = comps[ci];
     for (int i = 0; i < co.count; ++i) {
@@ -136,9 +147,9 @@ void draw_from_spec_full_impl(uint8_t variantId) {
           if (x0 > x1) { int16_t t = x0; x0 = x1; x1 = t; }
           if (y0 > y1) { int16_t t = y0; y0 = y1; y1 = t; }
           if (y0 == y1) {
-            for (int16_t x = x0; x <= x1; ++x) display.drawPixel(x, y0, GxEPD_BLACK);
+            for (int16_t x = x0; x <= x1; ++x) gfx.drawPixel(x, y0, GxEPD_BLACK);
           } else if (x0 == x1) {
-            for (int16_t y = y0; y <= y1; ++y) display.drawPixel(x0, y, GxEPD_BLACK);
+            for (int16_t y = y0; y <= y1; ++y) gfx.drawPixel(x0, y, GxEPD_BLACK);
           }
           break;
         }
@@ -226,8 +237,8 @@ void draw_from_spec_full_impl(uint8_t variantId) {
             out += fmt_field(key);
             start = rb + 1;
           }
-          display.setTextColor(GxEPD_BLACK);
-          display.setTextSize(1);
+          gfx.setTextColor(GxEPD_BLACK);
+          gfx.setTextSize(1);
           // Handle rect-based positioning for all alignments (LEFT, RIGHT, CENTER)
           if (r && tx == 0) {
             int16_t tw = text_width_default_font(out.c_str(), 1);
@@ -240,8 +251,8 @@ void draw_from_spec_full_impl(uint8_t variantId) {
             // Use y-offset (p1) if provided, otherwise default to +1
             ty = r[1] + (op.p1 != 0 ? op.p1 : 1);
           }
-          display.setCursor(tx, ty);
-          display.print(out.c_str());
+          gfx.setCursor(tx, ty);
+          gfx.print(out.c_str());
           break;
         }
         case OP_TIMERIGHT: {
@@ -252,10 +263,10 @@ void draw_from_spec_full_impl(uint8_t variantId) {
           int16_t tw = text_width_default_font(hhmm, 1);
           int16_t rx = static_cast<int16_t>(r[0] + r[2] - 2 - tw);
           int16_t by = static_cast<int16_t>(r[1] + r[3] - 2);
-          display.setTextColor(GxEPD_BLACK);
-          display.setTextSize(1);
-          display.setCursor(rx, by);
-          display.print(hhmm);
+          gfx.setTextColor(GxEPD_BLACK);
+          gfx.setTextSize(1);
+          gfx.setCursor(rx, by);
+          gfx.print(hhmm);
           break;
         }
         // OP_LABELCENTERED removed - no longer in ui_spec.json
@@ -307,25 +318,29 @@ void draw_from_spec_full_impl(uint8_t variantId) {
           char ip_c[32];
           net_ip_cstr(ip_c, sizeof(ip_c));
           templ.replace("{ip}", ip_c);
-          display.setTextColor(GxEPD_BLACK);
-          display.setTextSize(1);
+          gfx.setTextColor(GxEPD_BLACK);
+          gfx.setTextSize(1);
           int16_t tw = text_width_default_font(templ.c_str(), 1);
           int16_t tx = r[0] + (r[2] - tw) / 2;
           int16_t ty = r[1] + op.p0;
-          display.setCursor(tx, ty);
-          display.print(templ.c_str());
+          gfx.setCursor(tx, ty);
+          gfx.print(templ.c_str());
           break;
         }
         case OP_BATTERYGLYPH: {
           BatteryStatus bs = read_battery_status();
           int16_t bx = op.p0, by = op.p1, bw = op.p2, bh = op.p3;
-          display.drawRect(bx, by, bw, bh, GxEPD_BLACK);
-          display.fillRect(static_cast<int16_t>(bx + bw), static_cast<int16_t>(by + 2), 2, 3,
-                           GxEPD_BLACK);
-          int16_t fillw = static_cast<int16_t>(((bw - 2) * (bs.percent / 100.0f) + 0.5f));
-          if (fillw > 0)
-            display.fillRect(static_cast<int16_t>(bx + 1), static_cast<int16_t>(by + 1), fillw,
-                             static_cast<int16_t>(bh - 2), GxEPD_BLACK);
+          gfx.drawRect(bx, by, bw, bh, GxEPD_BLACK);
+          gfx.fillRect(static_cast<int16_t>(bx + bw), static_cast<int16_t>(by + 2), 2, 3,
+                       GxEPD_BLACK);
+          // Clamp percent to 0-100 to prevent fill exceeding bounds
+          int pct_clamped = (bs.percent > 100) ? 100 : ((bs.percent < 0) ? 0 : bs.percent);
+          int16_t max_fillw = (bw > 2) ? static_cast<int16_t>(bw - 2) : 0;
+          int16_t fillw = static_cast<int16_t>((max_fillw * (pct_clamped / 100.0f) + 0.5f));
+          if (fillw > max_fillw) fillw = max_fillw;  // Safety clamp
+          if (fillw > 0 && max_fillw > 0)
+            gfx.fillRect(static_cast<int16_t>(bx + 1), static_cast<int16_t>(by + 1), fillw,
+                         static_cast<int16_t>(bh - 2), GxEPD_BLACK);
           break;
         }
         default:
