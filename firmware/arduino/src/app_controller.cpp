@@ -126,9 +126,21 @@ void app_setup() {
   BatteryStatus bs = read_battery_status();
   Serial.printf("[4] Battery: %d%% (%.2fV)\n", bs.percent, bs.voltage);
   
-  // Check for critical battery
+  // Check for critical battery - properly cleanup before emergency sleep
   if (bs.percent >= 0 && bs.percent < 5) {
-    Serial.println("Battery critical! Entering deep sleep");
+    Serial.println("Battery critical! Preparing for emergency deep sleep...");
+    
+    // Prepare hardware for sleep (puts fuel gauge to sleep)
+    power_prepare_sleep();
+    
+    // Save any cached state to NVS
+    nvs_end_cache();
+    
+    Serial.println("Entering emergency deep sleep (1 hour)");
+    Serial.flush();
+    
+    // Sleep for 1 hour to conserve remaining battery
+    esp_sleep_enable_timer_wakeup(3600ULL * 1000000ULL);
     esp_deep_sleep_start();
   }
   
