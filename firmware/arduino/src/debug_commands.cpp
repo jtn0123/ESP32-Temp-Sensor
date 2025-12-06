@@ -11,6 +11,10 @@
 #include "mqtt_batcher.h"
 #include "display_smart_refresh.h"
 #include "sensors.h"
+#include "config.h"
+#if USE_DISPLAY
+#include "display_capture.h"
+#endif
 #include <ArduinoJson.h>
 #include <esp_system.h>
 #include <esp_heap_caps.h>
@@ -105,6 +109,8 @@ void DebugCommands::handleCommand(const char* topic, const uint8_t* payload, siz
         cmdMqttBatch(client);
     } else if (strcmp(cmd, "smart_refresh") == 0) {
         cmdSmartRefresh(client);
+    } else if (strcmp(cmd, "screenshot") == 0) {
+        cmdScreenshot(client);
     } else {
         char response[128];
         snprintf(response, sizeof(response),
@@ -383,6 +389,18 @@ void DebugCommands::cmdSmartRefresh(PubSubClient* client) {
             "{\"cmd\":\"smart_refresh\",\"dirty_mask\":\"0x%04X\",%s}",
             SmartRefresh::getInstance().getDirtyMask(), stats_content);
     publishResponse(client, response);
+}
+
+void DebugCommands::cmdScreenshot(PubSubClient* client) {
+#if USE_DISPLAY
+    // Acknowledge the command first
+    publishResponse(client, "{\"cmd\":\"screenshot\",\"status\":\"capturing\"}");
+
+    // Call the display capture handler (it publishes the screenshot data)
+    display_capture_handle("", 0);
+#else
+    publishResponse(client, "{\"cmd\":\"screenshot\",\"error\":\"Display not enabled\"}");
+#endif
 }
 
 void DebugCommands::publishResponse(PubSubClient* client, const char* json) {

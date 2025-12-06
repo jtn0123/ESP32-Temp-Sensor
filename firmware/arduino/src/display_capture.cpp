@@ -1,0 +1,244 @@
+#include "display_capture.h"
+
+#if USE_DISPLAY
+
+#include <PubSubClient.h>
+#include <ArduinoJson.h>
+#include "logging/logger.h"
+#include "mqtt_client.h"
+
+static uint8_t log_module_id = 0;  // Will be registered in getInstance
+
+// Base64 encoding table
+static const char base64_chars[] =
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+
+DisplayCapture::DisplayCapture() {
+    // Allocate GFXcanvas1 for shadow buffer
+    // GFXcanvas1 uses 1 bit per pixel, perfect for eInk
+    canvas_ = new GFXcanvas1(WIDTH, HEIGHT);
+    if (canvas_) {
+        canvas_->fillScreen(1);  // White background (1 = white for GFXcanvas1)
+        LOG_INFO("Screenshot canvas allocated: %dx%d (%d bytes)", WIDTH, HEIGHT, BUFFER_SIZE);
+    } else {
+        LOG_ERROR("Failed to allocate screenshot canvas");
+    }
+}
+
+DisplayCapture::~DisplayCapture() {
+    if (canvas_) {
+        delete canvas_;
+        canvas_ = nullptr;
+    }
+}
+
+DisplayCapture& DisplayCapture::getInstance() {
+    static DisplayCapture instance;
+    static bool registered = false;
+    if (!registered) {
+        log_module_id = Logger::getInstance().registerModule("DispCap");
+        registered = true;
+    }
+    return instance;
+}
+
+const uint8_t* DisplayCapture::capture(size_t* out_size) {
+    if (!out_size) {
+        LOG_ERROR("out_size is null");
+        return nullptr;
+    }
+
+    if (!canvas_) {
+        LOG_ERROR("Canvas not initialized");
+        *out_size = 0;
+        return nullptr;
+    }
+
+    if (!has_content_) {
+        LOG_WARN("Canvas has no content - display may not have synced drawing");
+    }
+
+    // GFXcanvas1 stores buffer internally, we can access it via getBuffer()
+    const uint8_t* buffer = canvas_->getBuffer();
+    if (!buffer) {
+        LOG_ERROR("Canvas buffer is null");
+        *out_size = 0;
+        return nullptr;
+    }
+
+    *out_size = BUFFER_SIZE;
+    LOG_DEBUG("Captured %d bytes from canvas (%dx%d)", BUFFER_SIZE, WIDTH, HEIGHT);
+    return buffer;
+}
+
+size_t DisplayCapture::captureBase64(char* out_buffer, size_t buffer_size) {
+    if (!out_buffer || buffer_size < BASE64_SIZE) {
+        LOG_ERROR("Invalid output buffer (size=%d, need=%d)", buffer_size, BASE64_SIZE);
+        return 0;
+    }
+
+    size_t size;
+    const uint8_t* data = capture(&size);
+    if (!data || size == 0) {
+        LOG_ERROR("Failed to capture display");
+        return 0;
+    }
+
+    return base64Encode(data, size, out_buffer, buffer_size);
+}
+
+size_t DisplayCapture::base64Encode(const uint8_t* input, size_t input_len,
+                                     char* output, size_t output_size) {
+    size_t output_len = ((input_len + 2) / 3) * 4;
+
+    if (output_size < output_len + 1) {
+        LOG_ERROR("Output buffer too small");
+        return 0;
+    }
+
+    size_t i = 0, j = 0;
+    uint8_t char_array_3[3];
+    uint8_t char_array_4[4];
+
+    while (input_len--) {
+        char_array_3[i++] = *(input++);
+        if (i == 3) {
+            char_array_4[0] = (char_array_3[0] & 0xfc) >> 2;
+            char_array_4[1] = ((char_array_3[0] & 0x03) << 4) + ((char_array_3[1] & 0xf0) >> 4);
+            char_array_4[2] = ((char_array_3[1] & 0x0f) << 2) + ((char_array_3[2] & 0xc0) >> 6);
+            char_array_4[3] = char_array_3[2] & 0x3f;
+
+            for (i = 0; i < 4; i++) {
+                output[j++] = base64_chars[char_array_4[i]];
+            }
+            i = 0;
+        }
+    }
+
+    if (i) {
+        for (size_t k = i; k < 3; k++) {
+            char_array_3[k] = '\0';
+        }
+
+        char_array_4[0] = (char_array_3[0] & 0xfc) >> 2;
+        char_array_4[1] = ((char_array_3[0] & 0x03) << 4) + ((char_array_3[1] & 0xf0) >> 4);
+        char_array_4[2] = ((char_array_3[1] & 0x0f) << 2) + ((char_array_3[2] & 0xc0) >> 6);
+
+        for (size_t k = 0; k < i + 1; k++) {
+            output[j++] = base64_chars[char_array_4[k]];
+        }
+
+        while (i++ < 3) {
+            output[j++] = '=';
+        }
+    }
+
+    output[j] = '\0';
+    return j;
+}
+
+// Global convenience functions
+GFXcanvas1* display_capture_canvas() {
+    return DisplayCapture::getInstance().getCanvas();
+}
+
+void display_capture_fill_screen(uint16_t color) {
+    GFXcanvas1* canvas = display_capture_canvas();
+    if (canvas) {
+        // GFXcanvas1: 0 = black, 1 = white (opposite of GxEPD2)
+        // GxEPD_WHITE = 0xFFFF, GxEPD_BLACK = 0x0000
+        canvas->fillScreen(color == 0xFFFF ? 1 : 0);
+        DisplayCapture::getInstance().setHasContent();
+    }
+}
+
+// C linkage for MQTT command handler
+extern "C" void display_capture_handle(const char* payload, size_t length) {
+    LOG_INFO("Screenshot command received");
+
+    DisplayCapture& cap = DisplayCapture::getInstance();
+    
+    if (!cap.hasContent()) {
+        LOG_WARN("No display content captured yet");
+    }
+
+    // Allocate buffer for base64 data on heap (it's large ~5KB)
+    char* base64_buffer = new char[DisplayCapture::BASE64_SIZE];
+    if (!base64_buffer) {
+        LOG_ERROR("Failed to allocate base64 buffer");
+        return;
+    }
+
+    size_t base64_len = cap.captureBase64(base64_buffer, DisplayCapture::BASE64_SIZE);
+    if (base64_len == 0) {
+        LOG_ERROR("Failed to capture and encode display");
+        delete[] base64_buffer;
+        return;
+    }
+
+    // Build JSON response
+    StaticJsonDocument<256> meta_doc;
+    meta_doc["width"] = DisplayCapture::WIDTH;
+    meta_doc["height"] = DisplayCapture::HEIGHT;
+    meta_doc["format"] = "1bit";
+    meta_doc["data_size"] = base64_len;
+    meta_doc["buffer_size"] = DisplayCapture::BUFFER_SIZE;
+
+    char meta_buffer[256];
+    size_t meta_len = serializeJson(meta_doc, meta_buffer, sizeof(meta_buffer));
+
+    // Publish metadata to /debug/screenshot/meta
+    char topic[128];
+    const char* client_id = mqtt_get_client_id();
+    snprintf(topic, sizeof(topic), "espsensor/%s/debug/screenshot/meta", client_id);
+
+    PubSubClient* client = mqtt_get_client();
+    if (client && client->connected()) {
+        client->publish(topic, (const uint8_t*)meta_buffer, meta_len, false);
+        LOG_INFO("Published screenshot metadata");
+
+        // Publish base64 data to /debug/screenshot/data
+        snprintf(topic, sizeof(topic), "espsensor/%s/debug/screenshot/data", client_id);
+
+        const size_t CHUNK_SIZE = 4096;
+        size_t offset = 0;
+        int chunk_num = 0;
+
+        while (offset < base64_len) {
+            size_t chunk_len = min(CHUNK_SIZE, base64_len - offset);
+
+            if (base64_len > CHUNK_SIZE) {
+                snprintf(topic, sizeof(topic), "espsensor/%s/debug/screenshot/data/%d",
+                         client_id, chunk_num);
+            }
+
+            bool success = client->publish(topic,
+                                          (const uint8_t*)(base64_buffer + offset),
+                                          chunk_len,
+                                          false);
+
+            if (success) {
+                LOG_DEBUG("Published chunk %d (%d bytes, offset=%d)",
+                         chunk_num, chunk_len, offset);
+            } else {
+                LOG_ERROR("Failed to publish chunk %d", chunk_num);
+                break;
+            }
+
+            offset += chunk_len;
+            chunk_num++;
+
+            if (offset < base64_len) {
+                delay(10);
+            }
+        }
+
+        LOG_INFO("Screenshot capture complete: %d bytes in %d chunks", base64_len, chunk_num);
+    } else {
+        LOG_ERROR("MQTT client not connected");
+    }
+
+    delete[] base64_buffer;
+}
+
+#endif // USE_DISPLAY

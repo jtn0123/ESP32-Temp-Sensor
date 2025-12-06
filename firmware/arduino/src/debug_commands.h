@@ -28,6 +28,7 @@
 // - {"cmd": "features"}                -> Returns enabled/disabled features
 // - {"cmd": "mqtt_batch"}              -> Returns MQTT batching statistics
 // - {"cmd": "smart_refresh"}           -> Returns smart refresh statistics
+// - {"cmd": "screenshot"}              -> Captures and publishes display screenshot
 
 class DebugCommands {
 public:
@@ -71,6 +72,7 @@ private:
     void cmdFeatures(PubSubClient* client);
     void cmdMqttBatch(PubSubClient* client);
     void cmdSmartRefresh(PubSubClient* client);
+    void cmdScreenshot(PubSubClient* client);
 
     // Helper to publish response
     void publishResponse(PubSubClient* client, const char* json);

@@ -21,13 +21,20 @@
     const deviceIdInput = document.getElementById('mqttDeviceId');
     const roomNameInput = document.getElementById('mqttRoomName');
     const intervalInput = document.getElementById('mqttInterval');
-    
+
     const connectBtn = document.getElementById('mqttConnect');
     const disconnectBtn = document.getElementById('mqttDisconnect');
     const publishNowBtn = document.getElementById('mqttPublishNow');
     const publishDiscoveryBtn = document.getElementById('mqttPublishDiscovery');
     const startAutoBtn = document.getElementById('mqttStartAuto');
     const stopAutoBtn = document.getElementById('mqttStopAuto');
+
+    // Mirror mode elements
+    const mirrorModeSelect = document.getElementById('mqttMirrorMode');
+    const mirrorDeviceIdInput = document.getElementById('mqttMirrorDeviceId');
+    const startMirrorBtn = document.getElementById('mqttStartMirror');
+    const stopMirrorBtn = document.getElementById('mqttStopMirror');
+    const mirrorStatusEl = document.getElementById('mqttMirrorStatus');
     
     // Load saved settings
     function loadSettings() {
@@ -67,11 +74,36 @@
     // Update button states
     function updateButtons() {
       const connected = window.SimMQTT.isConnected();
-      
+      const mode = window.SimMQTT.getMode();
+      const isMirroring = mode !== 'emulate';
+
       if (connectBtn) connectBtn.disabled = connected;
       if (disconnectBtn) disconnectBtn.disabled = !connected;
       if (publishNowBtn) publishNowBtn.disabled = !connected;
       if (publishDiscoveryBtn) publishDiscoveryBtn.disabled = !connected;
+
+      // Update mirror buttons
+      if (startMirrorBtn) startMirrorBtn.disabled = !connected || isMirroring;
+      if (stopMirrorBtn) stopMirrorBtn.disabled = !connected || !isMirroring;
+    }
+
+    // Update mirror status display
+    function updateMirrorStatus() {
+      if (!mirrorStatusEl) return;
+
+      const mode = window.SimMQTT.getMode();
+      const device = window.SimMQTT.getMirroredDevice();
+
+      if (mode === 'emulate') {
+        mirrorStatusEl.textContent = 'Emulate mode (local simulation only)';
+        mirrorStatusEl.className = 'mqtt-status';
+      } else if (device) {
+        mirrorStatusEl.textContent = `${mode.charAt(0).toUpperCase() + mode.slice(1)} mode: ${device}`;
+        mirrorStatusEl.className = 'mqtt-status success';
+      } else {
+        mirrorStatusEl.textContent = `${mode.charAt(0).toUpperCase() + mode.slice(1)} mode active`;
+        mirrorStatusEl.className = 'mqtt-status';
+      }
     }
     
     // Connect button handler
@@ -144,7 +176,54 @@
         stopAutoBtn.disabled = true;
       });
     }
-    
+
+    // Mirror mode controls
+    if (startMirrorBtn) {
+      startMirrorBtn.addEventListener('click', function() {
+        const mode = mirrorModeSelect ? mirrorModeSelect.value : 'mirror';
+        const targetDevice = mirrorDeviceIdInput ? mirrorDeviceIdInput.value.trim() : '';
+
+        if (!targetDevice) {
+          alert('Please enter a target device ID');
+          return;
+        }
+
+        const success = window.SimMQTT.mirrorDevice(targetDevice, mode);
+        if (success) {
+          updateButtons();
+          updateMirrorStatus();
+          console.log(`Started ${mode} mode for device: ${targetDevice}`);
+        } else {
+          alert('Failed to start mirror mode. Make sure you are connected to MQTT broker.');
+        }
+      });
+    }
+
+    if (stopMirrorBtn) {
+      stopMirrorBtn.addEventListener('click', function() {
+        window.SimMQTT.stopMirror();
+        updateButtons();
+        updateMirrorStatus();
+        console.log('Stopped mirror mode');
+      });
+    }
+
+    // Update status when mode changes
+    if (mirrorModeSelect) {
+      mirrorModeSelect.addEventListener('change', function() {
+        const currentMode = window.SimMQTT.getMode();
+        if (currentMode !== 'emulate' && currentMode !== this.value) {
+          // Mode changed while mirroring - need to restart
+          const device = window.SimMQTT.getMirroredDevice();
+          if (device) {
+            window.SimMQTT.stopMirror();
+            window.SimMQTT.mirrorDevice(device, this.value);
+            updateMirrorStatus();
+          }
+        }
+      });
+    }
+
     // Subscribe to data changes for auto-publishing
     if (window.simDataState) {
       let autoPublishEnabled = false;
@@ -166,9 +245,13 @@
     // Initialize
     loadSettings();
     updateButtons();
-    
-    // Update buttons periodically
-    setInterval(updateButtons, 2000);
+    updateMirrorStatus();
+
+    // Update buttons and status periodically
+    setInterval(function() {
+      updateButtons();
+      updateMirrorStatus();
+    }, 2000);
   });
   
 })();

@@ -394,6 +394,11 @@
               <input type="file" id="deviceScreenshot" accept="image/*" style="font-size:11px;max-width:150px;">
               <button id="clearDeviceScreenshot" disabled>Clear</button>
             </div>
+            <div style="margin-bottom:6px;">
+              <button id="captureFromDevice" title="Capture screenshot from connected device via MQTT">📸 Capture from Device</button>
+              <input type="text" id="targetDeviceId" placeholder="Device ID (optional)" style="font-size:11px;max-width:120px;" title="Leave empty to use current MQTT device ID">
+              <span id="captureStatus" style="font-size:11px;margin-left:6px;"></span>
+            </div>
             <div id="deviceCompareContainer" style="display:none;">
               <div style="margin-bottom:6px;display:flex;gap:8px;">
                 <button id="toggleCompareView">Toggle View</button>
@@ -405,6 +410,37 @@
               </div>
               <div id="deviceCompareView" style="position:relative;display:inline-block;border:1px solid #ccc;"></div>
               <div id="deviceCompareResults" style="margin-top:8px;font-size:11px;"></div>
+            </div>
+          </fieldset>
+
+          <fieldset class="fieldset">
+            <legend>📡 Remote Commands</legend>
+            <div style="margin-bottom:8px;">
+              <select id="remoteCommand" style="max-width:150px;">
+                <option value="">Select command...</option>
+                <option value="heap">Heap Status</option>
+                <option value="sensors">Sensor Readings</option>
+                <option value="state">Device State</option>
+                <option value="config">Configuration</option>
+                <option value="uptime">Uptime</option>
+                <option value="network">Network Status</option>
+                <option value="perf">Performance Stats</option>
+                <option value="bufpool">Buffer Pool</option>
+                <option value="crash">Crash Info</option>
+                <option value="memory">Memory Tracking</option>
+                <option value="features">Features</option>
+                <option value="mqtt_batch">MQTT Batching</option>
+                <option value="smart_refresh">Smart Refresh</option>
+                <option value="screenshot">Screenshot</option>
+                <option value="restart">Restart Device</option>
+              </select>
+              <button id="sendRemoteCommand" disabled>Send</button>
+            </div>
+            <div id="commandResponseContainer" style="display:none;">
+              <label style="font-size:11px;font-weight:bold;">Response:</label>
+              <pre id="commandResponse" style="background:#f5f5f5;padding:8px;border:1px solid #ddd;max-height:200px;overflow-y:auto;font-size:10px;margin:4px 0;"></pre>
+              <button id="clearResponse">Clear</button>
+              <button id="copyResponse">Copy</button>
             </div>
           </fieldset>
 
@@ -1335,6 +1371,228 @@
       });
     }
 
+    // Capture screenshot from device via MQTT
+    document.getElementById('captureFromDevice')?.addEventListener('click', () => {
+      captureScreenshotFromDevice();
+    });
+
+    async function captureScreenshotFromDevice() {
+      const statusEl = document.getElementById('captureStatus');
+      const targetDeviceInput = document.getElementById('targetDeviceId');
+
+      // Get device ID (use target input or current MQTT device ID)
+      let targetDeviceId = targetDeviceInput?.value.trim();
+      if (!targetDeviceId && window.SimMQTT) {
+        targetDeviceId = window.SimMQTT.getDeviceId();
+      }
+
+      if (!targetDeviceId) {
+        if (statusEl) statusEl.textContent = '⚠️ No device ID specified';
+        debugLog('No device ID specified. Enter a device ID or connect via MQTT.', 'error');
+        return;
+      }
+
+      // Check if we have access to MQTT client
+      if (!window.mqtt) {
+        if (statusEl) statusEl.textContent = '⚠️ MQTT library not loaded';
+        debugLog('MQTT library not available. Include mqtt.min.js in index.html.', 'error');
+        return;
+      }
+
+      if (statusEl) statusEl.textContent = '📡 Sending command...';
+      debugLog(`Requesting screenshot from device: ${targetDeviceId}`, 'info');
+
+      // Create temporary MQTT client for screenshot capture
+      const broker = localStorage.getItem('mqttBroker') || '127.0.0.1';
+      const port = localStorage.getItem('mqttWsPort') || '9001';
+      const url = `ws://${broker}:${port}`;
+
+      const screenshotClient = mqtt.connect(url, {
+        clientId: `sim-screenshot-${Date.now()}`,
+        clean: true
+      });
+
+      let screenshotMeta = null;
+      let screenshotChunks = [];
+      let expectedChunks = 0;
+      let receivedChunks = 0;
+
+      screenshotClient.on('connect', () => {
+        debugLog('Connected to MQTT broker for screenshot capture', 'success');
+
+        // Subscribe to screenshot response topics
+        const metaTopic = `espsensor/${targetDeviceId}/debug/screenshot/meta`;
+        const dataTopic = `espsensor/${targetDeviceId}/debug/screenshot/data/#`;
+        const responseTopic = `espsensor/${targetDeviceId}/debug/response`;
+
+        screenshotClient.subscribe([metaTopic, dataTopic, responseTopic], (err) => {
+          if (err) {
+            debugLog(`Failed to subscribe: ${err.message}`, 'error');
+            if (statusEl) statusEl.textContent = '❌ Subscribe failed';
+            screenshotClient.end();
+            return;
+          }
+
+          // Send screenshot command
+          const cmdTopic = `espsensor/${targetDeviceId}/cmd/debug`;
+          const cmd = JSON.stringify({ cmd: 'screenshot' });
+
+          screenshotClient.publish(cmdTopic, cmd, { qos: 0 }, (err) => {
+            if (err) {
+              debugLog(`Failed to send command: ${err.message}`, 'error');
+              if (statusEl) statusEl.textContent = '❌ Command failed';
+              screenshotClient.end();
+            } else {
+              debugLog('Screenshot command sent', 'info');
+              if (statusEl) statusEl.textContent = '⏳ Waiting for response...';
+            }
+          });
+        });
+      });
+
+      screenshotClient.on('message', (topic, message) => {
+        const msgStr = message.toString();
+
+        // Handle metadata
+        if (topic.endsWith('/meta')) {
+          try {
+            screenshotMeta = JSON.parse(msgStr);
+            debugLog(`Received screenshot metadata: ${screenshotMeta.width}x${screenshotMeta.height}, ${screenshotMeta.data_size} bytes`, 'success');
+
+            // Estimate number of chunks (4096 bytes per chunk)
+            expectedChunks = Math.ceil(screenshotMeta.data_size / 4096);
+            if (statusEl) statusEl.textContent = `⏳ Receiving data (0/${expectedChunks})...`;
+          } catch (e) {
+            debugLog(`Failed to parse metadata: ${e.message}`, 'error');
+          }
+        }
+        // Handle data chunks
+        else if (topic.includes('/screenshot/data')) {
+          screenshotChunks.push(msgStr);
+          receivedChunks++;
+
+          if (statusEl && expectedChunks > 0) {
+            statusEl.textContent = `⏳ Receiving data (${receivedChunks}/${expectedChunks})...`;
+          }
+
+          // Check if we've received all chunks (wait a bit for any stragglers)
+          setTimeout(() => {
+            if (screenshotMeta && screenshotChunks.length > 0) {
+              processScreenshotData();
+            }
+          }, 500);
+        }
+        // Handle acknowledgment
+        else if (topic.endsWith('/debug/response')) {
+          try {
+            const response = JSON.parse(msgStr);
+            if (response.cmd === 'screenshot') {
+              debugLog(`Screenshot command acknowledged: ${response.status || 'ok'}`, 'info');
+            }
+          } catch (e) {
+            // Ignore parse errors for non-JSON responses
+          }
+        }
+      });
+
+      screenshotClient.on('error', (err) => {
+        debugLog(`MQTT error: ${err.message}`, 'error');
+        if (statusEl) statusEl.textContent = '❌ Connection error';
+        screenshotClient.end();
+      });
+
+      function processScreenshotData() {
+        if (!screenshotMeta || screenshotChunks.length === 0) return;
+
+        // Concatenate all chunks
+        const base64Data = screenshotChunks.join('');
+        debugLog(`Received total ${base64Data.length} bytes of base64 data`, 'info');
+
+        // Decode base64 to binary
+        try {
+          const binaryString = atob(base64Data);
+          const bytes = new Uint8Array(binaryString.length);
+          for (let i = 0; i < binaryString.length; i++) {
+            bytes[i] = binaryString.charCodeAt(i);
+          }
+
+          // Convert 1-bit packed data to image
+          const width = screenshotMeta.width;
+          const height = screenshotMeta.height;
+
+          // Create canvas
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) {
+            debugLog('Failed to create canvas context', 'error');
+            return;
+          }
+
+          const imageData = ctx.createImageData(width, height);
+
+          // Unpack 1-bit data (1 = white, 0 = black for eInk)
+          for (let y = 0; y < height; y++) {
+            for (let x = 0; x < width; x++) {
+              const pixelIndex = y * width + x;
+              const byteIndex = Math.floor(pixelIndex / 8);
+              const bitIndex = 7 - (pixelIndex % 8);
+
+              const bit = (bytes[byteIndex] >> bitIndex) & 1;
+              const color = bit ? 255 : 0;  // 1=white, 0=black
+
+              const dataIndex = (y * width + x) * 4;
+              imageData.data[dataIndex] = color;     // R
+              imageData.data[dataIndex + 1] = color; // G
+              imageData.data[dataIndex + 2] = color; // B
+              imageData.data[dataIndex + 3] = 255;   // A
+            }
+          }
+
+          ctx.putImageData(imageData, 0, 0);
+
+          // Convert to data URL and load as device screenshot
+          const dataUrl = canvas.toDataURL('image/png');
+          deviceImage = new Image();
+          deviceImage.onload = () => {
+            if (deviceContainer) deviceContainer.style.display = 'block';
+            if (clearDeviceBtn) clearDeviceBtn.disabled = false;
+            updateDeviceCompareView();
+            debugLog(`Device screenshot captured: ${width}x${height}`, 'success');
+            if (statusEl) statusEl.textContent = '✅ Captured!';
+
+            // Clear status after a few seconds
+            setTimeout(() => {
+              if (statusEl) statusEl.textContent = '';
+            }, 3000);
+          };
+          deviceImage.src = dataUrl;
+
+          // Clean up
+          screenshotClient.end();
+          screenshotChunks = [];
+          screenshotMeta = null;
+
+        } catch (e) {
+          debugLog(`Failed to process screenshot data: ${e.message}`, 'error');
+          if (statusEl) statusEl.textContent = '❌ Processing failed';
+          screenshotClient.end();
+        }
+      }
+
+      // Timeout after 15 seconds
+      setTimeout(() => {
+        if (screenshotClient.connected) {
+          if (!screenshotMeta) {
+            debugLog('Screenshot capture timed out - no response from device', 'warn');
+            if (statusEl) statusEl.textContent = '⏱️ Timeout';
+          }
+          screenshotClient.end();
+        }
+      }, 15000);
+    }
+
     document.getElementById('toggleCompareView')?.addEventListener('click', () => {
       showDeviceOverlay = !showDeviceOverlay;
       updateDeviceCompareView();
@@ -1606,6 +1864,128 @@
       };
       input.click();
     });
+
+    // Remote command UI handlers
+    const remoteCommandSelect = document.getElementById('remoteCommand');
+    const sendRemoteCommandBtn = document.getElementById('sendRemoteCommand');
+    const commandResponseEl = document.getElementById('commandResponse');
+    const commandResponseContainer = document.getElementById('commandResponseContainer');
+
+    // Enable send button only when command is selected and in control/sync mode
+    if (remoteCommandSelect) {
+      remoteCommandSelect.addEventListener('change', () => {
+        const mode = window.SimMQTT ? window.SimMQTT.getMode() : 'emulate';
+        const hasCommand = remoteCommandSelect.value !== '';
+        const canSend = (mode === 'control' || mode === 'sync') && hasCommand;
+
+        if (sendRemoteCommandBtn) {
+          sendRemoteCommandBtn.disabled = !canSend;
+        }
+      });
+    }
+
+    // Send remote command
+    if (sendRemoteCommandBtn) {
+      sendRemoteCommandBtn.addEventListener('click', () => {
+        const cmd = remoteCommandSelect ? remoteCommandSelect.value : '';
+        if (!cmd) return;
+
+        debugLog(`Sending remote command: ${cmd}`, 'info');
+
+        // Subscribe to response topic
+        const mode = window.SimMQTT ? window.SimMQTT.getMode() : 'emulate';
+        const deviceId = window.SimMQTT ? window.SimMQTT.getMirroredDevice() : null;
+
+        if (!deviceId) {
+          debugLog('No device connected', 'error');
+          return;
+        }
+
+        // Create temporary MQTT client to listen for response
+        const broker = localStorage.getItem('mqttBroker') || '127.0.0.1';
+        const port = localStorage.getItem('mqttWsPort') || '9001';
+        const url = `ws://${broker}:${port}`;
+
+        const responseClient = mqtt.connect(url, {
+          clientId: `cmd-response-${Date.now()}`,
+          clean: true
+        });
+
+        responseClient.on('connect', () => {
+          const responseTopic = `espsensor/${deviceId}/debug/response`;
+
+          responseClient.subscribe(responseTopic, (err) => {
+            if (err) {
+              debugLog(`Failed to subscribe: ${err.message}`, 'error');
+              responseClient.end();
+              return;
+            }
+
+            // Send command using SimMQTT
+            if (window.SimMQTT && window.SimMQTT.sendCommand) {
+              window.SimMQTT.sendCommand(cmd);
+            }
+          });
+        });
+
+        responseClient.on('message', (topic, message) => {
+          const response = message.toString();
+
+          // Display response
+          if (commandResponseEl && commandResponseContainer) {
+            commandResponseEl.textContent = response;
+            commandResponseContainer.style.display = 'block';
+            debugLog(`Command response received (${response.length} bytes)`, 'success');
+          }
+
+          // Close connection after receiving response
+          setTimeout(() => {
+            responseClient.end();
+          }, 100);
+        });
+
+        responseClient.on('error', (err) => {
+          debugLog(`MQTT error: ${err.message}`, 'error');
+          responseClient.end();
+        });
+
+        // Timeout after 10 seconds
+        setTimeout(() => {
+          if (responseClient.connected) {
+            debugLog('Command timed out - no response', 'warn');
+            responseClient.end();
+          }
+        }, 10000);
+      });
+    }
+
+    // Clear response
+    document.getElementById('clearResponse')?.addEventListener('click', () => {
+      if (commandResponseEl) commandResponseEl.textContent = '';
+      if (commandResponseContainer) commandResponseContainer.style.display = 'none';
+    });
+
+    // Copy response
+    document.getElementById('copyResponse')?.addEventListener('click', () => {
+      if (commandResponseEl) {
+        navigator.clipboard.writeText(commandResponseEl.textContent).then(() => {
+          debugLog('Response copied to clipboard', 'success');
+        }).catch(err => {
+          debugLog(`Failed to copy: ${err.message}`, 'error');
+        });
+      }
+    });
+
+    // Update send button state when mode changes
+    setInterval(() => {
+      const mode = window.SimMQTT ? window.SimMQTT.getMode() : 'emulate';
+      const hasCommand = remoteCommandSelect ? remoteCommandSelect.value !== '' : false;
+      const canSend = (mode === 'control' || mode === 'sync') && hasCommand;
+
+      if (sendRemoteCommandBtn) {
+        sendRemoteCommandBtn.disabled = !canSend;
+      }
+    }, 1000);
   }
 
   // Hook into draw function for performance monitoring
