@@ -102,8 +102,11 @@ void mqtt_begin() {
     
     // Handle temperature in Fahrenheit
     if (ends_with(topicStr, "/temp_f")) {
-      float temp_f = atof(value_str);
-      if (isfinite(temp_f)) {
+      // Use strtof to properly detect parse errors (atof returns 0.0 for both error and valid "0")
+      char* endptr = nullptr;
+      float temp_f = strtof(value_str, &endptr);
+      // Valid parse: endptr moved past start AND value is finite
+      if (endptr != value_str && isfinite(temp_f)) {
         // Convert to Celsius and update outside readings
         float temp_c = (temp_f - 32.0f) * 5.0f / 9.0f;
         g_outside.temperatureC = temp_c;
@@ -112,8 +115,9 @@ void mqtt_begin() {
     }
     // Handle temperature in Celsius (legacy)
     else if (ends_with(topicStr, "/temp")) {
-      float temp_c = atof(value_str);
-      if (isfinite(temp_c)) {
+      char* endptr = nullptr;
+      float temp_c = strtof(value_str, &endptr);
+      if (endptr != value_str && isfinite(temp_c)) {
         g_outside.temperatureC = temp_c;
         g_outside.validTemp = true;
       }
@@ -187,7 +191,7 @@ bool mqtt_connect() {
     String ip_str = wifi_get_ip();
     safe_strcpy(ip_buf, ip_str.c_str());
     #else
-    strcpy(ip_buf, "0.0.0.0");
+    safe_strcpy(ip_buf, "0.0.0.0");
     #endif
 
     snprintf(discovery_payload, sizeof(discovery_payload),

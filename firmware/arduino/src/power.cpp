@@ -3,6 +3,7 @@
 
 #include "power.h"
 #include <Wire.h>
+#include <cmath>  // For fabsf()
 
 #if USE_MAX17048
 #include <Adafruit_MAX1704X.h>
@@ -39,7 +40,8 @@ static void ensure_i2c_initialized() {
   Wire.begin();
 #endif
 #ifdef I2C_TIMEOUT_MS
-  Wire.setTimeOut(I2C_TIMEOUT_MS);
+  // Use configured timeout if > 0, otherwise use safe default (50ms)
+  Wire.setTimeOut(I2C_TIMEOUT_MS > 0 ? I2C_TIMEOUT_MS : 50);
 #endif
 #ifdef I2C_CLOCK_HZ
   Wire.setClock(I2C_CLOCK_HZ);
@@ -239,7 +241,8 @@ bool is_temperature_changing_rapidly() {
         return false;
     }
 
-    float delta = abs(current_temp - g_last_temperature);
+    // Use fabsf() for float absolute value (abs() returns int, truncating the delta)
+    float delta = fabsf(current_temp - g_last_temperature);
     g_last_temperature = current_temp;
 
     return delta > 2.0f;  // More than 2°F change
