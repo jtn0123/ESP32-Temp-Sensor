@@ -24,6 +24,26 @@ using namespace ui;
 #include "display_smart_refresh.h"
 #include "profiling.h"
 #include "display_capture.h"
+#include "dual_gfx.h"
+
+// Helper macro: draw to both display and screenshot canvas if context is set
+#define DUAL_DRAW(method, ...) do { \
+    display.method(__VA_ARGS__); \
+    DualGFX* _ctx = get_dual_gfx_context(); \
+    if (_ctx && _ctx->getSecondary()) { \
+        _ctx->getSecondary()->method(__VA_ARGS__); \
+    } \
+} while(0)
+
+// For setTextColor which takes a GxEPD color that needs mapping to canvas color
+#define DUAL_SET_TEXT_COLOR(color) do { \
+    display.setTextColor(color); \
+    DualGFX* _ctx = get_dual_gfx_context(); \
+    if (_ctx && _ctx->getSecondary()) { \
+        uint16_t _mapped = (color == 0xFFFF) ? 1 : 0; \
+        _ctx->getSecondary()->setTextColor(_mapped); \
+    } \
+} while(0)
 
 // External display object from main.cpp
 #if EINK_PANEL_DEPG0213BN
@@ -124,8 +144,8 @@ void draw_right_aligned_text_in_rect(const int rect[4], const char* text,
 // Draw temperature with units
 void draw_temp_number_and_units(const int r[4], const char* t) {
   draw_in_region(r, [&](int16_t x, int16_t y, int16_t w, int16_t h) {
-    display.setTextColor(GxEPD_BLACK);
-    display.setTextSize(2);
+    DUAL_SET_TEXT_COLOR(GxEPD_BLACK);
+    DUAL_DRAW(setTextSize, 2);
     
     int16_t x1, y1;
     uint16_t bw, bh;
@@ -136,23 +156,23 @@ void draw_temp_number_and_units(const int r[4], const char* t) {
     int16_t baseX = targetX - x1;
     int16_t baseY = targetY - y1;
     
-    display.setCursor(baseX, baseY);
-    display.print(t);
+    DUAL_DRAW(setCursor, baseX, baseY);
+    DUAL_DRAW(print, t);
     
     // Draw units
-    display.setTextSize(1);
-    display.setCursor(baseX + static_cast<int16_t>(bw) + 2, baseY - 8);
-    display.print("\xF8");
-    display.setCursor(baseX + static_cast<int16_t>(bw) + 8, baseY - 8);
-    display.print("F");
+    DUAL_DRAW(setTextSize, 1);
+    DUAL_DRAW(setCursor, baseX + static_cast<int16_t>(bw) + 2, baseY - 8);
+    DUAL_DRAW(print, "\xF8");
+    DUAL_DRAW(setCursor, baseX + static_cast<int16_t>(bw) + 8, baseY - 8);
+    DUAL_DRAW(print, "F");
   });
 }
 
 // Direct temperature drawing (without region clearing)
 void draw_temp_number_and_units_direct(int16_t x, int16_t y, int16_t w, int16_t h,
                                        const char* t) {
-  display.setTextColor(GxEPD_BLACK);
-  display.setTextSize(2);
+  DUAL_SET_TEXT_COLOR(GxEPD_BLACK);
+  DUAL_DRAW(setTextSize, 2);
   
   int16_t x1, y1;
   uint16_t bw, bh;
@@ -163,15 +183,15 @@ void draw_temp_number_and_units_direct(int16_t x, int16_t y, int16_t w, int16_t 
   int16_t baseX = targetX - x1;
   int16_t baseY = targetY - y1;
   
-  display.setCursor(baseX, baseY);
-  display.print(t);
+  DUAL_DRAW(setCursor, baseX, baseY);
+  DUAL_DRAW(print, t);
   
   // Draw units (degree symbol and F)
-  display.setTextSize(1);
-  display.setCursor(baseX + static_cast<int16_t>(bw) + 2, baseY - 8);
-  display.print("\xF8");  // degree symbol
-  display.setCursor(baseX + static_cast<int16_t>(bw) + 8, baseY - 8);
-  display.print("F");
+  DUAL_DRAW(setTextSize, 1);
+  DUAL_DRAW(setCursor, baseX + static_cast<int16_t>(bw) + 2, baseY - 8);
+  DUAL_DRAW(print, "\xF8");  // degree symbol
+  DUAL_DRAW(setCursor, baseX + static_cast<int16_t>(bw) + 8, baseY - 8);
+  DUAL_DRAW(print, "F");
 }
 
 // Draw header time
@@ -197,11 +217,20 @@ void draw_weather_icon_region_at(int16_t x, int16_t y, int16_t w, int16_t h,
   IconId iconId = map_weather_to_icon(condition);
   
   // Center the baked icon within the region using generated dimensions
+  // Clamp positions to prevent drawing outside intended region when icon > region
   int16_t icon_x = x + (w - ICON_W) / 2;
   int16_t icon_y = y + (h - ICON_H) / 2;
+  if (icon_x < x) icon_x = x;  // Don't go left of region
+  if (icon_y < y) icon_y = y;  // Don't go above region
   
-  // Draw the icon
+  // Draw the icon to display
   draw_icon(display, icon_x, icon_y, iconId, GxEPD_BLACK);
+  
+  // Also draw to screenshot canvas if context is set
+  DualGFX* ctx = get_dual_gfx_context();
+  if (ctx && ctx->getSecondary()) {
+    draw_icon(*ctx->getSecondary(), icon_x, icon_y, iconId, 0);  // 0 = black for canvas
+  }
 }
 
 // Draw weather icon from outside readings
@@ -226,18 +255,10 @@ void full_refresh() {
   display.setFullWindow();
   display.firstPage();
   
-  // Also render to shadow canvas for screenshot capture
-  GFXcanvas1* canvas = display_capture_canvas();
-  if (canvas) {
-    canvas->fillScreen(1);  // White background
-    // Note: draw_from_spec_full_impl draws to 'display', not canvas
-    // For full screenshot support, the spec drawing would need to also 
-    // draw to canvas. For now, we capture the white background and mark as ready.
-    DisplayCapture::getInstance().setHasContent();
-  }
-  
   do {
     display.fillScreen(GxEPD_WHITE);
+    // draw_from_spec_full_impl sets up DualGFX context and draws to both
+    // display and screenshot canvas
     draw_from_spec_full_impl(0); // variantId 0 = "v2"
   } while (display.nextPage());
   reset_partial_counter();
@@ -372,7 +393,9 @@ void full_refresh() {
       display.setTextColor(GxEPD_BLACK);
       display.setTextSize(1);
       int16_t tw = text_width_default_font(short_condition, 1);
+      // Clamp text position to prevent negative x when text is wider than region
       int16_t tx = FOOTER_WEATHER[0] + (FOOTER_WEATHER[2] - tw) / 2;
+      if (tx < FOOTER_WEATHER[0]) tx = FOOTER_WEATHER[0];  // Don't go left of region
       int16_t ty = FOOTER_WEATHER[1] + 19; // y=90+19=109, matches ui_spec.json
       display.setCursor(tx, ty);
       display.print(short_condition);

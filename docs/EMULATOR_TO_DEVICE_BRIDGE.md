@@ -27,16 +27,26 @@ This document outlines the plan to evolve the web simulator from a pure emulator
 | **Discovery Publishing** | ✅ Done | Device publishes to `espsensor/discovery/<id>` |
 | **Python Tests** | ✅ Done | `tests/test_display_capture.py` (15 tests) |
 
-### Known Limitations
+### Technical Implementation
 
-1. **Shadow Buffer Sync**: The GFXcanvas1 shadow buffer captures `fillScreen()` calls but doesn't automatically capture all drawing operations. For full screenshot fidelity, the spec-based drawing (`draw_from_spec_full_impl`) would need to also draw to the canvas.
+**DualGFX Pattern**: The `dual_gfx.h` wrapper class forwards all drawing operations to both the display AND a `GFXcanvas1` shadow buffer. This ensures pixel-perfect screenshot fidelity.
 
-2. **GxEPD2 Buffer Access**: GxEPD2 doesn't expose its internal framebuffer publicly. The implementation uses a separate GFXcanvas1 as a shadow buffer instead of reading directly from the display.
+```cpp
+// In draw_from_spec_full_impl():
+GFXcanvas1* canvas = display_capture_canvas();
+DualGFX gfx(&display, canvas);
+DualGFXScope scope(&gfx);  // Set global context
+
+gfx.drawRect(...);  // Draws to both targets
+gfx.print("Hello"); // Draws to both targets
+```
+
+Helper functions in `display_renderer.cpp` use the `DUAL_DRAW()` macro to automatically sync to the canvas when the context is set.
 
 ### Build Status
 ```
-RAM:   [==        ]  19.0% (used 62332 bytes)
-Flash: [======    ]  61.9% (used 892246 bytes)
+RAM:   [==        ]  19.0% (used 62340 bytes)
+Flash: [======    ]  62.0% (used 893734 bytes)
 ```
 
 ---
