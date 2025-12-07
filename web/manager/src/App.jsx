@@ -5,6 +5,10 @@ import { useWebSocket } from './hooks/useWebSocket';
 import { DeviceSelector } from './components/DeviceSelector';
 import { SerialConsole } from './components/SerialConsole';
 import { FlashManager } from './components/FlashManager';
+import { MqttInspector } from './components/MqttInspector';
+import { DisplayViewer } from './components/DisplayViewer';
+import { ControlPanel } from './components/ControlPanel';
+import { StatusDashboard } from './components/StatusDashboard';
 import './styles/manager.css';
 
 function App() {
@@ -51,17 +55,17 @@ function App() {
           </TabPanel>
 
           <TabPanel>
-            <div className="placeholder-panel">
-              <h2>Status Dashboard</h2>
-              <p>Coming soon: Device status, battery, memory stats</p>
+            <div className="dashboard-layout">
+              <StatusDashboard
+                serialConnected={connected}
+                mqttConnected={wsConnected}
+              />
+              <ControlPanel />
             </div>
           </TabPanel>
 
           <TabPanel>
-            <div className="placeholder-panel">
-              <h2>Display Viewer</h2>
-              <p>Coming soon: Screenshot display and refresh controls</p>
-            </div>
+            <DisplayViewer messages={messages} />
           </TabPanel>
 
           <TabPanel>
@@ -69,10 +73,7 @@ function App() {
           </TabPanel>
 
           <TabPanel>
-            <div className="placeholder-panel">
-              <h2>MQTT Inspector</h2>
-              <p>Coming soon: MQTT message viewer and publisher</p>
-            </div>
+            <MqttInspector messages={messages} />
           </TabPanel>
         </Tabs>
       </main>

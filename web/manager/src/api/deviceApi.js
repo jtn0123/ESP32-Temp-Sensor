@@ -96,4 +96,75 @@ export const deviceApi = {
       body: JSON.stringify({ interval_sec: intervalSec }),
     });
   },
+
+  // MQTT endpoints
+  async getMqttStatus() {
+    return fetchAPI('/mqtt/status');
+  },
+
+  async publishMqtt(topic, payload, retain = false, qos = 0) {
+    return fetchAPI('/mqtt/publish', {
+      method: 'POST',
+      body: JSON.stringify({ topic, payload, retain, qos }),
+    });
+  },
+
+  async getMqttMessages(limit = 100) {
+    return fetchAPI(`/mqtt/messages?limit=${limit}`);
+  },
+
+  async getSubscriptions() {
+    return fetchAPI('/mqtt/subscriptions');
+  },
+
+  async subscribe(topic, qos = 0) {
+    return fetchAPI('/mqtt/subscribe', {
+      method: 'POST',
+      body: JSON.stringify({ topic, qos }),
+    });
+  },
+
+  async unsubscribe(topic) {
+    return fetchAPI(`/mqtt/unsubscribe?topic=${encodeURIComponent(topic)}`, {
+      method: 'POST',
+    });
+  },
+
+  async startMqttSimulator() {
+    return fetchAPI('/mqtt/simulator/start', {
+      method: 'POST',
+    });
+  },
+
+  async stopMqttSimulator() {
+    return fetchAPI('/mqtt/simulator/stop', {
+      method: 'POST',
+    });
+  },
+
+  // Device control endpoints
+  async requestScreenshot(deviceId = 'office') {
+    return fetchAPI(`/device/screenshot?device_id=${deviceId}`, {
+      method: 'POST',
+    });
+  },
+
+  async getLatestScreenshot() {
+    return fetchAPI('/device/screenshot/latest');
+  },
+
+  async getTestScreenshot() {
+    return fetchAPI('/device/screenshot/test');
+  },
+
+  async sendCommand(command, params = {}) {
+    return fetchAPI('/device/command', {
+      method: 'POST',
+      body: JSON.stringify({ command, params }),
+    });
+  },
+
+  async getDeviceStatus() {
+    return fetchAPI('/device/status');
+  },
 };
