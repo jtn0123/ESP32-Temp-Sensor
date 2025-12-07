@@ -22,6 +22,10 @@ static Preferences g_mqtt_prefs;
 static bool g_diagnostic_mode_requested = false;
 static bool g_diagnostic_mode_request_value = false;
 
+// Rate limiting for MQTT commands (prevents flooding/DoS)
+static uint32_t g_last_command_ms = 0;
+static const uint32_t COMMAND_COOLDOWN_MS = 1000;  // 1 second between commands
+
 // Helper to build MQTT topic (buffer-based to avoid heap fragmentation)
 static void build_topic_buf(char* out, size_t out_size, const char* suffix) {
   snprintf(out, out_size, "espsensor/%s/%s", g_mqtt_client_id, suffix);
@@ -49,6 +53,17 @@ void mqtt_begin() {
   // Set up MQTT callback for commands and outdoor data
   g_mqtt.setCallback([](char* topic, byte* payload, unsigned int length) {
     String topicStr(topic);
+    
+    // Rate limit command topics (prevents flooding/DoS attacks)
+    // Data topics (temp, weather) are not rate limited
+    if (topicStr.indexOf("/cmd/") >= 0) {
+      uint32_t now = millis();
+      if (now - g_last_command_ms < COMMAND_COOLDOWN_MS) {
+        Serial.println("[MQTT] Command rate limited - ignoring");
+        return;
+      }
+      g_last_command_ms = now;
+    }
     
     // Handle diagnostic mode commands
     if (topicStr.endsWith("/cmd/diagnostic_mode")) {
