@@ -28,7 +28,13 @@ static const uint32_t COMMAND_COOLDOWN_MS = 1000;  // 1 second between commands
 
 // Helper to build MQTT topic (buffer-based to avoid heap fragmentation)
 static void build_topic_buf(char* out, size_t out_size, const char* suffix) {
-  safe_snprintf_rt(out, out_size, "espsensor/%s/%s", g_mqtt_client_id, suffix);
+  if (out_size == 0) return;
+  if (g_mqtt_client_id[0] == '\0') {
+    // Client ID not set - use fallback
+    safe_snprintf_rt(out, out_size, "espsensor/unknown/%s", suffix ? suffix : "");
+    return;
+  }
+  safe_snprintf_rt(out, out_size, "espsensor/%s/%s", g_mqtt_client_id, suffix ? suffix : "");
 }
 
 // Deprecated - use build_topic_buf instead (kept for compatibility)
