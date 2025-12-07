@@ -123,9 +123,16 @@ class SerialManager:
     def _reader_loop(self):
         """Background thread to read serial data and broadcast"""
         logger.info("Serial reader thread started")
+        error_count = 0
+        max_errors = 3  # Disconnect after this many consecutive errors
 
-        while self.running and self.serial and self.serial.is_open:
+        while self.running and self.serial:
             try:
+                # Check if port is still open
+                if not self.serial.is_open:
+                    logger.warning("Serial port closed unexpectedly")
+                    break
+                    
                 if self.serial.in_waiting:
                     line = self.serial.readline()
                     if line:
@@ -133,6 +140,7 @@ class SerialManager:
                             text = line.decode('utf-8', errors='replace').strip()
                             if text:
                                 self._process_line(text)
+                                error_count = 0  # Reset on successful read
                         except Exception as e:
                             logger.warning(f"Error decoding serial data: {e}")
                 else:
@@ -142,8 +150,19 @@ class SerialManager:
                 logger.error(f"Serial error: {e}")
                 self.connected = False
                 break
+            except OSError as e:
+                # Handle device disconnection (errno 6 = Device not configured)
+                error_count += 1
+                if error_count >= max_errors:
+                    logger.warning(f"Device disconnected: {e}")
+                    break
+                time.sleep(0.1)  # Brief pause before retry
             except Exception as e:
-                logger.error(f"Unexpected error in reader loop: {e}")
+                error_count += 1
+                if error_count >= max_errors:
+                    logger.error(f"Too many errors in reader loop, disconnecting: {e}")
+                    break
+                time.sleep(0.1)  # Brief pause before retry
 
         logger.info("Serial reader thread stopped")
         self.connected = False
