@@ -608,19 +608,26 @@ const int* rect_ptr_by_id(uint8_t rid) {
       return HEADER_NAME;
     case ui::RECT_HEADER_TIME_CENTER:
       return HEADER_TIME_CENTER;
-    // Legacy alias - RECT_HEADER_CENTER doesn't exist anymore
+    case ui::RECT_HEADER_VERSION:
+      return HEADER_VERSION;
+    case ui::RECT_INSIDE_LABEL:
+      return INSIDE_LABEL;
     case ui::RECT_INSIDE_TEMP:
       return INSIDE_TEMP;
     case ui::RECT_INSIDE_HUMIDITY:
       return INSIDE_HUMIDITY;
     case ui::RECT_INSIDE_PRESSURE:
       return INSIDE_PRESSURE;
+    case ui::RECT_OUTSIDE_LABEL:
+      return OUTSIDE_LABEL;
     case ui::RECT_OUT_TEMP:
       return OUT_TEMP;
     case ui::RECT_WEATHER_ICON:
       return WEATHER_ICON;
     case ui::RECT_FOOTER_WEATHER:
       return FOOTER_WEATHER;
+    case ui::RECT_FOOTER_BATTERY:
+      return FOOTER_BATTERY;
     case ui::RECT_OUT_PRESSURE:
       return OUT_PRESSURE;
     case ui::RECT_OUT_HUMIDITY:
@@ -629,7 +636,6 @@ const int* rect_ptr_by_id(uint8_t rid) {
       return OUT_WIND;
     case ui::RECT_FOOTER_IP:
       return FOOTER_STATUS;  // FOOTER_STATUS is alias for RECT_FOOTER_IP
-    // Note: RECT_FOOTER_WEATHER case already handled above
     default:
       return nullptr;
   }
