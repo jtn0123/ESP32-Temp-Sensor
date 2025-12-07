@@ -1,0 +1,99 @@
+// API client for device manager backend
+
+const API_BASE = '/api';
+
+async function fetchAPI(endpoint, options = {}) {
+  const response = await fetch(`${API_BASE}${endpoint}`, {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(error || `HTTP ${response.status}`);
+  }
+
+  return response.json();
+}
+
+export const deviceApi = {
+  // Serial endpoints
+  async listPorts() {
+    return fetchAPI('/ports');
+  },
+
+  async connectSerial(port, baud = 115200) {
+    return fetchAPI('/serial/connect', {
+      method: 'POST',
+      body: JSON.stringify({ port, baud }),
+    });
+  },
+
+  async disconnectSerial() {
+    return fetchAPI('/serial/disconnect', {
+      method: 'POST',
+    });
+  },
+
+  async sendSerial(data) {
+    return fetchAPI('/serial/send', {
+      method: 'POST',
+      body: JSON.stringify({ data }),
+    });
+  },
+
+  async getSerialStatus() {
+    return fetchAPI('/serial/status');
+  },
+
+  // Flash endpoints
+  async startFlash(config = 'dev') {
+    return fetchAPI('/flash/start', {
+      method: 'POST',
+      body: JSON.stringify({ config }),
+    });
+  },
+
+  async getFlashStatus() {
+    return fetchAPI('/flash/status');
+  },
+
+  async cancelFlash() {
+    return fetchAPI('/flash/cancel', {
+      method: 'POST',
+    });
+  },
+
+  // Device endpoints
+  async requestScreenshot() {
+    return fetchAPI('/device/screenshot', {
+      method: 'POST',
+    });
+  },
+
+  async getLatestScreenshot() {
+    return fetchAPI('/device/screenshot/latest');
+  },
+
+  async sendCommand(command, params = {}) {
+    return fetchAPI('/device/command', {
+      method: 'POST',
+      body: JSON.stringify({ command, params }),
+    });
+  },
+
+  async getDeviceStatus() {
+    return fetchAPI('/device/status');
+  },
+
+  // Config endpoints
+  async setSleepInterval(intervalSec) {
+    return fetchAPI('/config/sleep-interval', {
+      method: 'POST',
+      body: JSON.stringify({ interval_sec: intervalSec }),
+    });
+  },
+};
