@@ -110,20 +110,42 @@ public:
 
     // Format all stats to JSON
     void formatJson(char* out, size_t out_size) const {
-        int pos = snprintf(out, out_size, "{\"stats\":[");
+        if (out_size == 0) return;
+        
+        size_t pos = 0;
+        int written = snprintf(out, out_size, "{\"stats\":[");
+        if (written < 0) { out[0] = '\0'; return; }
+        pos = (size_t)written;
 
-        for (size_t i = 0; i < stat_count_; i++) {
-            if (i > 0) {
-                pos += snprintf(out + pos, out_size - pos, ",");
+        for (size_t i = 0; i < stat_count_ && pos < out_size - 1; i++) {
+            if (i > 0 && pos < out_size - 1) {
+                written = snprintf(out + pos, out_size - pos, ",");
+                if (written > 0) pos += (size_t)written;
             }
 
+            if (pos >= out_size - 1) break;
+
             const PerfStats& s = stats_[i];
-            pos += snprintf(out + pos, out_size - pos,
+            written = snprintf(out + pos, out_size - pos,
                           "{\"name\":\"%s\",\"count\":%u,\"avg_us\":%u,\"min_us\":%u,\"max_us\":%u,\"last_us\":%u}",
                           s.name, s.count, s.getAverage(), s.min_us, s.max_us, s.last_us);
+            if (written > 0 && pos + (size_t)written < out_size) {
+                pos += (size_t)written;
+            } else {
+                break;  // Buffer full, stop adding entries
+            }
         }
 
-        snprintf(out + pos, out_size - pos, "]}");
+        if (pos < out_size - 2) {
+            snprintf(out + pos, out_size - pos, "]}");
+        } else {
+            // Truncate gracefully - ensure valid JSON
+            if (out_size >= 3) {
+                out[out_size - 3] = ']';
+                out[out_size - 2] = '}';
+                out[out_size - 1] = '\0';
+            }
+        }
     }
 
 private:
@@ -208,7 +230,10 @@ public:
     void resetAll() {}
     size_t getStatCount() const { return 0; }
     void formatJson(char* out, size_t out_size) const {
-        snprintf(out, out_size, "{\"stats\":[],\"enabled\":false}");
+        if (out_size > 0) {
+            int written = snprintf(out, out_size, "{\"stats\":[],\"enabled\":false}");
+            if (written < 0) out[0] = '\0';
+        }
     }
 };
 
