@@ -14,6 +14,7 @@ import './styles/manager.css';
 function App() {
   const [connected, setConnected] = useState(false);
   const [serialPort, setSerialPort] = useState(null);
+  const [targetDevice, setTargetDevice] = useState(null);
   const { connected: wsConnected, messages, send } = useWebSocket();
 
   const handleConnect = (isConnected, port) => {
@@ -23,6 +24,10 @@ function App() {
     } else {
       setSerialPort(null);
     }
+  };
+
+  const handleTargetChange = (deviceId) => {
+    setTargetDevice(deviceId);
   };
 
   return (
@@ -36,19 +41,32 @@ function App() {
           <span className={`status-indicator ${connected ? 'connected' : 'disconnected'}`}>
             {connected ? '🟢' : '🔴'} Serial
           </span>
+          {targetDevice && (
+            <span className="status-indicator connected">
+              🎯 {targetDevice}
+            </span>
+          )}
         </div>
-        <DeviceSelector onConnect={handleConnect} connected={connected} />
       </header>
 
       <main className="app-main">
         <Tabs>
           <TabList>
-            <Tab>Console</Tab>
-            <Tab>Dashboard</Tab>
-            <Tab>Display</Tab>
-            <Tab>Flash</Tab>
-            <Tab>MQTT</Tab>
+            <Tab>🔌 Connect</Tab>
+            <Tab>📟 Console</Tab>
+            <Tab>📊 Dashboard</Tab>
+            <Tab>🖼️ Display</Tab>
+            <Tab>⚡ Flash</Tab>
+            <Tab>📡 MQTT</Tab>
           </TabList>
+
+          <TabPanel>
+            <DeviceSelector 
+              onConnect={handleConnect} 
+              connected={connected}
+              onTargetChange={handleTargetChange}
+            />
+          </TabPanel>
 
           <TabPanel>
             <SerialConsole messages={messages} send={send} />

@@ -75,3 +75,14 @@ tests/visual_output/
 
 # Claude.md project-specific instructions
 CLAUDE.md
+
+# Device Manager artifacts
+screenshots/
+*.screenshot.png
+device_manager.log
+
+# Node modules (frontend)
+web/manager/node_modules/
+web/manager/dist/
+web/sim/node_modules/
+web/sim/dist/

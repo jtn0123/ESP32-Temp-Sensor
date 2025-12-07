@@ -97,6 +97,34 @@ export const deviceApi = {
     });
   },
 
+  // Discovery endpoints (mDNS)
+  async getDiscoveredDevices() {
+    return fetchAPI('/discovery/devices');
+  },
+
+  async startDiscovery() {
+    return fetchAPI('/discovery/start', { method: 'POST' });
+  },
+
+  async stopDiscovery() {
+    return fetchAPI('/discovery/stop', { method: 'POST' });
+  },
+
+  async setTargetDevice(deviceId) {
+    return fetchAPI('/discovery/target', {
+      method: 'POST',
+      body: JSON.stringify({ device_id: deviceId }),
+    });
+  },
+
+  async getTargetDevice() {
+    return fetchAPI('/discovery/target');
+  },
+
+  async clearTargetDevice() {
+    return fetchAPI('/discovery/target', { method: 'DELETE' });
+  },
+
   // MQTT endpoints
   async getMqttStatus() {
     return fetchAPI('/mqtt/status');

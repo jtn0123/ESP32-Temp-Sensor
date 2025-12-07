@@ -15,6 +15,7 @@ from .flash_manager import FlashManager
 from .mqtt_broker import SimpleMQTTBroker
 from .mqtt_simulator import MqttSimulator
 from .screenshot_handler import ScreenshotHandler
+from .mdns_discovery import get_discovery, MDNSDiscovery
 from .config import ManagerConfig
 
 # Configure logging
@@ -44,6 +45,12 @@ flash_manager = FlashManager(websocket_hub=hub, config=config)
 mqtt_broker = SimpleMQTTBroker(websocket_hub=hub, port=config.mqtt_broker_port)
 mqtt_simulator = MqttSimulator(broker=mqtt_broker, config=config)
 screenshot_handler = ScreenshotHandler(mqtt_broker=mqtt_broker, websocket_hub=hub, config=config)
+
+# mDNS discovery for finding devices on the network
+mdns_discovery = get_discovery()
+
+# Currently targeted device (only ONE at a time for safety)
+_targeted_device_id: str | None = None
 
 
 # Pydantic models for request/response
@@ -456,6 +463,123 @@ async def set_sleep_interval(request: SleepIntervalRequest, device_id: str = "of
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# ============================================================================
+# Device Discovery Endpoints (mDNS)
+# ============================================================================
+
+@app.get("/api/discovery/devices")
+async def get_discovered_devices():
+    """Get all devices discovered via mDNS"""
+    global _targeted_device_id
+    
+    devices = mdns_discovery.get_devices()
+    return {
+        "devices": [d.to_dict() for d in devices],
+        "discovery_running": mdns_discovery.is_running(),
+        "discovery_available": mdns_discovery.available,
+        "targeted_device_id": _targeted_device_id
+    }
+
+
+@app.post("/api/discovery/start")
+async def start_discovery():
+    """Start mDNS device discovery"""
+    if not mdns_discovery.available:
+        raise HTTPException(
+            status_code=503,
+            detail="mDNS discovery not available (zeroconf library not installed)"
+        )
+    
+    success = mdns_discovery.start()
+    return {
+        "status": "started" if success else "failed",
+        "running": mdns_discovery.is_running()
+    }
+
+
+@app.post("/api/discovery/stop")
+async def stop_discovery():
+    """Stop mDNS device discovery"""
+    mdns_discovery.stop()
+    return {"status": "stopped", "running": False}
+
+
+class TargetDeviceRequest(BaseModel):
+    device_id: str
+
+
+@app.post("/api/discovery/target")
+async def set_target_device(request: TargetDeviceRequest):
+    """
+    Set the targeted device for all commands.
+    
+    SAFETY: Only ONE device can be targeted at a time. All commands
+    (sleep interval, reboot, screenshot, etc.) will go to this device.
+    """
+    global _targeted_device_id
+    
+    # Verify device exists (if discovery is running)
+    if mdns_discovery.is_running():
+        device = mdns_discovery.get_device_by_id(request.device_id)
+        if not device:
+            # Allow manual device IDs even if not discovered
+            logger.warning(f"Targeting device '{request.device_id}' not found via mDNS")
+    
+    old_target = _targeted_device_id
+    _targeted_device_id = request.device_id
+    
+    logger.info(f"Target device changed: {old_target} -> {_targeted_device_id}")
+    
+    # Notify connected clients
+    await hub.broadcast({
+        "type": "target_changed",
+        "device_id": _targeted_device_id,
+        "previous_device_id": old_target
+    })
+    
+    return {
+        "status": "targeted",
+        "device_id": _targeted_device_id,
+        "previous_device_id": old_target
+    }
+
+
+@app.get("/api/discovery/target")
+async def get_target_device():
+    """Get the currently targeted device"""
+    global _targeted_device_id
+    
+    device_info = None
+    if _targeted_device_id and mdns_discovery.is_running():
+        device = mdns_discovery.get_device_by_id(_targeted_device_id)
+        if device:
+            device_info = device.to_dict()
+    
+    return {
+        "device_id": _targeted_device_id,
+        "device_info": device_info
+    }
+
+
+@app.delete("/api/discovery/target")
+async def clear_target_device():
+    """Clear the targeted device (no device selected)"""
+    global _targeted_device_id
+    
+    old_target = _targeted_device_id
+    _targeted_device_id = None
+    
+    logger.info(f"Target device cleared (was: {old_target})")
+    
+    await hub.broadcast({
+        "type": "target_changed",
+        "device_id": None,
+        "previous_device_id": old_target
+    })
+    
+    return {"status": "cleared", "previous_device_id": old_target}
+
+
 # WebSocket endpoint
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
@@ -505,6 +629,15 @@ async def startup_event():
         except Exception as e:
             logger.error(f"Failed to start MQTT broker: {e}")
             logger.warning("MQTT features will be unavailable")
+    
+    # Start mDNS discovery
+    if mdns_discovery.available:
+        if mdns_discovery.start():
+            logger.info("mDNS discovery started - scanning for devices")
+        else:
+            logger.warning("mDNS discovery failed to start")
+    else:
+        logger.info("mDNS discovery not available (install zeroconf: pip install zeroconf)")
 
 
 # Shutdown event
@@ -513,6 +646,9 @@ async def shutdown_event():
     """Cleanup on shutdown"""
     logger.info("Shutting down...")
     serial_manager.disconnect()
+
+    # Stop mDNS discovery
+    mdns_discovery.stop()
 
     # Stop MQTT services
     await mqtt_simulator.stop()
