@@ -56,6 +56,8 @@ char* BufferPool::acquireLarge() {
 }
 
 char* BufferPool::acquire(size_t size) {
+    // Note: size == 0 returns smallest buffer (valid use case for empty strings)
+    // Caller is responsible for reserving space for null terminator if needed
     if (size <= SMALL_BUF) {
         return acquireSmall();
     } else if (size <= MEDIUM_BUF) {

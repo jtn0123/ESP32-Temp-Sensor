@@ -118,8 +118,16 @@ float MemoryTracker::getCurrentFragmentation() const {
     if (free_heap == 0) return 100.0f;
 
     uint32_t largest_block = heap_caps_get_largest_free_block(MALLOC_CAP_DEFAULT);
+    
+    // Sanity check: largest block can't exceed free heap
+    // (could happen if heap state is inconsistent during measurement)
+    if (largest_block > free_heap) {
+        largest_block = free_heap;
+    }
 
     // Fragmentation = (1 - largest_block / free_heap) * 100%
+    // 0% = no fragmentation (largest block == free heap)
+    // 100% = completely fragmented (no large blocks available)
     return 100.0f * (1.0f - (float)largest_block / (float)free_heap);
 }
 
