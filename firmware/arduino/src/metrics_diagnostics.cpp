@@ -118,7 +118,8 @@ bool check_rapid_reset_diagnostic_trigger() {
   uint32_t current_time = (uint32_t)(esp_timer_get_time() / 1000000ULL);
   
   // Check if last boot was recent (rapid reset indicator)
-  if (rtc_last_boot_timestamp > 0) {
+  // Guard against clock reset or wrap: only compare if current >= last boot
+  if (rtc_last_boot_timestamp > 0 && current_time >= rtc_last_boot_timestamp) {
     uint32_t time_since_last_boot = current_time - rtc_last_boot_timestamp;
     
     // Check both time-based and count-based triggers

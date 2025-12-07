@@ -69,8 +69,13 @@ public:
         return instance;
     }
 
+    // Get or create stats entry for the given name.
+    // NOTE: The name pointer is stored directly - caller must ensure it points to
+    // a string with static lifetime (e.g., __func__, string literals).
+    // Do NOT pass dynamically allocated or stack-based strings.
     PerfStats* getStats(const char* name) {
-        // Find existing stat
+        // Find existing stat - try pointer comparison first (fast path for __func__)
+        // then fall back to strcmp for different pointers with same content
         for (size_t i = 0; i < stat_count_; i++) {
             if (stats_[i].name == name || strcmp(stats_[i].name, name) == 0) {
                 return &stats_[i];
@@ -79,7 +84,7 @@ public:
 
         // Create new stat
         if (stat_count_ < MAX_STATS) {
-            stats_[stat_count_].name = name;
+            stats_[stat_count_].name = name;  // Store pointer directly (must be static!)
             return &stats_[stat_count_++];
         }
 
@@ -126,13 +131,15 @@ public:
             if (pos >= out_size - 1) break;
 
             const PerfStats& s = stats_[i];
-            written = snprintf(out + pos, out_size - pos,
+            size_t remaining = out_size - pos;
+            written = snprintf(out + pos, remaining,
                           "{\"name\":\"%s\",\"count\":%u,\"avg_us\":%u,\"min_us\":%u,\"max_us\":%u,\"last_us\":%u}",
                           s.name, s.count, s.getAverage(), s.min_us, s.max_us, s.last_us);
-            if (written > 0 && pos + (size_t)written < out_size) {
+            // Check: written >= 0 means success, written < remaining means not truncated
+            if (written >= 0 && (size_t)written < remaining) {
                 pos += (size_t)written;
             } else {
-                break;  // Buffer full, stop adding entries
+                break;  // Buffer full or error, stop adding entries
             }
         }
 

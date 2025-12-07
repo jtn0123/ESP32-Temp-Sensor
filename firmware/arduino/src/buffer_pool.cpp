@@ -79,11 +79,12 @@ void BufferPool::release(char* buf) {
             if (small_in_use_ & mask) {
                 small_in_use_ &= ~mask;
                 stats_.small_released++;
-                stats_.small_in_use--;
+                if (stats_.small_in_use > 0) stats_.small_in_use--;
                 return;
             } else {
-                // Double release
+                // Double release detected
                 stats_.invalid_releases++;
+                Serial.println("[BufferPool] WARN: Double release of small buffer");
                 return;
             }
         }
@@ -96,10 +97,12 @@ void BufferPool::release(char* buf) {
             if (medium_in_use_ & mask) {
                 medium_in_use_ &= ~mask;
                 stats_.medium_released++;
-                stats_.medium_in_use--;
+                if (stats_.medium_in_use > 0) stats_.medium_in_use--;
                 return;
             } else {
+                // Double release detected
                 stats_.invalid_releases++;
+                Serial.println("[BufferPool] WARN: Double release of medium buffer");
                 return;
             }
         }
@@ -112,10 +115,12 @@ void BufferPool::release(char* buf) {
             if (large_in_use_ & mask) {
                 large_in_use_ &= ~mask;
                 stats_.large_released++;
-                stats_.large_in_use--;
+                if (stats_.large_in_use > 0) stats_.large_in_use--;
                 return;
             } else {
+                // Double release detected
                 stats_.invalid_releases++;
+                Serial.println("[BufferPool] WARN: Double release of large buffer");
                 return;
             }
         }
@@ -123,6 +128,7 @@ void BufferPool::release(char* buf) {
 
     // Not a pool buffer
     stats_.invalid_releases++;
+    Serial.println("[BufferPool] WARN: Release of non-pool buffer");
 }
 
 bool BufferPool::isPoolBuffer(const char* buf) const {
