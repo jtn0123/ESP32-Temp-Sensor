@@ -16,6 +16,7 @@ from .mqtt_broker import SimpleMQTTBroker
 from .mqtt_simulator import MqttSimulator
 from .screenshot_handler import ScreenshotHandler
 from .mdns_discovery import get_discovery, MDNSDiscovery
+from .device_tracker import get_tracker, DeviceTracker, DeviceMode, SLEEP_PRESETS
 from .config import ManagerConfig
 
 # Configure logging
@@ -48,6 +49,9 @@ screenshot_handler = ScreenshotHandler(mqtt_broker=mqtt_broker, websocket_hub=hu
 
 # mDNS discovery for finding devices on the network
 mdns_discovery = get_discovery()
+
+# Device tracker for activity and wake predictions
+device_tracker = get_tracker()
 
 # Currently targeted device (only ONE at a time for safety)
 _targeted_device_id: str | None = None
@@ -578,6 +582,137 @@ async def clear_target_device():
     })
     
     return {"status": "cleared", "previous_device_id": old_target}
+
+
+# ============================================================================
+# Device Tracking & Wake Prediction Endpoints
+# ============================================================================
+
+@app.get("/api/devices")
+async def get_all_tracked_devices():
+    """Get all tracked devices with their state and wake predictions"""
+    devices = device_tracker.get_all_devices()
+    return {
+        "devices": [d.to_dict() for d in devices],
+        "sleep_presets": SLEEP_PRESETS
+    }
+
+
+@app.get("/api/devices/{device_id}")
+async def get_device_state(device_id: str):
+    """Get state for a specific device"""
+    device = device_tracker.get_device(device_id)
+    if not device:
+        raise HTTPException(status_code=404, detail=f"Device {device_id} not found")
+    return device.to_dict()
+
+
+class SetModeRequest(BaseModel):
+    mode: str  # "dev" or "production"
+
+
+@app.post("/api/devices/{device_id}/mode")
+async def set_device_mode(device_id: str, request: SetModeRequest):
+    """
+    Set device operating mode (dev or production).
+    
+    Dev mode enables screenshots and fixed sleep intervals.
+    Auto-expires after 1 hour to prevent battery drain.
+    """
+    try:
+        mode = DeviceMode(request.mode)
+    except ValueError:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Invalid mode. Must be 'dev' or 'production'"
+        )
+    
+    # Update local tracker
+    state = await device_tracker.set_mode(device_id, mode)
+    
+    # Send command to device via MQTT
+    topic = f"espsensor/{device_id}/cmd/mode"
+    payload = request.mode
+    mqtt_broker.publish(topic, payload)
+    
+    # Broadcast state change
+    await hub.broadcast({
+        "type": "device_state",
+        "device_id": device_id,
+        "state": state.to_dict()
+    })
+    
+    return {
+        "status": "success",
+        "device_id": device_id,
+        "mode": mode.value,
+        "dev_mode_timeout_sec": state.dev_mode_remaining_sec if mode == DeviceMode.DEVELOPMENT else 0
+    }
+
+
+class SetIntervalRequest(BaseModel):
+    interval_sec: int
+
+
+@app.post("/api/devices/{device_id}/interval")
+async def set_device_interval(device_id: str, request: SetIntervalRequest):
+    """
+    Set device sleep interval.
+    
+    Minimum 180 seconds (3 minutes) to prevent sensor self-heating.
+    Presets: 180 (3min), 300 (5min), 600 (10min), 3600 (1hr)
+    """
+    interval = request.interval_sec
+    
+    # Enforce minimum 3 minutes
+    if interval < 180:
+        raise HTTPException(
+            status_code=400,
+            detail="Minimum interval is 180 seconds (3 minutes) to prevent sensor heating"
+        )
+    
+    # Enforce maximum 1 hour
+    if interval > 3600:
+        raise HTTPException(
+            status_code=400,
+            detail="Maximum interval is 3600 seconds (1 hour)"
+        )
+    
+    # Update local tracker
+    state = await device_tracker.set_sleep_interval(device_id, interval)
+    
+    # Send command to device via MQTT
+    topic = f"espsensor/{device_id}/cmd/sleep_interval"
+    payload = str(interval)
+    mqtt_broker.publish(topic, payload)
+    
+    # Broadcast state change
+    await hub.broadcast({
+        "type": "device_state",
+        "device_id": device_id,
+        "state": state.to_dict()
+    })
+    
+    return {
+        "status": "success",
+        "device_id": device_id,
+        "interval_sec": interval
+    }
+
+
+@app.get("/api/presets/intervals")
+async def get_interval_presets():
+    """Get available sleep interval presets"""
+    return {
+        "presets": [
+            {"name": "Dev (3 min)", "value": 180, "icon": "🔧"},
+            {"name": "Testing (5 min)", "value": 300, "icon": "📊"},
+            {"name": "Normal (10 min)", "value": 600, "icon": "🔋"},
+            {"name": "Power Save (1 hr)", "value": 3600, "icon": "💤"},
+        ],
+        "min_sec": 180,
+        "max_sec": 3600
+    }
 
 
 # WebSocket endpoint

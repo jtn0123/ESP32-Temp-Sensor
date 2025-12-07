@@ -1231,3 +1231,366 @@ button:not(:disabled):hover {
 .confirm-button:hover {
   background-color: #fbbf24;
 }
+
+/* ============================================================================
+   Wake Prediction Styles
+   ============================================================================ */
+
+.wake-prediction {
+  background-color: #2d2d2d;
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.wake-prediction.empty,
+.wake-prediction.loading,
+.wake-prediction.error {
+  text-align: center;
+  color: #888;
+  padding: 2rem;
+}
+
+.wake-prediction .hint {
+  font-size: 0.85rem;
+  color: #666;
+  margin-top: 0.5rem;
+}
+
+.prediction-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.prediction-header h4 {
+  margin: 0;
+  color: #61dafb;
+}
+
+.device-status {
+  padding: 0.25rem 0.75rem;
+  border-radius: 12px;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.device-status.status-awake {
+  background-color: #1e4620;
+  color: #4ade80;
+}
+
+.device-status.status-sleeping {
+  background-color: #1e3a5f;
+  color: #60a5fa;
+}
+
+.device-status.status-unknown {
+  background-color: #3c3c3c;
+  color: #888;
+}
+
+.prediction-details {
+  margin-bottom: 1rem;
+}
+
+.detail-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.25rem 0;
+  font-size: 0.9rem;
+}
+
+.detail-row .label {
+  color: #888;
+}
+
+.detail-row .value {
+  color: #d4d4d4;
+  font-weight: 500;
+}
+
+.countdown-section {
+  background-color: #252525;
+  border-radius: 6px;
+  padding: 1rem;
+}
+
+.countdown-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.countdown-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #61dafb;
+}
+
+.countdown-value.overdue {
+  color: #f87171;
+}
+
+.progress-bar-container {
+  height: 8px;
+  background-color: #3c3c3c;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 0.5rem;
+}
+
+.progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, #61dafb, #3b82f6);
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+.progress-bar.overdue {
+  background: linear-gradient(90deg, #f87171, #dc2626);
+}
+
+.progress-label {
+  font-size: 0.8rem;
+  color: #888;
+  text-align: center;
+}
+
+.awake-section {
+  background-color: #1e4620;
+  border-radius: 6px;
+  padding: 1rem;
+  text-align: center;
+}
+
+.awake-message {
+  color: #4ade80;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.awake-hint {
+  color: #86efac;
+  font-size: 0.85rem;
+}
+
+.mode-warning {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 1rem;
+  padding: 0.5rem 0.75rem;
+  background-color: #78350f;
+  border-radius: 4px;
+  color: #fbbf24;
+  font-size: 0.85rem;
+}
+
+/* ============================================================================
+   Device Mode Selector Styles
+   ============================================================================ */
+
+.mode-selector {
+  background-color: #2d2d2d;
+  border-radius: 8px;
+  padding: 1rem;
+}
+
+.mode-selector.disabled {
+  opacity: 0.5;
+  text-align: center;
+  padding: 2rem;
+}
+
+.mode-section {
+  margin-bottom: 1.5rem;
+}
+
+.mode-section h4,
+.interval-section h4 {
+  margin: 0 0 0.75rem 0;
+  color: #61dafb;
+  font-size: 1rem;
+}
+
+.mode-options {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.mode-option {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  background-color: #353535;
+  border: 2px solid #444;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.mode-option:hover {
+  background-color: #404040;
+  border-color: #555;
+}
+
+.mode-option.selected {
+  background-color: #1e4620;
+  border-color: #4ade80;
+}
+
+.mode-option input[type="radio"] {
+  display: none;
+}
+
+.mode-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.mode-icon {
+  font-size: 1.25rem;
+}
+
+.mode-name {
+  font-weight: 600;
+  color: #d4d4d4;
+}
+
+.mode-desc {
+  font-size: 0.85rem;
+  color: #888;
+}
+
+.dev-mode-warning {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  background-color: #78350f;
+  border-radius: 4px;
+  color: #fbbf24;
+  font-size: 0.9rem;
+}
+
+.interval-section {
+  margin-bottom: 1rem;
+}
+
+.interval-hint {
+  font-size: 0.85rem;
+  color: #888;
+  margin-bottom: 0.75rem;
+}
+
+.interval-presets {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.5rem;
+}
+
+.interval-button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.75rem;
+  background-color: #353535;
+  border: 2px solid #444;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: #d4d4d4;
+}
+
+.interval-button:hover {
+  background-color: #404040;
+  border-color: #61dafb;
+}
+
+.interval-button.selected {
+  background-color: #1e3a5f;
+  border-color: #3b82f6;
+}
+
+.interval-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.preset-icon {
+  font-size: 1.25rem;
+}
+
+.preset-name {
+  font-size: 0.85rem;
+}
+
+.current-interval {
+  margin-top: 0.75rem;
+  font-size: 0.9rem;
+  color: #888;
+  text-align: center;
+}
+
+.mode-error {
+  margin-top: 1rem;
+  padding: 0.5rem 0.75rem;
+  background-color: #461e1e;
+  border: 1px solid #f87171;
+  border-radius: 4px;
+  color: #f87171;
+  font-size: 0.9rem;
+}
+
+.mode-success {
+  margin-top: 1rem;
+  padding: 0.5rem 0.75rem;
+  background-color: #1e4620;
+  border: 1px solid #4ade80;
+  border-radius: 4px;
+  color: #4ade80;
+  font-size: 0.9rem;
+}
+
+/* Confirm dialog list */
+.confirm-dialog ul {
+  margin: 0.75rem 0;
+  padding-left: 1.5rem;
+  color: #d4d4d4;
+}
+
+.confirm-dialog li {
+  margin-bottom: 0.25rem;
+}
+
+/* Flash Manager Sections */
+.flash-section {
+  margin-bottom: 1.5rem;
+}
+
+.flash-section h3 {
+  margin: 0 0 1rem 0;
+  color: #61dafb;
+  font-size: 1.1rem;
+}
+
+.section-divider {
+  border: none;
+  border-top: 1px solid #444;
+  margin: 1.5rem 0;
+}
+
+/* Dashboard Layout */
+.dashboard-main {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}

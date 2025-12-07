@@ -9,6 +9,7 @@ import { MqttInspector } from './components/MqttInspector';
 import { DisplayViewer } from './components/DisplayViewer';
 import { ControlPanel } from './components/ControlPanel';
 import { StatusDashboard } from './components/StatusDashboard';
+import { WakePrediction } from './components/WakePrediction';
 import './styles/manager.css';
 
 function App() {
@@ -74,10 +75,13 @@ function App() {
 
           <TabPanel>
             <div className="dashboard-layout">
-              <StatusDashboard
-                serialConnected={connected}
-                mqttConnected={wsConnected}
-              />
+              <div className="dashboard-main">
+                <WakePrediction deviceId={targetDevice} />
+                <StatusDashboard
+                  serialConnected={connected}
+                  mqttConnected={wsConnected}
+                />
+              </div>
               <ControlPanel />
             </div>
           </TabPanel>
@@ -87,7 +91,11 @@ function App() {
           </TabPanel>
 
           <TabPanel>
-            <FlashManager messages={messages} serialPort={serialPort} />
+            <FlashManager 
+              messages={messages} 
+              serialPort={serialPort}
+              targetDevice={targetDevice}
+            />
           </TabPanel>
 
           <TabPanel>

@@ -38,6 +38,12 @@ bool is_temperature_changing_rapidly();
 void set_custom_sleep_interval(uint32_t sec);
 uint32_t get_custom_sleep_interval();
 
+// Device mode (dev vs production)
+void set_device_mode(const char* mode);
+bool is_dev_mode();
+uint32_t get_dev_mode_remaining_sec();
+const char* get_device_mode_str();
+
 // Power management
 void power_init();
 void power_prepare_sleep();
