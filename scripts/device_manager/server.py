@@ -77,6 +77,13 @@ class SleepIntervalRequest(BaseModel):
     interval_sec: int
 
 
+class FlashQueueRequest(BaseModel):
+    build_config: str = "dev"
+    target_port: Optional[str] = None
+    target_device_id: Optional[str] = None
+    timeout_minutes: Optional[int] = 15
+
+
 class FlashRequest(BaseModel):
     port: str
     config: str = "dev"
@@ -243,6 +250,61 @@ async def cancel_flash():
         return {"status": "cancelled"}
     except Exception as e:
         logger.error(f"Error cancelling flash: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# Flash Queue / Hunt Mode endpoints
+@app.post("/api/flash/queue")
+async def queue_flash(request: FlashQueueRequest):
+    """
+    Queue a flash operation to run when device connects.
+    
+    Pre-builds firmware immediately, then monitors for device connection.
+    When device is detected, automatically flashes.
+    """
+    try:
+        success, error_msg = await flash_manager.queue_flash(
+            build_config=request.build_config,
+            target_port=request.target_port,
+            target_device_id=request.target_device_id,
+            timeout_minutes=request.timeout_minutes
+        )
+        if success:
+            return {"status": "queued", "queue": flash_manager.get_queue_status()}
+        else:
+            raise HTTPException(status_code=400, detail=error_msg or "Could not queue flash")
+    except HTTPException:
+        raise  # Re-raise HTTP exceptions as-is
+    except Exception as e:
+        logger.error(f"Error queuing flash: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.delete("/api/flash/queue")
+async def cancel_queued_flash():
+    """Cancel queued flash operation"""
+    try:
+        success = await flash_manager.cancel_queued_flash()
+        if success:
+            return {"status": "cancelled"}
+        else:
+            return {"status": "no_queue", "message": "No flash queued"}
+    except Exception as e:
+        logger.error(f"Error cancelling queued flash: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/flash/queue")
+async def get_flash_queue_status():
+    """Get current flash queue status"""
+    try:
+        queue_status = flash_manager.get_queue_status()
+        return {
+            "queued": queue_status is not None,
+            "queue": queue_status
+        }
+    except Exception as e:
+        logger.error(f"Error getting queue status: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -799,6 +861,13 @@ async def startup_event():
     
     # Start mDNS discovery
     if mdns_discovery.available:
+        # Hook up flash queue callback for OTA device detection
+        def on_device_discovered(device):
+            """Called when a new mDNS device is discovered"""
+            flash_manager.on_mdns_device_found(device.device_id, device.ip_address)
+        
+        mdns_discovery.set_device_added_callback(on_device_discovered)
+        
         if mdns_discovery.start():
             logger.info("mDNS discovery started - scanning for devices")
         else:

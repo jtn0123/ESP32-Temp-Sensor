@@ -58,9 +58,14 @@ class DiscoveredDevice:
 class DeviceListener(ServiceListener):
     """Listener for mDNS service events"""
     
-    def __init__(self, on_change: Optional[Callable[[], None]] = None):
+    def __init__(
+        self, 
+        on_change: Optional[Callable[[], None]] = None,
+        on_device_added: Optional[Callable[['DiscoveredDevice'], None]] = None
+    ):
         self.devices: dict[str, DiscoveredDevice] = {}
         self.on_change = on_change
+        self.on_device_added = on_device_added  # Callback when new device appears
         self._lock = threading.Lock()
     
     def add_service(self, zc: Zeroconf, type_: str, name: str) -> None:
@@ -121,6 +126,9 @@ class DeviceListener(ServiceListener):
             
             if is_new:
                 logger.info(f"Device discovered: {device.room} ({device.ip_address}) v{device.version}")
+                # Notify about new device (for flash queue)
+                if self.on_device_added:
+                    self.on_device_added(device)
             else:
                 logger.debug(f"Device updated: {device.room} ({device.ip_address})")
             
@@ -141,8 +149,13 @@ class MDNSDiscovery:
     Thread-safe and designed for long-running operation.
     """
     
-    def __init__(self, on_devices_changed: Optional[Callable[[], None]] = None):
+    def __init__(
+        self, 
+        on_devices_changed: Optional[Callable[[], None]] = None,
+        on_device_added: Optional[Callable[['DiscoveredDevice'], None]] = None
+    ):
         self.on_devices_changed = on_devices_changed
+        self.on_device_added = on_device_added  # Callback when new device appears
         self._zeroconf: Zeroconf | None = None
         self._browser: ServiceBrowser | None = None
         self._listener: DeviceListener | None = None
@@ -164,7 +177,10 @@ class MDNSDiscovery:
         
         try:
             self._zeroconf = Zeroconf()
-            self._listener = DeviceListener(on_change=self.on_devices_changed)
+            self._listener = DeviceListener(
+                on_change=self.on_devices_changed,
+                on_device_added=self.on_device_added
+            )
             self._browser = ServiceBrowser(self._zeroconf, SERVICE_TYPE, self._listener)
             self._running = True
             logger.info(f"mDNS discovery started, scanning for {SERVICE_TYPE}")
@@ -205,6 +221,12 @@ class MDNSDiscovery:
     def is_running(self) -> bool:
         """Check if discovery is running"""
         return self._running
+    
+    def set_device_added_callback(self, callback: Optional[Callable[['DiscoveredDevice'], None]]):
+        """Set the callback for when a new device is discovered (for flash queue integration)"""
+        self.on_device_added = callback
+        if self._listener:
+            self._listener.on_device_added = callback
 
 
 # Singleton instance

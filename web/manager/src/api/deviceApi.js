@@ -67,6 +67,29 @@ export const deviceApi = {
     });
   },
 
+  // Flash Queue / Hunt Mode endpoints
+  async queueFlash(buildConfig = 'dev', targetPort = null, targetDeviceId = null, timeoutMinutes = 15) {
+    return fetchAPI('/flash/queue', {
+      method: 'POST',
+      body: JSON.stringify({
+        build_config: buildConfig,
+        target_port: targetPort,
+        target_device_id: targetDeviceId,
+        timeout_minutes: timeoutMinutes,
+      }),
+    });
+  },
+
+  async cancelQueuedFlash() {
+    return fetchAPI('/flash/queue', {
+      method: 'DELETE',
+    });
+  },
+
+  async getQueueStatus() {
+    return fetchAPI('/flash/queue');
+  },
+
   // Device endpoints
   async requestScreenshot() {
     return fetchAPI('/device/screenshot', {
