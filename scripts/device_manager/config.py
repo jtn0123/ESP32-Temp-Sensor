@@ -15,8 +15,8 @@ class ManagerConfig:
     default_baud: int = 115200
     serial_timeout: float = 1.0
 
-    # MQTT
-    mqtt_broker_port: int = 1883
+    # MQTT (port matches mosquitto_test.conf)
+    mqtt_broker_port: int = 18884
     mqtt_broker_enabled: bool = True
 
     # Simulator
