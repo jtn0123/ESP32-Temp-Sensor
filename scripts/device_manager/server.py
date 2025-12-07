@@ -100,6 +100,12 @@ class MqttSubscribeRequest(BaseModel):
 _project_root = pathlib.Path(__file__).parent.parent.parent
 _web_root = _project_root / "web"
 
+# Serve icons first (more specific paths must come before less specific)
+if (_web_root / "icons").exists():
+    app.mount("/icons", StaticFiles(directory=str(_web_root / "icons")), name="icons")
+    # Also serve at /sim/icons for simulator compatibility
+    app.mount("/sim/icons", StaticFiles(directory=str(_web_root / "icons")), name="sim_icons")
+
 # Serve simulator at /sim
 if (_web_root / "sim").exists():
     app.mount("/sim", StaticFiles(directory=str(_web_root / "sim"), html=True), name="simulator")
@@ -110,10 +116,6 @@ if (_web_root / "manager" / "dist").exists():
 elif (_web_root / "manager" / "index.html").exists():
     # Serve manager source files (for development)
     app.mount("/manager", StaticFiles(directory=str(_web_root / "manager"), html=True), name="manager")
-
-# Serve icons and other static assets
-if (_web_root / "icons").exists():
-    app.mount("/icons", StaticFiles(directory=str(_web_root / "icons")), name="icons")
 
 
 # API Routes

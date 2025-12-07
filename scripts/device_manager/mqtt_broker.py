@@ -7,6 +7,9 @@ import paho.mqtt.client as mqtt
 
 logger = logging.getLogger(__name__)
 
+# Check paho-mqtt version for API compatibility
+_PAHO_V2 = hasattr(mqtt, 'CallbackAPIVersion')
+
 
 class MQTTMessage:
     """Represents an MQTT message"""
@@ -48,6 +51,15 @@ class SimpleMQTTBroker:
         self.message_log: deque = deque(maxlen=1000)  # Keep last 1000 messages
         self.subscriptions: Dict[str, int] = {}  # topic -> qos
         self.message_callbacks: List[Callable] = []
+        self._loop: Optional[asyncio.AbstractEventLoop] = None  # Store event loop reference
+    
+    def _schedule_async(self, coro):
+        """Schedule an async coroutine from a sync callback (thread-safe)"""
+        if self._loop and self.hub:
+            try:
+                asyncio.run_coroutine_threadsafe(coro, self._loop)
+            except Exception as e:
+                logger.debug(f"Could not schedule async task: {e}")
 
     async def start(self):
         """Start the MQTT client (connects to external broker or mosquitto)"""
@@ -55,9 +67,21 @@ class SimpleMQTTBroker:
             logger.warning("MQTT broker already running")
             return
 
+        # Store event loop reference for thread-safe async scheduling
+        self._loop = asyncio.get_running_loop()
+
         try:
-            # Create MQTT client
-            self.client = mqtt.Client(client_id="device_manager", protocol=mqtt.MQTTv311)
+            # Create MQTT client (compatible with paho-mqtt v1 and v2)
+            if _PAHO_V2:
+                # paho-mqtt 2.0+ requires CallbackAPIVersion
+                self.client = mqtt.Client(
+                    callback_api_version=mqtt.CallbackAPIVersion.VERSION1,
+                    client_id="device_manager",
+                    protocol=mqtt.MQTTv311
+                )
+            else:
+                # paho-mqtt 1.x
+                self.client = mqtt.Client(client_id="device_manager", protocol=mqtt.MQTTv311)
 
             # Set callbacks
             self.client.on_connect = self._on_connect
@@ -66,7 +90,6 @@ class SimpleMQTTBroker:
             self.client.on_publish = self._on_publish
 
             # Connect to broker (assumes mosquitto or similar is running)
-            # For a fully embedded solution, we'd start mosquitto as a subprocess
             logger.info(f"Connecting to MQTT broker at {self.host}:{self.port}")
 
             # Run client loop in background
@@ -108,13 +131,12 @@ class SimpleMQTTBroker:
             self.client.subscribe("espsensor/#", qos=0)
             self.client.subscribe("homeassistant/#", qos=0)
 
-            # Broadcast connection status
-            if self.hub:
-                asyncio.create_task(self.hub.broadcast({
-                    'type': 'mqtt_status',
-                    'connected': True,
-                    'message': 'Connected to MQTT broker'
-                }))
+            # Broadcast connection status (thread-safe)
+            self._schedule_async(self.hub.broadcast({
+                'type': 'mqtt_status',
+                'connected': True,
+                'message': 'Connected to MQTT broker'
+            }))
         else:
             logger.error(f"Failed to connect to MQTT broker, code: {rc}")
 
@@ -122,12 +144,11 @@ class SimpleMQTTBroker:
         """Callback when disconnected from MQTT broker"""
         logger.warning(f"Disconnected from MQTT broker, code: {rc}")
 
-        if self.hub:
-            asyncio.create_task(self.hub.broadcast({
-                'type': 'mqtt_status',
-                'connected': False,
-                'message': 'Disconnected from MQTT broker'
-            }))
+        self._schedule_async(self.hub.broadcast({
+            'type': 'mqtt_status',
+            'connected': False,
+            'message': 'Disconnected from MQTT broker'
+        }))
 
     def _on_message(self, client, userdata, msg):
         """Callback when message is received"""
@@ -150,12 +171,11 @@ class SimpleMQTTBroker:
             except Exception as e:
                 logger.error(f"Error in message callback: {e}")
 
-        # Broadcast to WebSocket clients
-        if self.hub:
-            asyncio.create_task(self.hub.broadcast({
-                'type': 'mqtt',
-                **mqtt_msg.to_dict()
-            }))
+        # Broadcast to WebSocket clients (thread-safe)
+        self._schedule_async(self.hub.broadcast({
+            'type': 'mqtt',
+            **mqtt_msg.to_dict()
+        }))
 
     def _on_publish(self, client, userdata, mid):
         """Callback when message is published"""
@@ -185,12 +205,11 @@ class SimpleMQTTBroker:
             )
             self.message_log.append(mqtt_msg)
 
-            # Broadcast to WebSocket clients
-            if self.hub:
-                asyncio.create_task(self.hub.broadcast({
-                    'type': 'mqtt',
-                    **mqtt_msg.to_dict()
-                }))
+            # Broadcast to WebSocket clients (thread-safe)
+            self._schedule_async(self.hub.broadcast({
+                'type': 'mqtt',
+                **mqtt_msg.to_dict()
+            }))
 
             logger.debug(f"Published to {topic}: {payload_bytes[:100]}")
             return True

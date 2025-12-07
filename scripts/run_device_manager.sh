@@ -24,7 +24,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 BACKEND_PORT=8080
 FRONTEND_PORT=5173
-MQTT_PORT=1883
+MQTT_PORT=18884  # Matches mosquitto_test.conf
 
 # Parse arguments
 DEV_MODE=false
@@ -76,9 +76,20 @@ check_port() {
     lsof -i :$1 >/dev/null 2>&1
 }
 
+# Track PIDs for cleanup
+MOSQUITTO_PID=""
+BACKEND_PID=""
+FRONTEND_PID=""
+
 # Function to cleanup on exit
 cleanup() {
     echo -e "\n${YELLOW}Shutting down...${NC}"
+    
+    # Kill Mosquitto if we started it
+    if [ -n "$MOSQUITTO_PID" ] && kill -0 "$MOSQUITTO_PID" 2>/dev/null; then
+        echo -e "${YELLOW}  Stopping Mosquitto...${NC}"
+        kill "$MOSQUITTO_PID" 2>/dev/null || true
+    fi
     
     # Kill background jobs
     jobs -p 2>/dev/null | xargs kill 2>/dev/null || true
@@ -113,19 +124,22 @@ if [ "$NO_BROKER" = false ]; then
         if command -v mosquitto &> /dev/null; then
             echo -e "${YELLOW}  Starting Mosquitto...${NC}"
             
-            # Use project config if available
+            # Start Mosquitto as background job (not daemon) so we can track and kill it
             if [ -f "$PROJECT_ROOT/mosquitto_test.conf" ]; then
-                mosquitto -c "$PROJECT_ROOT/mosquitto_test.conf" -d 2>/dev/null
+                mosquitto -c "$PROJECT_ROOT/mosquitto_test.conf" >/dev/null 2>&1 &
+                MOSQUITTO_PID=$!
             else
-                mosquitto -p $MQTT_PORT -d 2>/dev/null
+                mosquitto -p $MQTT_PORT >/dev/null 2>&1 &
+                MOSQUITTO_PID=$!
             fi
             
             sleep 1
             
             if check_port $MQTT_PORT; then
-                echo -e "${GREEN}  ✓ Mosquitto started on port $MQTT_PORT${NC}"
+                echo -e "${GREEN}  ✓ Mosquitto started on port $MQTT_PORT (PID: $MOSQUITTO_PID)${NC}"
             else
                 echo -e "${YELLOW}  ⚠ Mosquitto didn't start (continuing without MQTT)${NC}"
+                MOSQUITTO_PID=""
                 NO_BROKER=true
             fi
         else
@@ -174,6 +188,36 @@ if [ "$NEED_INSTALL" = true ]; then
 fi
 
 echo -e "${GREEN}  ✓ Python environment ready${NC}"
+
+# ─────────────────────────────────────────────────────────────────
+# Step 2.5: Build Manager UI if needed (and not in dev mode)
+# ─────────────────────────────────────────────────────────────────
+if [ "$DEV_MODE" = false ]; then
+    MANAGER_DIR="$PROJECT_ROOT/web/manager"
+    if [ ! -d "$MANAGER_DIR/dist" ] && [ -f "$MANAGER_DIR/package.json" ]; then
+        if command -v npm &> /dev/null; then
+            echo -e "${BLUE}[2.5/3] Building Manager UI...${NC}"
+            cd "$MANAGER_DIR"
+            if [ ! -d "node_modules" ]; then
+                echo -e "${YELLOW}  Installing npm dependencies...${NC}"
+                npm install --silent 2>/dev/null || npm install 2>/dev/null || true
+            fi
+            echo -e "${YELLOW}  Building production bundle...${NC}"
+            npm run build 2>/dev/null || {
+                echo -e "${YELLOW}  ⚠ Manager build failed (use --dev for hot reload)${NC}"
+            }
+            cd "$PROJECT_ROOT"
+            if [ -d "$MANAGER_DIR/dist" ]; then
+                echo -e "${GREEN}  ✓ Manager UI built${NC}"
+            fi
+        else
+            echo -e "${YELLOW}  ⚠ npm not found - Manager UI won't be available${NC}"
+            echo -e "${YELLOW}    Install Node.js or use: ./scripts/run_device_manager.sh --dev${NC}"
+        fi
+    elif [ -d "$MANAGER_DIR/dist" ]; then
+        echo -e "${GREEN}  ✓ Manager UI already built${NC}"
+    fi
+fi
 
 # ─────────────────────────────────────────────────────────────────
 # Step 3: Start Backend
