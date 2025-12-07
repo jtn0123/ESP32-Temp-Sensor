@@ -125,6 +125,33 @@ export const deviceApi = {
     return fetchAPI('/discovery/target', { method: 'DELETE' });
   },
 
+  // Device tracking & wake prediction
+  async getAllDevices() {
+    return fetchAPI('/devices');
+  },
+
+  async getDeviceState(deviceId) {
+    return fetchAPI(`/devices/${deviceId}`);
+  },
+
+  async setDeviceMode(deviceId, mode) {
+    return fetchAPI(`/devices/${deviceId}/mode`, {
+      method: 'POST',
+      body: JSON.stringify({ mode }),
+    });
+  },
+
+  async setDeviceInterval(deviceId, intervalSec) {
+    return fetchAPI(`/devices/${deviceId}/interval`, {
+      method: 'POST',
+      body: JSON.stringify({ interval_sec: intervalSec }),
+    });
+  },
+
+  async getIntervalPresets() {
+    return fetchAPI('/presets/intervals');
+  },
+
   // MQTT endpoints
   async getMqttStatus() {
     return fetchAPI('/mqtt/status');

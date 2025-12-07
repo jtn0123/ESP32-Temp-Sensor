@@ -223,12 +223,61 @@ static float g_last_temperature = NAN;
 // Custom sleep interval (set via MQTT, 0 = use adaptive)
 static uint32_t g_custom_sleep_interval_sec = 0;
 
+// Device mode: 0 = production, 1 = development
+static uint8_t g_device_mode = 0;
+static uint32_t g_dev_mode_start_ms = 0;
+
+// Dev mode auto-timeout (1 hour in milliseconds)
+static const uint32_t DEV_MODE_TIMEOUT_MS = 3600000UL;
+
 void set_custom_sleep_interval(uint32_t sec) {
-    g_custom_sleep_interval_sec = sec;
+    // Enforce minimum 180 seconds (3 minutes) to prevent sensor heating
+    g_custom_sleep_interval_sec = (sec < 180) ? 180 : sec;
 }
 
 uint32_t get_custom_sleep_interval() {
     return g_custom_sleep_interval_sec;
+}
+
+void set_device_mode(const char* mode) {
+    if (strcmp(mode, "dev") == 0 || strcmp(mode, "development") == 0) {
+        g_device_mode = 1;
+        g_dev_mode_start_ms = millis();
+        Serial.println("[Power] Device mode: DEVELOPMENT (1hr timeout)");
+    } else {
+        g_device_mode = 0;
+        g_dev_mode_start_ms = 0;
+        Serial.println("[Power] Device mode: PRODUCTION");
+    }
+}
+
+bool is_dev_mode() {
+    if (g_device_mode == 0) return false;
+    
+    // Check for auto-timeout
+    if (g_dev_mode_start_ms > 0) {
+        uint32_t elapsed = millis() - g_dev_mode_start_ms;
+        if (elapsed >= DEV_MODE_TIMEOUT_MS) {
+            Serial.println("[Power] Dev mode auto-expired, reverting to production");
+            g_device_mode = 0;
+            g_dev_mode_start_ms = 0;
+            return false;
+        }
+    }
+    return true;
+}
+
+uint32_t get_dev_mode_remaining_sec() {
+    if (!is_dev_mode() || g_dev_mode_start_ms == 0) return 0;
+    
+    uint32_t elapsed = millis() - g_dev_mode_start_ms;
+    if (elapsed >= DEV_MODE_TIMEOUT_MS) return 0;
+    
+    return (DEV_MODE_TIMEOUT_MS - elapsed) / 1000;
+}
+
+const char* get_device_mode_str() {
+    return is_dev_mode() ? "dev" : "production";
 }
 
 static SleepConfig g_sleep_config = {

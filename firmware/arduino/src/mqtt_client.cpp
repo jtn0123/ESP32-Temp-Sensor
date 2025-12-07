@@ -75,7 +75,7 @@ void mqtt_begin() {
       return;
     }
     
-    // Handle sleep interval command
+    // Handle sleep interval command (minimum 180s / 3 min to prevent sensor heating)
     if (topicStr.endsWith("/cmd/sleep_interval")) {
       if (length > 0 && length < 16) {
         char buf[16];
@@ -83,15 +83,34 @@ void mqtt_begin() {
         buf[length] = '\0';
         char* endptr = nullptr;
         long interval = strtol(buf, &endptr, 10);
-        if (endptr != buf && interval >= 60 && interval <= 3600) {
+        if (endptr != buf && interval >= 180 && interval <= 3600) {
           // Store new interval - will be used on next sleep cycle
           extern void set_custom_sleep_interval(uint32_t sec);
           set_custom_sleep_interval(static_cast<uint32_t>(interval));
           Serial.printf("[MQTT] Sleep interval set to %ld seconds\n", interval);
         } else {
-          Serial.println("[MQTT] Invalid sleep interval (must be 60-3600 seconds)");
+          Serial.println("[MQTT] Invalid sleep interval (must be 180-3600 seconds)");
         }
       }
+      return;
+    }
+    
+    // Handle device mode command (dev or production)
+    if (topicStr.endsWith("/cmd/mode")) {
+      if (length > 0 && length < 16) {
+        char buf[16];
+        memcpy(buf, payload, length);
+        buf[length] = '\0';
+        extern void set_device_mode(const char* mode);
+        set_device_mode(buf);
+      }
+      return;
+    }
+    
+    // Handle status request command
+    if (topicStr.endsWith("/cmd/status")) {
+      extern void publish_device_status();
+      publish_device_status();
       return;
     }
     
@@ -298,6 +317,45 @@ void mqtt_disconnect() {
     g_mqtt.publish(lwt_topic, "offline", true);
     g_mqtt.disconnect();
   }
+}
+
+void publish_device_status() {
+  if (!g_mqtt.connected()) return;
+  
+  // Get device mode and sleep interval
+  extern const char* get_device_mode_str();
+  extern uint32_t get_dev_mode_remaining_sec();
+  extern uint32_t get_custom_sleep_interval();
+  
+  const char* mode = get_device_mode_str();
+  uint32_t dev_timeout_sec = get_dev_mode_remaining_sec();
+  uint32_t sleep_interval = get_custom_sleep_interval();
+  if (sleep_interval == 0) sleep_interval = 600;  // Default 10 min
+  
+  // Get battery status
+  extern BatteryStatus read_battery_status();
+  BatteryStatus bs = read_battery_status();
+  
+  // Build status JSON
+  char topic_buf[96];
+  build_topic_buf(topic_buf, sizeof(topic_buf), "status");
+  
+  char payload[256];
+  snprintf(payload, sizeof(payload),
+    "{\"mode\":\"%s\",\"sleep_interval_sec\":%lu,\"dev_mode_timeout_sec\":%lu,"
+    "\"uptime_sec\":%lu,\"battery_pct\":%d,\"heap_free\":%lu,\"fw_version\":\"%s\",\"room\":\"%s\"}",
+    mode,
+    (unsigned long)sleep_interval,
+    (unsigned long)dev_timeout_sec,
+    (unsigned long)(millis() / 1000),
+    bs.percent,
+    (unsigned long)ESP.getFreeHeap(),
+    FW_VERSION,
+    ROOM_NAME
+  );
+  
+  g_mqtt.publish(topic_buf, payload, false);
+  Serial.printf("[MQTT] Published device status: mode=%s, interval=%lus\n", mode, (unsigned long)sleep_interval);
 }
 
 void mqtt_set_client_id(const char* client_id) {

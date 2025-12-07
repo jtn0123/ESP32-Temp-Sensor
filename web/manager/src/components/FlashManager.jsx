@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { deviceApi } from '../api/deviceApi';
+import { DeviceModeSelector } from './DeviceModeSelector';
 
-export function FlashManager({ messages, serialPort }) {
+export function FlashManager({ messages, serialPort, targetDevice }) {
   const [config, setConfig] = useState('dev');
   const [isFlashing, setIsFlashing] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -79,43 +80,55 @@ export function FlashManager({ messages, serialPort }) {
 
   return (
     <div className="flash-manager">
-      <div className="flash-controls">
-        <div className="config-selector">
-          <label htmlFor="build-config">Build Configuration:</label>
-          <select
-            id="build-config"
-            value={config}
-            onChange={(e) => setConfig(e.target.value)}
-            disabled={isFlashing}
-          >
-            {configOptions.map(opt => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
-              </option>
-            ))}
-          </select>
-          <div className="config-description">
-            {configOptions.find(o => o.value === config)?.description}
-          </div>
-        </div>
+      {/* Device Mode & Interval Configuration */}
+      <div className="flash-section">
+        <h3>⚙️ Device Configuration</h3>
+        <DeviceModeSelector deviceId={targetDevice} />
+      </div>
 
-        <div className="flash-actions">
-          {isFlashing ? (
-            <button onClick={handleCancel} className="cancel-button">
-              Cancel Flash
-            </button>
-          ) : (
-            <button
-              onClick={handleFlash}
-              disabled={!serialPort}
-              className="flash-button"
+      <hr className="section-divider" />
+
+      {/* Flash Controls */}
+      <div className="flash-section">
+        <h3>⚡ Build & Flash</h3>
+        <div className="flash-controls">
+          <div className="config-selector">
+            <label htmlFor="build-config">Build Configuration:</label>
+            <select
+              id="build-config"
+              value={config}
+              onChange={(e) => setConfig(e.target.value)}
+              disabled={isFlashing}
             >
-              Flash Firmware
+              {configOptions.map(opt => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+            <div className="config-description">
+              {configOptions.find(o => o.value === config)?.description}
+            </div>
+          </div>
+
+          <div className="flash-actions">
+            {isFlashing ? (
+              <button onClick={handleCancel} className="cancel-button">
+                Cancel Flash
+              </button>
+            ) : (
+              <button
+                onClick={handleFlash}
+                disabled={!serialPort}
+                className="flash-button"
+              >
+                Flash Firmware
+              </button>
+            )}
+            <button onClick={handleClearLogs} disabled={isFlashing}>
+              Clear Logs
             </button>
-          )}
-          <button onClick={handleClearLogs} disabled={isFlashing}>
-            Clear Logs
-          </button>
+          </div>
         </div>
       </div>
 
