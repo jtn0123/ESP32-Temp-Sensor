@@ -90,8 +90,8 @@ export const deviceApi = {
   },
 
   // Config endpoints
-  async setSleepInterval(intervalSec) {
-    return fetchAPI('/config/sleep-interval', {
+  async setSleepInterval(intervalSec, deviceId = 'office') {
+    return fetchAPI(`/config/sleep-interval?device_id=${deviceId}`, {
       method: 'POST',
       body: JSON.stringify({ interval_sec: intervalSec }),
     });

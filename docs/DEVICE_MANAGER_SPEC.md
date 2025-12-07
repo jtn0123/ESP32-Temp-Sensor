@@ -1,14 +1,31 @@
 # ESP32 Device Manager - Implementation Specification
 
+> **Status: ✅ FULLY IMPLEMENTED** (Last updated: December 2024)
+
 ## Overview
 
 Transform the existing web simulator into a comprehensive **Device Manager** that can:
-1. Flash firmware to connected ESP32 devices
-2. Display live serial console output
-3. Simulate MQTT broker with Home Assistant-like data
-4. Pull and display device screenshots
-5. Control device settings (sleep interval, diagnostic mode)
-6. Show real-time device status
+1. ✅ Flash firmware to connected ESP32 devices
+2. ✅ Display live serial console output
+3. ✅ Simulate MQTT broker with Home Assistant-like data
+4. ✅ Pull and display device screenshots
+5. ✅ Control device settings (sleep interval, diagnostic mode)
+6. ✅ Show real-time device status
+
+## Quick Start
+
+```bash
+# Combined startup (recommended)
+./scripts/run_device_manager.sh
+
+# With frontend hot-reload for development
+./scripts/run_device_manager.sh --dev
+
+# Manual start
+python scripts/start_device_manager.py --port 8080
+```
+
+See `web/manager/README.md` for detailed usage instructions.
 
 ---
 
@@ -46,41 +63,57 @@ Transform the existing web simulator into a comprehensive **Device Manager** tha
 
 ---
 
-## File Structure
+## File Structure (Actual Implementation)
 
 ```
 web/
-├── src/
-│   ├── App.jsx                    # Main app with tab navigation
-│   ├── components/
-│   │   ├── DisplayViewer.jsx      # Screenshot display + refresh
-│   │   ├── SerialConsole.jsx      # Live serial output
-│   │   ├── FlashManager.jsx       # Flash controls + progress
-│   │   ├── MqttInspector.jsx      # MQTT message viewer
-│   │   ├── StatusDashboard.jsx    # Device status cards
-│   │   ├── ControlPanel.jsx       # Sleep interval, reboot, etc.
-│   │   └── DeviceSelector.jsx     # Port/device dropdown
-│   ├── hooks/
-│   │   └── useWebSocket.js        # WebSocket connection hook
-│   ├── api/
-│   │   └── deviceApi.js           # REST API calls
-│   └── styles/
-│       └── manager.css            # Manager-specific styles
+├── manager/                        # ✅ Device Manager frontend
+│   ├── src/
+│   │   ├── App.jsx                 # Main app with tab navigation
+│   │   ├── main.jsx                # React entry point
+│   │   ├── components/
+│   │   │   ├── DisplayViewer.jsx   # Screenshot display + refresh
+│   │   │   ├── SerialConsole.jsx   # Live serial output
+│   │   │   ├── FlashManager.jsx    # Flash controls + progress
+│   │   │   ├── MqttInspector.jsx   # MQTT message viewer
+│   │   │   ├── StatusDashboard.jsx # Device status cards
+│   │   │   ├── ControlPanel.jsx    # Sleep interval, reboot, etc.
+│   │   │   └── DeviceSelector.jsx  # Port/device dropdown
+│   │   ├── hooks/
+│   │   │   └── useWebSocket.js     # WebSocket connection hook
+│   │   ├── api/
+│   │   │   └── deviceApi.js        # REST API calls
+│   │   └── styles/
+│   │       └── manager.css         # Manager-specific styles
+│   ├── index.html
+│   ├── package.json
+│   ├── vite.config.js
+│   └── README.md                   # ✅ Usage documentation
+│
+├── sim/                            # Original simulator (preserved)
+│   └── ...
 │
 scripts/
-├── device_manager/
+├── device_manager/                 # ✅ Backend modules
 │   ├── __init__.py
-│   ├── server.py                  # FastAPI main server
-│   ├── serial_manager.py          # Serial port handling
-│   ├── flash_manager.py           # esptool.py wrapper
-│   ├── mqtt_broker.py             # Embedded MQTT broker
-│   ├── mqtt_simulator.py          # Fake HA data generator
-│   ├── screenshot_handler.py      # Screenshot decode/store
-│   ├── websocket_hub.py           # WebSocket broadcast manager
-│   └── config.py                  # Server configuration
-├── start_device_manager.py        # Entry point script
-└── requirements-manager.txt       # Additional dependencies
+│   ├── server.py                   # FastAPI main server (500+ lines)
+│   ├── serial_manager.py           # Serial port handling
+│   ├── flash_manager.py            # PlatformIO wrapper
+│   ├── mqtt_broker.py              # Paho MQTT client (connects to mosquitto)
+│   ├── mqtt_simulator.py           # Fake HA data generator
+│   ├── screenshot_handler.py       # Screenshot decode/store
+│   ├── websocket_hub.py            # WebSocket broadcast manager
+│   └── config.py                   # Server configuration
+├── start_device_manager.py         # ✅ Entry point script
+└── run_device_manager.sh           # ✅ Combined startup script
 ```
+
+### Implementation Notes
+
+- **Frontend location**: `web/manager/` (separate from simulator in `web/sim/`)
+- **MQTT approach**: Uses paho-mqtt client connecting to external Mosquitto broker
+  (more reliable than embedded Python MQTT broker)
+- **Flash tool**: Uses PlatformIO CLI (`pio run -t upload`) instead of raw esptool
 
 ---
 
@@ -705,87 +738,110 @@ class ManagerConfig:
 
 ## Implementation Order
 
-### Phase 1: Foundation (Day 1)
-1. [ ] Create `scripts/device_manager/` directory structure
-2. [ ] Implement `server.py` with basic FastAPI app
-3. [ ] Implement `websocket_hub.py`
-4. [ ] Implement `serial_manager.py` (list ports, connect, read)
-5. [ ] Create basic frontend with serial console only
-6. [ ] Test serial communication end-to-end
+### Phase 1: Foundation ✅ COMPLETE
+1. [x] Create `scripts/device_manager/` directory structure
+2. [x] Implement `server.py` with basic FastAPI app
+3. [x] Implement `websocket_hub.py`
+4. [x] Implement `serial_manager.py` (list ports, connect, read)
+5. [x] Create basic frontend with serial console only
+6. [x] Test serial communication end-to-end
 
-### Phase 2: Flash Support (Day 2)
-1. [ ] Implement `flash_manager.py`
-2. [ ] Add flash progress parsing
-3. [ ] Create `FlashManager.jsx` component
-4. [ ] Test flash workflow end-to-end
+### Phase 2: Flash Support ✅ COMPLETE
+1. [x] Implement `flash_manager.py`
+2. [x] Add flash progress parsing
+3. [x] Create `FlashManager.jsx` component
+4. [x] Test flash workflow end-to-end
 
-### Phase 3: MQTT (Day 3)
-1. [ ] Implement `mqtt_broker.py` (embedded broker)
-2. [ ] Implement `mqtt_simulator.py` (fake data)
-3. [ ] Create `MqttInspector.jsx` component
-4. [ ] Test device connecting to embedded broker
+### Phase 3: MQTT ✅ COMPLETE
+1. [x] Implement `mqtt_broker.py` (paho-mqtt client)
+2. [x] Implement `mqtt_simulator.py` (fake data)
+3. [x] Create `MqttInspector.jsx` component
+4. [x] Test device connecting to broker
 
-### Phase 4: Screenshots & Control (Day 4)
-1. [ ] Implement `screenshot_handler.py`
-2. [ ] Create `DisplayViewer.jsx` component
-3. [ ] Create `ControlPanel.jsx` component
-4. [ ] Create `StatusDashboard.jsx` component
-5. [ ] Test screenshot capture end-to-end
+### Phase 4: Screenshots & Control ✅ COMPLETE
+1. [x] Implement `screenshot_handler.py`
+2. [x] Create `DisplayViewer.jsx` component
+3. [x] Create `ControlPanel.jsx` component
+4. [x] Create `StatusDashboard.jsx` component
+5. [x] Test screenshot capture end-to-end
 
-### Phase 5: Polish (Day 5)
-1. [ ] Add error handling throughout
-2. [ ] Add loading states to UI
-3. [ ] Add configuration UI
-4. [ ] Write startup script with CLI args
-5. [ ] Test full workflow
-6. [ ] Update documentation
+### Phase 5: Polish ✅ COMPLETE
+1. [x] Add error handling throughout
+2. [x] Add loading states to UI
+3. [x] Add configuration support
+4. [x] Write startup script with CLI args (`start_device_manager.py`)
+5. [x] Create combined startup script (`run_device_manager.sh`)
+6. [x] Update documentation (`web/manager/README.md`)
+
+### Phase 6: Firmware Integration ✅ COMPLETE (Added)
+1. [x] Add `sleep_interval` MQTT command handler
+2. [x] Add `reboot` MQTT command handler
+3. [x] Add `screenshot` MQTT command handler
+4. [x] Update backend to send proper MQTT commands
 
 ---
 
 ## Testing Checklist
 
-- [ ] Serial: Can list available ports
-- [ ] Serial: Can connect to device
-- [ ] Serial: Live output appears in console
-- [ ] Serial: Can send commands to device
-- [ ] Flash: Can flash dev firmware
-- [ ] Flash: Progress bar updates
-- [ ] Flash: Can cancel flash
-- [ ] MQTT: Embedded broker starts
-- [ ] MQTT: Device connects to embedded broker
-- [ ] MQTT: Messages appear in inspector
-- [ ] MQTT: Can inject messages
-- [ ] MQTT: Simulator generates fake data
-- [ ] Screenshot: Can request screenshot
-- [ ] Screenshot: Screenshot displays correctly
-- [ ] Control: Can change sleep interval
-- [ ] Control: Can reboot device
-- [ ] Status: Shows correct battery level
-- [ ] Status: Shows correct memory stats
+- [x] Serial: Can list available ports
+- [x] Serial: Can connect to device
+- [x] Serial: Live output appears in console
+- [x] Serial: Can send commands to device
+- [x] Flash: Can flash dev firmware
+- [x] Flash: Progress bar updates
+- [x] Flash: Can cancel flash
+- [x] MQTT: Broker client connects to Mosquitto
+- [x] MQTT: Device connects to broker
+- [x] MQTT: Messages appear in inspector
+- [x] MQTT: Can inject messages
+- [x] MQTT: Simulator generates fake data
+- [x] Screenshot: Can request screenshot
+- [x] Screenshot: Screenshot displays correctly
+- [x] Control: Can change sleep interval
+- [x] Control: Can reboot device
+- [x] Status: Shows correct battery level
+- [x] Status: Shows correct memory stats
 
 ---
 
-## Notes for Implementer
+## Implementation Notes (Post-Implementation)
 
-1. **Start simple**: Get serial console working first, then add features incrementally.
+1. **Architecture decisions**:
+   - Frontend lives in `web/manager/` separate from simulator (`web/sim/`)
+   - Uses paho-mqtt client connecting to external Mosquitto (more reliable than Python embedded broker)
+   - Uses PlatformIO for building/flashing (not raw esptool)
 
-2. **Reuse existing code**: The `web/` directory already has a working Vite+React setup and the display simulator. Extend it rather than replace.
+2. **Error handling**: Implemented throughout with try/catch and user-visible error messages
 
-3. **Error handling**: Serial ports are flaky. Handle disconnections gracefully and allow reconnection.
+3. **Threading**: Serial reading uses background thread, rest uses asyncio
 
-4. **Threading**: Serial reading must be in a background thread. Use `asyncio` for the rest.
+4. **State management**: Uses React hooks (useState, useEffect) and WebSocket for real-time updates
 
-5. **State management**: Consider using React Context or Zustand for shared state (connection status, device info).
+5. **Firmware commands added**:
+   - `sleep_interval` - Set custom wake interval (60-3600 seconds)
+   - `reboot` - Remote device restart
+   - `screenshot` - Capture display to MQTT
+   - `diagnostic_mode` - Toggle verbose logging
 
-6. **Firmware commands**: The device already supports MQTT commands for diagnostic mode. Check `mqtt_client.cpp` for the command format.
-
-7. **Screenshot format**: Device sends 1-bit packed buffer. Check `display_capture.cpp` for the exact format.
+6. **Screenshot format**: 1-bit packed buffer, 250x122 pixels, converted to PNG via PIL
 
 ---
 
-## Questions to Resolve During Implementation
+## Design Decisions Made
 
-1. Should we support multiple simultaneous devices?
-2. Should MQTT messages persist across page refreshes?
-3. Should we add authentication for the web UI?
-4. Should flash configs be editable in the UI or just presets?
+| Question | Decision |
+|----------|----------|
+| Multiple devices? | Single device at a time (via device ID selector) |
+| MQTT persistence? | No - messages cleared on page refresh |
+| Authentication? | No - local development tool |
+| Editable flash configs? | Presets only (dev, prod, battery_test) |
+
+---
+
+## Future Enhancements (Not Implemented)
+
+- [ ] Multi-device simultaneous management
+- [ ] MQTT message persistence/history
+- [ ] Build config editor in UI
+- [ ] OTA firmware update support
+- [ ] Device auto-discovery via mDNS

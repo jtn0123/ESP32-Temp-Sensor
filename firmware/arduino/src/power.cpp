@@ -219,6 +219,18 @@ void power_wake_from_sleep() {
 #include "state_manager.h"
 
 static float g_last_temperature = NAN;
+
+// Custom sleep interval (set via MQTT, 0 = use adaptive)
+static uint32_t g_custom_sleep_interval_sec = 0;
+
+void set_custom_sleep_interval(uint32_t sec) {
+    g_custom_sleep_interval_sec = sec;
+}
+
+uint32_t get_custom_sleep_interval() {
+    return g_custom_sleep_interval_sec;
+}
+
 static SleepConfig g_sleep_config = {
     .normal_interval_sec = 300,           // 5 minutes
     .low_battery_interval_sec = 600,      // 10 minutes
@@ -249,6 +261,12 @@ bool is_temperature_changing_rapidly() {
 }
 
 uint32_t calculate_optimal_sleep_interval(const SleepConfig& config) {
+    // If custom interval is set via MQTT, use it (overrides adaptive)
+    if (g_custom_sleep_interval_sec > 0) {
+        Serial.printf("[Power] Using custom sleep interval: %us\n", g_custom_sleep_interval_sec);
+        return g_custom_sleep_interval_sec;
+    }
+
     BatteryStatus bs = read_battery_status();
 
     // Critical battery - maximum conservation
