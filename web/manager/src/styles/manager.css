@@ -1703,3 +1703,134 @@ button:not(:disabled):hover {
   flex-direction: column;
   gap: 1rem;
 }
+
+/* ============================================================================
+   Collapsible Section Styles
+   ============================================================================ */
+
+.app-main.single-page {
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 1rem;
+}
+
+.collapsible-section {
+  background-color: #2d2d2d;
+  border-radius: 8px;
+  border: 1px solid #444;
+  overflow: hidden;
+}
+
+.collapsible-section.open {
+  border-color: #555;
+}
+
+.collapsible-header {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  background-color: #353535;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.collapsible-header:hover {
+  background-color: #404040;
+}
+
+.collapsible-section.open .collapsible-header {
+  background-color: #3c3c3c;
+  border-bottom: 1px solid #444;
+}
+
+.collapsible-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #61dafb;
+}
+
+.section-icon {
+  font-size: 1.1rem;
+}
+
+.collapsible-chevron {
+  font-size: 0.75rem;
+  color: #888;
+  transition: transform 0.2s ease;
+}
+
+.collapsible-chevron.open {
+  transform: rotate(180deg);
+}
+
+.collapsible-content {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease-out;
+}
+
+.collapsible-content.open {
+  max-height: 2000px; /* Large enough to fit content */
+  transition: max-height 0.5s ease-in;
+}
+
+.collapsible-inner {
+  padding: 1rem;
+}
+
+/* Monitor section layout */
+.monitor-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+/* Adjust nested components inside collapsible sections */
+.collapsible-section .device-selector,
+.collapsible-section .flash-manager,
+.collapsible-section .serial-console,
+.collapsible-section .mqtt-inspector,
+.collapsible-section .display-viewer {
+  background-color: transparent;
+  padding: 0;
+}
+
+/* Override nested backgrounds */
+.collapsible-section .flash-controls,
+.collapsible-section .status-dashboard,
+.collapsible-section .control-panel,
+.collapsible-section .wake-prediction,
+.collapsible-section .mode-selector {
+  background-color: #252525;
+}
+
+/* Compact the console height when in collapsible */
+.collapsible-section .serial-console {
+  max-height: 400px;
+}
+
+.collapsible-section .console-output {
+  max-height: 300px;
+}
+
+/* Compact MQTT inspector */
+.collapsible-section .mqtt-messages {
+  max-height: 300px;
+}
+
+/* Compact flash logs */
+.collapsible-section .flash-logs {
+  max-height: 250px;
+}
+
+.collapsible-section .logs-output {
+  max-height: 180px;
+}

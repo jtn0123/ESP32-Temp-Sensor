@@ -68,15 +68,22 @@ export const deviceApi = {
   },
 
   // Flash Queue / Hunt Mode endpoints
-  async queueFlash(buildConfig = 'dev', targetPort = null, targetDeviceId = null, timeoutMinutes = 15) {
+  async queueFlash(buildConfig = 'dev', targetPort = null, targetDeviceId = null, timeoutMinutes = 15, sleepIntervalSec = null) {
+    const body = {
+      build_config: buildConfig,
+      target_port: targetPort,
+      target_device_id: targetDeviceId,
+      timeout_minutes: timeoutMinutes,
+    };
+    
+    // Include sleep interval if specified
+    if (sleepIntervalSec !== null) {
+      body.sleep_interval_sec = sleepIntervalSec;
+    }
+    
     return fetchAPI('/flash/queue', {
       method: 'POST',
-      body: JSON.stringify({
-        build_config: buildConfig,
-        target_port: targetPort,
-        target_device_id: targetDeviceId,
-        timeout_minutes: timeoutMinutes,
-      }),
+      body: JSON.stringify(body),
     });
   },
 

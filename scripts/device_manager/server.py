@@ -82,6 +82,7 @@ class FlashQueueRequest(BaseModel):
     target_port: Optional[str] = None
     target_device_id: Optional[str] = None
     timeout_minutes: Optional[int] = 15
+    sleep_interval_sec: Optional[int] = None  # Sleep interval to apply after flash
 
 
 class FlashRequest(BaseModel):
@@ -261,13 +262,16 @@ async def queue_flash(request: FlashQueueRequest):
     
     Pre-builds firmware immediately, then monitors for device connection.
     When device is detected, automatically flashes.
+    
+    If sleep_interval_sec is provided, will send interval command after flash.
     """
     try:
         success, error_msg = await flash_manager.queue_flash(
             build_config=request.build_config,
             target_port=request.target_port,
             target_device_id=request.target_device_id,
-            timeout_minutes=request.timeout_minutes
+            timeout_minutes=request.timeout_minutes,
+            sleep_interval_sec=request.sleep_interval_sec
         )
         if success:
             return {"status": "queued", "queue": flash_manager.get_queue_status()}
