@@ -55,9 +55,12 @@ void LogBuffer::begin() {
             count_ = 0;
             overflow_count_ = 0;
             wrapped_ = false;
+            // Note: We still proceed - the buffer is now in a safe state
         }
     }
     
+    // Success - mark as initialized
+    // Note: If we fail after mutex creation, we clean up the mutex
     initialized_ = true;
     s_begin_in_progress = false;
 }

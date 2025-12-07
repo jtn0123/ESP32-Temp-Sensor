@@ -57,12 +57,22 @@ void mqtt_begin() {
   #endif
   
   // Set up MQTT callback for commands and outdoor data
+  // NOTE: Using C strings (not Arduino String) to avoid heap fragmentation
   g_mqtt.setCallback([](char* topic, byte* payload, unsigned int length) {
-    String topicStr(topic);
+    // Null check for safety
+    if (!topic) return;
+    
+    // Helper to check if topic ends with suffix (C string version - no heap allocation)
+    auto topic_ends_with = [](const char* t, const char* suffix) -> bool {
+      size_t tlen = strlen(t);
+      size_t slen = strlen(suffix);
+      if (tlen < slen) return false;
+      return strcmp(t + tlen - slen, suffix) == 0;
+    };
     
     // Rate limit command topics (prevents flooding/DoS attacks)
     // Data topics (temp, weather) are not rate limited
-    if (topicStr.indexOf("/cmd/") >= 0) {
+    if (strstr(topic, "/cmd/") != nullptr) {
       uint32_t now = millis();
       if (now - g_last_command_ms < COMMAND_COOLDOWN_MS) {
         Serial.println("[MQTT] Command rate limited - ignoring");
@@ -72,7 +82,7 @@ void mqtt_begin() {
     }
     
     // Handle diagnostic mode commands
-    if (topicStr.endsWith("/cmd/diagnostic_mode")) {
+    if (topic_ends_with(topic, "/cmd/diagnostic_mode")) {
       if (length > 0) {
         char value = (char)payload[0];
         g_diagnostic_mode_requested = true;
@@ -82,7 +92,7 @@ void mqtt_begin() {
     }
     
     // Handle sleep interval command (minimum 180s / 3 min to prevent sensor heating)
-    if (topicStr.endsWith("/cmd/sleep_interval")) {
+    if (topic_ends_with(topic, "/cmd/sleep_interval")) {
       if (length > 0 && length < 16) {
         char buf[16];
         memcpy(buf, payload, length);
@@ -102,7 +112,7 @@ void mqtt_begin() {
     }
     
     // Handle device mode command (dev or production)
-    if (topicStr.endsWith("/cmd/mode")) {
+    if (topic_ends_with(topic, "/cmd/mode")) {
       if (length > 0 && length < 16) {
         char buf[16];
         memcpy(buf, payload, length);
@@ -114,14 +124,14 @@ void mqtt_begin() {
     }
     
     // Handle status request command
-    if (topicStr.endsWith("/cmd/status")) {
+    if (topic_ends_with(topic, "/cmd/status")) {
       extern void publish_device_status();
       publish_device_status();
       return;
     }
     
     // Handle reboot command
-    if (topicStr.endsWith("/cmd/reboot")) {
+    if (topic_ends_with(topic, "/cmd/reboot")) {
       Serial.println("[MQTT] Reboot command received");
       Serial.flush();
       delay(100);
@@ -130,7 +140,7 @@ void mqtt_begin() {
     }
     
     // Handle screenshot command
-    if (topicStr.endsWith("/cmd/screenshot")) {
+    if (topic_ends_with(topic, "/cmd/screenshot")) {
       #if USE_DISPLAY
       extern "C" void display_capture_handle(const char* payload, size_t length);
       display_capture_handle((const char*)payload, length);
@@ -140,30 +150,22 @@ void mqtt_begin() {
     
     // Forward log commands to LogMQTT
     #if LOG_MQTT_ENABLED
-    if (topicStr.indexOf("/cmd/clear_logs") >= 0 ||
-        topicStr.indexOf("/cmd/log_level") >= 0 ||
-        topicStr.indexOf("/cmd/log_filter") >= 0) {
+    if (strstr(topic, "/cmd/clear_logs") != nullptr ||
+        strstr(topic, "/cmd/log_level") != nullptr ||
+        strstr(topic, "/cmd/log_filter") != nullptr) {
       log_mqtt_handle_command(topic, (const uint8_t*)payload, length);
       return;
     }
     #endif
 
     // Handle debug commands
-    if (topicStr.indexOf("/cmd/debug") >= 0) {
+    if (strstr(topic, "/cmd/debug") != nullptr) {
       debug_commands_handle(topic, (const uint8_t*)payload, length);
       return;
     }
     
     // Handle outdoor weather data (alias topics)
     #ifdef MQTT_SUB_BASE
-    // Helper function to check if topic ends with a string
-    auto ends_with = [](const String& str, const char* suffix) {
-      int suffixLen = strlen(suffix);
-      int strLen = str.length();
-      if (strLen < suffixLen) return false;
-      return str.substring(strLen - suffixLen) == suffix;
-    };
-    
     // Convert payload to string
     char value_str[64];
     if (length < sizeof(value_str)) {
@@ -179,7 +181,7 @@ void mqtt_begin() {
     }
     
     // Handle temperature in Fahrenheit
-    if (ends_with(topicStr, "/temp_f")) {
+    if (topic_ends_with(topic, "/temp_f")) {
       // Use strtof to properly detect parse errors (atof returns 0.0 for both error and valid "0")
       char* endptr = nullptr;
       float temp_f = strtof(value_str, &endptr);
@@ -192,7 +194,7 @@ void mqtt_begin() {
       }
     }
     // Handle temperature in Celsius (legacy)
-    else if (ends_with(topicStr, "/temp")) {
+    else if (topic_ends_with(topic, "/temp")) {
       char* endptr = nullptr;
       float temp_c = strtof(value_str, &endptr);
       if (endptr != value_str && isfinite(temp_c)) {
@@ -201,22 +203,22 @@ void mqtt_begin() {
       }
     }
     // Handle weather condition text
-    else if (ends_with(topicStr, "/condition")) {
+    else if (topic_ends_with(topic, "/condition")) {
       snprintf(g_outside.weather, sizeof(g_outside.weather), "%s", value_str);
       g_outside.validWeather = true;
     }
     // Handle weather description (legacy)
-    else if (ends_with(topicStr, "/weather")) {
+    else if (topic_ends_with(topic, "/weather")) {
       snprintf(g_outside.weather, sizeof(g_outside.weather), "%s", value_str);
       g_outside.validWeather = true;
     }
     // Handle weather condition code (currently not stored separately)
-    else if (ends_with(topicStr, "/condition_code")) {
+    else if (topic_ends_with(topic, "/condition_code")) {
       // Weather code could be used to map to weather text if needed
       // For now, we rely on the condition text itself
     }
     // Handle weather ID (legacy - currently not stored separately)
-    else if (ends_with(topicStr, "/weather_id")) {
+    else if (topic_ends_with(topic, "/weather_id")) {
       // Weather ID could be used to map to weather text if needed  
       // For now, we rely on the weather text itself
     }
