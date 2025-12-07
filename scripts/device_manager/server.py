@@ -1,5 +1,6 @@
 """FastAPI server for ESP32 Device Manager"""
 import logging
+import pathlib
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -94,12 +95,41 @@ class MqttSubscribeRequest(BaseModel):
     qos: int = 0
 
 
+# Mount static files for web UIs
+# Get project root (assuming this file is in scripts/device_manager/)
+_project_root = pathlib.Path(__file__).parent.parent.parent
+_web_root = _project_root / "web"
+
+# Serve simulator at /sim
+if (_web_root / "sim").exists():
+    app.mount("/sim", StaticFiles(directory=str(_web_root / "sim"), html=True), name="simulator")
+
+# Serve manager static files if built, otherwise redirect to dev server info
+if (_web_root / "manager" / "dist").exists():
+    app.mount("/manager", StaticFiles(directory=str(_web_root / "manager" / "dist"), html=True), name="manager")
+elif (_web_root / "manager" / "index.html").exists():
+    # Serve manager source files (for development)
+    app.mount("/manager", StaticFiles(directory=str(_web_root / "manager"), html=True), name="manager")
+
+# Serve icons and other static assets
+if (_web_root / "icons").exists():
+    app.mount("/icons", StaticFiles(directory=str(_web_root / "icons")), name="icons")
+
+
 # API Routes
 
 @app.get("/")
 async def root():
-    """Root endpoint"""
-    return {"name": "ESP32 Device Manager", "version": "0.1.0"}
+    """Root endpoint - redirects to manager or shows available endpoints"""
+    return {
+        "name": "ESP32 Device Manager",
+        "version": "0.1.0",
+        "endpoints": {
+            "simulator": "/sim/index.html",
+            "manager": "/manager/index.html",
+            "api_docs": "/docs"
+        }
+    }
 
 
 @app.get("/api/health")
