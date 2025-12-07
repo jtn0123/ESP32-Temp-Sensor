@@ -6,9 +6,15 @@
 #include "debug_commands.h"
 #include "profiling.h"
 #include "safe_strings.h"
+#include "power.h"  // For BatteryStatus
 #include <Preferences.h>
 #if LOG_MQTT_ENABLED
 #include "logging/log_mqtt.h"
+#endif
+
+// External C function declarations (must be at file scope for extern "C")
+#if USE_DISPLAY
+extern "C" void display_capture_handle(const char* payload, size_t length);
 #endif
 
 // Static storage
@@ -142,7 +148,6 @@ void mqtt_begin() {
     // Handle screenshot command
     if (topic_ends_with(topic, "/cmd/screenshot")) {
       #if USE_DISPLAY
-      extern "C" void display_capture_handle(const char* payload, size_t length);
       display_capture_handle((const char*)payload, length);
       #endif
       return;
@@ -340,8 +345,7 @@ void publish_device_status() {
   uint32_t sleep_interval = get_custom_sleep_interval();
   if (sleep_interval == 0) sleep_interval = 600;  // Default 10 min
   
-  // Get battery status
-  extern BatteryStatus read_battery_status();
+  // Get battery status (read_battery_status() declared in power.h)
   BatteryStatus bs = read_battery_status();
   
   // Build status JSON
