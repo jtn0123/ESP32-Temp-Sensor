@@ -844,4 +844,13 @@ class ManagerConfig:
 - [ ] MQTT message persistence/history
 - [ ] Build config editor in UI
 - [ ] OTA firmware update support
-- [ ] Device auto-discovery via mDNS
+- [x] ~~Device auto-discovery via mDNS~~ ✅ IMPLEMENTED
+
+### mDNS Device Discovery (Added Dec 2024)
+
+Devices are automatically discovered on the local network via mDNS:
+- Firmware advertises `_espsensor._tcp` service with version and room info
+- Backend uses `zeroconf` library to scan for devices
+- **Safety feature**: Only ONE device can be "targeted" at a time
+- Confirmation dialog required when switching targets
+- All commands go to the targeted device only

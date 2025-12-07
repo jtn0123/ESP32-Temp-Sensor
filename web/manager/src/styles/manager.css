@@ -974,3 +974,260 @@ button:not(:disabled):hover {
 .no-screenshot p {
   margin: 0.5rem 0;
 }
+
+/* ============================================================================
+   Device Discovery Styles
+   ============================================================================ */
+
+.device-selector {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1rem;
+  background-color: #2d2d2d;
+  border-radius: 8px;
+}
+
+.device-selector h4 {
+  margin: 0 0 0.5rem 0;
+  color: #61dafb;
+  font-size: 1rem;
+}
+
+/* Target Section */
+.target-section {
+  border-bottom: 1px solid #444;
+  padding-bottom: 1rem;
+}
+
+.target-help {
+  font-size: 0.85rem;
+  color: #888;
+  margin-bottom: 0.75rem;
+}
+
+/* Discovered Devices */
+.discovered-devices {
+  margin-bottom: 1rem;
+}
+
+.discovery-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+  font-size: 0.9rem;
+  color: #aaa;
+}
+
+.discovery-toggle {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.8rem;
+  background-color: #3c3c3c;
+  border: 1px solid #555;
+  border-radius: 4px;
+  color: #d4d4d4;
+  cursor: pointer;
+}
+
+.discovery-toggle:hover {
+  background-color: #4c4c4c;
+}
+
+.no-devices {
+  padding: 1rem;
+  text-align: center;
+  color: #666;
+  font-style: italic;
+  background-color: #252525;
+  border-radius: 4px;
+}
+
+.device-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.device-card {
+  padding: 0.75rem;
+  background-color: #353535;
+  border: 2px solid #444;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.device-card:hover {
+  background-color: #404040;
+  border-color: #61dafb;
+}
+
+.device-card.targeted {
+  background-color: #1e4620;
+  border-color: #4ade80;
+}
+
+.device-name {
+  font-weight: 600;
+  font-size: 1rem;
+  margin-bottom: 0.25rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.target-badge {
+  color: #4ade80;
+  font-weight: bold;
+}
+
+.device-details {
+  display: flex;
+  gap: 1rem;
+  font-size: 0.85rem;
+  color: #888;
+}
+
+.device-ip {
+  font-family: monospace;
+}
+
+.device-version {
+  color: #61dafb;
+}
+
+/* Manual Target Input */
+.manual-target {
+  margin-top: 0.5rem;
+}
+
+.manual-target label {
+  display: block;
+  font-size: 0.85rem;
+  color: #888;
+  margin-bottom: 0.25rem;
+}
+
+.manual-input-row {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.device-id-input {
+  flex: 1;
+  padding: 0.5rem;
+  background-color: #3c3c3c;
+  border: 1px solid #555;
+  border-radius: 4px;
+  color: #d4d4d4;
+  font-size: 0.9rem;
+}
+
+.clear-target {
+  padding: 0.5rem 0.75rem;
+  background-color: #461e1e;
+  border: 1px solid #f87171;
+  border-radius: 4px;
+  color: #f87171;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.clear-target:hover {
+  background-color: #5c2525;
+}
+
+/* Current Target Display */
+.current-target {
+  margin-top: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  background-color: #1e4620;
+  border: 1px solid #4ade80;
+  border-radius: 4px;
+  color: #4ade80;
+  font-size: 0.9rem;
+}
+
+/* Serial Section */
+.serial-section {
+  padding-top: 1rem;
+}
+
+.port-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+/* Confirmation Dialog */
+.confirm-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.confirm-dialog {
+  background-color: #2d2d2d;
+  border: 2px solid #f59e0b;
+  border-radius: 8px;
+  padding: 1.5rem;
+  max-width: 400px;
+  width: 90%;
+}
+
+.confirm-dialog h4 {
+  color: #f59e0b;
+  margin-bottom: 1rem;
+}
+
+.confirm-dialog p {
+  margin-bottom: 0.5rem;
+  color: #d4d4d4;
+}
+
+.confirm-warning {
+  color: #f87171;
+  font-weight: 500;
+}
+
+.confirm-buttons {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+  justify-content: flex-end;
+}
+
+.cancel-button {
+  padding: 0.5rem 1rem;
+  background-color: #3c3c3c;
+  border: 1px solid #555;
+  border-radius: 4px;
+  color: #d4d4d4;
+  cursor: pointer;
+}
+
+.cancel-button:hover {
+  background-color: #4c4c4c;
+}
+
+.confirm-button {
+  padding: 0.5rem 1rem;
+  background-color: #f59e0b;
+  border: none;
+  border-radius: 4px;
+  color: #000;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.confirm-button:hover {
+  background-color: #fbbf24;
+}

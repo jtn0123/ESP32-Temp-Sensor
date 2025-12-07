@@ -1,6 +1,8 @@
 # ESP32 Device Manager
 
 A comprehensive tool for managing ESP32 temperature sensor devices, including:
+- **Device Discovery** - Auto-discover devices on network via mDNS
+- **Safe Targeting** - Select ONE device at a time, with confirmation dialogs
 - **Serial Console** - Live serial output with filtering and command input
 - **Flash Manager** - One-click firmware flashing with progress tracking
 - **MQTT Inspector** - View/send MQTT messages, run data simulator
@@ -86,6 +88,14 @@ npm run dev
 - **Force Refresh**: Trigger display update
 
 ## API Endpoints
+
+### Discovery (mDNS)
+- `GET /api/discovery/devices` - List discovered devices
+- `POST /api/discovery/start` - Start mDNS scanning
+- `POST /api/discovery/stop` - Stop mDNS scanning
+- `POST /api/discovery/target` - Set target device (SAFE: only one at a time)
+- `GET /api/discovery/target` - Get current target
+- `DELETE /api/discovery/target` - Clear target
 
 ### Serial
 - `GET /api/ports` - List serial ports
