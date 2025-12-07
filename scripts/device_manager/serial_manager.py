@@ -4,7 +4,7 @@ import serial.tools.list_ports
 import threading
 import time
 import logging
-from typing import List, Dict, Optional, Callable
+from typing import List, Dict, Optional, Callable, Any
 import json
 import asyncio
 
