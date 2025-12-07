@@ -2,35 +2,53 @@
 
 A comprehensive web-based tool for managing ESP32 devices, built with React (frontend) and FastAPI (backend).
 
-## Features
+## ✨ Features
 
-### Phase 1 - Serial Console ✅
+### ✅ Phase 1 - Serial Console
 - Connect to ESP32 devices via serial port
 - Real-time serial output monitoring
 - Command input to send to device
-- Log filtering and color-coded output
+- Log filtering and color-coded output (ERROR, WARN, INFO, DEBUG)
 - Auto-scroll with pause/resume
+- Message history (last 1000 messages)
 
-### Phase 2 - Flash Manager ✅
+### ✅ Phase 2 - Flash Manager
 - Flash firmware to connected ESP32 devices
 - Support for multiple build configurations:
   - **Development**: No sleep, boot debug enabled
   - **Production**: Normal operation with sleep
   - **Battery Test**: Verbose battery logging
-- Real-time progress tracking
+- Real-time progress tracking with percentage
 - Build and flash log output
 - Cancel flash operation
+- Automatic PlatformIO integration
 
-### Phase 3 - MQTT (Coming Soon)
-- Embedded MQTT broker
-- Message inspector
-- Data simulator for Home Assistant
-- Manual message publishing
+### ✅ Phase 3 - MQTT Integration
+- MQTT broker connectivity (Mosquitto)
+- Real-time message inspector with filtering
+- Data simulator for Home Assistant weather data
+- Manual message publishing with retain and QoS
+- Topic subscription management
+- Direction indicators (incoming/outgoing)
+- 1000 message history
+- Auto-refresh status
 
-### Phase 4 - Display & Control (Coming Soon)
-- Screenshot viewer
-- Device control panel (sleep interval, reboot, etc.)
-- Status dashboard (battery, memory, connectivity)
+### ✅ Phase 4 - Display & Device Control
+- **Screenshot Viewer**: View ESP32 display in real-time
+  - Manual refresh and auto-refresh (5s/10s/30s/1m)
+  - 2x scaling with pixel-perfect rendering
+  - Test image generator
+- **Control Panel**: Remote device management
+  - Sleep interval adjustment (1-60 minutes)
+  - Reboot device
+  - Enable/disable diagnostic mode
+  - Force display refresh
+- **Status Dashboard**: 8 status cards showing:
+  - Serial, MQTT, and device connection status
+  - Battery level with visual bar
+  - Temperature and humidity
+  - Free heap memory
+  - Last seen timestamp
 
 ## Installation
 
