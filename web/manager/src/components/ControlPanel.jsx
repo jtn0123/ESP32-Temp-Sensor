@@ -14,12 +14,9 @@ export function ControlPanel() {
     setSuccess(null);
 
     try {
-      await deviceApi.setSleepInterval(sleepInterval);
-      await deviceApi.sendCommand('set_sleep', {
-        device_id: deviceId,
-        payload: String(sleepInterval)
-      });
-      setSuccess(`Sleep interval set to ${sleepInterval / 60} minutes`);
+      // Send sleep interval command via MQTT
+      const result = await deviceApi.setSleepInterval(sleepInterval, deviceId);
+      setSuccess(`Sleep interval set to ${formatSleepTime(sleepInterval)} (will apply on next wake)`);
     } catch (err) {
       console.error('Error setting sleep interval:', err);
       setError(err.message);

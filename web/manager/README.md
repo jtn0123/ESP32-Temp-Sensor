@@ -1,217 +1,175 @@
 # ESP32 Device Manager
 
-A comprehensive web-based tool for managing ESP32 devices, built with React (frontend) and FastAPI (backend).
+A comprehensive tool for managing ESP32 temperature sensor devices, including:
+- **Serial Console** - Live serial output with filtering and command input
+- **Flash Manager** - One-click firmware flashing with progress tracking
+- **MQTT Inspector** - View/send MQTT messages, run data simulator
+- **Display Viewer** - Pull and view device screenshots
+- **Control Panel** - Set sleep interval, reboot, diagnostic mode
 
-## ✨ Features
+## Quick Start
 
-### ✅ Phase 1 - Serial Console
-- Connect to ESP32 devices via serial port
-- Real-time serial output monitoring
-- Command input to send to device
-- Log filtering and color-coded output (ERROR, WARN, INFO, DEBUG)
-- Auto-scroll with pause/resume
-- Message history (last 1000 messages)
-
-### ✅ Phase 2 - Flash Manager
-- Flash firmware to connected ESP32 devices
-- Support for multiple build configurations:
-  - **Development**: No sleep, boot debug enabled
-  - **Production**: Normal operation with sleep
-  - **Battery Test**: Verbose battery logging
-- Real-time progress tracking with percentage
-- Build and flash log output
-- Cancel flash operation
-- Automatic PlatformIO integration
-
-### ✅ Phase 3 - MQTT Integration
-- MQTT broker connectivity (Mosquitto)
-- Real-time message inspector with filtering
-- Data simulator for Home Assistant weather data
-- Manual message publishing with retain and QoS
-- Topic subscription management
-- Direction indicators (incoming/outgoing)
-- 1000 message history
-- Auto-refresh status
-
-### ✅ Phase 4 - Display & Device Control
-- **Screenshot Viewer**: View ESP32 display in real-time
-  - Manual refresh and auto-refresh (5s/10s/30s/1m)
-  - 2x scaling with pixel-perfect rendering
-  - Test image generator
-- **Control Panel**: Remote device management
-  - Sleep interval adjustment (1-60 minutes)
-  - Reboot device
-  - Enable/disable diagnostic mode
-  - Force display refresh
-- **Status Dashboard**: 8 status cards showing:
-  - Serial, MQTT, and device connection status
-  - Battery level with visual bar
-  - Temperature and humidity
-  - Free heap memory
-  - Last seen timestamp
-
-## Installation
-
-### Backend
-
-1. Install Python dependencies:
+### Option 1: Combined Script (Recommended)
 ```bash
-pip install -r requirements-manager.txt
+# From project root
+./scripts/run_device_manager.sh
+
+# With frontend hot-reload (for development)
+./scripts/run_device_manager.sh --dev
 ```
 
-2. Ensure PlatformIO is installed (for flashing):
+### Option 2: Manual Start
+
+1. **Start MQTT Broker** (if not already running):
 ```bash
-pip install platformio
+mosquitto -c mosquitto_test.conf
 ```
 
-### Frontend
-
-1. Navigate to the manager directory:
-```bash
-cd web/manager
-```
-
-2. Install npm dependencies:
-```bash
-npm install
-```
-
-## Usage
-
-### Development Mode
-
-1. Start the backend server:
-```bash
-python scripts/start_device_manager.py --port 8080 --debug
-```
-
-2. In a separate terminal, start the frontend dev server:
-```bash
-cd web/manager
-npm run dev
-```
-
-3. Open your browser to `http://localhost:3000`
-
-### Production Mode
-
-Build the frontend:
-```bash
-cd web/manager
-npm run build
-```
-
-Start the backend (which serves the built frontend):
+2. **Start Backend**:
 ```bash
 python scripts/start_device_manager.py --port 8080
 ```
 
-Open your browser to `http://localhost:8080`
-
-## Architecture
-
+3. **Start Frontend** (optional, for development):
+```bash
+cd web/manager
+npm install
+npm run dev
 ```
-┌─────────────────────────────────────────────────────────────────────┐
-│                        Browser (Vite + React)                       │
-│  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐  │
-│  │ Display  │ │ Serial   │ │  Flash   │ │  MQTT    │ │ Status   │  │
-│  │ Viewer   │ │ Console  │ │ Manager  │ │ Inspector│ │ Dashboard│  │
-│  └────┬─────┘ └────┬─────┘ └────┬─────┘ └────┬─────┘ └────┬─────┘  │
-│       │            │            │            │            │         │
-│       └────────────┴────────────┴─────┬──────┴────────────┘         │
-│                                       │ WebSocket                   │
-└───────────────────────────────────────┼─────────────────────────────┘
-                                        │
-┌───────────────────────────────────────┼─────────────────────────────┐
-│                     Python Backend (FastAPI)                        │
-│                                       │                             │
-│  ┌────────────────────────────────────┴────────────────────────┐   │
-│  │                    WebSocket Hub                             │   │
-│  │  (broadcasts serial, mqtt, status to all connected clients)  │   │
-│  └──────────────────────────────────────────────────────────────┘   │
-│       │            │            │            │                      │
-│  ┌────┴────┐ ┌─────┴─────┐ ┌────┴────┐ ┌─────┴─────┐               │
-│  │ Serial  │ │   Flash   │ │  MQTT   │ │ Screenshot│               │
-│  │ Manager │ │  Manager  │ │ Broker  │ │  Handler  │               │
-│  └────┬────┘ └─────┬─────┘ └────┬────┘ └─────┬─────┘               │
-│       │            │            │            │                      │
-│   pyserial    subprocess     paho-mqtt   base64 decode              │
-│              (esptool.py)   (embedded)                              │
-└───────────────────────────────────────────────────────────────────────┘
-```
+
+## URLs
+
+| Service | URL |
+|---------|-----|
+| Backend API | http://localhost:8080 |
+| Frontend (dev) | http://localhost:5173 |
+| API Docs | http://localhost:8080/docs |
+| MQTT Broker | localhost:1883 |
+
+## Features
+
+### Serial Console
+- Live serial output from connected device
+- Color-coded log levels (ERROR, WARN, INFO, DEBUG)
+- Filter/search logs
+- Send commands to device
+- Pause/resume auto-scroll
+
+### Flash Manager
+- Build configurations: Dev, Prod, Battery Test
+- Progress bar with stage indication
+- Build output log
+- Cancel flash operation
+
+### MQTT Inspector
+- View all MQTT messages (incoming/outgoing)
+- Filter by topic or payload
+- Publish custom messages
+- Start/stop weather data simulator
+- Simulator generates:
+  - Temperature (sine wave based on time of day)
+  - Humidity (inversely related to temperature)
+  - Weather conditions (sunny, cloudy, rain, etc.)
+  - Wind speed with occasional gusts
+  - Barometric pressure
+
+### Display Viewer
+- Request screenshot from device
+- Auto-refresh option (5s, 10s, 30s, 60s intervals)
+- Test image for development
+- 2x scaling for visibility
+
+### Control Panel
+- **Sleep Interval**: Slider from 1 minute to 1 hour
+- **Reboot**: Remote device restart
+- **Diagnostic Mode**: Enable/disable verbose logging
+- **Force Refresh**: Trigger display update
 
 ## API Endpoints
 
 ### Serial
-- `GET /api/ports` - List available serial ports
-- `POST /api/serial/connect` - Connect to serial port
-- `POST /api/serial/disconnect` - Disconnect from serial
-- `POST /api/serial/send` - Send command to serial
-- `GET /api/serial/status` - Get connection status
+- `GET /api/ports` - List serial ports
+- `POST /api/serial/connect` - Connect to port
+- `POST /api/serial/disconnect` - Disconnect
+- `POST /api/serial/send` - Send data
+- `GET /api/serial/status` - Connection status
 
 ### Flash
-- `POST /api/flash/start` - Start flash process
-- `GET /api/flash/status` - Get flash progress
-- `POST /api/flash/cancel` - Cancel flash operation
+- `POST /api/flash/start` - Start flash
+- `GET /api/flash/status` - Get progress
+- `POST /api/flash/cancel` - Cancel flash
 
-### WebSocket
-- `WS /ws` - WebSocket for real-time updates
-  - Message types: `serial`, `flash_progress`, `flash_complete`, `mqtt`, `device_status`
+### MQTT
+- `GET /api/mqtt/status` - Broker/simulator status
+- `POST /api/mqtt/publish` - Publish message
+- `GET /api/mqtt/messages` - Recent messages
+- `POST /api/mqtt/simulator/start` - Start simulator
+- `POST /api/mqtt/simulator/stop` - Stop simulator
+
+### Device
+- `POST /api/device/screenshot` - Request screenshot
+- `GET /api/device/screenshot/latest` - Get latest
+- `POST /api/device/command` - Send command
+- `GET /api/device/status` - Device status
+
+### Config
+- `POST /api/config/sleep-interval` - Set sleep interval
+
+## WebSocket
+
+Connect to `ws://localhost:8080/ws` for real-time updates:
+
+```javascript
+// Message types received:
+{ type: "serial", data: "log line", timestamp: 1234567890 }
+{ type: "mqtt", topic: "...", payload: "...", direction: "in"|"out" }
+{ type: "flash_progress", percent: 45, stage: "writing", message: "..." }
+{ type: "flash_complete", success: true, message: "..." }
+{ type: "screenshot", data: "base64...", width: 250, height: 122 }
+{ type: "device_status", battery: 87, heap: 45000 }
+```
 
 ## Development
 
-### Backend Structure
-```
-scripts/device_manager/
-├── __init__.py
-├── server.py              # FastAPI main server
-├── websocket_hub.py       # WebSocket broadcast manager
-├── serial_manager.py      # Serial port handling
-├── flash_manager.py       # Firmware flashing
-├── mqtt_broker.py         # Embedded MQTT broker (TODO)
-├── mqtt_simulator.py      # Fake data generator (TODO)
-├── screenshot_handler.py  # Screenshot decode/store (TODO)
-└── config.py              # Configuration
+### Backend
+```bash
+# Install dependencies
+pip install fastapi uvicorn websockets pyserial paho-mqtt pillow
+
+# Run with auto-reload
+uvicorn scripts.device_manager.server:app --reload --port 8080
 ```
 
-### Frontend Structure
+### Frontend
+```bash
+cd web/manager
+npm install
+npm run dev
 ```
-web/manager/src/
-├── App.jsx                # Main application
-├── main.jsx               # Entry point
-├── components/
-│   ├── DeviceSelector.jsx # Port selection and connection
-│   ├── SerialConsole.jsx  # Serial monitor
-│   └── FlashManager.jsx   # Flash controls
-├── hooks/
-│   └── useWebSocket.js    # WebSocket connection hook
-├── api/
-│   └── deviceApi.js       # REST API client
-└── styles/
-    └── manager.css        # Styles
-```
+
+## Firmware Commands
+
+The device responds to these MQTT commands:
+
+| Topic | Payload | Description |
+|-------|---------|-------------|
+| `.../cmd/sleep_interval` | `60`-`3600` | Set sleep seconds |
+| `.../cmd/reboot` | (any) | Reboot device |
+| `.../cmd/diagnostic_mode` | `0` or `1` | Toggle diagnostics |
+| `.../cmd/screenshot` | (any) | Capture display |
 
 ## Troubleshooting
 
-### Serial Port Not Found
-- Ensure the ESP32 is connected via USB
-- Check that drivers are installed (CP210x, CH340, etc.)
-- Try refreshing the port list
+### "MQTT broker not connected"
+- Ensure Mosquitto is running: `mosquitto -c mosquitto_test.conf`
+- Check port 1883 is available: `lsof -i :1883`
 
-### Flash Fails
-- Verify PlatformIO is installed: `pio --version`
-- Check that the correct port is selected
-- Ensure no other program is using the serial port
-- Try manually with: `pio run -e <env> -t upload --upload-port <port>`
+### "No serial ports found"
+- Connect ESP32 via USB
+- Check USB drivers (CP210x, CH340)
+- On macOS: `ls /dev/tty.usb*`
 
-### WebSocket Connection Issues
-- Check that the backend is running
-- Verify port 8080 is not blocked by firewall
-- Check browser console for errors
-
-## Next Steps
-
-See `docs/DEVICE_MANAGER_SPEC.md` for the complete implementation plan, including:
-- Phase 3: MQTT broker and simulator
-- Phase 4: Screenshot viewer and device controls
-- Phase 5: Polish and testing
+### "Flash failed"
+- Ensure device is in bootloader mode (hold BOOT, press RESET)
+- Check serial port permissions
+- Try a different USB cable

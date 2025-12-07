@@ -75,6 +75,44 @@ void mqtt_begin() {
       return;
     }
     
+    // Handle sleep interval command
+    if (topicStr.endsWith("/cmd/sleep_interval")) {
+      if (length > 0 && length < 16) {
+        char buf[16];
+        memcpy(buf, payload, length);
+        buf[length] = '\0';
+        char* endptr = nullptr;
+        long interval = strtol(buf, &endptr, 10);
+        if (endptr != buf && interval >= 60 && interval <= 3600) {
+          // Store new interval - will be used on next sleep cycle
+          extern void set_custom_sleep_interval(uint32_t sec);
+          set_custom_sleep_interval(static_cast<uint32_t>(interval));
+          Serial.printf("[MQTT] Sleep interval set to %ld seconds\n", interval);
+        } else {
+          Serial.println("[MQTT] Invalid sleep interval (must be 60-3600 seconds)");
+        }
+      }
+      return;
+    }
+    
+    // Handle reboot command
+    if (topicStr.endsWith("/cmd/reboot")) {
+      Serial.println("[MQTT] Reboot command received");
+      Serial.flush();
+      delay(100);
+      esp_restart();
+      return;
+    }
+    
+    // Handle screenshot command
+    if (topicStr.endsWith("/cmd/screenshot")) {
+      #if USE_DISPLAY
+      extern "C" void display_capture_handle(const char* payload, size_t length);
+      display_capture_handle((const char*)payload, length);
+      #endif
+      return;
+    }
+    
     // Forward log commands to LogMQTT
     #if LOG_MQTT_ENABLED
     if (topicStr.indexOf("/cmd/clear_logs") >= 0 ||

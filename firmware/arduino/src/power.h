@@ -34,6 +34,10 @@ SleepConfig get_default_sleep_config();
 uint32_t calculate_optimal_sleep_interval(const SleepConfig& config);
 bool is_temperature_changing_rapidly();
 
+// Custom sleep interval (set via MQTT command)
+void set_custom_sleep_interval(uint32_t sec);
+uint32_t get_custom_sleep_interval();
+
 // Power management
 void power_init();
 void power_prepare_sleep();

@@ -425,9 +425,35 @@ async def get_device_status():
 
 
 @app.post("/api/config/sleep-interval")
-async def set_sleep_interval(request: SleepIntervalRequest):
-    """Set device sleep interval"""
-    return {"status": "not_implemented", "interval_sec": request.interval_sec}
+async def set_sleep_interval(request: SleepIntervalRequest, device_id: str = "office"):
+    """Set device sleep interval via MQTT command"""
+    try:
+        # Validate interval (60 seconds to 1 hour)
+        if request.interval_sec < 60 or request.interval_sec > 3600:
+            raise HTTPException(
+                status_code=400, 
+                detail="Interval must be between 60 and 3600 seconds"
+            )
+        
+        # Send MQTT command to device
+        topic = f"espsensor/{device_id}/cmd/sleep_interval"
+        payload = str(request.interval_sec)
+        
+        success = mqtt_broker.publish(topic, payload)
+        
+        if success:
+            return {
+                "status": "sent",
+                "device_id": device_id,
+                "interval_sec": request.interval_sec
+            }
+        else:
+            raise HTTPException(status_code=500, detail="Failed to send command")
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error setting sleep interval: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 # WebSocket endpoint
