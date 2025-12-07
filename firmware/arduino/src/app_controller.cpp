@@ -16,6 +16,7 @@
 #include "mqtt_batcher.h"
 #include "profiling.h"
 #include <ESPmDNS.h>
+#include <esp_task_wdt.h>  // Hardware watchdog
 
 // Diagnostic test functions (from diagnostic_test.cpp)
 extern void diagnostic_test_init();
@@ -44,6 +45,11 @@ void app_setup() {
   // Initialize serial FIRST with longer delay
   Serial.begin(115200);
   delay(500);  // Longer delay for serial stability
+  
+  // Initialize hardware watchdog early (30 second timeout)
+  // This catches hangs in setup - will reboot if setup takes too long
+  esp_task_wdt_init(30, true);  // 30 sec timeout, panic (reboot) on timeout
+  esp_task_wdt_add(NULL);       // Add current task to watchdog
   
   // Immediate debug output
   Serial.println("\n\n=== ESP32 BOOT SEQUENCE ===");
@@ -220,6 +226,9 @@ void app_setup() {
 
 // Main application loop (for diagnostic mode)
 void app_loop() {
+  // Feed the hardware watchdog to prevent reboot
+  esp_task_wdt_reset();
+  
   #if DEV_NO_SLEEP
   // In always-on mode, just print alive message periodically
   static uint32_t last_print = 0;

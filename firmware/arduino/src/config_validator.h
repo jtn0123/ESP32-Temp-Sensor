@@ -147,8 +147,14 @@ inline ErrorCode validate_config() {
 }
 
 // Enter safe mode with minimal configuration
+// After timeout, reboots with safe defaults applied (avoids sensor heating from infinite loop)
 inline void enter_safe_mode(const char* reason = nullptr) {
   LOG_ERROR("ENTERING SAFE MODE%s%s", reason ? ": " : "", reason ? reason : "");
+  
+  // Safe mode timeout - reboot after 2 minutes to try again with safe defaults
+  // This prevents: 1) device bricking, 2) sensor heating from always-on operation
+  const uint32_t SAFE_MODE_TIMEOUT_MS = 2 * 60 * 1000;  // 2 minutes
+  uint32_t safe_mode_start = millis();
   
   // Visual indication if display available
   #if USE_DISPLAY
@@ -165,9 +171,9 @@ inline void enter_safe_mode(const char* reason = nullptr) {
   // Set status pixel to orange/yellow for safe mode
   #endif
   
-  // Safe mode loop - blink pattern and wait for intervention
+  // Safe mode loop - blink pattern until timeout
   uint32_t blink_count = 0;
-  while(1) {
+  while (millis() - safe_mode_start < SAFE_MODE_TIMEOUT_MS) {
     // Distinctive safe mode blink pattern: 3 quick, pause
     for (int i = 0; i < 3; i++) {
       #ifdef LED_BUILTIN
@@ -183,7 +189,9 @@ inline void enter_safe_mode(const char* reason = nullptr) {
     
     // Every 10 seconds, output status
     if (++blink_count % 10 == 0) {
-      LOG_ERROR("Safe mode active (reason: %s)", reason ? reason : "config error");
+      uint32_t remaining_sec = (SAFE_MODE_TIMEOUT_MS - (millis() - safe_mode_start)) / 1000;
+      LOG_ERROR("Safe mode active (reason: %s) - reboot in %u sec", 
+                reason ? reason : "config error", remaining_sec);
       log_heap_status("SafeMode");
     }
     
@@ -193,6 +201,13 @@ inline void enter_safe_mode(const char* reason = nullptr) {
     
     yield();  // Keep watchdog happy
   }
+  
+  // Timeout reached - reboot to try again
+  // Safe defaults will be applied on next boot via apply_safe_defaults()
+  LOG_ERROR("Safe mode timeout - rebooting with safe defaults");
+  Serial.flush();
+  delay(100);
+  esp_restart();
 }
 
 // Validate and apply safe defaults for out-of-range values

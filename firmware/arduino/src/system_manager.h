@@ -50,6 +50,15 @@ void print_memory_stats();
 uint32_t get_display_deadline_ms();
 void set_display_deadline_ms(uint32_t deadline);
 
+// Timing utilities
+// Returns milliseconds elapsed since 'start_ms'.
+// Works correctly even when millis() wraps around (~49 days) due to
+// unsigned integer underflow behavior: (small - large) wraps to correct delta.
+// Example: millis()=10, start=UINT32_MAX-5 -> elapsed = 10 - (UINT32_MAX-5) = 16
+inline uint32_t elapsed_since_ms(uint32_t start_ms) {
+    return millis() - start_ms;
+}
+
 // CRC and validation utilities
 uint32_t fast_crc32(const uint8_t* data, size_t len);
 
