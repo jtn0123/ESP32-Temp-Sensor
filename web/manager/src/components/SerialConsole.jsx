@@ -59,6 +59,18 @@ export function SerialConsole({ messages, send }) {
           {paused ? '▶ Resume' : '⏸ Pause'}
         </button>
         <button onClick={handleClear}>🗑 Clear</button>
+        <button 
+          onClick={() => {
+            const text = filteredMessages
+              .map(m => `[${new Date(m.timestamp * 1000).toLocaleTimeString()}] ${m.data}`)
+              .join('\n');
+            navigator.clipboard.writeText(text);
+          }}
+          disabled={filteredMessages.length === 0}
+          title="Copy console output to clipboard"
+        >
+          📋 Copy
+        </button>
         <span className="message-count">
           {filteredMessages.length} messages
         </span>

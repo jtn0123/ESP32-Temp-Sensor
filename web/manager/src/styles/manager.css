@@ -445,6 +445,33 @@ button:not(:disabled):hover {
   to { transform: rotate(360deg); }
 }
 
+/* Copy button styles */
+.copy-button {
+  background-color: #4b5563;
+  color: #d1d5db;
+  border: 1px solid #6b7280;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  transition: background-color 0.2s;
+}
+
+.copy-button:hover {
+  background-color: #6b7280;
+}
+
+.copy-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.logs-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
 .flash-progress {
   background-color: #2d2d2d;
   padding: 1rem;

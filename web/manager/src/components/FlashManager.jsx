@@ -331,7 +331,20 @@ export function FlashManager({ messages, serialPort, targetDevice }) {
       <div className="flash-logs">
         <div className="logs-header">
           <h3>Flash Log</h3>
-          <span className="log-count">{logs.length} lines</span>
+          <div className="logs-actions">
+            <span className="log-count">{logs.length} lines</span>
+            {logs.length > 0 && (
+              <button 
+                className="copy-button"
+                onClick={() => {
+                  navigator.clipboard.writeText(logs.join('\n'));
+                }}
+                title="Copy logs to clipboard"
+              >
+                📋 Copy
+              </button>
+            )}
+          </div>
         </div>
         <div className="logs-output">
           {logs.map((log, idx) => (
