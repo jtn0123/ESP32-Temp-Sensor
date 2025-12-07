@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 class SerialManager:
     """Manages serial port connections and communication"""
 
-    def __init__(self, websocket_hub=None):
+    def __init__(self, websocket_hub: Any = None) -> None:
         self.port: Optional[str] = None
         self.serial: Optional[serial.Serial] = None
         self.reader_thread: Optional[threading.Thread] = None
@@ -22,7 +22,7 @@ class SerialManager:
         self.running = False
         self.connected = False
 
-    def list_ports(self) -> List[Dict[str, str]]:
+    def list_ports(self) -> List[Dict[str, Any]]:
         """Return list of available serial ports with metadata"""
         ports = []
         for port in serial.tools.list_ports.comports():
