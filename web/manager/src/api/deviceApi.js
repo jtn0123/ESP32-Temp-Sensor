@@ -50,10 +50,10 @@ export const deviceApi = {
   },
 
   // Flash endpoints
-  async startFlash(config = 'dev') {
+  async startFlash(port, config = 'dev') {
     return fetchAPI('/flash/start', {
       method: 'POST',
-      body: JSON.stringify({ config }),
+      body: JSON.stringify({ port, config }),
     });
   },
 

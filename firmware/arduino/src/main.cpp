@@ -281,7 +281,7 @@ void draw_from_spec_full_impl(uint8_t variantId) {
             InsideReadings ir = read_inside_sensors();
             if (isfinite(ir.temperatureC)) {
               float tempF = ir.temperatureC * 9.0f / 5.0f + 32.0f;
-              snprintf(temp_buf, sizeof(temp_buf), "%.1f", tempF);
+              snprintf(temp_buf, sizeof(temp_buf), "%.0f", tempF);
             } else {
               snprintf(temp_buf, sizeof(temp_buf), "--");
             }
@@ -289,14 +289,15 @@ void draw_from_spec_full_impl(uint8_t variantId) {
             OutsideReadings orr = net_get_outside();
             if (orr.validTemp && isfinite(orr.temperatureC)) {
               float tempF = orr.temperatureC * 9.0f / 5.0f + 32.0f;
-              snprintf(temp_buf, sizeof(temp_buf), "%.1f", tempF);
+              snprintf(temp_buf, sizeof(temp_buf), "%.0f", tempF);
             } else if (isfinite(get_last_outside_f())) {
-              snprintf(temp_buf, sizeof(temp_buf), "%.1f", get_last_outside_f());
+              snprintf(temp_buf, sizeof(temp_buf), "%.0f", get_last_outside_f());
             } else {
               snprintf(temp_buf, sizeof(temp_buf), "--");
             }
           }
-          draw_temp_number_and_units(r, temp_buf);
+          // Use direct draw (no displayWindow call) during full refresh
+          draw_temp_number_and_units_direct(r[0], r[1], r[2], r[3], temp_buf);
           break;
         }
         case OP_ICONIN: {

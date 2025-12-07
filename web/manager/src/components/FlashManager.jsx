@@ -114,7 +114,7 @@ export function FlashManager({ messages, serialPort, targetDevice }) {
     setError(null);
 
     try {
-      await deviceApi.startFlash(config);
+      await deviceApi.startFlash(serialPort, config);
     } catch (err) {
       console.error('Error starting flash:', err);
       setError(err.message);
