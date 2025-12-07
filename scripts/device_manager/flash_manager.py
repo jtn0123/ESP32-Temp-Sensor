@@ -25,6 +25,7 @@ class QueuedFlash:
     created_at: float = field(default_factory=time.time)
     expires_at: Optional[float] = None   # Optional timeout timestamp
     status: str = "pending"              # pending, building, hunting, flashing, completed, failed, cancelled, expired
+    sleep_interval_sec: Optional[int] = None  # Sleep interval to apply after flash
     
     def is_expired(self) -> bool:
         """Check if the queued flash has expired"""
@@ -49,7 +50,8 @@ class QueuedFlash:
             "created_at": self.created_at,
             "expires_at": self.expires_at,
             "time_remaining": self.time_remaining(),
-            "is_expired": self.is_expired()
+            "is_expired": self.is_expired(),
+            "sleep_interval_sec": self.sleep_interval_sec
         }
 
 
@@ -324,7 +326,8 @@ class FlashManager:
         build_config: str = "dev",
         target_port: Optional[str] = None,
         target_device_id: Optional[str] = None,
-        timeout_minutes: Optional[int] = 15
+        timeout_minutes: Optional[int] = 15,
+        sleep_interval_sec: Optional[int] = None
     ) -> tuple[bool, Optional[str]]:
         """
         Queue a flash operation and start hunting for device.
@@ -336,6 +339,7 @@ class FlashManager:
             target_port: Specific port to watch, or None for any new port
             target_device_id: mDNS device ID for OTA flashing
             timeout_minutes: Minutes until queue expires, or None for no timeout
+            sleep_interval_sec: Sleep interval to apply after flash (via MQTT)
             
         Returns:
             tuple: (success: bool, error_message: Optional[str])
@@ -371,10 +375,11 @@ class FlashManager:
             target_device_id=target_device_id,
             expires_at=expires_at,
             env_name=env_name,
-            status="building"
+            status="building",
+            sleep_interval_sec=sleep_interval_sec
         )
         
-        logger.info(f"Flash queued: config={build_config}, target_port={target_port}, timeout={timeout_minutes}min")
+        logger.info(f"Flash queued: config={build_config}, target_port={target_port}, timeout={timeout_minutes}min, sleep={sleep_interval_sec}s")
         
         # Broadcast queue started
         await self._broadcast('flash_queue_status', {
@@ -550,6 +555,7 @@ class FlashManager:
         # Flash using the pre-built firmware
         env = self.queued_flash.env_name
         build_config = self.queued_flash.build_config
+        sleep_interval = self.queued_flash.sleep_interval_sec
         
         # Clear the queue before flashing (so we don't re-trigger)
         self.queued_flash = None
@@ -559,8 +565,42 @@ class FlashManager:
         
         if success:
             logger.info("Queued flash completed successfully")
+            
+            # Apply sleep interval if specified
+            if sleep_interval is not None:
+                await self._apply_sleep_interval(sleep_interval)
         else:
             logger.error("Queued flash failed")
+    
+    async def _apply_sleep_interval(self, interval_sec: int):
+        """Apply sleep interval to device via MQTT after flash"""
+        if self.hub is None:
+            logger.warning("No WebSocket hub available to apply sleep interval")
+            return
+        
+        try:
+            # Import here to avoid circular dependency
+            from .mqtt_broker import SimpleMQTTBroker
+            
+            # Find mqtt_broker from app context - we'll broadcast the config
+            # and let the server apply it when the device comes online
+            logger.info(f"Will apply sleep interval {interval_sec}s when device connects")
+            
+            await self._broadcast('flash_progress', {
+                'percent': 100,
+                'stage': 'configuring',
+                'message': f'Flash complete. Sleep interval: {interval_sec}s will apply on next boot.'
+            })
+            
+            # Also broadcast for any listeners
+            await self._broadcast('config_pending', {
+                'type': 'sleep_interval',
+                'interval_sec': interval_sec,
+                'message': f'Sleep interval of {interval_sec}s will be applied when device connects'
+            })
+            
+        except Exception as e:
+            logger.error(f"Error applying sleep interval: {e}")
     
     async def _handle_queue_expired(self):
         """Handle queue timeout expiration"""

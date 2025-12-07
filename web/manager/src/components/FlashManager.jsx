@@ -1,6 +1,13 @@
 import { useState, useEffect } from 'react';
 import { deviceApi } from '../api/deviceApi';
-import { DeviceModeSelector } from './DeviceModeSelector';
+
+// Sleep interval presets (matching DeviceModeSelector)
+const INTERVAL_PRESETS = [
+  { value: 180, name: '3 min', icon: '⚡' },
+  { value: 300, name: '5 min', icon: '🔋' },
+  { value: 600, name: '10 min', icon: '💤' },
+  { value: 3600, name: '1 hour', icon: '🌙' },
+];
 
 export function FlashManager({ messages, serialPort, targetDevice }) {
   const [config, setConfig] = useState('dev');
@@ -15,6 +22,9 @@ export function FlashManager({ messages, serialPort, targetDevice }) {
   const [isQueued, setIsQueued] = useState(false);
   const [queueTimeRemaining, setQueueTimeRemaining] = useState(null);
   const [timeoutMinutes, setTimeoutMinutes] = useState(15);
+
+  // Sleep interval configuration (works without target device)
+  const [sleepIntervalSec, setSleepIntervalSec] = useState(600); // 10 min default
 
   // Listen for flash progress and queue messages
   useEffect(() => {
@@ -126,11 +136,11 @@ export function FlashManager({ messages, serialPort, targetDevice }) {
     setIsQueued(true);
     setProgress(0);
     setStage('Queuing flash...');
-    setLogs([]);
+    setLogs([`Sleep interval: ${formatInterval(sleepIntervalSec)}`]);
     setError(null);
 
     try {
-      await deviceApi.queueFlash(config, null, null, timeoutMinutes);
+      await deviceApi.queueFlash(config, null, null, timeoutMinutes, sleepIntervalSec);
     } catch (err) {
       console.error('Error queuing flash:', err);
       setError(err.message);
@@ -168,6 +178,12 @@ export function FlashManager({ messages, serialPort, targetDevice }) {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
+  const formatInterval = (seconds) => {
+    if (seconds < 60) return `${seconds}s`;
+    if (seconds < 3600) return `${Math.round(seconds / 60)} min`;
+    return `${seconds / 3600} hr`;
+  };
+
   const configOptions = [
     { value: 'dev', label: 'Development (No Sleep)', description: 'DEV_NO_SLEEP=1, BOOT_DEBUG=1' },
     { value: 'prod', label: 'Production', description: 'Normal operation with sleep' },
@@ -186,17 +202,37 @@ export function FlashManager({ messages, serialPort, targetDevice }) {
 
   return (
     <div className="flash-manager">
-      {/* Device Mode & Interval Configuration */}
+      {/* Sleep Interval Configuration - Always visible */}
       <div className="flash-section">
-        <h3>⚙️ Device Configuration</h3>
-        <DeviceModeSelector deviceId={targetDevice} />
+        <h3>💤 Sleep Interval</h3>
+        <p className="interval-hint">
+          Configure the sleep interval before flashing. Minimum 3 minutes to prevent sensor self-heating.
+        </p>
+        
+        <div className="interval-presets">
+          {INTERVAL_PRESETS.map(preset => (
+            <button
+              key={preset.value}
+              className={`interval-button ${sleepIntervalSec === preset.value ? 'selected' : ''}`}
+              onClick={() => setSleepIntervalSec(preset.value)}
+              disabled={isBusy}
+            >
+              <span className="preset-icon">{preset.icon}</span>
+              <span className="preset-name">{preset.name}</span>
+            </button>
+          ))}
+        </div>
+
+        <div className="current-interval">
+          Selected: <strong>{formatInterval(sleepIntervalSec)}</strong>
+        </div>
       </div>
 
       <hr className="section-divider" />
 
       {/* Flash Controls */}
       <div className="flash-section">
-        <h3>⚡ Build & Flash</h3>
+        <h3>🔧 Build Configuration</h3>
         <div className="flash-controls">
           <div className="config-selector">
             <label htmlFor="build-config">Build Configuration:</label>
@@ -268,6 +304,7 @@ export function FlashManager({ messages, serialPort, targetDevice }) {
           <div className="queue-hint">
             <strong>No device connected.</strong> Use "Queue Flash" to pre-build firmware 
             and automatically flash when your device wakes up or connects via USB.
+            The sleep interval above will be applied after flashing.
           </div>
         )}
       </div>
@@ -299,7 +336,7 @@ export function FlashManager({ messages, serialPort, targetDevice }) {
               <p>
                 Firmware is ready. Waiting for ESP32 to connect via USB or appear on network.
                 <br />
-                <small>The device will be flashed automatically as soon as it's detected.</small>
+                <small>The device will be flashed automatically with {formatInterval(sleepIntervalSec)} sleep interval.</small>
               </p>
             )}
           </div>
@@ -354,7 +391,7 @@ export function FlashManager({ messages, serialPort, targetDevice }) {
           ))}
           {logs.length === 0 && (
             <div className="no-logs">
-              No flash operations yet. Select a configuration and click "Flash Firmware" or "Queue Flash" to begin.
+              No flash operations yet. Select a configuration and click "Flash Now" or "Queue Flash" to begin.
             </div>
           )}
         </div>

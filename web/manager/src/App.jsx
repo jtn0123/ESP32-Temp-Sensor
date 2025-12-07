@@ -1,15 +1,13 @@
 import { useState } from 'react';
-import { Tab, Tabs, TabList, TabPanel } from 'react-tabs';
-import 'react-tabs/style/react-tabs.css';
 import { useWebSocket } from './hooks/useWebSocket';
 import { DeviceSelector } from './components/DeviceSelector';
 import { SerialConsole } from './components/SerialConsole';
 import { FlashManager } from './components/FlashManager';
 import { MqttInspector } from './components/MqttInspector';
 import { DisplayViewer } from './components/DisplayViewer';
-import { ControlPanel } from './components/ControlPanel';
 import { StatusDashboard } from './components/StatusDashboard';
 import { WakePrediction } from './components/WakePrediction';
+import { CollapsibleSection } from './components/CollapsibleSection';
 import './styles/manager.css';
 
 function App() {
@@ -50,58 +48,41 @@ function App() {
         </div>
       </header>
 
-      <main className="app-main">
-        <Tabs>
-          <TabList>
-            <Tab>🔌 Connect</Tab>
-            <Tab>📟 Console</Tab>
-            <Tab>📊 Dashboard</Tab>
-            <Tab>🖼️ Display</Tab>
-            <Tab>⚡ Flash</Tab>
-            <Tab>📡 MQTT</Tab>
-          </TabList>
+      <main className="app-main single-page">
+        <CollapsibleSection title="Device Connection" icon="🔌" defaultOpen={true}>
+          <DeviceSelector 
+            onConnect={handleConnect} 
+            connected={connected}
+            onTargetChange={handleTargetChange}
+          />
+        </CollapsibleSection>
 
-          <TabPanel>
-            <DeviceSelector 
-              onConnect={handleConnect} 
-              connected={connected}
-              onTargetChange={handleTargetChange}
+        <CollapsibleSection title="Build & Flash" icon="⚡" defaultOpen={true}>
+          <FlashManager 
+            messages={messages} 
+            serialPort={serialPort}
+            targetDevice={targetDevice}
+          />
+        </CollapsibleSection>
+
+        <CollapsibleSection title="Monitor" icon="📊" defaultOpen={false}>
+          <div className="monitor-section">
+            <WakePrediction deviceId={targetDevice} />
+            <StatusDashboard
+              serialConnected={connected}
+              mqttConnected={wsConnected}
             />
-          </TabPanel>
-
-          <TabPanel>
-            <SerialConsole messages={messages} send={send} />
-          </TabPanel>
-
-          <TabPanel>
-            <div className="dashboard-layout">
-              <div className="dashboard-main">
-                <WakePrediction deviceId={targetDevice} />
-                <StatusDashboard
-                  serialConnected={connected}
-                  mqttConnected={wsConnected}
-                />
-              </div>
-              <ControlPanel />
-            </div>
-          </TabPanel>
-
-          <TabPanel>
             <DisplayViewer messages={messages} />
-          </TabPanel>
+          </div>
+        </CollapsibleSection>
 
-          <TabPanel>
-            <FlashManager 
-              messages={messages} 
-              serialPort={serialPort}
-              targetDevice={targetDevice}
-            />
-          </TabPanel>
+        <CollapsibleSection title="Serial Console" icon="📟" defaultOpen={false}>
+          <SerialConsole messages={messages} send={send} />
+        </CollapsibleSection>
 
-          <TabPanel>
-            <MqttInspector messages={messages} />
-          </TabPanel>
-        </Tabs>
+        <CollapsibleSection title="MQTT Debug" icon="📡" defaultOpen={false}>
+          <MqttInspector messages={messages} />
+        </CollapsibleSection>
       </main>
     </div>
   );
