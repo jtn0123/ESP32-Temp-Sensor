@@ -67,7 +67,7 @@ void MQTTBatcher::formatStatsJson(char* out, size_t out_size) const {
         ? (float)stats_.total_flushed / stats_.flush_count
         : 0.0f;
 
-    snprintf(out, out_size,
+    safe_snprintf_rt(out, out_size,
             "{\"queued\":%u,\"flushed\":%u,\"flushes\":%u,\"drops\":%u,\"avg_batch\":%.1f,\"current_queue\":%zu}",
             stats_.total_queued, stats_.total_flushed, stats_.flush_count,
             stats_.queue_full_drops, avg_batch, queue_count_);
