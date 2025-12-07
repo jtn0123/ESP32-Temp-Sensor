@@ -24,8 +24,8 @@ class ManagerConfig:
     simulator_interval_sec: int = 60
     mqtt_sub_base: str = "homeassistant/sensor/outside"
 
-    # Flash
-    platformio_env_dev: str = "feather_esp32s2_display_only_dev"
+    # Flash (valid envs: dev_display, feather_esp32s2_display_only, feather_esp32s2_headless)
+    platformio_env_dev: str = "dev_display"
     platformio_env_prod: str = "feather_esp32s2_display_only"
     firmware_dir: str = ".pio/build"
 
