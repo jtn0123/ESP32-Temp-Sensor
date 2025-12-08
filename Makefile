@@ -1,45 +1,78 @@
-PY=python3
+# ESP32 Device Manager - Makefile
+# Simple entry points for common operations
 
-.PHONY: test test-web browsers rebaseline lint lint-python lint-cpp lint-fix lint-all check-banned fw
+.PHONY: dev run help clean install check
 
-test:
-	$(PY) -m pytest
+# Default target
+.DEFAULT_GOAL := help
 
-test-web: browsers
-	$(PY) -m pytest tests/test_web_sim*.py
+# Colors for terminal output
+CYAN := \033[0;36m
+GREEN := \033[0;32m
+YELLOW := \033[1;33m
+RED := \033[0;31m
+NC := \033[0m # No Color
 
-browsers:
-	$(PY) -m pip install -q playwright || true
-	$(PY) -m playwright install chromium
+help: ## Show this help message
+	@echo ""
+	@echo "$(CYAN)ESP32 Device Manager$(NC)"
+	@echo "$(CYAN)════════════════════$(NC)"
+	@echo ""
+	@echo "$(GREEN)Usage:$(NC)"
+	@echo "  make <target>"
+	@echo ""
+	@echo "$(GREEN)Targets:$(NC)"
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  $(CYAN)%-15s$(NC) %s\n", $$1, $$2}'
+	@echo ""
+	@echo "$(GREEN)Quick Start:$(NC)"
+	@echo "  make dev     - Start everything and open browser"
+	@echo ""
 
-rebaseline:
-	@echo "Rebaseline functionality temporarily disabled - use scripts directly"
+dev: ## Start all services and open browser (recommended)
+	@./scripts/run_device_manager.sh --open-browser
 
-lint: lint-python lint-cpp check-banned
+run: ## Start all services without opening browser
+	@./scripts/run_device_manager.sh
 
-lint-python:
-	@echo "Running Python linters..."
-	@python3 -m ruff check . --quiet
-	@python3 -m mypy . --hide-error-context --no-color-output --ignore-missing-imports
+dev-hot: ## Start with frontend hot-reload for development
+	@./scripts/run_device_manager.sh --dev --open-browser
 
-lint-cpp:
-	@echo "Running C++ linters..."
-	@python3 -m cpplint firmware/arduino/src/*.{h,cpp}
+install: ## Install all dependencies
+	@echo "$(CYAN)Installing dependencies...$(NC)"
+	@python3 -m venv venv 2>/dev/null || true
+	@. venv/bin/activate && pip install -q -r requirements.txt -r requirements-manager.txt 2>/dev/null || true
+	@cd web/manager && npm install 2>/dev/null || true
+	@echo "$(GREEN)Dependencies installed$(NC)"
 
-check-banned:
-	@echo "Checking for banned C functions..."
-	@$(PY) scripts/check_banned_functions.py
+build: ## Build the frontend for production
+	@echo "$(CYAN)Building frontend...$(NC)"
+	@cd web/manager && npm run build
+	@echo "$(GREEN)Build complete$(NC)"
 
-lint-fix:
-	@echo "Auto-fixing Python linting issues..."
-	@python3 -m ruff check . --fix --unsafe-fixes
-	@echo "✅ Python auto-fixes applied"
+check: ## Run health check on services
+	@echo "$(CYAN)Checking service health...$(NC)"
+	@curl -s http://localhost:8080/api/health 2>/dev/null && echo "" || echo "$(RED)Backend not running$(NC)"
 
-lint-all: lint
-	@echo "🎉 All linters passed!"
+clean: ## Clean build artifacts and caches
+	@echo "$(CYAN)Cleaning...$(NC)"
+	@rm -rf web/manager/dist
+	@rm -rf web/manager/node_modules/.cache
+	@rm -rf __pycache__ scripts/__pycache__ scripts/device_manager/__pycache__
+	@find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
+	@echo "$(GREEN)Clean complete$(NC)"
 
-fw:
-	@echo "Building Arduino firmware"
-	cd firmware/arduino && pio run -e feather_esp32s2_display_only -e feather_esp32s2_headless
+logs: ## Show recent logs from the device manager
+	@tail -f /tmp/device_manager.log 2>/dev/null || echo "$(YELLOW)No log file found$(NC)"
 
+stop: ## Stop all running services
+	@echo "$(CYAN)Stopping services...$(NC)"
+	@pkill -f "start_device_manager.py" 2>/dev/null || true
+	@pkill -f "mosquitto" 2>/dev/null || true
+	@echo "$(GREEN)Services stopped$(NC)"
 
+status: ## Show status of all services
+	@echo "$(CYAN)Service Status$(NC)"
+	@echo "$(CYAN)══════════════$(NC)"
+	@echo -n "Backend (8080):  "; lsof -i :8080 >/dev/null 2>&1 && echo "$(GREEN)Running$(NC)" || echo "$(RED)Stopped$(NC)"
+	@echo -n "MQTT (18884):    "; lsof -i :18884 >/dev/null 2>&1 && echo "$(GREEN)Running$(NC)" || echo "$(RED)Stopped$(NC)"
+	@echo -n "Frontend (5173): "; lsof -i :5173 >/dev/null 2>&1 && echo "$(GREEN)Running$(NC)" || echo "$(YELLOW)Not started$(NC)"
