@@ -142,6 +142,14 @@ async def root():
     }
 
 
+@app.get("/favicon.ico")
+async def favicon():
+    """Handle favicon requests to prevent 404 errors"""
+    from fastapi.responses import Response
+    # Return empty 204 No Content response
+    return Response(status_code=204)
+
+
 @app.get("/api/health")
 async def health_check():
     """Health check endpoint"""
@@ -884,15 +892,32 @@ async def startup_event():
 @app.on_event("shutdown")
 async def shutdown_event():
     """Cleanup on shutdown"""
-    logger.info("Shutting down...")
-    serial_manager.disconnect()
+    logger.info("Shutting down server...")
+    
+    # Disconnect serial first
+    try:
+        serial_manager.disconnect()
+    except Exception as e:
+        logger.debug(f"Error disconnecting serial: {e}")
 
-    # Stop mDNS discovery
-    mdns_discovery.stop()
+    # Stop mDNS discovery (may produce warning about blocking I/O, but that's expected)
+    try:
+        mdns_discovery.stop()
+    except Exception as e:
+        logger.debug(f"Error stopping mDNS discovery: {e}")
 
     # Stop MQTT services
-    await mqtt_simulator.stop()
-    await mqtt_broker.stop()
+    try:
+        await mqtt_simulator.stop()
+    except Exception as e:
+        logger.debug(f"Error stopping MQTT simulator: {e}")
+    
+    try:
+        await mqtt_broker.stop()
+    except Exception as e:
+        logger.debug(f"Error stopping MQTT broker: {e}")
+    
+    logger.info("Server shutdown complete")
 
 
 if __name__ == "__main__":

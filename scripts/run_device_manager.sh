@@ -83,18 +83,38 @@ FRONTEND_PID=""
 
 # Function to cleanup on exit
 cleanup() {
-    echo -e "\n${YELLOW}Shutting down...${NC}"
+    # Only show shutdown message if we're actually shutting down (not already done)
+    if [ -n "$MOSQUITTO_PID" ] || [ -n "$BACKEND_PID" ] || [ -n "$FRONTEND_PID" ]; then
+        echo -e "\n${YELLOW}Shutting down services...${NC}"
+    fi
     
     # Kill Mosquitto if we started it
     if [ -n "$MOSQUITTO_PID" ] && kill -0 "$MOSQUITTO_PID" 2>/dev/null; then
         echo -e "${YELLOW}  Stopping Mosquitto...${NC}"
         kill "$MOSQUITTO_PID" 2>/dev/null || true
+        wait "$MOSQUITTO_PID" 2>/dev/null || true
     fi
     
-    # Kill background jobs
+    # Kill backend if we started it
+    if [ -n "$BACKEND_PID" ] && kill -0 "$BACKEND_PID" 2>/dev/null; then
+        echo -e "${YELLOW}  Stopping backend server...${NC}"
+        kill "$BACKEND_PID" 2>/dev/null || true
+        wait "$BACKEND_PID" 2>/dev/null || true
+    fi
+    
+    # Kill frontend if we started it
+    if [ -n "$FRONTEND_PID" ] && kill -0 "$FRONTEND_PID" 2>/dev/null; then
+        echo -e "${YELLOW}  Stopping frontend dev server...${NC}"
+        kill "$FRONTEND_PID" 2>/dev/null || true
+        wait "$FRONTEND_PID" 2>/dev/null || true
+    fi
+    
+    # Kill any remaining background jobs
     jobs -p 2>/dev/null | xargs kill 2>/dev/null || true
     
-    echo -e "${GREEN}Cleanup complete${NC}"
+    if [ -n "$MOSQUITTO_PID" ] || [ -n "$BACKEND_PID" ] || [ -n "$FRONTEND_PID" ]; then
+        echo -e "${GREEN}Cleanup complete${NC}"
+    fi
 }
 
 trap cleanup EXIT INT TERM
@@ -224,10 +244,20 @@ fi
 # ─────────────────────────────────────────────────────────────────
 echo -e "${BLUE}[3/3] Starting backend server...${NC}"
 
+# Kill any stale process on the port
 if check_port $BACKEND_PORT; then
-    echo -e "${YELLOW}  ⚠ Port $BACKEND_PORT already in use${NC}"
-    echo -e "${YELLOW}  Using existing server or kill the process on that port${NC}"
-else
+    echo -e "${YELLOW}  Port $BACKEND_PORT in use, killing existing process...${NC}"
+    lsof -ti :$BACKEND_PORT | xargs kill -9 2>/dev/null || true
+    sleep 1
+    if check_port $BACKEND_PORT; then
+        echo -e "${RED}  ❌ Could not free port $BACKEND_PORT${NC}"
+        echo -e "${YELLOW}  Another application may be using it. Try a different port.${NC}"
+        exit 1
+    fi
+    echo -e "${GREEN}  ✓ Port freed${NC}"
+fi
+
+if ! check_port $BACKEND_PORT; then
     # Build the command with appropriate flags
     BACKEND_CMD="python3 $SCRIPT_DIR/start_device_manager.py --port $BACKEND_PORT"
     if [ "$NO_BROKER" = true ]; then

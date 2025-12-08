@@ -192,14 +192,25 @@ class MDNSDiscovery:
     
     def stop(self) -> None:
         """Stop mDNS discovery"""
+        if not self._running:
+            return
+        
         self._running = False
         
         if self._browser:
-            self._browser.cancel()
+            try:
+                self._browser.cancel()
+            except Exception as e:
+                logger.debug(f"Error canceling browser: {e}")
             self._browser = None
         
         if self._zeroconf:
-            self._zeroconf.close()
+            try:
+                # Close zeroconf in a way that doesn't block
+                # Use unregister_all_services() first if available, then close
+                self._zeroconf.close()
+            except Exception as e:
+                logger.debug(f"Error closing zeroconf: {e}")
             self._zeroconf = None
         
         self._listener = None
