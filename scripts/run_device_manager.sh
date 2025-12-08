@@ -29,6 +29,7 @@ MQTT_PORT=18884  # Matches mosquitto_test.conf
 # Parse arguments
 DEV_MODE=false
 NO_BROKER=false
+OPEN_BROWSER=false
 HELP=false
 
 for arg in "$@"; do
@@ -38,6 +39,9 @@ for arg in "$@"; do
             ;;
         --no-broker)
             NO_BROKER=true
+            ;;
+        --open-browser)
+            OPEN_BROWSER=true
             ;;
         --help|-h)
             HELP=true
@@ -52,9 +56,13 @@ if [ "$HELP" = true ]; then
     echo "Usage: $0 [options]"
     echo ""
     echo "Options:"
-    echo "  --dev        Start Vite dev server for frontend hot-reload"
-    echo "  --no-broker  Don't start Mosquitto MQTT broker"
-    echo "  --help, -h   Show this help message"
+    echo "  --dev          Start Vite dev server for frontend hot-reload"
+    echo "  --no-broker    Don't start Mosquitto MQTT broker"
+    echo "  --open-browser Auto-open browser after startup"
+    echo "  --help, -h     Show this help message"
+    echo ""
+    echo "Quick Start:"
+    echo "  make dev       Start everything and open browser"
     echo ""
     echo "URLs:"
     echo "  Simulator:   http://localhost:$BACKEND_PORT/sim/index.html"
@@ -63,6 +71,28 @@ if [ "$HELP" = true ]; then
     echo "  MQTT Broker: localhost:$MQTT_PORT"
     exit 0
 fi
+
+# Function to open browser (cross-platform)
+open_browser() {
+    local url="$1"
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        open "$url" 2>/dev/null
+    elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
+        xdg-open "$url" 2>/dev/null || sensible-browser "$url" 2>/dev/null
+    elif [[ "$OSTYPE" == "msys" ]] || [[ "$OSTYPE" == "cygwin" ]]; then
+        start "$url" 2>/dev/null
+    fi
+}
+
+# Function to run health check
+health_check() {
+    local result=$(curl -s "http://localhost:$BACKEND_PORT/api/health" 2>/dev/null)
+    if [ -n "$result" ]; then
+        echo "$result"
+        return 0
+    fi
+    return 1
+}
 
 # Print banner
 echo -e "${BLUE}"
@@ -333,15 +363,38 @@ if [ "$DEV_MODE" = true ]; then
 fi
 
 # ─────────────────────────────────────────────────────────────────
+# Health Check
+# ─────────────────────────────────────────────────────────────────
+echo -e "${BLUE}Running health check...${NC}"
+sleep 1  # Give server a moment to fully initialize
+
+HEALTH_OK=false
+for i in {1..5}; do
+    if health_check >/dev/null 2>&1; then
+        HEALTH_OK=true
+        break
+    fi
+    sleep 1
+done
+
+if [ "$HEALTH_OK" = true ]; then
+    echo -e "${GREEN}  ✓ All services healthy${NC}"
+else
+    echo -e "${YELLOW}  ⚠ Health check incomplete (services may still be starting)${NC}"
+fi
+
+# ─────────────────────────────────────────────────────────────────
 # Print summary
 # ─────────────────────────────────────────────────────────────────
+MANAGER_URL="http://localhost:$BACKEND_PORT/manager/index.html"
+
 echo ""
 echo -e "${GREEN}════════════════════════════════════════════════════════════${NC}"
 echo -e "${GREEN}  Device Manager is ready!${NC}"
 echo -e "${GREEN}════════════════════════════════════════════════════════════${NC}"
 echo ""
+echo -e "  ${BLUE}Dashboard:${NC}    $MANAGER_URL"
 echo -e "  ${BLUE}Simulator:${NC}    http://localhost:$BACKEND_PORT/sim/index.html"
-echo -e "  ${BLUE}Manager:${NC}      http://localhost:$BACKEND_PORT/manager/index.html"
 echo -e "  ${BLUE}API Docs:${NC}     http://localhost:$BACKEND_PORT/docs"
 if [ "$NO_BROKER" = false ]; then
     echo -e "  ${BLUE}MQTT Broker:${NC}  localhost:$MQTT_PORT"
@@ -352,6 +405,14 @@ fi
 echo ""
 echo -e "  ${YELLOW}Press Ctrl+C to stop all services${NC}"
 echo ""
+
+# ─────────────────────────────────────────────────────────────────
+# Auto-open browser if requested
+# ─────────────────────────────────────────────────────────────────
+if [ "$OPEN_BROWSER" = true ]; then
+    echo -e "${BLUE}Opening browser...${NC}"
+    open_browser "$MANAGER_URL"
+fi
 
 # Keep script running and wait for interrupt
 wait

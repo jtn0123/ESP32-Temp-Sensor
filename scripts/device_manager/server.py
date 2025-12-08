@@ -152,11 +152,45 @@ async def favicon():
 
 @app.get("/api/health")
 async def health_check():
-    """Health check endpoint"""
-    return {
+    """
+    Comprehensive health check endpoint.
+    Returns status of all subsystems for startup verification and monitoring.
+    """
+    mqtt_status = mqtt_broker.get_status() if mqtt_broker else {}
+    
+    health = {
         "status": "ok",
-        "serial_connected": serial_manager.connected
+        "services": {
+            "serial": {
+                "connected": serial_manager.connected,
+                "port": serial_manager.current_port if serial_manager.connected else None
+            },
+            "mqtt": {
+                "connected": mqtt_status.get("connected", False),
+                "broker_host": mqtt_status.get("host", "localhost"),
+                "broker_port": mqtt_status.get("port", config.mqtt_broker_port)
+            },
+            "websocket": {
+                "active_connections": len(hub.clients) if hub else 0
+            },
+            "discovery": {
+                "available": mdns_discovery.available if mdns_discovery else False,
+                "running": mdns_discovery.is_running() if mdns_discovery else False,
+                "devices_found": len(mdns_discovery.get_devices()) if mdns_discovery else 0
+            },
+            "simulator": {
+                "running": mqtt_simulator.running if mqtt_simulator else False
+            }
+        },
+        "targeted_device": _targeted_device_id
     }
+    
+    # Set overall status based on critical services
+    if not mqtt_status.get("connected", False):
+        health["status"] = "degraded"
+        health["message"] = "MQTT broker not connected"
+    
+    return health
 
 
 # Serial endpoints

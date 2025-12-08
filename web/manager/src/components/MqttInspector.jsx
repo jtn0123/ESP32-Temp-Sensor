@@ -116,8 +116,11 @@ export function MqttInspector({ messages }) {
         {/* Simulator controls */}
         <div className="simulator-controls">
           <h3>Simulator</h3>
-          <button onClick={handleToggleSimulator} className="simulator-button">
-            {simulatorRunning ? 'Stop Simulator' : 'Start Simulator'}
+          <button onClick={handleToggleSimulator} className={`simulator-button ${simulatorRunning ? 'running' : 'stopped'}`}>
+            <span className="simulator-icon">{simulatorRunning ? '⏸' : '▶'}</span>
+            <span className="simulator-text">
+              {simulatorRunning ? 'Stop Simulator' : 'Start Simulator'}
+            </span>
           </button>
           <p className="simulator-description">
             Generate fake Home Assistant weather data for testing

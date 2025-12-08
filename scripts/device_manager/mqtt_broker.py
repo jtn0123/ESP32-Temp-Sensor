@@ -1,6 +1,7 @@
 """Embedded MQTT broker for ESP32 Device Manager"""
 import asyncio
 import logging
+import time
 from typing import Dict, Any, List, Optional, Callable
 from collections import deque
 import paho.mqtt.client as mqtt
@@ -17,7 +18,15 @@ class MQTTMessage:
         self.topic = topic
         self.payload = payload
         self.direction = direction  # 'in' or 'out'
-        self.timestamp = asyncio.get_event_loop().time()
+        # Use time.time() instead of asyncio event loop time since this may be called
+        # from a thread without an event loop (paho-mqtt callback thread)
+        try:
+            # Try to use event loop time if available (more precise for async contexts)
+            loop = asyncio.get_running_loop()
+            self.timestamp = loop.time()
+        except RuntimeError:
+            # Fall back to wall-clock time if no event loop (thread context)
+            self.timestamp = time.time()
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for JSON serialization"""
