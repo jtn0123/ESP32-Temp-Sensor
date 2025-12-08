@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { deviceApi } from '../api/deviceApi';
 
 /**
@@ -15,8 +15,8 @@ export function WakePrediction({ deviceId }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Fetch device state
-  const fetchState = async () => {
+  // Fetch device state - memoized to prevent unnecessary re-renders
+  const fetchState = useCallback(async () => {
     if (!deviceId) {
       setState(null);
       setLoading(false);
@@ -37,7 +37,7 @@ export function WakePrediction({ deviceId }) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [deviceId]);
 
   // Initial fetch and polling
   useEffect(() => {
@@ -46,7 +46,7 @@ export function WakePrediction({ deviceId }) {
     // Poll every second for countdown updates
     const interval = setInterval(fetchState, 1000);
     return () => clearInterval(interval);
-  }, [deviceId]);
+  }, [fetchState]);
 
   // Format seconds as human readable
   const formatTime = (seconds) => {
