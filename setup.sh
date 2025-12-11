@@ -166,3 +166,5 @@ echo -e "   • Simulator:  ${BLUE}http://localhost:8080/sim/index.html${NC}"
 echo -e "   • Manager:    ${BLUE}http://localhost:8080/manager/index.html${NC}"
 echo -e "   • API Docs:   ${BLUE}http://localhost:8080/docs${NC}"
 echo ""
+
+
