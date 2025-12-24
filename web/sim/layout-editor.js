@@ -147,7 +147,7 @@
     const editorPanel = document.createElement('details');
     editorPanel.id = 'layoutEditor';
     editorPanel.setAttribute('aria-label', 'Layout editor panel');
-    editorPanel.open = true;
+    editorPanel.open = false;
 
     editorPanel.innerHTML = `
       <summary>Layout Editor <span id="editorBadge" class="badge">OFF</span></summary>
