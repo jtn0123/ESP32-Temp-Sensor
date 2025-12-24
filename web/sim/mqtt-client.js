@@ -19,6 +19,10 @@
   let mirrorMode = 'emulate'; // 'emulate', 'mirror', 'control', 'sync'
   let mirroredDeviceId = null;
   let mirrorTopics = [];
+
+  // Sync indicator state
+  let lastMirrorMessageTime = null;
+  let mirrorMessageCount = 0;
   
   // Default connection settings
   const DEFAULT_BROKER = '127.0.0.1';
@@ -380,6 +384,11 @@
         window.simDataState.update(updates);
         console.log(`Mirror mode updated: ${sensorPath} = ${value}`, updates);
 
+        // Update sync indicator state
+        lastMirrorMessageTime = Date.now();
+        mirrorMessageCount++;
+        updateSyncIndicator();
+
         // Trigger redraw if available
         if (window.draw) {
           window.draw();
@@ -387,6 +396,43 @@
       }
     }
   }
+
+  // Update sync indicator UI
+  function updateSyncIndicator() {
+    const indicator = document.getElementById('syncIndicator');
+    if (!indicator) return;
+
+    // Only show when actively mirroring
+    if (mirrorMode === 'emulate' || !mirroredDeviceId || !isConnected) {
+      indicator.style.display = 'none';
+      return;
+    }
+
+    indicator.style.display = 'inline-flex';
+
+    if (!lastMirrorMessageTime) {
+      indicator.className = 'sync-indicator';
+      indicator.textContent = `⏳ Waiting for ${mirroredDeviceId}...`;
+      return;
+    }
+
+    const ageMs = Date.now() - lastMirrorMessageTime;
+    const ageSec = Math.floor(ageMs / 1000);
+
+    if (ageSec < 2) {
+      indicator.className = 'sync-indicator synced';
+      indicator.textContent = `${mirroredDeviceId}`;
+    } else if (ageSec < 5) {
+      indicator.className = 'sync-indicator lagging';
+      indicator.textContent = `${mirroredDeviceId} (${ageSec}s ago)`;
+    } else {
+      indicator.className = 'sync-indicator stale';
+      indicator.textContent = `${mirroredDeviceId} (${ageSec}s ago)`;
+    }
+  }
+
+  // Start periodic sync indicator updates
+  setInterval(updateSyncIndicator, 1000);
 
   // Start mirroring a real device
   function mirrorDevice(targetDeviceId, mode = 'mirror') {
@@ -426,6 +472,7 @@
 
       console.log(`Mirror mode started for device ${targetDeviceId} (mode: ${mode})`);
       updateStatus(`Mirroring device: ${targetDeviceId} (${mode} mode)`);
+      updateSyncIndicator();
     });
 
     return true;
@@ -446,6 +493,11 @@
     mirrorMode = 'emulate';
     mirroredDeviceId = null;
     mirrorTopics = [];
+
+    // Reset sync indicator state
+    lastMirrorMessageTime = null;
+    mirrorMessageCount = 0;
+    updateSyncIndicator();
 
     console.log('Mirror mode stopped');
     updateStatus('Emulate mode (local simulation only)');

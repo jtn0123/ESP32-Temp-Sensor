@@ -13,8 +13,8 @@
   <body>
     <div class="wrap">
       <header class="page-header">
-        <h1>Display Simulator (250×122) <span id="statusPill" class="status-pill" title="Simulator status" role="status" aria-live="polite">Not Ready</span></h1>
-        <div class="subtitle">ESP32 eInk Room Node</div>
+        <h1>Display Simulator (250×122) <span id="statusPill" class="status-pill" title="Simulator status" role="status" aria-live="polite">Not Ready</span> <span id="syncIndicator" class="sync-indicator" style="display:none;" aria-live="polite"></span></h1>
+        <div class="subtitle">ESP32 eInk Room Node <button id="themeToggle" class="theme-toggle" title="Toggle dark/light mode" aria-label="Toggle theme">☀️</button></div>
       </header>
 
       <div class="layout">
@@ -48,12 +48,17 @@
 
             <div class="toolbar-row toggles" aria-label="Overlays">
               <label title="Show partial refresh windows"><input type="checkbox" id="showWindows" aria-label="Toggle partial refresh windows"> Partial refresh windows</label>
-              <label title="Toggle stress data"><input type="checkbox" id="stressMode" aria-label="Toggle stress test mode"> Stress test</label>
-              <label title="Show 4px grid"><input type="checkbox" id="showGrid" aria-label="Toggle 4px grid overlay"> Show 4px grid</label>
-              <label title="Show geometry rectangles"><input type="checkbox" id="showRects" aria-label="Toggle geometry rectangles"> Show geometry rects</label>
-              <label title="Label regions"><input type="checkbox" id="showLabels" aria-label="Toggle region labels"> Label regions</label>
-              <label title="Simulates e‑ink ghosting artifacts"><input type="checkbox" id="simulateGhosting" aria-label="Toggle ghosting simulation"> Simulate ghosting</label>
-              <label title="Show UI validation overlay"><input type="checkbox" id="toggleValidationOverlay" aria-label="Toggle UI validation overlay"> UI validation overlay</label>
+              <details class="advanced-toggles">
+                <summary>Advanced</summary>
+                <div class="advanced-toggles-content">
+                  <label title="Toggle stress data"><input type="checkbox" id="stressMode" aria-label="Toggle stress test mode"> Stress test</label>
+                  <label title="Show 4px grid"><input type="checkbox" id="showGrid" aria-label="Toggle 4px grid overlay"> Show 4px grid</label>
+                  <label title="Show geometry rectangles"><input type="checkbox" id="showRects" aria-label="Toggle geometry rectangles"> Show geometry rects</label>
+                  <label title="Label regions"><input type="checkbox" id="showLabels" aria-label="Toggle region labels"> Label regions</label>
+                  <label title="Simulates e‑ink ghosting artifacts"><input type="checkbox" id="simulateGhosting" aria-label="Toggle ghosting simulation"> Simulate ghosting</label>
+                  <label title="Show UI validation overlay"><input type="checkbox" id="toggleValidationOverlay" aria-label="Toggle UI validation overlay"> UI validation overlay</label>
+                </div>
+              </details>
             </div>
           </div>
 

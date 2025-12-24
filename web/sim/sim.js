@@ -3075,9 +3075,7 @@
       const bar = document.getElementById('statusBar');
       if (bar){
         const issuesCount = (Array.isArray(validationIssues) ? validationIssues.length : 0);
-        const ms = (Number(renderMs)||0).toFixed(1);
-        const crcInfo = (GJSON && GJSON.layout_crc) ? ` | CRC: ${GJSON.layout_crc}` : '';
-        bar.textContent = `${ready ? '✓ Simulator ready' : '… Initializing'} | ⟳ ${ms}ms | Issues: ${issuesCount}${crcInfo}`;
+        bar.textContent = `${ready ? '✓ Simulator ready' : '… Initializing'} | Issues: ${issuesCount}`;
       }
     }catch(e){}
   }
@@ -3685,16 +3683,51 @@ Keyboard Shortcuts:
   // Initialize render timings storage
   window.__renderTimings = {};
 
+  // Theme toggle functionality
+  function initTheme() {
+    const savedTheme = localStorage.getItem('sim_theme');
+    // Default to dark mode (no data-theme attribute needed)
+    if (savedTheme === 'light') {
+      document.documentElement.setAttribute('data-theme', 'light');
+    }
+    updateThemeButton();
+  }
+
+  function toggleTheme() {
+    const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+    if (isLight) {
+      document.documentElement.removeAttribute('data-theme');
+      localStorage.setItem('sim_theme', 'dark');
+    } else {
+      document.documentElement.setAttribute('data-theme', 'light');
+      localStorage.setItem('sim_theme', 'light');
+    }
+    updateThemeButton();
+  }
+
+  function updateThemeButton() {
+    const btn = document.getElementById('themeToggle');
+    if (!btn) return;
+    const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+    btn.textContent = isLight ? '🌙' : '☀️';
+    btn.title = isLight ? 'Switch to dark mode' : 'Switch to light mode';
+  }
+
+  // Initialize theme immediately (before DOM ready to prevent flash)
+  initTheme();
+
   // Wait for DOM to be ready before initializing
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
       load();
       setupKeyboardNavigation();
+      document.getElementById('themeToggle')?.addEventListener('click', toggleTheme);
     });
   } else {
     // DOM is already ready
     load();
     setupKeyboardNavigation();
+    document.getElementById('themeToggle')?.addEventListener('click', toggleTheme);
   }
 })();
 
