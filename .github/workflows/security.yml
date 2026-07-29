@@ -14,8 +14,10 @@ jobs:
     name: Gitleaks Secret Scan
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
+          # Scanners need no authenticated git operations
+          persist-credentials: false
           fetch-depth: 0  # Fetch all history for scanning
       
       - name: Run Gitleaks
@@ -25,7 +27,7 @@ jobs:
       
       - name: Upload SARIF report
         if: failure()
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: results.sarif
 
@@ -33,10 +35,13 @@ jobs:
     name: Custom Security Audit
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
+        with:
+          # Scanners need no authenticated git operations
+          persist-credentials: false
       
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: '3.11'
       
@@ -62,7 +67,10 @@ jobs:
     name: Dependency Security Check
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
+        with:
+          # Scanners need no authenticated git operations
+          persist-credentials: false
       
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@master
@@ -74,7 +82,7 @@ jobs:
           severity: 'CRITICAL,HIGH'
       
       - name: Upload Trivy results to GitHub Security
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: 'trivy-results.sarif'
 
@@ -82,7 +90,10 @@ jobs:
     name: Code Quality & Security Patterns
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
+        with:
+          # Scanners need no authenticated git operations
+          persist-credentials: false
       
       - name: Check for hardcoded credentials
         run: |
