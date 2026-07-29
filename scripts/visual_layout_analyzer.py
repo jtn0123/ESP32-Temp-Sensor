@@ -6,15 +6,15 @@ Uses the web simulator as the single source of truth for validation.
 
 from __future__ import annotations
 
+import base64
 from dataclasses import dataclass
+from datetime import datetime
 import json
 from pathlib import Path
 import subprocess
 import sys
 import time
 from typing import Dict, List, Optional, Tuple
-import base64
-from datetime import datetime
 
 # Add project root to path
 ROOT = Path(__file__).resolve().parents[1]
@@ -22,6 +22,7 @@ sys.path.insert(0, str(ROOT))
 
 try:
     import io
+
     import numpy as np
     from PIL import Image, ImageDraw, ImageFont
     from playwright.sync_api import sync_playwright
@@ -55,7 +56,7 @@ class VisualLayoutAnalyzer:
     Visual Layout Analyzer that uses the web simulator's validation API.
     The simulator is the single source of truth for all validation logic.
     """
-    
+
     def __init__(self, web_root: Optional[str] = None):
         self.web_root = web_root or str(ROOT / "web" / "sim")
         self.out_dir = ROOT / "out"
@@ -85,6 +86,7 @@ class VisualLayoutAnalyzer:
 
     def _find_free_port(self) -> int:
         import socket
+
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             s.bind(("127.0.0.1", 0))
             return s.getsockname()[1]
@@ -96,36 +98,38 @@ class VisualLayoutAnalyzer:
             stderr=subprocess.DEVNULL,
         )
 
-    def _capture_with_sim_validation(self, page, test_data: Dict) -> Tuple[List[LayoutIssue], Optional[Image.Image]]:
+    def _capture_with_sim_validation(
+        self, page, test_data: Dict
+    ) -> Tuple[List[LayoutIssue], Optional[Image.Image]]:
         """Capture validation results from the simulator"""
         # Wait for simulator to be ready
         page.wait_for_function("() => window.__simReady === true", timeout=5000)
-        
+
         # Draw test data
         page.evaluate(f"window.draw && window.draw({json.dumps(test_data)})")
-        
+
         # Wait for draw to complete
         page.wait_for_function("() => window.__lastDrawAt > 0", timeout=1000)
         page.wait_for_timeout(100)  # Extra time for rendering
-        
+
         # Get validation results with screenshot
         result = page.evaluate("() => window.exportValidation({ includeScreenshot: true })")
-        
+
         # Convert JS issues to Python LayoutIssue objects
         issues = []
         for js_issue in result.get("issues", []):
             # Preserve simulator-provided severity
             severity = js_issue.get("severity", "info")
-            
+
             issue = LayoutIssue(
                 issue_type=js_issue.get("type", "unknown"),
                 severity=severity,
                 regions=[js_issue.get("region", "unknown")] if js_issue.get("region") else [],
                 description=js_issue.get("description", ""),
-                coordinates=tuple(js_issue["rect"]) if js_issue.get("rect") else None
+                coordinates=tuple(js_issue["rect"]) if js_issue.get("rect") else None,
             )
             issues.append(issue)
-        
+
         # Decode screenshot if present
         screenshot = None
         if result.get("screenshot"):
@@ -134,7 +138,7 @@ class VisualLayoutAnalyzer:
                 b64_data = data_url.split(",", 1)[1]
                 img_bytes = base64.b64decode(b64_data)
                 screenshot = Image.open(io.BytesIO(img_bytes))
-        
+
         return issues, screenshot
 
     def _get_rects_from_page(self, page) -> Dict[str, List[int]]:
@@ -160,7 +164,7 @@ class VisualLayoutAnalyzer:
         img = Image.fromarray(base_img).convert("RGBA")
         ov = Image.new("RGBA", img.size, (255, 255, 255, 0))
         draw = ImageDraw.Draw(ov)
-        
+
         # Draw region boundaries
         for a in analyses.values():
             x, y, w, h = a.rect
@@ -172,7 +176,7 @@ class VisualLayoutAnalyzer:
                 draw.text((x + 2, y + 2), a.name, fill=(0, 0, 0, 255), font=font)
             except Exception:
                 draw.text((x + 2, y + 2), a.name, fill=(0, 0, 0, 255))
-        
+
         # Draw issues with severity-based colors
         for issue in issues:
             # Colors: critical(red), error(orange), warning(yellow), info(blue)
@@ -184,13 +188,17 @@ class VisualLayoutAnalyzer:
                 color = (255, 187, 0, 128)
             else:
                 color = (0, 136, 255, 128)
-            
+
             if issue.coordinates:
                 x, y, w, h = issue.coordinates
                 if w > 0 and h > 0:
-                    draw.rectangle((x, y, x + w - 1, y + h - 1),
-                                   outline=color[:3] + (255,), fill=color, width=2)
-        
+                    draw.rectangle(
+                        (x, y, x + w - 1, y + h - 1),
+                        outline=color[:3] + (255,),
+                        fill=color,
+                        width=2,
+                    )
+
         return Image.alpha_composite(img, ov).convert("RGB")
 
     def generate_enhanced_text_report(
@@ -206,7 +214,7 @@ class VisualLayoutAnalyzer:
             f"Found {len(issues)} total issues",
             "",
         ]
-        
+
         # Group issues by severity
         for sev in ("critical", "error", "warning", "info"):
             items = [i for i in issues if i.severity == sev]
@@ -216,7 +224,7 @@ class VisualLayoutAnalyzer:
                 for it in items:
                     lines.append(f"  • {it.description}")
                 lines.append("")
-        
+
         return "\n".join(lines)
 
     def run(self, variants: Optional[List[str]] = None) -> Dict[str, Dict[str, object]]:
@@ -225,21 +233,23 @@ class VisualLayoutAnalyzer:
         port = self._find_free_port()
         server = self._start_http_server(self.web_root, port)
         results: Dict[str, Dict[str, object]] = {}
-        
+
         try:
             # Clean previous outputs
             self._clean_out(variants)
             time.sleep(0.4)
-            
+
             with sync_playwright() as p:
                 browser = p.chromium.launch()
                 page = browser.new_page(viewport={"width": 700, "height": 400})
-                
+
                 for variant in variants:
                     # Navigate to simulator with variant
-                    page.goto(f"http://127.0.0.1:{port}/index.html?variant={variant}", wait_until="load")
+                    page.goto(
+                        f"http://127.0.0.1:{port}/index.html?variant={variant}", wait_until="load"
+                    )
                     page.wait_for_timeout(300)
-                    
+
                     # Prepare test data
                     test_data = {
                         "room_name": "Living Room",
@@ -257,12 +267,12 @@ class VisualLayoutAnalyzer:
                         "battery_percent": 76,
                         "battery_voltage": 4.017,
                         "days": 192,
-                        "ip": "192.168.1.42"
+                        "ip": "192.168.1.42",
                     }
-                    
+
                     # Get validation results from simulator
                     issues, screenshot = self._capture_with_sim_validation(page, test_data)
-                    
+
                     # Convert screenshot to numpy array for consistency
                     if screenshot:
                         base_img = np.array(screenshot.convert("RGB"))
@@ -277,7 +287,7 @@ class VisualLayoutAnalyzer:
                             base_img = np.array(Image.open(io.BytesIO(img_bytes)).convert("RGB"))
                         else:
                             base_img = np.zeros((122, 250, 3), dtype=np.uint8)
-                    
+
                     # Get rects for annotation
                     rects = self._get_rects_from_page(page)
                     analyses = {}
@@ -288,55 +298,63 @@ class VisualLayoutAnalyzer:
                             category="",
                             pixel_coverage=0.0,
                             content_bounds=None,
-                            issues=[]
+                            issues=[],
                         )
-                    
+
                     # Annotate the screenshot with issues
                     if issues:
                         annotated = self.annotate(base_img, analyses, issues)
                     else:
                         annotated = Image.fromarray(base_img)
-                    
+
                     # Save artifacts
                     ts = datetime.now().strftime("%Y-%m-%dT%H-%M-%S")
                     base_name = f"layout_analysis_{variant}_{ts}"
                     Image.fromarray(base_img).save(self.out_dir / f"{base_name}.png")
                     annotated.save(self.out_dir / f"{base_name}_annotated.png")
-                    
+
                     # Generate text report
                     report_txt = self.generate_enhanced_text_report(variant, analyses, issues)
                     (self.out_dir / f"{base_name}_report.txt").write_text(report_txt)
-                    
+
                     results[variant] = {
                         "analyses": analyses,
                         "issues": issues,
                         "text_report": report_txt,
                     }
-                
+
                 browser.close()
         finally:
             server.terminate()
             server.wait(timeout=2)
-        
+
         return results
 
 
 def main() -> None:
     import argparse
 
-    ap = argparse.ArgumentParser(description="Analyze ESP32 eInk display layout using simulator validation")
+    ap = argparse.ArgumentParser(
+        description="Analyze ESP32 eInk display layout using simulator validation"
+    )
     ap.add_argument("--variants", nargs="*", default=["v2_grid"])
     ap.add_argument("--web-root", default=str(ROOT / "web" / "sim"))
-    ap.add_argument("--fail-on-critical", action="store_true",
-                    help="Exit with non-zero code if critical issues found")
-    ap.add_argument("--fail-on-error", action="store_true",
-                    help="Exit with non-zero code if error-level issues found")
+    ap.add_argument(
+        "--fail-on-critical",
+        action="store_true",
+        help="Exit with non-zero code if critical issues found",
+    )
+    ap.add_argument(
+        "--fail-on-error",
+        action="store_true",
+        help="Exit with non-zero code if error-level issues found",
+    )
     args = ap.parse_args()
-    
+
     # Always use simulator validation (no legacy mode)
     analyzer = VisualLayoutAnalyzer(args.web_root)
     results = analyzer.run(args.variants)
-    
+
     # Count issues by severity
     by_severity = {"critical": 0, "error": 0, "warning": 0, "info": 0}
     for v in results.values():
@@ -346,19 +364,21 @@ def main() -> None:
         for i in issues_list_obj:
             if isinstance(i, LayoutIssue) and i.severity in by_severity:
                 by_severity[i.severity] += 1
-    
+
     # Print summary
-    print(f"\nSummary: {by_severity['critical']} critical, {by_severity['error']} errors, "
-          f"{by_severity['warning']} warnings, {by_severity['info']} info")
-    
+    print(
+        f"\nSummary: {by_severity['critical']} critical, {by_severity['error']} errors, "
+        f"{by_severity['warning']} warnings, {by_severity['info']} info"
+    )
+
     # Exit based on flags
-    if args.fail_on_critical and by_severity['critical'] > 0:
+    if args.fail_on_critical and by_severity["critical"] > 0:
         print(f"Exiting with error due to {by_severity['critical']} critical issues.")
         sys.exit(1)
-    elif args.fail_on_error and by_severity['error'] > 0:
+    elif args.fail_on_error and by_severity["error"] > 0:
         print(f"Exiting with error due to {by_severity['error']} error-level issues.")
         sys.exit(1)
-    elif by_severity['critical'] > 0:
+    elif by_severity["critical"] > 0:
         print(f"Found {by_severity['critical']} critical issues (not failing build).")
     else:
         print("No critical layout issues detected.")

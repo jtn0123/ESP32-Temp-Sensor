@@ -22,14 +22,12 @@ def run_parse(content: str) -> tuple[int, str]:
 
 
 def test_parse_counts():
-    rc, out = run_parse(
-        """
+    rc, out = run_parse("""
 Timeout: sensor read exceeded budget ms=420 budget=300
 Timeout: retained fetch budget reached ms=800 budget=800 (no outside data)
 Timeout: display phase exceeded budget ms=2100 budget=2000
 Timeout: publish exceeded budget ms=900 budget=800
-"""
-    )
+""")
     assert rc == 0
     # Expect summary counts in output
     assert "sensor=1" in out

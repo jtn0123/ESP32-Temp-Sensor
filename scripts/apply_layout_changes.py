@@ -20,12 +20,12 @@ Usage:
 
 import argparse
 import json
+from pathlib import Path
 import shutil
 import subprocess
 import sys
+from typing import Any, Dict, List
 import zlib
-from pathlib import Path
-from typing import Any, Dict, List, Tuple
 
 # Path setup
 ROOT = Path(__file__).resolve().parents[1]
@@ -36,6 +36,7 @@ GEN_LAYOUT_SCRIPT = ROOT / "scripts" / "gen_layout_header.py"
 
 class ValidationError(Exception):
     """Raised when layout validation fails"""
+
     pass
 
 
@@ -50,17 +51,16 @@ def load_json(path: Path) -> Dict[str, Any]:
 
 def save_json(path: Path, data: Dict[str, Any]) -> None:
     """Save JSON file with formatting"""
-    with open(path, 'w') as f:
+    with open(path, "w") as f:
         json.dump(data, f, indent=2)
-        f.write('\n')  # Trailing newline
+        f.write("\n")  # Trailing newline
 
 
 def compute_layout_crc(data: Dict[str, Any]) -> str:
     """Compute layout CRC the same way gen_layout_header.py does"""
-    crc_obj = json.dumps(
-        {"canvas": data["canvas"], "rects": data["rects"]},
-        sort_keys=True
-    ).encode("utf-8")
+    crc_obj = json.dumps({"canvas": data["canvas"], "rects": data["rects"]}, sort_keys=True).encode(
+        "utf-8"
+    )
     crc = zlib.crc32(crc_obj) & 0xFFFFFFFF
     return f"0x{crc:08X}"
 
@@ -120,14 +120,10 @@ def validate_layout(data: Dict[str, Any]) -> List[str]:
             errors.append(f"{name}: Non-positive dimensions ({w}x{h})")
 
         if x + w > canvas_w:
-            errors.append(
-                f"{name}: Right edge ({x}+{w}={x+w}) exceeds canvas width ({canvas_w})"
-            )
+            errors.append(f"{name}: Right edge ({x}+{w}={x+w}) exceeds canvas width ({canvas_w})")
 
         if y + h > canvas_h:
-            errors.append(
-                f"{name}: Bottom edge ({y}+{h}={y+h}) exceeds canvas height ({canvas_h})"
-            )
+            errors.append(f"{name}: Bottom edge ({y}+{h}={y+h}) exceeds canvas height ({canvas_h})")
 
     # Check for collisions (warnings, not errors)
     collisions = []
@@ -211,11 +207,7 @@ def show_diff(original: Dict[str, Any], modified: Dict[str, Any]) -> None:
     print()
 
 
-def apply_changes(
-    modified_path: Path,
-    dry_run: bool = False,
-    validate_only: bool = False
-) -> None:
+def apply_changes(modified_path: Path, dry_run: bool = False, validate_only: bool = False) -> None:
     """
     Apply layout changes from modified JSON file.
 
@@ -224,7 +216,7 @@ def apply_changes(
         dry_run: If True, show what would be done but don't modify files
         validate_only: If True, only validate without showing diff or applying
     """
-    print(f"📐 Layout Change Applier\n")
+    print("📐 Layout Change Applier\n")
     print(f"Reading modified layout from: {modified_path}")
 
     # Load files
@@ -269,7 +261,7 @@ def apply_changes(
     # Confirm changes
     if not dry_run:
         response = input("\nApply these changes? [y/N]: ").strip().lower()
-        if response not in ['y', 'yes']:
+        if response not in ["y", "yes"]:
             print("❌ Aborted")
             return
 
@@ -289,7 +281,7 @@ def apply_changes(
             print(f"  • {description}")
         else:
             # Backup original
-            backup_path = target_path.with_suffix('.json.backup')
+            backup_path = target_path.with_suffix(".json.backup")
             shutil.copy2(target_path, backup_path)
 
             # Write new content
@@ -301,10 +293,7 @@ def apply_changes(
         print("\n🔧 Regenerating firmware headers...")
         try:
             subprocess.run(
-                [sys.executable, str(GEN_LAYOUT_SCRIPT)],
-                check=True,
-                capture_output=True,
-                text=True
+                [sys.executable, str(GEN_LAYOUT_SCRIPT)], check=True, capture_output=True, text=True
             )
             print("  ✓ Generated display_layout.h")
         except subprocess.CalledProcessError as e:
@@ -312,7 +301,7 @@ def apply_changes(
             print(f"     You may need to run: python3 {GEN_LAYOUT_SCRIPT}")
 
     # Success message
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     if dry_run:
         print("✅ Dry run complete - no files were modified")
     else:
@@ -321,7 +310,7 @@ def apply_changes(
         print("  1. Reload web simulator: http://localhost:8000")
         print("  2. Or rebuild firmware: cd firmware/arduino && pio run")
         print("\nBackups saved with .backup extension")
-    print("="*60 + "\n")
+    print("=" * 60 + "\n")
 
 
 def main():
@@ -333,25 +322,23 @@ Examples:
   python3 scripts/apply_layout_changes.py modified.json
   python3 scripts/apply_layout_changes.py --dry-run modified.json
   python3 scripts/apply_layout_changes.py --validate-only modified.json
-        """
+        """,
     )
 
     parser.add_argument(
         "modified_json",
         type=Path,
-        help="Path to modified geometry JSON exported from web simulator"
+        help="Path to modified geometry JSON exported from web simulator",
     )
 
     parser.add_argument(
-        "--dry-run",
-        action="store_true",
-        help="Show what would be done without modifying files"
+        "--dry-run", action="store_true", help="Show what would be done without modifying files"
     )
 
     parser.add_argument(
         "--validate-only",
         action="store_true",
-        help="Only validate the modified JSON without applying changes"
+        help="Only validate the modified JSON without applying changes",
     )
 
     args = parser.parse_args()
@@ -362,17 +349,14 @@ Examples:
         sys.exit(1)
 
     try:
-        apply_changes(
-            args.modified_json,
-            dry_run=args.dry_run,
-            validate_only=args.validate_only
-        )
+        apply_changes(args.modified_json, dry_run=args.dry_run, validate_only=args.validate_only)
     except KeyboardInterrupt:
         print("\n\n❌ Aborted by user")
         sys.exit(1)
     except Exception as e:
         print(f"\n❌ Error: {e}")
         import traceback
+
         traceback.print_exc()
         sys.exit(1)
 

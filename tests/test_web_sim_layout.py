@@ -150,6 +150,7 @@ def test_layout_centering_and_clipping():
 
                 # 6) Section labels centered above their temp blocks (if using labeled layout)
                 if "inside" in M.get("labels", {}) and "outside" in M.get("labels", {}):
+
                     def _centered_over(rect, label_x, tol=2):
                         mid = rect["x"] + rect["w"] / 2
                         assert abs(label_x - mid) <= tol

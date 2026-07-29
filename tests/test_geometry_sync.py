@@ -113,12 +113,12 @@ def test_all_regions_within_canvas():
         # Check bounds
         assert x >= 0, f"{name}: x={x} is negative"
         assert y >= 0, f"{name}: y={y} is negative"
-        assert x + w <= canvas_w, (
-            f"{name}: right edge ({x}+{w}={x+w}) exceeds canvas width ({canvas_w})"
-        )
-        assert y + h <= canvas_h, (
-            f"{name}: bottom edge ({y}+{h}={y+h}) exceeds canvas height ({canvas_h})"
-        )
+        assert (
+            x + w <= canvas_w
+        ), f"{name}: right edge ({x}+{w}={x+w}) exceeds canvas width ({canvas_w})"
+        assert (
+            y + h <= canvas_h
+        ), f"{name}: bottom edge ({y}+{h}={y+h}) exceeds canvas height ({canvas_h})"
 
 
 def test_regions_aligned_to_4px_grid():
@@ -151,8 +151,7 @@ def test_layout_crc_consistency():
 
     # Compute CRC the same way gen_layout_header.py does
     crc_obj = json.dumps(
-        {"canvas": config_data["canvas"], "rects": config_data["rects"]},
-        sort_keys=True
+        {"canvas": config_data["canvas"], "rects": config_data["rects"]}, sort_keys=True
     ).encode("utf-8")
     computed_crc = zlib.crc32(crc_obj) & 0xFFFFFFFF
 
@@ -160,7 +159,9 @@ def test_layout_crc_consistency():
         # Remove '0x' prefix if present and convert to int
         stored_crc_str = config_data["layout_crc"]
         if isinstance(stored_crc_str, str):
-            stored_crc = int(stored_crc_str, 16) if stored_crc_str.startswith("0x") else int(stored_crc_str)
+            stored_crc = (
+                int(stored_crc_str, 16) if stored_crc_str.startswith("0x") else int(stored_crc_str)
+            )
         else:
             stored_crc = stored_crc_str
 

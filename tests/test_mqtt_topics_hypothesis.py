@@ -6,14 +6,13 @@ to ensure topic structure consistency and firmware parity.
 """
 
 import os
-import re
 import sys
 
 import pytest
 
 # Try to import hypothesis
 try:
-    from hypothesis import given, assume, settings, example
+    from hypothesis import assume, example, given, settings
     from hypothesis import strategies as st
 
     HAS_HYPOTHESIS = True
@@ -23,31 +22,38 @@ except ImportError:
     def given(*args, **kwargs):
         def decorator(f):
             return pytest.mark.skip(reason="hypothesis not installed")(f)
+
         return decorator
 
     def example(*args, **kwargs):
         def decorator(f):
             return f
+
         return decorator
 
     def settings(**kwargs):
         def decorator(f):
             return f
+
         return decorator
 
     class st:
         @staticmethod
         def text(*args, **kwargs):
             return None
+
         @staticmethod
         def sampled_from(*args, **kwargs):
             return None
+
         @staticmethod
         def floats(*args, **kwargs):
             return None
+
         @staticmethod
         def integers(*args, **kwargs):
             return None
+
         @staticmethod
         def from_regex(*args, **kwargs):
             return None
@@ -60,13 +66,12 @@ except ImportError:
 ROOT = os.path.dirname(os.path.dirname(__file__))
 sys.path.insert(0, os.path.join(ROOT, "scripts"))
 from mqtt_topics import (
-    build_topic,
-    build_discovery_topic,
     build_discovery_config,
-    get_standard_sensors,
+    build_discovery_topic,
+    build_topic,
     format_sensor_value,
+    get_standard_sensors,
 )
-
 
 pytestmark = pytest.mark.skipif(not HAS_HYPOTHESIS, reason="hypothesis not installed")
 
@@ -80,19 +85,21 @@ if HAS_HYPOTHESIS:
     room_name_strategy = st.from_regex(r"[A-Za-z][A-Za-z0-9 ]{0,20}", fullmatch=True)
 
     # Valid topic suffixes
-    suffix_strategy = st.sampled_from([
-        "inside/temperature",
-        "inside/humidity",
-        "inside/pressure",
-        "battery/voltage",
-        "battery/percent",
-        "wifi/rssi",
-        "availability",
-        "status",
-        "debug/json",
-        "debug/memory",
-        "cmd/+",
-    ])
+    suffix_strategy = st.sampled_from(
+        [
+            "inside/temperature",
+            "inside/humidity",
+            "inside/pressure",
+            "battery/voltage",
+            "battery/percent",
+            "wifi/rssi",
+            "availability",
+            "status",
+            "debug/json",
+            "debug/memory",
+            "cmd/+",
+        ]
+    )
 
 
 class TestBuildTopicProperties:
@@ -141,13 +148,15 @@ class TestBuildTopicProperties:
 
     @given(
         device_id=st.from_regex(r"[a-z][a-z0-9_-]{2,20}", fullmatch=True),
-        suffix=st.sampled_from([
-            "inside/temperature",
-            "inside/humidity",
-            "battery/voltage",
-            "status",
-            "availability",
-        ]),
+        suffix=st.sampled_from(
+            [
+                "inside/temperature",
+                "inside/humidity",
+                "battery/voltage",
+                "status",
+                "availability",
+            ]
+        ),
     )
     @settings(max_examples=100)
     def test_topic_idempotent(self, device_id, suffix):
@@ -162,10 +171,9 @@ class TestDiscoveryTopicProperties:
 
     @given(
         device_id=st.from_regex(r"[a-z][a-z0-9_-]{2,20}", fullmatch=True),
-        sensor_key=st.sampled_from([
-            "temperature", "humidity", "pressure",
-            "battery_voltage", "battery", "rssi"
-        ]),
+        sensor_key=st.sampled_from(
+            ["temperature", "humidity", "pressure", "battery_voltage", "battery", "rssi"]
+        ),
     )
     @settings(max_examples=100)
     def test_discovery_topic_structure(self, device_id, sensor_key):
@@ -331,12 +339,14 @@ class TestSensorValueFormatting:
     def test_nan_returns_empty(self):
         """NaN values should return empty string."""
         import math
+
         formatted = format_sensor_value(math.nan, "temperature")
         assert formatted == ""
 
     def test_inf_returns_empty(self):
         """Infinity values should return empty string."""
         import math
+
         formatted = format_sensor_value(math.inf, "temperature")
         assert formatted == ""
 

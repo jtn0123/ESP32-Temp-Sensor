@@ -9,8 +9,8 @@ These tests verify:
 
 import base64
 import json
+
 import pytest
-from unittest.mock import Mock, patch
 
 # Display dimensions matching firmware
 DISPLAY_WIDTH = 250
@@ -40,7 +40,7 @@ class TestDisplayCaptureBuffer:
             test_buffer[i] = 0xAA if i % 2 == 0 else 0x55
 
         # Encode
-        encoded = base64.b64encode(test_buffer).decode('ascii')
+        encoded = base64.b64encode(test_buffer).decode("ascii")
 
         # Decode
         decoded = base64.b64decode(encoded)
@@ -50,7 +50,7 @@ class TestDisplayCaptureBuffer:
     def test_base64_output_size(self):
         """Verify base64 output size calculation."""
         test_buffer = bytes(BUFFER_SIZE)
-        encoded = base64.b64encode(test_buffer).decode('ascii')
+        encoded = base64.b64encode(test_buffer).decode("ascii")
 
         # Base64 expands by 4/3
         expected_len = ((BUFFER_SIZE + 2) // 3) * 4
@@ -67,7 +67,7 @@ class TestScreenshotMetadata:
             "height": DISPLAY_HEIGHT,
             "format": "1bit",
             "data_size": BASE64_SIZE,
-            "buffer_size": BUFFER_SIZE
+            "buffer_size": BUFFER_SIZE,
         }
 
         json_str = json.dumps(metadata)
@@ -85,7 +85,7 @@ class TestScreenshotMetadata:
             "height": DISPLAY_HEIGHT,
             "format": "1bit",
             "data_size": BASE64_SIZE,
-            "buffer_size": BUFFER_SIZE
+            "buffer_size": BUFFER_SIZE,
         }
 
         json_str = json.dumps(metadata)
@@ -111,16 +111,16 @@ class TestScreenshotChunking:
         original_data = original_data[:BUFFER_SIZE]
 
         # Encode
-        encoded = base64.b64encode(original_data).decode('ascii')
+        encoded = base64.b64encode(original_data).decode("ascii")
 
         # Split into chunks
         chunk_size = 4096
         chunks = []
         for i in range(0, len(encoded), chunk_size):
-            chunks.append(encoded[i:i + chunk_size])
+            chunks.append(encoded[i : i + chunk_size])
 
         # Reassemble
-        reassembled = ''.join(chunks)
+        reassembled = "".join(chunks)
 
         # Decode
         decoded = base64.b64decode(reassembled)

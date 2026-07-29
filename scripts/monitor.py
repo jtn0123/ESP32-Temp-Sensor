@@ -3,6 +3,7 @@
 Consolidated serial monitoring script for ESP32.
 Provides colored output, auto-detection, and logging features.
 """
+
 import argparse
 from datetime import datetime
 import glob

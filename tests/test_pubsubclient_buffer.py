@@ -146,7 +146,11 @@ def test_platformio_and_firmware_config_set_buffer_to_1024():
 
     # Ensure firmware code also calls setBufferSize as a runtime fallback
     # After refactoring, MQTT setup moved to mqtt_client.cpp
-    mqtt_cpp = Path(__file__).resolve().parents[1] / "firmware" / "arduino" / "src" / "mqtt_client.cpp"
+    mqtt_cpp = (
+        Path(__file__).resolve().parents[1] / "firmware" / "arduino" / "src" / "mqtt_client.cpp"
+    )
     mqtt_text = mqtt_cpp.read_text(encoding="utf-8")
     msg_mqtt = "Expected runtime setBufferSize(MQTT_MAX_PACKET_SIZE) in mqtt_client.cpp"
-    assert "setBufferSize(MQTT_MAX_PACKET_SIZE)" in mqtt_text or "setBufferSize(1024)" in mqtt_text, msg_mqtt
+    assert (
+        "setBufferSize(MQTT_MAX_PACKET_SIZE)" in mqtt_text or "setBufferSize(1024)" in mqtt_text
+    ), msg_mqtt

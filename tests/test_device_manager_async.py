@@ -9,8 +9,8 @@ import asyncio
 import json
 import os
 import sys
-from typing import Dict, Any, List
-from unittest.mock import MagicMock, AsyncMock, patch
+from typing import List
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -19,8 +19,8 @@ ROOT = os.path.dirname(os.path.dirname(__file__))
 sys.path.insert(0, os.path.join(ROOT, "scripts"))
 
 # Import after path setup
-from device_manager.websocket_hub import WebSocketHub
 from device_manager.mqtt_broker import MQTTMessage, SimpleMQTTBroker
+from device_manager.websocket_hub import WebSocketHub
 
 
 class MockWebSocket:
@@ -215,11 +215,7 @@ class TestMQTTMessage:
 
     def test_message_creation(self):
         """Test creating an MQTT message."""
-        msg = MQTTMessage(
-            topic="espsensor/test/status",
-            payload=b"online",
-            direction="in"
-        )
+        msg = MQTTMessage(topic="espsensor/test/status", payload=b"online", direction="in")
 
         assert msg.topic == "espsensor/test/status"
         assert msg.payload == b"online"
@@ -228,11 +224,7 @@ class TestMQTTMessage:
 
     def test_message_to_dict_utf8(self):
         """Test converting UTF-8 message to dict."""
-        msg = MQTTMessage(
-            topic="test/topic",
-            payload=b"Hello, World!",
-            direction="out"
-        )
+        msg = MQTTMessage(topic="test/topic", payload=b"Hello, World!", direction="out")
 
         d = msg.to_dict()
 
@@ -244,11 +236,7 @@ class TestMQTTMessage:
     def test_message_to_dict_binary(self):
         """Test converting binary message to dict (uses hex encoding)."""
         binary_data = bytes([0x00, 0x01, 0xFF, 0xFE])
-        msg = MQTTMessage(
-            topic="test/binary",
-            payload=binary_data,
-            direction="in"
-        )
+        msg = MQTTMessage(topic="test/binary", payload=binary_data, direction="in")
 
         d = msg.to_dict()
 
@@ -258,11 +246,7 @@ class TestMQTTMessage:
     def test_message_to_dict_json_payload(self):
         """Test message with JSON payload."""
         json_payload = json.dumps({"temp": 22.5, "humidity": 45}).encode()
-        msg = MQTTMessage(
-            topic="sensor/data",
-            payload=json_payload,
-            direction="in"
-        )
+        msg = MQTTMessage(topic="sensor/data", payload=json_payload, direction="in")
 
         d = msg.to_dict()
         assert d["payload"] == json_payload.decode()
@@ -402,10 +386,7 @@ class TestIntegration:
         broker.message_log.append(msg)
 
         # Broadcast through hub
-        await hub.broadcast({
-            "type": "mqtt",
-            **msg.to_dict()
-        })
+        await hub.broadcast({"type": "mqtt", **msg.to_dict()})
 
         assert len(ws.messages) == 1
         received = json.loads(ws.messages[0])
@@ -491,7 +472,7 @@ class TestEdgeCases:
 
         # Timestamps should be non-decreasing
         for i in range(1, len(messages)):
-            assert messages[i].timestamp >= messages[i-1].timestamp
+            assert messages[i].timestamp >= messages[i - 1].timestamp
 
     @pytest.mark.asyncio
     async def test_large_message_broadcast(self):

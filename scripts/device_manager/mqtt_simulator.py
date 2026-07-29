@@ -1,9 +1,10 @@
 """MQTT simulator for generating fake Home Assistant data"""
+
 import asyncio
+from datetime import datetime
 import logging
 import math
 import random
-from datetime import datetime
 from typing import Optional
 
 logger = logging.getLogger(__name__)
@@ -24,15 +25,7 @@ class MqttSimulator:
         self.temp_period_hours = 24  # Full sine wave cycle
         self.update_interval_sec = 60  # Update every minute
 
-        self.weather_options = [
-            "sunny",
-            "partlycloudy",
-            "cloudy",
-            "rainy",
-            "snowy",
-            "fog",
-            "windy"
-        ]
+        self.weather_options = ["sunny", "partlycloudy", "cloudy", "rainy", "snowy", "fog", "windy"]
 
         # Current weather state (changes slowly)
         self.current_weather = "sunny"
@@ -107,7 +100,9 @@ class MqttSimulator:
 
         # Publish all values
         self.broker.publish(f"{self.mqtt_sub_base}/temp_f", f"{temp_f:.1f}", retain=True)
-        self.broker.publish(f"{self.mqtt_sub_base}/temp", f"{self._f_to_c(temp_f):.1f}", retain=True)
+        self.broker.publish(
+            f"{self.mqtt_sub_base}/temp", f"{self._f_to_c(temp_f):.1f}", retain=True
+        )
         self.broker.publish(f"{self.mqtt_sub_base}/humidity", f"{humidity}", retain=True)
         self.broker.publish(f"{self.mqtt_sub_base}/condition", weather, retain=True)
         self.broker.publish(f"{self.mqtt_sub_base}/wind_mph", f"{wind_mph:.1f}", retain=True)
@@ -211,8 +206,8 @@ class MqttSimulator:
     def get_status(self) -> dict:
         """Get simulator status"""
         return {
-            'running': self.running,
-            'update_interval': self.update_interval_sec,
-            'current_weather': self.current_weather,
-            'mqtt_base': self.mqtt_sub_base
+            "running": self.running,
+            "update_interval": self.update_interval_sec,
+            "current_weather": self.current_weather,
+            "mqtt_base": self.mqtt_sub_base,
         }

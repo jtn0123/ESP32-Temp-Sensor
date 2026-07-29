@@ -6,9 +6,9 @@ Tests focus on edge cases and error handling not covered by other test files.
 
 import json
 import os
+from pathlib import Path
 import sys
 import tempfile
-from pathlib import Path
 from typing import Any, Dict
 
 import pytest
@@ -258,9 +258,7 @@ class TestStringHandlingEdgeCases:
 
     def test_empty_string_value(self):
         """Test handling of empty string values."""
-        spec = {
-            "operations": [{"type": "drawText", "params": {"text": "", "x": 10, "y": 20}}]
-        }
+        spec = {"operations": [{"type": "drawText", "params": {"text": "", "x": 10, "y": 20}}]}
         spec_file = create_temp_json(spec)
         try:
             with open(spec_file, "r") as f:
@@ -273,9 +271,7 @@ class TestStringHandlingEdgeCases:
     def test_very_long_string(self):
         """Test handling of very long strings."""
         long_text = "A" * 10000
-        spec = {
-            "operations": [{"type": "drawText", "params": {"text": long_text, "x": 0, "y": 0}}]
-        }
+        spec = {"operations": [{"type": "drawText", "params": {"text": long_text, "x": 0, "y": 0}}]}
         spec_file = create_temp_json(spec)
         try:
             with open(spec_file, "r") as f:
@@ -289,7 +285,7 @@ class TestStringHandlingEdgeCases:
         """Test strings with C escape sequences."""
         spec = {
             "operations": [
-                {"type": "drawText", "params": {"text": 'Line1\\nLine2', "x": 0, "y": 0}},
+                {"type": "drawText", "params": {"text": "Line1\\nLine2", "x": 0, "y": 0}},
                 {"type": "drawText", "params": {"text": "Tab\\tHere", "x": 0, "y": 20}},
                 {"type": "drawText", "params": {"text": 'Quote\\"Test', "x": 0, "y": 40}},
             ]
@@ -454,8 +450,7 @@ class TestCPlusPlusCodeGeneration:
         for name in region_names:
             # Check if valid C++ identifier
             is_valid = name.isidentifier() or (
-                name.replace("_", "").replace("-", "").isalnum()
-                and not name[0].isdigit()
+                name.replace("_", "").replace("-", "").isalnum() and not name[0].isdigit()
             )
             if name in ["HEADER_NAME"]:
                 assert name.replace("_", "").isalnum()
@@ -466,7 +461,7 @@ class TestCPlusPlusCodeGeneration:
     def test_string_literal_escaping(self):
         """Test proper escaping for C++ string literals."""
         test_strings = [
-            ('Hello "World"', r'Hello \"World\"'),
+            ('Hello "World"', r"Hello \"World\""),
             ("Line1\nLine2", r"Line1\nLine2"),
             ("Tab\tHere", r"Tab\tHere"),
             ("Backslash\\Here", r"Backslash\\Here"),
@@ -485,7 +480,7 @@ class TestCPlusPlusCodeGeneration:
             2**31 - 1,  # Max int32
             2**31,  # Overflow int32
             2**63 - 1,  # Max int64
-            -2**31,  # Min int32
+            -(2**31),  # Min int32
         ]
 
         for val in values:
@@ -493,7 +488,7 @@ class TestCPlusPlusCodeGeneration:
             fits_int32 = -(2**31) <= val <= 2**31 - 1
             if val == 2**31 or val == 2**63 - 1:
                 assert not fits_int32
-            elif val in [2**31 - 1, -2**31]:
+            elif val in [2**31 - 1, -(2**31)]:
                 assert fits_int32
 
 

@@ -7,44 +7,49 @@ to find edge cases and ensure mathematical properties hold.
 
 import importlib.util
 import os
-import sys
 
 import pytest
 
 # Try to import hypothesis, skip tests if not available
 try:
-    from hypothesis import given, assume, settings, example
+    from hypothesis import assume, example, given, settings
     from hypothesis import strategies as st
 
     HAS_HYPOTHESIS = True
 except ImportError:
     HAS_HYPOTHESIS = False
+
     # Create dummy decorators for when hypothesis isn't available
     def given(*args, **kwargs):
         def decorator(f):
             return pytest.mark.skip(reason="hypothesis not installed")(f)
+
         return decorator
 
     def example(*args, **kwargs):
         def decorator(f):
             return f
+
         return decorator
 
     def settings(**kwargs):
         def decorator(f):
             return f
+
         return decorator
 
     class st:
         @staticmethod
         def floats(*args, **kwargs):
             return None
+
         @staticmethod
         def integers(*args, **kwargs):
             return None
 
     def assume(x):
         pass
+
 
 # Load power_estimator module
 ROOT = os.path.dirname(os.path.dirname(__file__))
@@ -84,9 +89,7 @@ class TestPowerEstimatorProperties:
         interval_s=st.floats(min_value=300, max_value=14400, allow_nan=False, allow_infinity=False),
     )
     @settings(max_examples=200)
-    def test_double_capacity_doubles_days(
-        self, capacity, sleep_mA, active_mA, awake_s, interval_s
-    ):
+    def test_double_capacity_doubles_days(self, capacity, sleep_mA, active_mA, awake_s, interval_s):
         """Doubling battery capacity should approximately double estimated days."""
         days_normal = pe.estimate_days(capacity, sleep_mA, active_mA, awake_s, interval_s)
         days_double = pe.estimate_days(capacity * 2, sleep_mA, active_mA, awake_s, interval_s)
@@ -149,9 +152,7 @@ class TestPowerEstimatorProperties:
         interval_s=st.floats(min_value=300, max_value=14400, allow_nan=False, allow_infinity=False),
     )
     @settings(max_examples=100)
-    def test_zero_sleep_current_still_works(
-        self, capacity, active_mA, awake_s, interval_s
-    ):
+    def test_zero_sleep_current_still_works(self, capacity, active_mA, awake_s, interval_s):
         """Zero sleep current should still produce valid results."""
         assume(awake_s < interval_s)
         result = pe.estimate_days(capacity, 0.0, active_mA, awake_s, interval_s)
@@ -193,7 +194,9 @@ class TestPowerEstimatorProperties:
         if invalid:
             # Function should return 0 for clearly invalid inputs (negative, zero)
             # NaN inputs may propagate as NaN (which is also not a valid positive result)
-            assert result == 0 or math.isnan(result), f"Expected 0 or NaN for invalid input, got {result}"
+            assert result == 0 or math.isnan(
+                result
+            ), f"Expected 0 or NaN for invalid input, got {result}"
 
 
 class TestPowerEstimatorRealisticScenarios:
@@ -207,9 +210,7 @@ class TestPowerEstimatorRealisticScenarios:
         interval_s=st.sampled_from([300, 600, 1800, 3600, 7200, 14400]),  # 5min to 4hr
     )
     @settings(max_examples=100)
-    def test_realistic_esp32_scenarios(
-        self, capacity, sleep_mA, active_mA, awake_s, interval_s
-    ):
+    def test_realistic_esp32_scenarios(self, capacity, sleep_mA, active_mA, awake_s, interval_s):
         """Test with realistic ESP32 eInk room node parameters."""
         result = pe.estimate_days(capacity, sleep_mA, active_mA, awake_s, interval_s)
 
@@ -284,9 +285,7 @@ class TestPowerEstimatorMathematicalProperties:
         interval_s=st.floats(min_value=300, max_value=14400, allow_nan=False, allow_infinity=False),
     )
     @settings(max_examples=100)
-    def test_average_current_formula(
-        self, capacity, sleep_mA, active_mA, awake_s, interval_s
-    ):
+    def test_average_current_formula(self, capacity, sleep_mA, active_mA, awake_s, interval_s):
         """Verify the weighted average current calculation."""
         assume(awake_s <= interval_s)
 

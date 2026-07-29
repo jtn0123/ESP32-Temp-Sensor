@@ -72,12 +72,10 @@ class VisualRegressionTester:
     def capture_screenshot(self, page: Page, test_data: Dict[str, Any]) -> np.ndarray:
         """Capture screenshot with given test data"""
         # Apply test data
-        page.evaluate(
-            f"""
+        page.evaluate(f"""
             window.testData = {json.dumps(test_data)};
             if (window.draw) window.draw(window.testData);
-        """
-        )
+        """)
 
         # Wait for render
         page.wait_for_timeout(200)
@@ -435,7 +433,9 @@ def test_comprehensive_suite(tester):
 
     # Fail if regression detected
     if results["failed"]:
-        failures = "\n".join([f"  - {f['name']}: {f['diff']:.2f}% > {f['threshold']}%" for f in results["failed"]])
+        failures = "\n".join(
+            [f"  - {f['name']}: {f['diff']:.2f}% > {f['threshold']}%" for f in results["failed"]]
+        )
         pytest.fail(f"{len(results['failed'])} visual regressions detected:\n{failures}")
 
 

@@ -4,7 +4,6 @@
 Tests system resilience to various failure scenarios.
 """
 
-
 import pytest
 
 

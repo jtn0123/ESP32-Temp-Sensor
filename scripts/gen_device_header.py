@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
 import os
-import subprocess
-import sys
 from pathlib import Path
+import subprocess
 
 try:
     import yaml  # type: ignore
@@ -12,13 +11,14 @@ except Exception:
 # Try to load environment variables from .env file
 try:
     from dotenv import load_dotenv
+
     # Look for .env in project root
     # Handle case where __file__ is not defined (e.g., when run from PlatformIO)
     try:
         script_dir = Path(__file__).parent
     except NameError:
         script_dir = Path(os.getcwd())
-    env_path = script_dir.parent / '.env'
+    env_path = script_dir.parent / ".env"
     if env_path.exists():
         load_dotenv(env_path)
         print(f"Loaded environment variables from {env_path}")
@@ -93,17 +93,17 @@ def main():
     mqtt = data.get("mqtt", {}) or {}  # Ensure mqtt is always a dict
     base_topics = mqtt.get("base_topics", {}) if mqtt else {}
     # Prioritize environment variables over config file for sensitive data
-    wifi_ssid = os.getenv('WIFI_SSID') or wifi.get("ssid", "")
-    wifi_pass = os.getenv('WIFI_PASSWORD') or wifi.get("password", "")
+    wifi_ssid = os.getenv("WIFI_SSID") or wifi.get("ssid", "")
+    wifi_pass = os.getenv("WIFI_PASSWORD") or wifi.get("password", "")
     wifi_static = wifi.get("static", {}) or {}
     wifi_bssid = str(wifi.get("bssid", "") or "")
     wifi_channel = wifi.get("channel", None)
     wifi_country = str(wifi.get("country", "") or "")
     # MQTT credentials from environment variables with fallback to config
-    mqtt_host = os.getenv('MQTT_HOST') or mqtt.get("host", "")
-    mqtt_port = int(os.getenv('MQTT_PORT') or mqtt.get("port", 1883) or 1883)
-    mqtt_user = str(os.getenv('MQTT_USER') or mqtt.get("user", "") or "")
-    mqtt_pass = str(os.getenv('MQTT_PASSWORD') or mqtt.get("password", "") or "")
+    mqtt_host = os.getenv("MQTT_HOST") or mqtt.get("host", "")
+    mqtt_port = int(os.getenv("MQTT_PORT") or mqtt.get("port", 1883) or 1883)
+    mqtt_user = str(os.getenv("MQTT_USER") or mqtt.get("user", "") or "")
+    mqtt_pass = str(os.getenv("MQTT_PASSWORD") or mqtt.get("password", "") or "")
     mqtt_pub = base_topics.get("publish", "sensors/" + room_name.lower())
     mqtt_sub = base_topics.get("subscribe", "home/outdoor")
     # battery
@@ -153,10 +153,14 @@ def main():
     os.makedirs(out_dir, exist_ok=True)
     # Validate critical configuration before generating
     if not wifi_ssid:
-        print("WARNING: WiFi SSID not configured. Set WIFI_SSID env var or update config/device.yaml")
+        print(
+            "WARNING: WiFi SSID not configured. Set WIFI_SSID env var or update config/device.yaml"
+        )
     if not mqtt_host:
-        print("WARNING: MQTT host not configured. Set MQTT_HOST env var or update config/device.yaml")
-    
+        print(
+            "WARNING: MQTT host not configured. Set MQTT_HOST env var or update config/device.yaml"
+        )
+
     out_path = os.path.join(out_dir, "generated_config.h")
     with open(out_path, "w") as f:
         f.write("// Auto-generated from config/device.yaml and environment variables\n")

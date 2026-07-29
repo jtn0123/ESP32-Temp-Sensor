@@ -7,13 +7,13 @@ edge cases in layout generation.
 
 import json
 import os
-from typing import Dict, List, Tuple
+from typing import Dict
 
 import pytest
 
 # Try to import hypothesis
 try:
-    from hypothesis import given, assume, settings, example
+    from hypothesis import assume, example, given, settings
     from hypothesis import strategies as st
 
     HAS_HYPOTHESIS = True
@@ -23,37 +23,46 @@ except ImportError:
     def given(*args, **kwargs):
         def decorator(f):
             return pytest.mark.skip(reason="hypothesis not installed")(f)
+
         return decorator
 
     def example(*args, **kwargs):
         def decorator(f):
             return f
+
         return decorator
 
     def settings(**kwargs):
         def decorator(f):
             return f
+
         return decorator
 
     class st:
         @staticmethod
         def integers(*args, **kwargs):
             return None
+
         @staticmethod
         def floats(*args, **kwargs):
             return None
+
         @staticmethod
         def lists(*args, **kwargs):
             return None
+
         @staticmethod
         def text(*args, **kwargs):
             return None
+
         @staticmethod
         def tuples(*args, **kwargs):
             return None
+
         @staticmethod
         def fixed_dictionaries(*args, **kwargs):
             return None
+
         @staticmethod
         def builds(*args, **kwargs):
             return None
@@ -94,12 +103,7 @@ class Rect:
 
     def overlaps(self, other: "Rect") -> bool:
         """Check if this rectangle overlaps with another."""
-        return (
-            self.x < other.x2
-            and self.x2 > other.x
-            and self.y < other.y2
-            and self.y2 > other.y
-        )
+        return self.x < other.x2 and self.x2 > other.x and self.y < other.y2 and self.y2 > other.y
 
     def contains_point(self, px: int, py: int) -> bool:
         """Check if a point is inside this rectangle."""
@@ -256,9 +260,9 @@ class TestActualGeometryFile:
         for name, coords in geom.get("rects", {}).items():
             x, y, w, h = coords
             rect = Rect(x, y, w, h)
-            assert rect.is_within(canvas_w, canvas_h), (
-                f"Rect {name} ({coords}) extends outside canvas ({canvas_w}x{canvas_h})"
-            )
+            assert rect.is_within(
+                canvas_w, canvas_h
+            ), f"Rect {name} ({coords}) extends outside canvas ({canvas_w}x{canvas_h})"
 
     def test_rects_have_positive_dimensions(self):
         """All rectangles should have positive width and height."""
@@ -454,4 +458,6 @@ class TestFontSizeConstraints:
         # This is a property of valid configurations, not all possible values
         assert big <= big_rect_h + 2, f"Big font {big} should fit in rect height {big_rect_h}"
         assert mid <= mid_rect_h + 6, f"Mid font {mid} should fit in rect height {mid_rect_h}"
-        assert small <= small_rect_h + 6, f"Small font {small} should fit in rect height {small_rect_h}"
+        assert (
+            small <= small_rect_h + 6
+        ), f"Small font {small} should fit in rect height {small_rect_h}"

@@ -4,7 +4,6 @@
 Tests complete device operation cycles and integration scenarios.
 """
 
-
 import pytest
 
 

@@ -136,7 +136,7 @@ def test_icons_available_or_fallback():
         "weather-pouring.svg",
         "weather-snowy.svg",
         "weather-lightning.svg",
-        "weather-fog.svg"
+        "weather-fog.svg",
     ]
 
     for icon_name in required_icons:

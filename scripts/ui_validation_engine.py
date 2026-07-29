@@ -638,12 +638,10 @@ class UIValidationEngine:
                         page.wait_for_timeout(300)
 
                         # Inject test data
-                        page.evaluate(
-                            f"""
+                        page.evaluate(f"""
                         window.testData = {json.dumps(scenario['data'])};
                         if (window.draw) window.draw();
-                        """
-                        )
+                        """)
                     else:
                         page.goto(url, wait_until="load")
 

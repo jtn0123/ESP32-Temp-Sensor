@@ -1,29 +1,28 @@
 """FastAPI server for ESP32 Device Manager"""
+
+import asyncio
 import logging
 import pathlib
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
+from typing import Any, Dict, Optional
+
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import JSONResponse
 from pydantic import BaseModel
-from typing import Optional, List, Dict, Any
-import asyncio
-import os
 
-from .websocket_hub import WebSocketHub
-from .serial_manager import SerialManager
+from .config import ManagerConfig
+from .device_tracker import SLEEP_PRESETS, DeviceMode, get_tracker
 from .flash_manager import FlashManager
+from .mdns_discovery import get_discovery
 from .mqtt_broker import SimpleMQTTBroker
 from .mqtt_simulator import MqttSimulator
 from .screenshot_handler import ScreenshotHandler
-from .mdns_discovery import get_discovery, MDNSDiscovery
-from .device_tracker import get_tracker, DeviceTracker, DeviceMode, SLEEP_PRESETS
-from .config import ManagerConfig
+from .serial_manager import SerialManager
+from .websocket_hub import WebSocketHub
 
 # Configure logging
 logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
 
@@ -120,13 +119,20 @@ if (_web_root / "sim").exists():
 
 # Serve manager static files if built, otherwise redirect to dev server info
 if (_web_root / "manager" / "dist").exists():
-    app.mount("/manager", StaticFiles(directory=str(_web_root / "manager" / "dist"), html=True), name="manager")
+    app.mount(
+        "/manager",
+        StaticFiles(directory=str(_web_root / "manager" / "dist"), html=True),
+        name="manager",
+    )
 elif (_web_root / "manager" / "index.html").exists():
     # Serve manager source files (for development)
-    app.mount("/manager", StaticFiles(directory=str(_web_root / "manager"), html=True), name="manager")
+    app.mount(
+        "/manager", StaticFiles(directory=str(_web_root / "manager"), html=True), name="manager"
+    )
 
 
 # API Routes
+
 
 @app.get("/")
 async def root():
@@ -137,8 +143,8 @@ async def root():
         "endpoints": {
             "simulator": "/sim/index.html",
             "manager": "/manager/index.html",
-            "api_docs": "/docs"
-        }
+            "api_docs": "/docs",
+        },
     }
 
 
@@ -146,6 +152,7 @@ async def root():
 async def favicon():
     """Handle favicon requests to prevent 404 errors"""
     from fastapi.responses import Response
+
     # Return empty 204 No Content response
     return Response(status_code=204)
 
@@ -157,39 +164,35 @@ async def health_check():
     Returns status of all subsystems for startup verification and monitoring.
     """
     mqtt_status = mqtt_broker.get_status() if mqtt_broker else {}
-    
+
     health = {
         "status": "ok",
         "services": {
             "serial": {
                 "connected": serial_manager.connected,
-                "port": serial_manager.current_port if serial_manager.connected else None
+                "port": serial_manager.current_port if serial_manager.connected else None,
             },
             "mqtt": {
                 "connected": mqtt_status.get("connected", False),
                 "broker_host": mqtt_status.get("host", "localhost"),
-                "broker_port": mqtt_status.get("port", config.mqtt_broker_port)
+                "broker_port": mqtt_status.get("port", config.mqtt_broker_port),
             },
-            "websocket": {
-                "active_connections": len(hub.clients) if hub else 0
-            },
+            "websocket": {"active_connections": len(hub.clients) if hub else 0},
             "discovery": {
                 "available": mdns_discovery.available if mdns_discovery else False,
                 "running": mdns_discovery.is_running() if mdns_discovery else False,
-                "devices_found": len(mdns_discovery.get_devices()) if mdns_discovery else 0
+                "devices_found": len(mdns_discovery.get_devices()) if mdns_discovery else 0,
             },
-            "simulator": {
-                "running": mqtt_simulator.running if mqtt_simulator else False
-            }
+            "simulator": {"running": mqtt_simulator.running if mqtt_simulator else False},
         },
-        "targeted_device": _targeted_device_id
+        "targeted_device": _targeted_device_id,
     }
-    
+
     # Set overall status based on critical services
     if not mqtt_status.get("connected", False):
         health["status"] = "degraded"
         health["message"] = "MQTT broker not connected"
-    
+
     return health
 
 
@@ -263,9 +266,7 @@ async def start_flash(request: FlashRequest):
         # Run flash in background task
         asyncio.create_task(
             flash_manager.flash(
-                port=request.port,
-                firmware_path=request.firmware_path,
-                build_config=request.config
+                port=request.port, firmware_path=request.firmware_path, build_config=request.config
             )
         )
         return {"status": "started"}
@@ -301,10 +302,10 @@ async def cancel_flash():
 async def queue_flash(request: FlashQueueRequest):
     """
     Queue a flash operation to run when device connects.
-    
+
     Pre-builds firmware immediately, then monitors for device connection.
     When device is detected, automatically flashes.
-    
+
     If sleep_interval_sec is provided, will send interval command after flash.
     """
     try:
@@ -313,7 +314,7 @@ async def queue_flash(request: FlashQueueRequest):
             target_port=request.target_port,
             target_device_id=request.target_device_id,
             timeout_minutes=request.timeout_minutes,
-            sleep_interval_sec=request.sleep_interval_sec
+            sleep_interval_sec=request.sleep_interval_sec,
         )
         if success:
             return {"status": "queued", "queue": flash_manager.get_queue_status()}
@@ -345,10 +346,7 @@ async def get_flash_queue_status():
     """Get current flash queue status"""
     try:
         queue_status = flash_manager.get_queue_status()
-        return {
-            "queued": queue_status is not None,
-            "queue": queue_status
-        }
+        return {"queued": queue_status is not None, "queue": queue_status}
     except Exception as e:
         logger.error(f"Error getting queue status: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -361,10 +359,7 @@ async def get_mqtt_status():
     try:
         broker_status = mqtt_broker.get_status()
         simulator_status = mqtt_simulator.get_status()
-        return {
-            'broker': broker_status,
-            'simulator': simulator_status
-        }
+        return {"broker": broker_status, "simulator": simulator_status}
     except Exception as e:
         logger.error(f"Error getting MQTT status: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -375,10 +370,7 @@ async def publish_mqtt(request: MqttPublishRequest):
     """Publish MQTT message"""
     try:
         success = mqtt_broker.publish(
-            topic=request.topic,
-            payload=request.payload,
-            retain=request.retain,
-            qos=request.qos
+            topic=request.topic, payload=request.payload, retain=request.retain, qos=request.qos
         )
         if success:
             return {"status": "published"}
@@ -495,14 +487,15 @@ async def get_test_screenshot():
     """Generate a test screenshot for development"""
     try:
         import base64
+
         test_image = screenshot_handler.generate_test_screenshot()
         if test_image:
             return {
-                'data': base64.b64encode(test_image).decode('utf-8'),
-                'width': config.display_width,
-                'height': config.display_height,
-                'format': 'png',
-                'test': True
+                "data": base64.b64encode(test_image).decode("utf-8"),
+                "width": config.display_width,
+                "height": config.display_height,
+                "format": "png",
+                "test": True,
             }
         else:
             raise HTTPException(status_code=500, detail="Failed to generate test screenshot")
@@ -515,10 +508,10 @@ async def get_test_screenshot():
 async def send_device_command(request: DeviceCommandRequest):
     """Send command to device via MQTT"""
     try:
-        device_id = request.params.get('device_id', 'office') if request.params else 'office'
+        device_id = request.params.get("device_id", "office") if request.params else "office"
         topic = f"espsensor/{device_id}/cmd/{request.command}"
 
-        payload = request.params.get('payload', '') if request.params else ''
+        payload = request.params.get("payload", "") if request.params else ""
 
         success = mqtt_broker.publish(topic, payload)
 
@@ -540,34 +533,34 @@ async def get_device_status():
 
         # Parse for device status information
         status = {
-            'connected': False,
-            'last_seen': None,
-            'battery': None,
-            'temperature': None,
-            'humidity': None,
-            'heap': None,
+            "connected": False,
+            "last_seen": None,
+            "battery": None,
+            "temperature": None,
+            "humidity": None,
+            "heap": None,
         }
 
         # Look for relevant topics in recent messages
         for msg in reversed(messages):
-            topic = msg.get('topic', '')
+            topic = msg.get("topic", "")
 
-            if 'battery/percent' in topic:
-                status['battery'] = msg.get('payload')
-                status['connected'] = True
-            elif 'inside/temperature' in topic:
-                status['temperature'] = msg.get('payload')
-                status['connected'] = True
-            elif 'inside/humidity' in topic:
-                status['humidity'] = msg.get('payload')
-                status['connected'] = True
-            elif 'heap' in topic:
-                status['heap'] = msg.get('payload')
-                status['connected'] = True
+            if "battery/percent" in topic:
+                status["battery"] = msg.get("payload")
+                status["connected"] = True
+            elif "inside/temperature" in topic:
+                status["temperature"] = msg.get("payload")
+                status["connected"] = True
+            elif "inside/humidity" in topic:
+                status["humidity"] = msg.get("payload")
+                status["connected"] = True
+            elif "heap" in topic:
+                status["heap"] = msg.get("payload")
+                status["connected"] = True
 
-            if msg.get('timestamp'):
-                if not status['last_seen'] or msg['timestamp'] > status['last_seen']:
-                    status['last_seen'] = msg['timestamp']
+            if msg.get("timestamp"):
+                if not status["last_seen"] or msg["timestamp"] > status["last_seen"]:
+                    status["last_seen"] = msg["timestamp"]
 
         return status
     except Exception as e:
@@ -582,22 +575,17 @@ async def set_sleep_interval(request: SleepIntervalRequest, device_id: str = "of
         # Validate interval (60 seconds to 1 hour)
         if request.interval_sec < 60 or request.interval_sec > 3600:
             raise HTTPException(
-                status_code=400, 
-                detail="Interval must be between 60 and 3600 seconds"
+                status_code=400, detail="Interval must be between 60 and 3600 seconds"
             )
-        
+
         # Send MQTT command to device
         topic = f"espsensor/{device_id}/cmd/sleep_interval"
         payload = str(request.interval_sec)
-        
+
         success = mqtt_broker.publish(topic, payload)
-        
+
         if success:
-            return {
-                "status": "sent",
-                "device_id": device_id,
-                "interval_sec": request.interval_sec
-            }
+            return {"status": "sent", "device_id": device_id, "interval_sec": request.interval_sec}
         else:
             raise HTTPException(status_code=500, detail="Failed to send command")
     except HTTPException:
@@ -611,17 +599,18 @@ async def set_sleep_interval(request: SleepIntervalRequest, device_id: str = "of
 # Device Discovery Endpoints (mDNS)
 # ============================================================================
 
+
 @app.get("/api/discovery/devices")
 async def get_discovered_devices():
     """Get all devices discovered via mDNS"""
     global _targeted_device_id
-    
+
     devices = mdns_discovery.get_devices()
     return {
         "devices": [d.to_dict() for d in devices],
         "discovery_running": mdns_discovery.is_running(),
         "discovery_available": mdns_discovery.available,
-        "targeted_device_id": _targeted_device_id
+        "targeted_device_id": _targeted_device_id,
     }
 
 
@@ -630,15 +619,11 @@ async def start_discovery():
     """Start mDNS device discovery"""
     if not mdns_discovery.available:
         raise HTTPException(
-            status_code=503,
-            detail="mDNS discovery not available (zeroconf library not installed)"
+            status_code=503, detail="mDNS discovery not available (zeroconf library not installed)"
         )
-    
+
     success = mdns_discovery.start()
-    return {
-        "status": "started" if success else "failed",
-        "running": mdns_discovery.is_running()
-    }
+    return {"status": "started" if success else "failed", "running": mdns_discovery.is_running()}
 
 
 @app.post("/api/discovery/stop")
@@ -656,35 +641,37 @@ class TargetDeviceRequest(BaseModel):
 async def set_target_device(request: TargetDeviceRequest):
     """
     Set the targeted device for all commands.
-    
+
     SAFETY: Only ONE device can be targeted at a time. All commands
     (sleep interval, reboot, screenshot, etc.) will go to this device.
     """
     global _targeted_device_id
-    
+
     # Verify device exists (if discovery is running)
     if mdns_discovery.is_running():
         device = mdns_discovery.get_device_by_id(request.device_id)
         if not device:
             # Allow manual device IDs even if not discovered
             logger.warning(f"Targeting device '{request.device_id}' not found via mDNS")
-    
+
     old_target = _targeted_device_id
     _targeted_device_id = request.device_id
-    
+
     logger.info(f"Target device changed: {old_target} -> {_targeted_device_id}")
-    
+
     # Notify connected clients
-    await hub.broadcast({
-        "type": "target_changed",
-        "device_id": _targeted_device_id,
-        "previous_device_id": old_target
-    })
-    
+    await hub.broadcast(
+        {
+            "type": "target_changed",
+            "device_id": _targeted_device_id,
+            "previous_device_id": old_target,
+        }
+    )
+
     return {
         "status": "targeted",
         "device_id": _targeted_device_id,
-        "previous_device_id": old_target
+        "previous_device_id": old_target,
     }
 
 
@@ -692,35 +679,30 @@ async def set_target_device(request: TargetDeviceRequest):
 async def get_target_device():
     """Get the currently targeted device"""
     global _targeted_device_id
-    
+
     device_info = None
     if _targeted_device_id and mdns_discovery.is_running():
         device = mdns_discovery.get_device_by_id(_targeted_device_id)
         if device:
             device_info = device.to_dict()
-    
-    return {
-        "device_id": _targeted_device_id,
-        "device_info": device_info
-    }
+
+    return {"device_id": _targeted_device_id, "device_info": device_info}
 
 
 @app.delete("/api/discovery/target")
 async def clear_target_device():
     """Clear the targeted device (no device selected)"""
     global _targeted_device_id
-    
+
     old_target = _targeted_device_id
     _targeted_device_id = None
-    
+
     logger.info(f"Target device cleared (was: {old_target})")
-    
-    await hub.broadcast({
-        "type": "target_changed",
-        "device_id": None,
-        "previous_device_id": old_target
-    })
-    
+
+    await hub.broadcast(
+        {"type": "target_changed", "device_id": None, "previous_device_id": old_target}
+    )
+
     return {"status": "cleared", "previous_device_id": old_target}
 
 
@@ -728,14 +710,12 @@ async def clear_target_device():
 # Device Tracking & Wake Prediction Endpoints
 # ============================================================================
 
+
 @app.get("/api/devices")
 async def get_all_tracked_devices():
     """Get all tracked devices with their state and wake predictions"""
     devices = device_tracker.get_all_devices()
-    return {
-        "devices": [d.to_dict() for d in devices],
-        "sleep_presets": SLEEP_PRESETS
-    }
+    return {"devices": [d.to_dict() for d in devices], "sleep_presets": SLEEP_PRESETS}
 
 
 @app.get("/api/devices/{device_id}")
@@ -755,38 +735,33 @@ class SetModeRequest(BaseModel):
 async def set_device_mode(device_id: str, request: SetModeRequest):
     """
     Set device operating mode (dev or production).
-    
+
     Dev mode enables screenshots and fixed sleep intervals.
     Auto-expires after 1 hour to prevent battery drain.
     """
     try:
         mode = DeviceMode(request.mode)
     except ValueError:
-        raise HTTPException(
-            status_code=400, 
-            detail=f"Invalid mode. Must be 'dev' or 'production'"
-        )
-    
+        raise HTTPException(status_code=400, detail="Invalid mode. Must be 'dev' or 'production'")
+
     # Update local tracker
     state = await device_tracker.set_mode(device_id, mode)
-    
+
     # Send command to device via MQTT
     topic = f"espsensor/{device_id}/cmd/mode"
     payload = request.mode
     mqtt_broker.publish(topic, payload)
-    
+
     # Broadcast state change
-    await hub.broadcast({
-        "type": "device_state",
-        "device_id": device_id,
-        "state": state.to_dict()
-    })
-    
+    await hub.broadcast({"type": "device_state", "device_id": device_id, "state": state.to_dict()})
+
     return {
         "status": "success",
         "device_id": device_id,
         "mode": mode.value,
-        "dev_mode_timeout_sec": state.dev_mode_remaining_sec if mode == DeviceMode.DEVELOPMENT else 0
+        "dev_mode_timeout_sec": (
+            state.dev_mode_remaining_sec if mode == DeviceMode.DEVELOPMENT else 0
+        ),
     }
 
 
@@ -798,46 +773,35 @@ class SetIntervalRequest(BaseModel):
 async def set_device_interval(device_id: str, request: SetIntervalRequest):
     """
     Set device sleep interval.
-    
+
     Minimum 180 seconds (3 minutes) to prevent sensor self-heating.
     Presets: 180 (3min), 300 (5min), 600 (10min), 3600 (1hr)
     """
     interval = request.interval_sec
-    
+
     # Enforce minimum 3 minutes
     if interval < 180:
         raise HTTPException(
             status_code=400,
-            detail="Minimum interval is 180 seconds (3 minutes) to prevent sensor heating"
+            detail="Minimum interval is 180 seconds (3 minutes) to prevent sensor heating",
         )
-    
+
     # Enforce maximum 1 hour
     if interval > 3600:
-        raise HTTPException(
-            status_code=400,
-            detail="Maximum interval is 3600 seconds (1 hour)"
-        )
-    
+        raise HTTPException(status_code=400, detail="Maximum interval is 3600 seconds (1 hour)")
+
     # Update local tracker
     state = await device_tracker.set_sleep_interval(device_id, interval)
-    
+
     # Send command to device via MQTT
     topic = f"espsensor/{device_id}/cmd/sleep_interval"
     payload = str(interval)
     mqtt_broker.publish(topic, payload)
-    
+
     # Broadcast state change
-    await hub.broadcast({
-        "type": "device_state",
-        "device_id": device_id,
-        "state": state.to_dict()
-    })
-    
-    return {
-        "status": "success",
-        "device_id": device_id,
-        "interval_sec": interval
-    }
+    await hub.broadcast({"type": "device_state", "device_id": device_id, "state": state.to_dict()})
+
+    return {"status": "success", "device_id": device_id, "interval_sec": interval}
 
 
 @app.get("/api/presets/intervals")
@@ -851,7 +815,7 @@ async def get_interval_presets():
             {"name": "Power Save (1 hr)", "value": 3600, "icon": "💤"},
         ],
         "min_sec": 180,
-        "max_sec": 3600
+        "max_sec": 3600,
     }
 
 
@@ -866,17 +830,18 @@ async def websocket_endpoint(websocket: WebSocket):
             data = await websocket.receive_text()
             try:
                 import json
+
                 message = json.loads(data)
                 response = await hub.handle_message(websocket, message)
 
                 # Handle specific message types
-                msg_type = message.get('type')
-                if msg_type == 'serial_send':
-                    serial_manager.send(message.get('data', ''))
-                elif msg_type == 'request_screenshot':
+                msg_type = message.get("type")
+                if msg_type == "serial_send":
+                    serial_manager.send(message.get("data", ""))
+                elif msg_type == "request_screenshot":
                     # TODO: Implement screenshot request
                     pass
-                elif msg_type == 'mqtt_publish':
+                elif msg_type == "mqtt_publish":
                     # TODO: Implement MQTT publish
                     pass
 
@@ -904,16 +869,16 @@ async def startup_event():
         except Exception as e:
             logger.error(f"Failed to start MQTT broker: {e}")
             logger.warning("MQTT features will be unavailable")
-    
+
     # Start mDNS discovery
     if mdns_discovery.available:
         # Hook up flash queue callback for OTA device detection
         def on_device_discovered(device):
             """Called when a new mDNS device is discovered"""
             flash_manager.on_mdns_device_found(device.device_id, device.ip_address)
-        
+
         mdns_discovery.set_device_added_callback(on_device_discovered)
-        
+
         if mdns_discovery.start():
             logger.info("mDNS discovery started - scanning for devices")
         else:
@@ -927,7 +892,7 @@ async def startup_event():
 async def shutdown_event():
     """Cleanup on shutdown"""
     logger.info("Shutting down server...")
-    
+
     # Disconnect serial first
     try:
         serial_manager.disconnect()
@@ -945,15 +910,16 @@ async def shutdown_event():
         await mqtt_simulator.stop()
     except Exception as e:
         logger.debug(f"Error stopping MQTT simulator: {e}")
-    
+
     try:
         await mqtt_broker.stop()
     except Exception as e:
         logger.debug(f"Error stopping MQTT broker: {e}")
-    
+
     logger.info("Server shutdown complete")
 
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app, host="0.0.0.0", port=8080)

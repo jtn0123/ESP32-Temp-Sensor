@@ -1,9 +1,11 @@
 """WebSocket Hub for broadcasting messages to all connected clients"""
-import json
+
 import asyncio
-from typing import Set, Dict, Any
-from fastapi import WebSocket
+import json
 import logging
+from typing import Any, Dict, Set
+
+from fastapi import WebSocket
 
 logger = logging.getLogger(__name__)
 
@@ -50,9 +52,9 @@ class WebSocketHub:
 
     async def handle_message(self, websocket: WebSocket, message: Dict[str, Any]):
         """Handle incoming message from client"""
-        msg_type = message.get('type')
+        msg_type = message.get("type")
         logger.debug(f"Received message type: {msg_type}")
 
         # Route messages based on type
         # This will be expanded as we add more features
-        return {'status': 'received', 'type': msg_type}
+        return {"status": "received", "type": msg_type}

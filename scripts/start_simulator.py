@@ -9,11 +9,11 @@ import os
 from pathlib import Path
 import socket
 import socketserver
+import subprocess
 import sys
 import threading
 import time
 import webbrowser
-import subprocess
 
 
 def find_free_port():

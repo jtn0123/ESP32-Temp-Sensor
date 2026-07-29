@@ -12,9 +12,10 @@ Quality improvements:
 Dependencies:
   pip install cairosvg pillow
 """
+
+import argparse
 import io
 import os
-import argparse
 from typing import Optional
 
 import cairosvg
@@ -160,12 +161,24 @@ def c_array_name(name: str) -> str:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Convert SVG icons to 24x24 1-bit header")
-    parser.add_argument("--oversample", type=int, default=4, help="SVG raster oversample factor (default 4)")
-    parser.add_argument("--threshold", type=str, default="auto", help="'auto' (Otsu) or integer 0-255")
-    parser.add_argument("--bold", type=int, default=0, help="Number of dilation passes to thicken lines (default 0)")
-    parser.add_argument("--preview-dir", type=str, default="", help="Optional directory to write 1-bit PNG previews")
-    parser.add_argument("--width", type=int, default=24, help="Output icon width in pixels (default 24)")
-    parser.add_argument("--height", type=int, default=24, help="Output icon height in pixels (default 24)")
+    parser.add_argument(
+        "--oversample", type=int, default=4, help="SVG raster oversample factor (default 4)"
+    )
+    parser.add_argument(
+        "--threshold", type=str, default="auto", help="'auto' (Otsu) or integer 0-255"
+    )
+    parser.add_argument(
+        "--bold", type=int, default=0, help="Number of dilation passes to thicken lines (default 0)"
+    )
+    parser.add_argument(
+        "--preview-dir", type=str, default="", help="Optional directory to write 1-bit PNG previews"
+    )
+    parser.add_argument(
+        "--width", type=int, default=24, help="Output icon width in pixels (default 24)"
+    )
+    parser.add_argument(
+        "--height", type=int, default=24, help="Output icon height in pixels (default 24)"
+    )
     args = parser.parse_args()
 
     thr_arg: Optional[int]

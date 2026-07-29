@@ -13,8 +13,8 @@ from pathlib import Path
 import subprocess
 import time
 
+from playwright.sync_api import sync_playwright
 import pytest
-from playwright.sync_api import sync_playwright, expect
 
 # Configuration
 WEB_SIM_PATH = Path(__file__).parent.parent / "web" / "sim"
@@ -51,7 +51,7 @@ class TestWebSimValidation:
     def load_simulator(self, test_data=None):
         """Load the simulator with optional test data."""
         # Create a new page for each test
-        if not hasattr(self, 'page') or self.page.is_closed():
+        if not hasattr(self, "page") or self.page.is_closed():
             self.page = self.browser.new_page()
 
             # Listen to console messages for debugging
@@ -74,7 +74,9 @@ class TestWebSimValidation:
             self.page.wait_for_timeout(500)  # Wait for render
 
             # Run validation after drawing
-            self.page.evaluate("() => { if (typeof runValidation === 'function') runValidation(); }")
+            self.page.evaluate(
+                "() => { if (typeof runValidation === 'function') runValidation(); }"
+            )
 
     def get_validation_issues(self):
         """Get current validation issues from the simulator."""
@@ -143,8 +145,13 @@ class TestWebSimValidation:
     def test_bounds_exceeded_detection(self):
         """Test that content exceeding region bounds is detected."""
         self.load_simulator(
-            {"room_name": "Test Room", "inside_temp_f": "72.5", "outside_temp_f": "68.4",
-             "inside_hum_pct": "47", "outside_hum_pct": "53"}
+            {
+                "room_name": "Test Room",
+                "inside_temp_f": "72.5",
+                "outside_temp_f": "68.4",
+                "inside_hum_pct": "47",
+                "outside_hum_pct": "53",
+            }
         )
 
         # Force validation
@@ -208,7 +215,11 @@ class TestWebSimValidation:
     def test_visual_overlay_rendering(self):
         """Test that validation overlay renders correctly."""
         self.load_simulator(
-            {"room_name": "Very Long Room Name That Overflows", "inside_temp_f": "999.9", "outside_temp_f": "888.8"}
+            {
+                "room_name": "Very Long Room Name That Overflows",
+                "inside_temp_f": "999.9",
+                "outside_temp_f": "888.8",
+            }
         )
 
         # Enable validation and check overlay is drawn

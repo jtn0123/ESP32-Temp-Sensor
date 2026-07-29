@@ -34,8 +34,7 @@ def test_last_will_offline_on_abrupt_disconnect(mosquitto_broker):
     # Reuse paho client to set will and publish online once, then sleep.
     helper = os.path.join(ROOT, "tests", "_mqtt_lwt_helper.py")
     with open(helper, "w", encoding="utf-8") as f:
-        f.write(
-            """
+        f.write("""
 import os, sys, time
 import paho.mqtt.client as mqtt
 host, port = sys.argv[1], int(sys.argv[2])
@@ -50,8 +49,7 @@ client.connect(host, port, keepalive=30)
 client.loop_start()
 client.publish(avail, "online", retain=False, qos=0)
 time.sleep(10)
-"""
-        )
+""")
 
     proc = None
     try:

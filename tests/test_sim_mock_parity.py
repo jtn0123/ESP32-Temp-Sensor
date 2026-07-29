@@ -9,14 +9,11 @@ This is the "golden test" that guarantees device/simulator parity:
 
 Run with: pytest tests/test_sim_mock_parity.py -v
 """
+
 import importlib.util
-import io
 import json
-import os
-import subprocess
-import sys
-import time
 from pathlib import Path
+import sys
 
 import pytest
 
@@ -88,10 +85,10 @@ class TestSimMockParity:
         """Verify ui_spec.json exists and is valid."""
         spec_path = ROOT / "config" / "ui_spec.json"
         assert spec_path.exists(), "ui_spec.json missing"
-        
+
         with open(spec_path) as f:
             spec = json.load(f)
-        
+
         assert "canvas" in spec
         assert "rects" in spec
         assert "components" in spec
@@ -101,10 +98,10 @@ class TestSimMockParity:
         spec_path = ROOT / "config" / "ui_spec.json"
         with open(spec_path) as f:
             spec = json.load(f)
-        
+
         canvas = spec["canvas"]
         width, height = canvas["w"], canvas["h"]
-        
+
         for name, rect in spec["rects"].items():
             x, y, w, h = rect
             assert x >= 0, f"{name}: x={x} < 0"
@@ -117,25 +114,26 @@ class TestSimMockParity:
         spec_path = ROOT / "config" / "ui_spec.json"
         with open(spec_path) as f:
             spec = json.load(f)
-        
+
         valid_rects = set(spec["rects"].keys())
-        
+
         # Components is a dict: { name: [ops] }
         for comp_name, ops in spec["components"].items():
             if isinstance(ops, list):
                 for op in ops:
                     rect_name = op.get("rect")
                     if rect_name:
-                        assert rect_name in valid_rects, \
-                            f"{comp_name}: op references unknown rect '{rect_name}'"
+                        assert (
+                            rect_name in valid_rects
+                        ), f"{comp_name}: op references unknown rect '{rect_name}'"
 
     def test_generated_js_matches_spec(self):
         """Verify ui_generated.js was generated from current ui_spec.json."""
         spec_path = ROOT / "config" / "ui_spec.json"
         gen_js_path = ROOT / "web" / "sim" / "ui_generated.js"
-        
+
         assert gen_js_path.exists(), "ui_generated.js missing - run gen_ui.py"
-        
+
         # Check that generator script exists
         gen_script = ROOT / "scripts" / "gen_ui.py"
         assert gen_script.exists()
@@ -146,23 +144,22 @@ class TestSimMockParity:
         # which is generated from ui_spec.json
         geometry_path = ROOT / "config" / "display_geometry.json"
         assert geometry_path.exists(), "display_geometry.json missing"
-        
+
         with open(geometry_path) as f:
             geometry = json.load(f)
-        
+
         # Rects are nested inside "rects" key
         rects = geometry.get("rects", geometry)
-        
+
         # Verify expected rects exist
-        expected = ["HEADER_NAME", "INSIDE_TEMP", "OUT_TEMP", 
-                    "FOOTER_STATUS", "FOOTER_WEATHER"]
+        expected = ["HEADER_NAME", "INSIDE_TEMP", "OUT_TEMP", "FOOTER_STATUS", "FOOTER_WEATHER"]
         for name in expected:
             assert name in rects, f"Rect {name} missing from geometry"
 
 
 class TestCoordinateBoundsValidation:
     """Validate all coordinates are within safe display bounds."""
-    
+
     DISPLAY_WIDTH = 250
     DISPLAY_HEIGHT = 122
     SAFE_MARGIN = 4  # 4px safe zone from edges
@@ -172,11 +169,11 @@ class TestCoordinateBoundsValidation:
         spec_path = ROOT / "config" / "ui_spec.json"
         with open(spec_path) as f:
             spec = json.load(f)
-        
+
         issues = []
         for name, rect in spec["rects"].items():
             x, y, w, h = rect
-            
+
             # Check safe margins (except outer border which should be at edges)
             if name not in ["OUTER_BORDER"]:
                 if x < self.SAFE_MARGIN:
@@ -187,7 +184,7 @@ class TestCoordinateBoundsValidation:
                     issues.append(f"{name}: x+w={x+w} > {self.DISPLAY_WIDTH - self.SAFE_MARGIN}")
                 if y + h > self.DISPLAY_HEIGHT - self.SAFE_MARGIN:
                     issues.append(f"{name}: y+h={y+h} > {self.DISPLAY_HEIGHT - self.SAFE_MARGIN}")
-        
+
         # Allow some issues but report them
         if issues:
             print(f"Coordinate warnings (not failing): {issues}")
@@ -197,35 +194,38 @@ class TestCoordinateBoundsValidation:
         spec_path = ROOT / "config" / "ui_spec.json"
         with open(spec_path) as f:
             spec = json.load(f)
-        
+
         # These regions should never overlap
         non_overlapping = [
             ("INSIDE_TEMP", "OUT_TEMP"),
             ("FOOTER_STATUS", "FOOTER_WEATHER"),
             ("HEADER_NAME", "HEADER_TIME_CENTER"),
         ]
-        
+
         def rects_overlap(r1, r2):
             x1, y1, w1, h1 = r1
             x2, y2, w2, h2 = r2
-            return not (x1 + w1 <= x2 or x2 + w2 <= x1 or 
-                       y1 + h1 <= y2 or y2 + h2 <= y1)
-        
+            return not (x1 + w1 <= x2 or x2 + w2 <= x1 or y1 + h1 <= y2 or y2 + h2 <= y1)
+
         for name1, name2 in non_overlapping:
             if name1 in spec["rects"] and name2 in spec["rects"]:
                 r1 = spec["rects"][name1]
                 r2 = spec["rects"][name2]
-                assert not rects_overlap(r1, r2), \
-                    f"{name1} and {name2} should not overlap"
+                assert not rects_overlap(r1, r2), f"{name1} and {name2} should not overlap"
 
 
 class TestOpCoverage:
     """Verify all op types used in spec have firmware handlers."""
-    
+
     # Ops that must have firmware handlers
     REQUIRED_OPS = {
-        "line", "text", "textCenteredIn", "timeRight",
-        "tempGroupCentered", "iconIn", "batteryGlyph"
+        "line",
+        "text",
+        "textCenteredIn",
+        "timeRight",
+        "tempGroupCentered",
+        "iconIn",
+        "batteryGlyph",
     }
 
     def test_all_used_ops_are_known(self):
@@ -233,7 +233,7 @@ class TestOpCoverage:
         spec_path = ROOT / "config" / "ui_spec.json"
         with open(spec_path) as f:
             spec = json.load(f)
-        
+
         used_ops = set()
         # Components is a dict: { name: [ops] }
         for comp_name, ops in spec["components"].items():
@@ -241,11 +241,10 @@ class TestOpCoverage:
                 for op in ops:
                     if isinstance(op, dict):
                         used_ops.add(op.get("op"))
-        
+
         unknown = used_ops - self.REQUIRED_OPS
         assert not unknown, f"Unknown ops without handlers: {unknown}"
 
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
-

@@ -3,6 +3,7 @@
 Consolidated ESP32 firmware flashing script.
 Replaces multiple redundant scripts with a single, feature-rich tool.
 """
+
 import argparse
 import glob
 import os
@@ -81,7 +82,7 @@ def find_usb_ports():
         else:
             # Non-macOS ports, add directly
             unique_ports[port] = port
-    
+
     return sorted(unique_ports.values())  # Return sorted list of unique ports
 
 

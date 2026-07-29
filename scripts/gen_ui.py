@@ -2,11 +2,11 @@
 import json
 import os
 import pathlib
+import re
 import subprocess
 import sys
 from typing import Any, Dict
 import zlib
-import re
 
 try:
     import yaml  # type: ignore
@@ -43,6 +43,7 @@ def _fail(msg: str) -> None:
 def load_ui_spec() -> Dict[str, Any]:
     if not UI_SPEC_PATH.exists():
         _fail(f"ui spec not found: {UI_SPEC_PATH}")
+
     def _strip_json_comments(text: str) -> str:
         out: list[str] = []
         i = 0

@@ -1,6 +1,6 @@
 """Configuration for Device Manager"""
+
 from dataclasses import dataclass
-from typing import Optional
 
 
 @dataclass
@@ -34,11 +34,11 @@ class ManagerConfig:
     display_height: int = 122
 
     @classmethod
-    def from_args(cls, args) -> 'ManagerConfig':
+    def from_args(cls, args) -> "ManagerConfig":
         """Create config from command line arguments"""
         config = cls()
-        if hasattr(args, 'port'):
+        if hasattr(args, "port"):
             config.port = args.port
-        if hasattr(args, 'no_broker') and args.no_broker:
+        if hasattr(args, "no_broker") and args.no_broker:
             config.mqtt_broker_enabled = False
         return config

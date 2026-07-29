@@ -1,19 +1,22 @@
 """Embedded MQTT broker for ESP32 Device Manager"""
+
 import asyncio
+from collections import deque
 import logging
 import time
-from typing import Dict, Any, List, Optional, Callable
-from collections import deque
+from typing import Any, Callable, Dict, List, Optional
+
 import paho.mqtt.client as mqtt
 
 logger = logging.getLogger(__name__)
 
 # Check paho-mqtt version for API compatibility
-_PAHO_V2 = hasattr(mqtt, 'CallbackAPIVersion')
+_PAHO_V2 = hasattr(mqtt, "CallbackAPIVersion")
 
 
 class MQTTMessage:
     """Represents an MQTT message"""
+
     def __init__(self, topic: str, payload: bytes, direction: str):
         self.topic = topic
         self.payload = payload
@@ -31,15 +34,15 @@ class MQTTMessage:
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for JSON serialization"""
         try:
-            payload_str = self.payload.decode('utf-8')
+            payload_str = self.payload.decode("utf-8")
         except UnicodeDecodeError:
             payload_str = self.payload.hex()
 
         return {
-            'topic': self.topic,
-            'payload': payload_str,
-            'direction': self.direction,
-            'timestamp': self.timestamp
+            "topic": self.topic,
+            "payload": payload_str,
+            "direction": self.direction,
+            "timestamp": self.timestamp,
         }
 
 
@@ -61,7 +64,7 @@ class SimpleMQTTBroker:
         self.subscriptions: Dict[str, int] = {}  # topic -> qos
         self.message_callbacks: List[Callable] = []
         self._loop: Optional[asyncio.AbstractEventLoop] = None  # Store event loop reference
-    
+
     def _schedule_async(self, coro):
         """Schedule an async coroutine from a sync callback (thread-safe)"""
         if self._loop and self.hub:
@@ -86,7 +89,7 @@ class SimpleMQTTBroker:
                 self.client = mqtt.Client(
                     callback_api_version=mqtt.CallbackAPIVersion.VERSION1,
                     client_id="device_manager",
-                    protocol=mqtt.MQTTv311
+                    protocol=mqtt.MQTTv311,
                 )
             else:
                 # paho-mqtt 1.x
@@ -141,11 +144,15 @@ class SimpleMQTTBroker:
             self.client.subscribe("homeassistant/#", qos=0)
 
             # Broadcast connection status (thread-safe)
-            self._schedule_async(self.hub.broadcast({
-                'type': 'mqtt_status',
-                'connected': True,
-                'message': 'Connected to MQTT broker'
-            }))
+            self._schedule_async(
+                self.hub.broadcast(
+                    {
+                        "type": "mqtt_status",
+                        "connected": True,
+                        "message": "Connected to MQTT broker",
+                    }
+                )
+            )
         else:
             logger.error(f"Failed to connect to MQTT broker, code: {rc}")
 
@@ -153,22 +160,22 @@ class SimpleMQTTBroker:
         """Callback when disconnected from MQTT broker"""
         logger.warning(f"Disconnected from MQTT broker, code: {rc}")
 
-        self._schedule_async(self.hub.broadcast({
-            'type': 'mqtt_status',
-            'connected': False,
-            'message': 'Disconnected from MQTT broker'
-        }))
+        self._schedule_async(
+            self.hub.broadcast(
+                {
+                    "type": "mqtt_status",
+                    "connected": False,
+                    "message": "Disconnected from MQTT broker",
+                }
+            )
+        )
 
     def _on_message(self, client, userdata, msg):
         """Callback when message is received"""
         logger.debug(f"MQTT message received: {msg.topic} = {msg.payload[:100]}")
 
         # Create message object
-        mqtt_msg = MQTTMessage(
-            topic=msg.topic,
-            payload=msg.payload,
-            direction='in'
-        )
+        mqtt_msg = MQTTMessage(topic=msg.topic, payload=msg.payload, direction="in")
 
         # Add to log
         self.message_log.append(mqtt_msg)
@@ -181,10 +188,7 @@ class SimpleMQTTBroker:
                 logger.error(f"Error in message callback: {e}")
 
         # Broadcast to WebSocket clients (thread-safe)
-        self._schedule_async(self.hub.broadcast({
-            'type': 'mqtt',
-            **mqtt_msg.to_dict()
-        }))
+        self._schedule_async(self.hub.broadcast({"type": "mqtt", **mqtt_msg.to_dict()}))
 
     def _on_publish(self, client, userdata, mid):
         """Callback when message is published"""
@@ -199,7 +203,7 @@ class SimpleMQTTBroker:
         try:
             # Convert payload to bytes if string
             if isinstance(payload, str):
-                payload_bytes = payload.encode('utf-8')
+                payload_bytes = payload.encode("utf-8")
             else:
                 payload_bytes = payload
 
@@ -207,18 +211,11 @@ class SimpleMQTTBroker:
             result = self.client.publish(topic, payload_bytes, qos=qos, retain=retain)
 
             # Log outgoing message
-            mqtt_msg = MQTTMessage(
-                topic=topic,
-                payload=payload_bytes,
-                direction='out'
-            )
+            mqtt_msg = MQTTMessage(topic=topic, payload=payload_bytes, direction="out")
             self.message_log.append(mqtt_msg)
 
             # Broadcast to WebSocket clients (thread-safe)
-            self._schedule_async(self.hub.broadcast({
-                'type': 'mqtt',
-                **mqtt_msg.to_dict()
-            }))
+            self._schedule_async(self.hub.broadcast({"type": "mqtt", **mqtt_msg.to_dict()}))
 
             logger.debug(f"Published to {topic}: {payload_bytes[:100]}")
             return True
@@ -264,20 +261,17 @@ class SimpleMQTTBroker:
 
     def get_subscriptions(self) -> List[Dict[str, Any]]:
         """Get active subscriptions"""
-        return [
-            {'topic': topic, 'qos': qos}
-            for topic, qos in self.subscriptions.items()
-        ]
+        return [{"topic": topic, "qos": qos} for topic, qos in self.subscriptions.items()]
 
     def get_status(self) -> Dict[str, Any]:
         """Get broker status"""
         return {
-            'running': self.running,
-            'connected': self.client.is_connected() if self.client else False,
-            'host': self.host,
-            'port': self.port,
-            'message_count': len(self.message_log),
-            'subscriptions': len(self.subscriptions)
+            "running": self.running,
+            "connected": self.client.is_connected() if self.client else False,
+            "host": self.host,
+            "port": self.port,
+            "message_count": len(self.message_log),
+            "subscriptions": len(self.subscriptions),
         }
 
     def add_message_callback(self, callback: Callable[[MQTTMessage], None]):

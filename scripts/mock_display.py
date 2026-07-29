@@ -256,27 +256,33 @@ def draw_layout(draw: ImageDraw.ImageDraw, data: dict):
     # These match the firmware display_renderer.cpp and ui_spec.json
     icon_x, icon_y, icon_w, icon_h = 168, 90, 30, 32
     weather_x, weather_y, weather_w, weather_h = 200, 90, 44, 32
-    
+
     cond_label = str(data.get("weather", "Cloudy")).split(" ")[0].split("-")[0]
     cond_lower = str(data.get("weather", "")).lower()
-    
+
     # Draw weather icon centered in WEATHER_ICON region
     icon_cx = icon_x + icon_w // 2
     icon_cy = icon_y + icon_h // 2
-    
+
     # Simple icon rendering
     if any(k in cond_lower for k in ["rain", "shower"]):
         # cloud with rain drops
-        draw.rounded_rectangle((icon_x + 2, icon_y + 8, icon_x + icon_w - 2, icon_y + 20), radius=4, outline=0, width=1)
+        draw.rounded_rectangle(
+            (icon_x + 2, icon_y + 8, icon_x + icon_w - 2, icon_y + 20), radius=4, outline=0, width=1
+        )
         for i in range(3):
             x0 = icon_x + 8 + i * 6
             draw.line((x0, icon_y + 22, x0 - 2, icon_y + 28), fill=0, width=1)
     elif any(k in cond_lower for k in ["snow"]):
-        draw.rounded_rectangle((icon_x + 2, icon_y + 8, icon_x + icon_w - 2, icon_y + 20), radius=4, outline=0, width=1)
+        draw.rounded_rectangle(
+            (icon_x + 2, icon_y + 8, icon_x + icon_w - 2, icon_y + 20), radius=4, outline=0, width=1
+        )
         for i in range(2):
             draw.text((icon_x + 6 + i * 10, icon_y + 20), "*", font=load_font(10), fill=0)
     elif any(k in cond_lower for k in ["storm", "thunder", "lightning"]):
-        draw.rounded_rectangle((icon_x + 2, icon_y + 6, icon_x + icon_w - 2, icon_y + 18), radius=4, outline=0, width=1)
+        draw.rounded_rectangle(
+            (icon_x + 2, icon_y + 6, icon_x + icon_w - 2, icon_y + 18), radius=4, outline=0, width=1
+        )
         draw.line((icon_cx - 4, icon_cy + 4, icon_cx + 2, icon_cy), fill=0, width=1)
         draw.line((icon_cx + 2, icon_cy, icon_cx - 2, icon_cy + 8), fill=0, width=1)
     elif any(k in cond_lower for k in ["fog", "mist", "haze"]):
@@ -284,7 +290,12 @@ def draw_layout(draw: ImageDraw.ImageDraw, data: dict):
             y0 = icon_y + 10 + i * 6
             draw.line((icon_x + 4, y0, icon_x + icon_w - 4, y0), fill=0, width=1)
     elif any(k in cond_lower for k in ["cloud", "overcast"]):
-        draw.rounded_rectangle((icon_x + 2, icon_y + 10, icon_x + icon_w - 2, icon_y + 24), radius=6, outline=0, width=1)
+        draw.rounded_rectangle(
+            (icon_x + 2, icon_y + 10, icon_x + icon_w - 2, icon_y + 24),
+            radius=6,
+            outline=0,
+            width=1,
+        )
     elif any(k in cond_lower for k in ["sun", "clear"]):
         r0 = min(icon_w, icon_h) // 4
         draw.ellipse((icon_cx - r0, icon_cy - r0, icon_cx + r0, icon_cy + r0), outline=0, width=1)
@@ -292,7 +303,7 @@ def draw_layout(draw: ImageDraw.ImageDraw, data: dict):
         # Default: simple circle
         r0 = min(icon_w, icon_h) // 4
         draw.ellipse((icon_cx - r0, icon_cy - r0, icon_cx + r0, icon_cy + r0), outline=0, width=1)
-    
+
     # Draw weather text centered in FOOTER_WEATHER region at y=109
     tl_cond = int(ImageDraw.Draw(Image.new("1", (1, 1))).textlength(cond_label, font=font_sm))
     text_x = weather_x + max(0, (weather_w - tl_cond) // 2)
@@ -318,7 +329,7 @@ def draw_layout(draw: ImageDraw.ImageDraw, data: dict):
     eta = f"~{data.get('days','128')}d"
     draw.text((8, 98), eta, font=font_sm, fill=0)
     # Row 3: IP centered in FOOTER_STATUS region
-    ip_val = data.get('ip', '192.168.1.42')
+    ip_val = data.get("ip", "192.168.1.42")
     if ip_val and ip_val != "0.0.0.0":
         ip = f"IP {ip_val}"
     else:
