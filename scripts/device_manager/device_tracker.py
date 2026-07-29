@@ -253,7 +253,6 @@ class DeviceTracker:
         """Set device operating mode"""
         async with self._lock:
             device = self._get_or_create(device_id)
-            old_mode = device.mode
             device.mode = mode
 
             if mode == DeviceMode.DEVELOPMENT:

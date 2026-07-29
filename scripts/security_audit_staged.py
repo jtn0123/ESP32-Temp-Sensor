@@ -126,7 +126,7 @@ def check_file_for_credentials(filepath):
     try:
         with open(filepath, "r", encoding="utf-8", errors="ignore") as f:
             content = f.read()
-    except:
+    except OSError:
         return findings
 
     lines = content.split("\n")

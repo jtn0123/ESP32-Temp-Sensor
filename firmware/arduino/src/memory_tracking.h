@@ -19,58 +19,58 @@
 //   Serial.printf("Peak heap used: %u bytes\n", stats.heap_high_watermark);
 
 class MemoryTracker {
-public:
-    struct MemoryStats {
-        uint32_t heap_high_watermark;      // Maximum heap usage seen
-        uint32_t heap_low_watermark;       // Minimum free heap seen
-        uint32_t stack_high_watermark;     // Maximum stack usage (estimated)
-        uint32_t largest_allocation;       // Largest single allocation seen
-        uint32_t total_allocations;        // Total allocation count (resets on reboot)
-        uint32_t failed_allocations;       // Failed allocation count (resets on reboot)
-        uint32_t fragmentation_peak;       // Worst fragmentation seen (%)
-        uint32_t total_heap_size;          // Total heap size
-        uint32_t psram_high_watermark;     // PSRAM peak usage (if available)
-    };
+ public:
+  struct MemoryStats {
+    uint32_t heap_high_watermark;   // Maximum heap usage seen
+    uint32_t heap_low_watermark;    // Minimum free heap seen
+    uint32_t stack_high_watermark;  // Maximum stack usage (estimated)
+    uint32_t largest_allocation;    // Largest single allocation seen
+    uint32_t total_allocations;     // Total allocation count (resets on reboot)
+    uint32_t failed_allocations;    // Failed allocation count (resets on reboot)
+    uint32_t fragmentation_peak;    // Worst fragmentation seen (%)
+    uint32_t total_heap_size;       // Total heap size
+    uint32_t psram_high_watermark;  // PSRAM peak usage (if available)
+  };
 
-    static MemoryTracker& getInstance();
+  static MemoryTracker& getInstance();
 
-    void begin();
+  void begin();
 
-    // Update watermarks (call periodically, e.g., in loop or before sleep)
-    void update();
+  // Update watermarks (call periodically, e.g., in loop or before sleep)
+  void update();
 
-    // Record an allocation attempt
-    void recordAllocation(size_t size, bool success);
+  // Record an allocation attempt
+  void recordAllocation(size_t size, bool success);
 
-    // Get current statistics
-    const MemoryStats& getStats() const { return stats_; }
+  // Get current statistics
+  const MemoryStats& getStats() const { return stats_; }
 
-    // Reset runtime counters (keeps watermarks)
-    void resetCounters();
+  // Reset runtime counters (keeps watermarks)
+  void resetCounters();
 
-    // Reset all stats including watermarks
-    void resetAll();
+  // Reset all stats including watermarks
+  void resetAll();
 
-    // Format stats as JSON
-    void formatStatsJson(char* out, size_t out_size) const;
+  // Format stats as JSON
+  void formatStatsJson(char* out, size_t out_size) const;
 
-    // Calculate current fragmentation percentage
-    float getCurrentFragmentation() const;
+  // Calculate current fragmentation percentage
+  float getCurrentFragmentation() const;
 
-private:
-    MemoryTracker();
-    ~MemoryTracker() = default;
-    MemoryTracker(const MemoryTracker&) = delete;
-    MemoryTracker& operator=(const MemoryTracker&) = delete;
+ private:
+  MemoryTracker();
+  ~MemoryTracker() = default;
+  MemoryTracker(const MemoryTracker&) = delete;
+  MemoryTracker& operator=(const MemoryTracker&) = delete;
 
-    // RTC memory storage (persists across deep sleep)
-    RTC_DATA_ATTR static MemoryStats stats_;
+  // RTC memory storage (persists across deep sleep)
+  RTC_DATA_ATTR static MemoryStats stats_;
 
-    bool initialized_ = false;
+  bool initialized_ = false;
 
-    // Update heap watermarks
-    void updateHeapWatermarks();
+  // Update heap watermarks
+  void updateHeapWatermarks();
 
-    // Estimate stack usage (ESP32-specific)
-    uint32_t estimateStackUsage() const;
+  // Estimate stack usage (ESP32-specific)
+  uint32_t estimateStackUsage() const;
 };

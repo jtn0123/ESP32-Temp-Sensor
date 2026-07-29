@@ -31,7 +31,7 @@ class WiFiClient;
 // Display-specific forward declarations
 #if USE_DISPLAY
 class GxEPD2_GFX_BASE_CLASS;
-template<typename GxEPD2_Type, uint16_t page_height>
+template <typename GxEPD2_Type, uint16_t page_height>
 class GxEPD2_BW;
 #endif
 

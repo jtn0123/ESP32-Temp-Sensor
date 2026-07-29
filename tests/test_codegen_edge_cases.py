@@ -448,10 +448,6 @@ class TestCPlusPlusCodeGeneration:
         ]
 
         for name in region_names:
-            # Check if valid C++ identifier
-            is_valid = name.isidentifier() or (
-                name.replace("_", "").replace("-", "").isalnum() and not name[0].isdigit()
-            )
             if name in ["HEADER_NAME"]:
                 assert name.replace("_", "").isalnum()
             elif name in ["123_START", "has-hyphen", "has space", "HEADER NAME"]:

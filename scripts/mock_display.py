@@ -161,7 +161,7 @@ def draw_layout(draw: ImageDraw.ImageDraw, data: dict):
     # FOOTER_STATUS (alias FOOTER_L for backward compat)
     FOOTER_L = R("FOOTER_STATUS", (6, 90, 6 + 160, 90 + 32))
     # Updated coords: x=200, y=90, w=44, h=32
-    FOOTER_WEATHER = R("FOOTER_WEATHER", (200, 90, 200 + 44, 90 + 32))
+    R("FOOTER_WEATHER", (200, 90, 200 + 44, 90 + 32))
 
     # Frame and header
     draw.rectangle(((0, 0), (WIDTH - 1, HEIGHT - 1)), outline=0, width=1)
@@ -255,7 +255,7 @@ def draw_layout(draw: ImageDraw.ImageDraw, data: dict):
     # Weather text in FOOTER_WEATHER region [200, 90, 44, 32]
     # These match the firmware display_renderer.cpp and ui_spec.json
     icon_x, icon_y, icon_w, icon_h = 168, 90, 30, 32
-    weather_x, weather_y, weather_w, weather_h = 200, 90, 44, 32
+    weather_x, weather_y, weather_w = 200, 90, 44
 
     cond_label = str(data.get("weather", "Cloudy")).split(" ")[0].split("-")[0]
     cond_lower = str(data.get("weather", "")).lower()

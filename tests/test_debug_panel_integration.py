@@ -16,6 +16,8 @@ try:
 except ImportError:
     pytest.skip("Playwright not installed", allow_module_level=True)
 
+# Drives a real browser, so it belongs to the CI job that installs Chromium.
+pytestmark = pytest.mark.slow
 
 ROOT = Path(__file__).resolve().parents[1]
 

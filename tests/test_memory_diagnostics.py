@@ -68,7 +68,7 @@ class TestMemoryDiagnostics:
         ]
 
         # Check for declining trend (potential leak)
-        assert self.detect_memory_leak(memory_samples) == True
+        assert self.detect_memory_leak(memory_samples)
 
         # Stable memory (no leak)
         stable_samples = [
@@ -78,7 +78,7 @@ class TestMemoryDiagnostics:
             {"free_heap": 49800, "min_heap": 45000},
         ]
 
-        assert self.detect_memory_leak(stable_samples) == False
+        assert not self.detect_memory_leak(stable_samples)
 
     def test_memory_threshold_alerts(self):
         """Test memory threshold alerting."""
@@ -243,19 +243,17 @@ class TestMemoryPerformance:
     def test_fragmentation_impact_analysis(self):
         """Test analysis of fragmentation impact on allocations."""
         # High fragmentation scenario
-        free_heap = 50000
         largest_block = 5000  # Very fragmented
 
         # Check if can allocate specific size
         allocation_size = 10000
         can_allocate = largest_block >= allocation_size
-        assert can_allocate == False  # Cannot allocate due to fragmentation
+        assert not can_allocate  # Cannot allocate due to fragmentation
 
         # Low fragmentation scenario
-        free_heap = 50000
         largest_block = 45000
         can_allocate = largest_block >= allocation_size
-        assert can_allocate == True
+        assert can_allocate
 
 
 if __name__ == "__main__":

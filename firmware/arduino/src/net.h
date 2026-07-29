@@ -3,6 +3,7 @@
 // Network module - refactored to use separate WiFi, MQTT, and HA discovery modules
 // This file now serves as a compatibility wrapper for the refactored modules
 
+#include <cstdio>
 #include "wifi_manager.h"
 #include "mqtt_client.h"
 #include "ha_discovery.h"
@@ -31,9 +32,9 @@ inline void net_begin() {
   // Generate client ID
   uint8_t mac[6];
   WiFi.macAddress(mac);
-  snprintf(g_client_id, sizeof(g_client_id), "%02x%02x%02x%02x%02x%02x",
-           mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
-  
+  snprintf(g_client_id, sizeof(g_client_id), "%02x%02x%02x%02x%02x%02x", mac[0], mac[1], mac[2],
+           mac[3], mac[4], mac[5]);
+
   // Initialize modules
   mqtt_begin();
   mqtt_set_client_id(g_client_id);
@@ -43,7 +44,7 @@ inline void net_begin() {
 // Main network loop
 inline void net_loop() {
   mqtt_loop();
-  
+
   // Check for diagnostic mode commands
   if (mqtt_is_diagnostic_mode_requested()) {
     g_diagnostic_mode_requested = true;
@@ -53,38 +54,24 @@ inline void net_loop() {
 }
 
 // WiFi wrapper functions
-inline bool net_wifi_is_connected() { 
-  return wifi_is_connected(); 
-}
+inline bool net_wifi_is_connected() { return wifi_is_connected(); }
 
-inline String net_ip() {
-  return wifi_get_ip();
-}
+inline String net_ip() { return wifi_get_ip(); }
 
-inline void net_ip_cstr(char* out, size_t out_size) {
-  wifi_get_ip_cstr(out, out_size);
-}
+inline void net_ip_cstr(char* out, size_t out_size) { wifi_get_ip_cstr(out, out_size); }
 
-inline bool net_wifi_clear_provisioning() {
-  return wifi_clear_provisioning();
-}
+inline bool net_wifi_clear_provisioning() { return wifi_clear_provisioning(); }
 
 // MQTT wrapper functions
-inline void net_publish_inside(float tempC, float rhPct) {
-  mqtt_publish_inside(tempC, rhPct);
-}
+inline void net_publish_inside(float tempC, float rhPct) { mqtt_publish_inside(tempC, rhPct); }
 
-inline void net_publish_pressure(float pressureHPa) {
-  mqtt_publish_pressure(pressureHPa);
-}
+inline void net_publish_pressure(float pressureHPa) { mqtt_publish_pressure(pressureHPa); }
 
 inline void net_publish_battery(float voltage, int percent) {
   mqtt_publish_battery(voltage, percent);
 }
 
-inline void net_publish_wifi_rssi(int rssiDbm) {
-  mqtt_publish_wifi_rssi(rssiDbm);
-}
+inline void net_publish_wifi_rssi(int rssiDbm) { mqtt_publish_wifi_rssi(rssiDbm); }
 
 inline void net_publish_status(const char* payload, bool retain = true) {
   mqtt_publish_status(payload, retain);
@@ -102,43 +89,29 @@ inline void net_publish_debug_probe(const char* payload, bool retain = false) {
   mqtt_publish_debug_probe(payload, retain);
 }
 
-inline void net_publish_boot_reason(const char* reason) {
-  mqtt_publish_boot_reason(reason);
-}
+inline void net_publish_boot_reason(const char* reason) { mqtt_publish_boot_reason(reason); }
 
-inline void net_publish_boot_count(uint32_t count) {
-  mqtt_publish_boot_count(count);
-}
+inline void net_publish_boot_count(uint32_t count) { mqtt_publish_boot_count(count); }
 
-inline void net_publish_crash_count(uint32_t count) {
-  mqtt_publish_crash_count(count);
-}
+inline void net_publish_crash_count(uint32_t count) { mqtt_publish_crash_count(count); }
 
-inline void net_publish_uptime(uint32_t uptime_sec) {
-  mqtt_publish_uptime(uptime_sec);
-}
+inline void net_publish_uptime(uint32_t uptime_sec) { mqtt_publish_uptime(uptime_sec); }
 
-inline void net_publish_wake_count(uint32_t count) {
-  mqtt_publish_wake_count(count);
-}
+inline void net_publish_wake_count(uint32_t count) { mqtt_publish_wake_count(count); }
 
-inline void net_publish_memory_diagnostics(uint32_t free_heap, uint32_t min_heap, 
-                                          uint32_t largest_block, float fragmentation_pct) {
+inline void net_publish_memory_diagnostics(uint32_t free_heap, uint32_t min_heap,
+                                           uint32_t largest_block, float fragmentation_pct) {
   mqtt_publish_memory_diagnostics(free_heap, min_heap, largest_block, fragmentation_pct);
 }
 
-inline void net_publish_diagnostic_mode(bool active) {
-  mqtt_publish_diagnostic_mode(active);
-}
+inline void net_publish_diagnostic_mode(bool active) { mqtt_publish_diagnostic_mode(active); }
 
 inline void net_publish_publish_latency_ms(uint32_t publishLatencyMs) {
   mqtt_publish_publish_latency_ms(publishLatencyMs);
 }
 
 // Home Assistant discovery wrapper
-inline void net_publish_ha_discovery() {
-  ha_discovery_publish_all();
-}
+inline void net_publish_ha_discovery() { ha_discovery_publish_all(); }
 
 // WiFi connection with retry logic
 inline bool net_wifi_connect_with_retry(uint32_t timeout_ms, uint32_t max_attempts = 3) {
@@ -151,10 +124,10 @@ inline bool net_wifi_connect_with_retry(uint32_t timeout_ms, uint32_t max_attemp
   return false;
 }
 
-// MQTT connection with retry logic  
+// MQTT connection with retry logic
 inline bool net_mqtt_connect_with_retry(uint32_t timeout_ms, uint32_t max_attempts = 3) {
   uint32_t start = millis();
-  
+
   while ((millis() - start) < (timeout_ms * max_attempts)) {
     if (mqtt_connect()) {
       return true;
@@ -171,21 +144,21 @@ inline bool net_init_and_connect() {
     Serial.println(F("WiFi connection failed"));
     return false;
   }
-  
+
   Serial.print(F("WiFi connected, IP: "));
   Serial.println(wifi_get_ip());
-  
+
   // Connect to MQTT
   if (!net_mqtt_connect_with_retry(MQTT_CONNECT_TIMEOUT_MS)) {
     Serial.println(F("MQTT connection failed"));
     return false;
   }
-  
+
   Serial.println(F("MQTT connected"));
-  
+
   // Publish discovery
   net_publish_ha_discovery();
-  
+
   return true;
 }
 
@@ -211,19 +184,13 @@ inline void net_set_outside_readings(const OutsideReadings& readings) {
   mqtt_update_outside_readings(readings);
 }
 
-inline OutsideReadings net_get_outside_readings() {
-  return mqtt_get_outside_readings();
-}
+inline OutsideReadings net_get_outside_readings() { return mqtt_get_outside_readings(); }
 
 // Backward compatibility alias
-inline OutsideReadings net_get_outside() {
-  return net_get_outside_readings();
-}
+inline OutsideReadings net_get_outside() { return net_get_outside_readings(); }
 
 // Additional compatibility functions
-inline bool net_mqtt_is_connected() {
-  return mqtt_is_connected();
-}
+inline bool net_mqtt_is_connected() { return mqtt_is_connected(); }
 
 inline void net_prepare_for_sleep() {
   // Disconnect cleanly before sleep

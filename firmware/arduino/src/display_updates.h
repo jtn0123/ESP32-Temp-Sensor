@@ -25,4 +25,4 @@ bool should_partial_update(uint16_t counter, bool full_only_mode);
 // Helper to increment partial counter
 void increment_partial_counter();
 
-#endif // USE_DISPLAY
+#endif  // USE_DISPLAY

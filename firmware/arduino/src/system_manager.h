@@ -10,12 +10,12 @@
 
 // Memory diagnostics structure
 struct MemoryDiagnostics {
-    uint32_t free_heap;
-    uint32_t min_free_heap;
-    uint32_t largest_free_block;
-    float fragmentation_pct;
-    uint32_t psram_free;
-    uint32_t psram_size;
+  uint32_t free_heap;
+  uint32_t min_free_heap;
+  uint32_t largest_free_block;
+  float fragmentation_pct;
+  uint32_t psram_free;
+  uint32_t psram_size;
 };
 
 // Deep sleep and wake management
@@ -55,18 +55,15 @@ void set_display_deadline_ms(uint32_t deadline);
 // Works correctly even when millis() wraps around (~49 days) due to
 // unsigned integer underflow behavior: (small - large) wraps to correct delta.
 // Example: millis()=10, start=UINT32_MAX-5 -> elapsed = 10 - (UINT32_MAX-5) = 16
-inline uint32_t elapsed_since_ms(uint32_t start_ms) {
-    return millis() - start_ms;
-}
+inline uint32_t elapsed_since_ms(uint32_t start_ms) { return millis() - start_ms; }
 
 // CRC and validation utilities
 uint32_t fast_crc32(const uint8_t* data, size_t len);
 
 // Helper templates for conditional redraws
 template <typename DrawFn>
-bool maybe_redraw_numeric(const int rect[4], float currentValue, float& lastValue,
-                         float threshold, DrawFn drawFn);
+bool maybe_redraw_numeric(const int rect[4], float currentValue, float& lastValue, float threshold,
+                          DrawFn drawFn);
 
 template <typename T, typename DrawFn>
-bool maybe_redraw_value(const int rect[4], const T& currentValue, T& lastValue,
-                       DrawFn drawFn);
+bool maybe_redraw_value(const int rect[4], const T& currentValue, T& lastValue, DrawFn drawFn);

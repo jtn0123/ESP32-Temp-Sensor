@@ -92,7 +92,7 @@ class MQTTWebSocketBridge:
             for client in self.ws_clients:
                 try:
                     await client.send(message)
-                except:
+                except Exception:
                     disconnected.add(client)
 
             # Remove disconnected clients

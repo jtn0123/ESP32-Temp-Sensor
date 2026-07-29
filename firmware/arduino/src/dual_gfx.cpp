@@ -4,16 +4,8 @@
 
 static DualGFX* g_dual_gfx_context = nullptr;
 
-void set_dual_gfx_context(DualGFX* ctx) {
-    g_dual_gfx_context = ctx;
-}
+void set_dual_gfx_context(DualGFX* ctx) { g_dual_gfx_context = ctx; }
 
-DualGFX* get_dual_gfx_context() {
-    return g_dual_gfx_context;
-}
+DualGFX* get_dual_gfx_context() { return g_dual_gfx_context; }
 
-#endif // USE_DISPLAY
-
-
-
-
+#endif  // USE_DISPLAY

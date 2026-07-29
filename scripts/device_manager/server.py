@@ -832,7 +832,7 @@ async def websocket_endpoint(websocket: WebSocket):
                 import json
 
                 message = json.loads(data)
-                response = await hub.handle_message(websocket, message)
+                await hub.handle_message(websocket, message)
 
                 # Handle specific message types
                 msg_type = message.get("type")

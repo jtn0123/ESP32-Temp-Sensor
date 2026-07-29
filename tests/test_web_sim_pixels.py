@@ -37,7 +37,7 @@ def test_web_sim_screenshot_matches_golden_with_tolerance(tmp_path):
         pytest.skip("numpy not installed")
 
     ROOT = os.path.dirname(os.path.dirname(__file__))
-    web_root = os.path.join(ROOT, "web", "sim")
+    web_root = os.path.join(ROOT, "web")
     port = _find_free_port()
     server = _start_http_server(web_root, port)
     try:
@@ -46,7 +46,7 @@ def test_web_sim_screenshot_matches_golden_with_tolerance(tmp_path):
             browser = p.chromium.launch()
             # Use larger viewport since we'll capture the canvas element directly
             page = browser.new_page(viewport={"width": 800, "height": 600})
-            page.goto(f"http://127.0.0.1:{port}/index.html", wait_until="load")
+            page.goto(f"http://127.0.0.1:{port}/sim/index.html", wait_until="load")
             page.wait_for_timeout(300)
 
             # Provide deterministic data
@@ -105,8 +105,11 @@ def test_web_sim_screenshot_matches_golden_with_tolerance(tmp_path):
                     + 0.0722 * ref_arr[:, :, 2]
                 )
                 ref_bin = (ry < 176).astype(np.uint8)
-                diff = np.abs(ref_bin - cur_bin)
-                num_diff = int(diff.sum())
+                # Count differing pixels directly. ref_bin and cur_bin are uint8
+                # 0/1 masks, so `np.abs(ref_bin - cur_bin)` underflowed: a 0->1
+                # pixel wrapped to 255 instead of 1, inflating the count roughly
+                # 255x (a real 5,481-pixel difference reported as 1,397,664).
+                num_diff = int((ref_bin != cur_bin).sum())
                 # Allow small tolerance for font raster differences
                 if num_diff > 5:
                     # If not in CI, refresh golden to current rendering to keep tests green

@@ -43,7 +43,7 @@ void draw_values(const char* in_temp_f, const char* in_rh, const char* out_temp_
 
 // Weather icon functions
 void draw_weather_icon_region_at(int16_t x, int16_t y, int16_t w, int16_t h, const char* weather);
-void draw_weather_icon_region_at_from_outside(int16_t x, int16_t y, int16_t w, int16_t h, 
+void draw_weather_icon_region_at_from_outside(int16_t x, int16_t y, int16_t w, int16_t h,
                                               const OutsideReadings& o);
 
 // Utility functions
@@ -69,4 +69,4 @@ void dev_display_tick();
 // Note: The actual display type is determined at compile time in main.cpp
 // We don't expose it directly to avoid circular dependencies
 
-#endif // USE_DISPLAY
+#endif  // USE_DISPLAY

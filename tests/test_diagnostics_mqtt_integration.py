@@ -125,7 +125,7 @@ class TestDiagnosticsMQTTIntegration:
             else:
                 diagnostic_mode_active = False
 
-        assert diagnostic_mode_active == True
+        assert diagnostic_mode_active
 
     @pytest.mark.integration
     def test_diagnostic_command_handling(self):
@@ -143,8 +143,6 @@ class TestDiagnosticsMQTTIntegration:
     @pytest.mark.integration
     def test_memory_diagnostics_json_format(self):
         """Test memory diagnostics JSON payload format."""
-        memory_topic = f"{self.base_topic}/diagnostics/memory"
-
         # Sample memory diagnostic payload
         memory_data = {
             "free_heap": 45000,
@@ -195,12 +193,12 @@ class TestDiagnosticsMQTTIntegration:
         # Check if sleep should be skipped
         should_sleep = self.check_should_sleep(diagnostic_mode)
 
-        assert should_sleep == False
+        assert not should_sleep
 
         # Normal mode should allow sleep
         diagnostic_mode = False
         should_sleep = self.check_should_sleep(diagnostic_mode)
-        assert should_sleep == True
+        assert should_sleep
 
     # Helper methods
     def simulate_mqtt_command(self, topic, payload):

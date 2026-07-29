@@ -26,7 +26,10 @@ def extract_test_scenarios(js_content: str) -> List[Dict[str, Any]]:
     scenarios = []
 
     # Look for test scenario definitions
-    pattern = r'(?:name|label|description):\s*["\']([^"\']+)["\'].*?(?:data|values?|config):\s*(\{[^}]+\})'
+    pattern = (
+        r'(?:name|label|description):\s*["\']([^"\']+)["\']'
+        r".*?(?:data|values?|config):\s*(\{[^}]+\})"
+    )
     matches = re.finditer(pattern, js_content, re.MULTILINE | re.DOTALL)
 
     for match in matches:
@@ -37,7 +40,7 @@ def extract_test_scenarios(js_content: str) -> List[Dict[str, Any]]:
             # Simple cleanup for JavaScript object notation
             data_str = re.sub(r"(\w+):", r'"\1":', data_str)
             data = json.loads(data_str)
-        except:
+        except (ValueError, IndexError):
             data = {}
 
         scenarios.append({"name": name, "data": data})
@@ -289,19 +292,19 @@ class TestDataEditor:
                 try:
                     num = float(value)
                     is_valid = -50 <= num <= 100
-                except:
+                except (TypeError, ValueError):
                     is_valid = False
             elif field == "battery":
                 try:
                     num = int(value)
                     is_valid = 0 <= num <= 100
-                except:
+                except (TypeError, ValueError):
                     is_valid = False
             elif field == "co2":
                 try:
                     num = int(value)
                     is_valid = 0 <= num <= 5000
-                except:
+                except (TypeError, ValueError):
                     is_valid = False
             else:
                 is_valid = True
@@ -344,12 +347,12 @@ class TestVisualRegression:
 
         # Test identical images
         result = compare_images("imageA", "imageA")
-        assert result["match"] == True, "Identical images should match"
+        assert result["match"], "Identical images should match"
         assert result["difference"] == 0, "No difference for identical images"
 
         # Test different images
         result = compare_images("imageA", "imageB")
-        assert result["match"] == False, "Different images should not match"
+        assert not result["match"], "Different images should not match"
         assert result["difference"] > 0, "Should have pixel differences"
 
     def test_visual_diff_highlighting(self):
@@ -403,7 +406,6 @@ class TestPerformanceMonitoring:
 
     def test_render_time_tracking(self):
         """Test render time measurement"""
-        render_times = []
 
         def measure_render(func):
             """Measure function execution time"""

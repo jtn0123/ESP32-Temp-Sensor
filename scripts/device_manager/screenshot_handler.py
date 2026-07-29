@@ -230,7 +230,7 @@ class ScreenshotHandler:
             try:
                 # Try to use a default font
                 font = ImageFont.truetype("/System/Library/Fonts/Helvetica.ttc", 20)
-            except:
+            except OSError:
                 font = ImageFont.load_default()
 
             draw.text((10, 10), "ESP32 Test Display", fill="black", font=font)

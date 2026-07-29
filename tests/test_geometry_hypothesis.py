@@ -410,12 +410,9 @@ class TestGeneratedRects:
     @settings(max_examples=100)
     def test_scaled_rect_properties(self, x, y, w, h, scale):
         """Test that scaled rectangles maintain proportions."""
-        original = Rect(x, y, w, h)
-
         # Scale dimensions
         new_w = max(1, int(w * scale))
         new_h = max(1, int(h * scale))
-        scaled = Rect(x, y, new_w, new_h)
 
         # Aspect ratio should be approximately maintained
         if w > 0 and h > 0 and new_w > 0 and new_h > 0:

@@ -404,7 +404,8 @@ class FlashManager:
         )
 
         logger.info(
-            f"Flash queued: config={build_config}, target_port={target_port}, timeout={timeout_minutes}min, sleep={sleep_interval_sec}s"
+            f"Flash queued: config={build_config}, target_port={target_port}, "
+            f"timeout={timeout_minutes}min, sleep={sleep_interval_sec}s"
         )
 
         # Broadcast queue started
@@ -586,7 +587,6 @@ class FlashManager:
         await self._send_keep_awake(port)
 
         # Flash using the pre-built firmware
-        env = self.queued_flash.env_name
         build_config = self.queued_flash.build_config
         sleep_interval = self.queued_flash.sleep_interval_sec
 
@@ -623,7 +623,9 @@ class FlashManager:
                 {
                     "percent": 100,
                     "stage": "configuring",
-                    "message": f"Flash complete. Sleep interval: {interval_sec}s will apply on next boot.",
+                    "message": (
+                        f"Flash complete. Sleep interval: {interval_sec}s will apply on next boot."
+                    ),
                 },
             )
 
@@ -633,7 +635,9 @@ class FlashManager:
                 {
                     "type": "sleep_interval",
                     "interval_sec": interval_sec,
-                    "message": f"Sleep interval of {interval_sec}s will be applied when device connects",
+                    "message": (
+                        f"Sleep interval of {interval_sec}s will be applied when device connects"
+                    ),
                 },
             )
 

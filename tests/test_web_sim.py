@@ -40,7 +40,7 @@ def _canvas_rgba(page, x: int, y: int):
 def test_web_sim_basic_pixels():
     from playwright.sync_api import sync_playwright  # type: ignore
 
-    web_root = os.path.join(os.path.dirname(os.path.dirname(__file__)), "web", "sim")
+    web_root = os.path.join(os.path.dirname(os.path.dirname(__file__)), "web")
     port = _find_free_port()
     server = _start_http_server(web_root, port)
     try:
@@ -48,7 +48,7 @@ def test_web_sim_basic_pixels():
         with sync_playwright() as p:
             browser = p.chromium.launch()
             page = browser.new_page(viewport={"width": 250, "height": 122})
-            page.goto(f"http://127.0.0.1:{port}/index.html", wait_until="load")
+            page.goto(f"http://127.0.0.1:{port}/sim/index.html", wait_until="load")
             # allow icons fetch & draw
             page.wait_for_timeout(300)
 
@@ -61,9 +61,20 @@ def test_web_sim_basic_pixels():
             r, g, b, a = _canvas_rgba(page, 5, 14)
             assert (r, g, b) == (0, 0, 0)
 
-            # Footer separator line at y=80 (from ui_spec.json chrome)
-            r, g, b, a = _canvas_rgba(page, 5, 80)
-            assert (r, g, b) == (0, 0, 0)
+            # Footer separator: read its y from the spec rather than hardcoding.
+            # It previously lived at y=80 and the spec moved it to 84, which this
+            # assertion silently outlived because the job could not fail.
+            sep_y = page.evaluate("""() => {
+                  const ops = (window.UI_SPEC || {}).components?.chrome || [];
+                  const h = ops.filter(o => o.op === 'line'
+                    && o.from[1] === o.to[1]
+                    && Math.abs(o.to[0] - o.from[0]) > 200
+                    && o.from[1] > 14 && o.from[1] < 121);
+                  return h.length ? h[0].from[1] : null;
+                }""")
+            assert sep_y is not None, "no footer separator line found in ui_spec chrome"
+            r, g, b, a = _canvas_rgba(page, 5, sep_y)
+            assert (r, g, b) == (0, 0, 0), f"footer separator missing at y={sep_y}"
 
             # Bottom-right weather area (split3) should contain some non-white pixels
             any_black = False

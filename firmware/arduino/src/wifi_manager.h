@@ -45,7 +45,8 @@ enum WiFiConnectionState {
 
 // WiFi management functions
 bool wifi_connect_with_timeout(uint32_t timeout_ms);
-bool wifi_connect_with_exponential_backoff(uint32_t max_attempts = 5, uint32_t initial_delay_ms = 1000);
+bool wifi_connect_with_exponential_backoff(uint32_t max_attempts = 5,
+                                           uint32_t initial_delay_ms = 1000);
 bool wifi_is_connected();
 String wifi_get_ip();
 void wifi_get_ip_cstr(char* out, size_t out_size);

@@ -29,7 +29,7 @@ def _start_http_server(root: str, port: int) -> subprocess.Popen:
 def test_center_divider_reaches_bottom():
     from playwright.sync_api import sync_playwright  # type: ignore
 
-    web_root = os.path.join(os.path.dirname(os.path.dirname(__file__)), "web", "sim")
+    web_root = os.path.join(os.path.dirname(os.path.dirname(__file__)), "web")
     port = _find_free_port()
     server = _start_http_server(web_root, port)
     try:
@@ -37,7 +37,7 @@ def test_center_divider_reaches_bottom():
         with sync_playwright() as p:
             browser = p.chromium.launch()
             page = browser.new_page(viewport={"width": 250, "height": 122})
-            page.goto(f"http://127.0.0.1:{port}/index.html", wait_until="load")
+            page.goto(f"http://127.0.0.1:{port}/sim/index.html", wait_until="load")
             page.wait_for_timeout(500)
 
             # Ensure canvas is drawn by calling draw function
@@ -53,18 +53,18 @@ def test_center_divider_reaches_bottom():
                 () => {
                     const c = document.getElementById('epd');
                     const ctx = c.getContext('2d');
-                    
+
                     // Get actual pixel values around the expected divider
                     let result = {
                         at_125_60: null,
                         black_count_at_125: 0,
                         sample_line: []
                     };
-                    
+
                     // Check the specific pixel
                     const pixel = ctx.getImageData(125, 60, 1, 1).data;
                     result.at_125_60 = [pixel[0], pixel[1], pixel[2]];
-                    
+
                     // Count black pixels along x=125
                     for (let y = 0; y < 122; y++) {
                         const p = ctx.getImageData(125, y, 1, 1).data;
@@ -72,13 +72,13 @@ def test_center_divider_reaches_bottom():
                             result.black_count_at_125++;
                         }
                     }
-                    
+
                     // Sample a few points along x=125
                     for (let y of [0, 18, 60, 84, 121]) {
                         const p = ctx.getImageData(125, y, 1, 1).data;
                         result.sample_line.push({y: y, rgb: [p[0], p[1], p[2]]});
                     }
-                    
+
                     return result;
                 }
             """

@@ -16,12 +16,12 @@ struct BatteryStatus {
 
 // Adaptive sleep configuration
 struct SleepConfig {
-    uint32_t normal_interval_sec;      // Default: 300 (5 min)
-    uint32_t low_battery_interval_sec; // Default: 600 (10 min) for <20% battery
-    uint32_t critical_interval_sec;    // Default: 1800 (30 min) for <5% battery
-    uint32_t rapid_update_interval_sec; // Default: 60 (1 min) when data changing
-    uint8_t low_battery_threshold;     // Default: 20%
-    uint8_t critical_battery_threshold; // Default: 5%
+  uint32_t normal_interval_sec;        // Default: 300 (5 min)
+  uint32_t low_battery_interval_sec;   // Default: 600 (10 min) for <20% battery
+  uint32_t critical_interval_sec;      // Default: 1800 (30 min) for <5% battery
+  uint32_t rapid_update_interval_sec;  // Default: 60 (1 min) when data changing
+  uint8_t low_battery_threshold;       // Default: 20%
+  uint8_t critical_battery_threshold;  // Default: 5%
 };
 
 // Core power functions

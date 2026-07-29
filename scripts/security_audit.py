@@ -80,7 +80,7 @@ def check_file_for_credentials(filepath: Path) -> list:
     try:
         with open(filepath, "r", encoding="utf-8", errors="ignore") as f:
             content = f.read()
-    except:
+    except OSError:
         return issues
 
     # Check each pattern
@@ -123,7 +123,7 @@ def check_git_history():
             )
             if result.stdout.strip():
                 issues.append(f"WARNING: {file} exists in git history!")
-        except:
+        except Exception:
             pass
 
     return issues

@@ -31,7 +31,9 @@ jobs:
           python -m pip install -r requirements.txt
 
       - name: Run schema/bounds tests
+        shell: bash
         run: |
+          set -euo pipefail
           pytest -q tests/test_ui_spec_schema.py tests/test_geometry_schema.py 2>&1 | tee json-validate.txt
 
       - name: Upload validation logs
@@ -93,6 +95,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          # Full history so the SonarCloud step below can resolve new-code scope
+          fetch-depth: 0
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -107,9 +112,30 @@ jobs:
           python -m pip install -r requirements.txt
           # For icon conversion coverage
           python -m pip install cairosvg
+          # Pinned deliberately: an unpinned install added here trips
+          # githubactions:S8544, and this is CI-only tooling.
+          python -m pip install "pytest-cov==7.1.0"
 
       - name: Run unit tests (skip web-sim)
-        run: pytest -q -k "not web_sim" 2>&1 | tee pytest-python.txt
+        shell: bash
+        run: |
+          set -euo pipefail
+          # -m "not slow" keeps browser-driven tests here out of this job, which has no Chromium.
+          # --cov writes coverage.xml for the SonarCloud step below. Collecting it
+          # from this run rather than a second one keeps the suite executing once.
+          pytest -q -k "not web_sim" -m "not slow" \
+            --cov=scripts --cov-report=xml 2>&1 | tee pytest-python.txt
+
+      # Scanning from inside this job means coverage.xml is already in the
+      # workspace: no artifact round-trip, and no second pytest run. always() so a
+      # failing test still gets measured instead of leaving the gate at 0%.
+      # Dependabot PRs cannot read SONAR_TOKEN, so the scan is skipped for them
+      # rather than reporting a misleading red check.
+      - name: SonarCloud Scan
+        if: ${{ always() && github.event.pull_request.user.login != 'dependabot[bot]' }}
+        uses: SonarSource/sonarqube-scan-action@v7
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
       - name: Upload test artifacts
         if: ${{ always() }}
@@ -121,6 +147,7 @@ jobs:
             out/*.png
             out/*.json
             pytest-python.txt
+            coverage.xml
 
   tests-web:
     name: Web simulator tests (Playwright/Chromium)
@@ -149,7 +176,19 @@ jobs:
         env:
           # Set to 1 to always save screenshots/artifacts from layout tests
           SAVE_SHOT: "1"
-        run: pytest -q -k web_sim 2>&1 | tee pytest-web.txt
+        shell: bash
+        run: |
+          # pipefail so a pytest failure is not swallowed by tee, but deliberately
+          # no -e: both selections must run even when the first one fails, or a red
+          # web_sim suite would silently stop the "slow" browser tests from
+          # running at all. Failure is recorded and re-raised at the end instead.
+          set -uo pipefail
+          rc=0
+          # This job has Chromium, so it owns both the web_sim suite and the
+          # browser-driven tests marked "slow" (visual regression, debug panel).
+          pytest -q -k web_sim 2>&1 | tee pytest-web.txt || rc=1
+          pytest -q -m slow 2>&1 | tee -a pytest-web.txt || rc=1
+          exit $rc
 
       - name: Upload web-sim artifacts
         if: ${{ always() }}
@@ -246,13 +285,19 @@ jobs:
         env:
           MQTT_HOST: 127.0.0.1
           MQTT_PORT: 1883
-        run: python3 scripts/test_mqtt_integration.py 2>&1 | tee mqtt_itest.log
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/test_mqtt_integration.py 2>&1 | tee mqtt_itest.log
 
       - name: Run pytest birth/rediscovery + discovery contract tests
         env:
           MQTT_HOST: 127.0.0.1
           MQTT_PORT: 1883
-        run: pytest -q tests/test_mqtt_birth.py tests/test_mqtt_discovery.py 2>&1 | tee mqtt_birth.log
+        shell: bash
+        run: |
+          set -euo pipefail
+          pytest -q tests/test_mqtt_birth.py tests/test_mqtt_discovery.py 2>&1 | tee mqtt_birth.log
 
       - name: Upload MQTT logs
         if: ${{ always() }}
@@ -314,7 +359,15 @@ jobs:
               black --check . 2>&1 | tee black.txt
               ;;
             clang-format)
-              FILES=$(find firmware/arduino/src -type f \( -name "*.cpp" -o -name "*.h" \))
+              # Generated sources are excluded: the generators, not clang-format, own
+              # their formatting, so any run of gen_ui.py/gen_icons.py would undo it.
+              # Keep this list in sync with exclude_files in CPPLINT.cfg.
+              FILES=$(find firmware/arduino/src -type f \( -name "*.cpp" -o -name "*.h" \) \
+                ! -name 'icons_generated.h' \
+                ! -name 'ui_generated.*' \
+                ! -name 'ui_ops_generated.*' \
+                ! -name 'generated_config.h' \
+                ! -name 'display_layout.h')
               if [ -n "$FILES" ]; then
                 clang-format --version | tee clang-format-version.txt
                 clang-format -n --Werror $FILES 2>&1 | tee clang-format.txt
@@ -375,4 +428,3 @@ jobs:
       - name: Run native unit tests
         working-directory: firmware/arduino
         run: pio test -e native -v
-

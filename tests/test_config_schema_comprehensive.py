@@ -7,7 +7,9 @@ import yaml
 
 # Configuration files to validate
 CONFIG_FILES = [
-    {"path": "config/device.yaml", "schema": "device_config", "required": True},
+    # device.yaml holds per-device secrets and is gitignored; it only exists after
+    # a local `setup.sh`, so it can never be required in CI or on a fresh clone.
+    {"path": "config/device.yaml", "schema": "device_config", "required": False},
     {"path": "config/device.sample.yaml", "schema": "device_config", "required": True},
     {"path": "config/ui_spec.json", "schema": "ui_spec", "required": True},
     {

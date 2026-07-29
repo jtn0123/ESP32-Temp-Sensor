@@ -23,7 +23,10 @@ jobs:
         language:
           - "python"
           - "javascript-typescript"
-          - "c-cpp"
+          # "c-cpp" is intentionally absent: autobuild cannot build the PlatformIO
+          # firmware, so the analysis step fails with "no source code was seen".
+          # Same reason C/C++ is excluded from SonarCloud (needs a compilation
+          # database). To re-enable, replace autobuild with an explicit `pio run`.
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4

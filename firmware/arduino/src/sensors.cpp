@@ -40,8 +40,8 @@ static void i2c_bus_recover_if_stuck() {
 void sensors_begin() {
   if (g_bme280_initialized)
     return;
-    
-  // Explicitly initialize I2C on known pins when available
+
+    // Explicitly initialize I2C on known pins when available
 #if defined(SDA) && defined(SCL)
   Serial.printf("I2C: using pins SDA=%d SCL=%d\n", SDA, SCL);
 #if I2C_DEBUG_SCAN
@@ -56,11 +56,11 @@ void sensors_begin() {
   Wire.setTimeOut(I2C_TIMEOUT_MS > 0 ? I2C_TIMEOUT_MS : 50);
 #endif
   Wire.setClock(I2C_CLOCK_HZ);
-  
+
 #if I2C_DEBUG_SCAN
   Serial.println("I2C: scanning...");
   const uint8_t candidates[] = {0x76, 0x77};
-  for (uint8_t i = 0; i < sizeof(candidates)/sizeof(candidates[0]); i++) {
+  for (uint8_t i = 0; i < sizeof(candidates) / sizeof(candidates[0]); i++) {
     uint8_t addr = candidates[i];
     Wire.beginTransmission(addr);
     uint8_t err = Wire.endTransmission();
@@ -78,20 +78,18 @@ void sensors_begin() {
     g_bme280_initialized = false;
     return;
   }
-  
+
   g_bme280.setSampling(Adafruit_BME280::MODE_FORCED,
-                       Adafruit_BME280::SAMPLING_X1, // temp
-                       Adafruit_BME280::SAMPLING_X1, // pressure
-                       Adafruit_BME280::SAMPLING_X1, // humidity
+                       Adafruit_BME280::SAMPLING_X1,  // temp
+                       Adafruit_BME280::SAMPLING_X1,  // pressure
+                       Adafruit_BME280::SAMPLING_X1,  // humidity
                        Adafruit_BME280::FILTER_OFF);
   g_bme280_initialized = true;
 }
 
 #else
 // No BME280, stub implementation
-void sensors_begin() { 
-  /* noop until SHT4x added */ 
-}
+void sensors_begin() { /* noop until SHT4x added */ }
 #endif
 
 InsideReadings read_inside_sensors() {
@@ -101,7 +99,7 @@ InsideReadings read_inside_sensors() {
   sensors_begin();
   if (!g_bme280_initialized)
     return r;
-    
+
   // Forced mode: trigger one measurement for low power
   g_bme280.takeForcedMeasurement();
   r.temperatureC = g_bme280.readTemperature();
@@ -119,16 +117,16 @@ void sensors_init_all() {
 
   // Initialize I2C and BME280
   sensors_begin();
-  
+
   // Read initial sensor values for diagnostics
   InsideReadings initial = read_inside_sensors();
   if (isfinite(initial.temperatureC)) {
-    Serial.printf("Initial readings: %.1f°C, %.1f%% RH, %.1f hPa\n",
-                  initial.temperatureC, initial.humidityPct, initial.pressureHPa);
+    Serial.printf("Initial readings: %.1f°C, %.1f%% RH, %.1f hPa\n", initial.temperatureC,
+                  initial.humidityPct, initial.pressureHPa);
   } else {
     Serial.println("No sensor readings available");
   }
-  
+
   // Future: Add other sensor initializations here
   // - SHT40 support
   // - SGP40 air quality sensor
@@ -139,7 +137,7 @@ void sensors_init_all() {
 InsideReadings read_sensors_with_timeout(uint32_t timeout_ms) {
   uint32_t start = millis();
   InsideReadings readings;
-  
+
   // Attempt to read sensors with timeout
   while (millis() - start < timeout_ms) {
     readings = read_inside_sensors();
@@ -149,10 +147,10 @@ InsideReadings read_sensors_with_timeout(uint32_t timeout_ms) {
     }
     delay(10);
   }
-  
+
   if (!isfinite(readings.temperatureC)) {
     Serial.println("Sensor read timeout");
   }
-  
+
   return readings;
 }

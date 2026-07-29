@@ -47,6 +47,10 @@ except ImportError:
         def integers(*args, **kwargs):
             return None
 
+        @staticmethod
+        def sampled_from(*args, **kwargs):
+            return None
+
     def assume(x):
         pass
 
@@ -172,7 +176,10 @@ class TestPowerEstimatorProperties:
     def test_invalid_inputs_return_zero_or_nan(
         self, capacity, sleep_mA, active_mA, awake_s, interval_s
     ):
-        """Invalid inputs (negative, zero, NaN, Inf) should return 0 or NaN (not a normal positive number)."""
+        """Invalid inputs (negative, zero, NaN, Inf) should return 0 or NaN.
+
+        A normal positive number is never a valid result here.
+        """
         import math
 
         # Check if any input is invalid

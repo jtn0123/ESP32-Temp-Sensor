@@ -18,9 +18,13 @@ import pytest
 ROOT = os.path.dirname(os.path.dirname(__file__))
 sys.path.insert(0, os.path.join(ROOT, "scripts"))
 
+# websocket_hub needs fastapi, which only the manager extra installs
+# (see requirements-manager.txt); skip the module rather than error on collection.
+pytest.importorskip("fastapi", reason="requirements-manager.txt not installed")
+
 # Import after path setup
-from device_manager.mqtt_broker import MQTTMessage, SimpleMQTTBroker
-from device_manager.websocket_hub import WebSocketHub
+from device_manager.mqtt_broker import MQTTMessage, SimpleMQTTBroker  # noqa: E402
+from device_manager.websocket_hub import WebSocketHub  # noqa: E402
 
 
 class MockWebSocket:

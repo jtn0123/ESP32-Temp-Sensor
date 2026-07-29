@@ -28,47 +28,47 @@
 //   const uint8_t* buffer = cap.capture(&size);
 
 class DisplayCapture {
-public:
-    static DisplayCapture& getInstance();
+ public:
+  static DisplayCapture& getInstance();
 
-    // Get the canvas for drawing (mirrors display operations)
-    GFXcanvas1* getCanvas() { return canvas_; }
-    
-    // Capture current canvas to buffer (1-bit packed)
-    // Returns pointer to canvas buffer and sets size
-    const uint8_t* capture(size_t* out_size);
+  // Get the canvas for drawing (mirrors display operations)
+  GFXcanvas1* getCanvas() { return canvas_; }
 
-    // Get as base64 string (for MQTT transmission)
-    // Returns length of base64 string, 0 on error
-    // out_buffer must be at least BASE64_SIZE bytes
-    size_t captureBase64(char* out_buffer, size_t buffer_size);
-    
-    // Check if canvas has been initialized and drawn to
-    bool hasContent() const { return canvas_ != nullptr && has_content_; }
-    
-    // Mark that content has been drawn
-    void setHasContent() { has_content_ = true; }
+  // Capture current canvas to buffer (1-bit packed)
+  // Returns pointer to canvas buffer and sets size
+  const uint8_t* capture(size_t* out_size);
 
-    // Display dimensions (250x122 for 2.13" eInk)
-    static constexpr uint16_t WIDTH = 250;
-    static constexpr uint16_t HEIGHT = 122;
+  // Get as base64 string (for MQTT transmission)
+  // Returns length of base64 string, 0 on error
+  // out_buffer must be at least BASE64_SIZE bytes
+  size_t captureBase64(char* out_buffer, size_t buffer_size);
 
-    // Buffer sizes (WIDTH must be padded to byte boundary for GFXcanvas1)
-    static constexpr uint16_t WIDTH_BYTES = (WIDTH + 7) / 8;  // 32 bytes per row
-    static constexpr size_t BUFFER_SIZE = WIDTH_BYTES * HEIGHT;  // 3904 bytes
-    static constexpr size_t BASE64_SIZE = ((BUFFER_SIZE + 2) / 3) * 4 + 1;  // ~5206 bytes
+  // Check if canvas has been initialized and drawn to
+  bool hasContent() const { return canvas_ != nullptr && has_content_; }
 
-private:
-    DisplayCapture();
-    ~DisplayCapture();
-    DisplayCapture(const DisplayCapture&) = delete;
-    DisplayCapture& operator=(const DisplayCapture&) = delete;
+  // Mark that content has been drawn
+  void setHasContent() { has_content_ = true; }
 
-    GFXcanvas1* canvas_ = nullptr;
-    bool has_content_ = false;
+  // Display dimensions (250x122 for 2.13" eInk)
+  static constexpr uint16_t WIDTH = 250;
+  static constexpr uint16_t HEIGHT = 122;
 
-    // Base64 encoding helper
-    size_t base64Encode(const uint8_t* input, size_t input_len, char* output, size_t output_size);
+  // Buffer sizes (WIDTH must be padded to byte boundary for GFXcanvas1)
+  static constexpr uint16_t WIDTH_BYTES = (WIDTH + 7) / 8;                // 32 bytes per row
+  static constexpr size_t BUFFER_SIZE = WIDTH_BYTES * HEIGHT;             // 3904 bytes
+  static constexpr size_t BASE64_SIZE = ((BUFFER_SIZE + 2) / 3) * 4 + 1;  // ~5206 bytes
+
+ private:
+  DisplayCapture();
+  ~DisplayCapture();
+  DisplayCapture(const DisplayCapture&) = delete;
+  DisplayCapture& operator=(const DisplayCapture&) = delete;
+
+  GFXcanvas1* canvas_ = nullptr;
+  bool has_content_ = false;
+
+  // Base64 encoding helper
+  size_t base64Encode(const uint8_t* input, size_t input_len, char* output, size_t output_size);
 };
 
 // C linkage for MQTT command handler
@@ -81,4 +81,4 @@ GFXcanvas1* display_capture_canvas();
 // Legacy convenience functions (now use canvas internally)
 void display_capture_fill_screen(uint16_t color);
 
-#endif // USE_DISPLAY
+#endif  // USE_DISPLAY

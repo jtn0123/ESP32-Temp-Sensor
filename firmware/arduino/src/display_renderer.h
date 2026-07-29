@@ -45,8 +45,7 @@ const int* rect_ptr_by_id(uint8_t rid);
 // Component drawing functions
 void draw_header_time(const char* time_str);
 void draw_status_line(const BatteryStatus& bs, const char* ip_cstr);
-void draw_weather_icon_region_at(int16_t x, int16_t y, int16_t w, int16_t h,
-                                 const char* condition);
+void draw_weather_icon_region_at(int16_t x, int16_t y, int16_t w, int16_t h, const char* condition);
 void draw_weather_icon_region_at_from_outside(int16_t x, int16_t y, int16_t w, int16_t h,
                                               const OutsideReadings& outh);
 
@@ -62,16 +61,14 @@ void draw_in_region(const int rect[4], DrawFnFwd drawFn);
 
 // Text drawing helpers
 void draw_temp_number_and_units(const int r[4], const char* t);
-void draw_temp_number_and_units_direct(int16_t x, int16_t y, int16_t w, int16_t h,
-                                       const char* t);
-void draw_right_aligned_text_in_rect(const int rect[4], const char* text,
-                                     int16_t text_width);
+void draw_temp_number_and_units_direct(int16_t x, int16_t y, int16_t w, int16_t h, const char* t);
+void draw_right_aligned_text_in_rect(const int rect[4], const char* text, int16_t text_width);
 
 // Value drawing functions
 void draw_values(const char* in_temp_f, const char* in_rh, const char* out_temp_f,
-                const char* out_rh, const char* time_str, const char* status);
+                 const char* out_rh, const char* time_str, const char* status);
 
 // Development/debug functions
 void dev_display_tick();
 
-#endif // USE_DISPLAY
+#endif  // USE_DISPLAY

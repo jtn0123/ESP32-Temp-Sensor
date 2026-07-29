@@ -15,6 +15,9 @@ from typing import Any, Dict, List, Optional
 
 import pytest
 
+# Drives a real browser, so it belongs to the CI job that installs Chromium.
+pytestmark = pytest.mark.slow
+
 # Add project root to path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))

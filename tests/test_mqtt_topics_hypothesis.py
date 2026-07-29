@@ -65,7 +65,7 @@ except ImportError:
 # Import mqtt_topics module
 ROOT = os.path.dirname(os.path.dirname(__file__))
 sys.path.insert(0, os.path.join(ROOT, "scripts"))
-from mqtt_topics import (
+from mqtt_topics import (  # noqa: E402
     build_discovery_config,
     build_discovery_topic,
     build_topic,

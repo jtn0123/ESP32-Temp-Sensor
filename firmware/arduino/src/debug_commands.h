@@ -31,51 +31,51 @@
 // - {"cmd": "screenshot"}              -> Captures and publishes display screenshot
 
 class DebugCommands {
-public:
-    static constexpr const char* TOPIC_CMD_DEBUG = "/cmd/debug";
-    static constexpr const char* TOPIC_DEBUG_RESPONSE = "/debug/response";
+ public:
+  static constexpr const char* TOPIC_CMD_DEBUG = "/cmd/debug";
+  static constexpr const char* TOPIC_DEBUG_RESPONSE = "/debug/response";
 
-    static DebugCommands& getInstance();
+  static DebugCommands& getInstance();
 
-    void begin();
-    void setClientId(const char* client_id);
+  void begin();
+  void setClientId(const char* client_id);
 
-    // Handle debug command from MQTT
-    void handleCommand(const char* topic, const uint8_t* payload, size_t length);
+  // Handle debug command from MQTT
+  void handleCommand(const char* topic, const uint8_t* payload, size_t length);
 
-private:
-    DebugCommands() = default;
-    ~DebugCommands() = default;
-    DebugCommands(const DebugCommands&) = delete;
-    DebugCommands& operator=(const DebugCommands&) = delete;
+ private:
+  DebugCommands() = default;
+  ~DebugCommands() = default;
+  DebugCommands(const DebugCommands&) = delete;
+  DebugCommands& operator=(const DebugCommands&) = delete;
 
-    char client_id_[40];
-    bool initialized_ = false;
+  char client_id_[40];
+  bool initialized_ = false;
 
-    // Command handlers
-    void cmdHeap(PubSubClient* client);
-    void cmdState(PubSubClient* client);
-    void cmdConfig(PubSubClient* client);
-    void cmdRestart(PubSubClient* client);
-    void cmdModules(PubSubClient* client);
-    void cmdUptime(PubSubClient* client);
-    void cmdNetwork(PubSubClient* client);
-    void cmdSensors(PubSubClient* client);
-    void cmdPerf(PubSubClient* client);
-    void cmdPerfReset(PubSubClient* client);
-    void cmdBufPool(PubSubClient* client);
-    void cmdCrash(PubSubClient* client);
-    void cmdCrashClear(PubSubClient* client);
-    void cmdMemory(PubSubClient* client);
-    void cmdMemoryReset(PubSubClient* client);
-    void cmdSleep(PubSubClient* client);
-    void cmdFeatures(PubSubClient* client);
-    void cmdMqttBatch(PubSubClient* client);
-    void cmdSmartRefresh(PubSubClient* client);
-    void cmdScreenshot(PubSubClient* client);
+  // Command handlers
+  void cmdHeap(PubSubClient* client);
+  void cmdState(PubSubClient* client);
+  void cmdConfig(PubSubClient* client);
+  void cmdRestart(PubSubClient* client);
+  void cmdModules(PubSubClient* client);
+  void cmdUptime(PubSubClient* client);
+  void cmdNetwork(PubSubClient* client);
+  void cmdSensors(PubSubClient* client);
+  void cmdPerf(PubSubClient* client);
+  void cmdPerfReset(PubSubClient* client);
+  void cmdBufPool(PubSubClient* client);
+  void cmdCrash(PubSubClient* client);
+  void cmdCrashClear(PubSubClient* client);
+  void cmdMemory(PubSubClient* client);
+  void cmdMemoryReset(PubSubClient* client);
+  void cmdSleep(PubSubClient* client);
+  void cmdFeatures(PubSubClient* client);
+  void cmdMqttBatch(PubSubClient* client);
+  void cmdSmartRefresh(PubSubClient* client);
+  void cmdScreenshot(PubSubClient* client);
 
-    // Helper to publish response
-    void publishResponse(PubSubClient* client, const char* json);
+  // Helper to publish response
+  void publishResponse(PubSubClient* client, const char* json);
 };
 
 // C linkage for MQTT callback

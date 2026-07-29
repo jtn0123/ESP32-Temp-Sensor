@@ -1,5 +1,7 @@
 // MQTT client implementation - extracted from net.h
 #include "mqtt_client.h"
+#include <Preferences.h>
+#include <cstdio>
 #include "generated_config.h"
 #include "config.h"
 #include "metrics_diagnostics.h"
@@ -7,7 +9,6 @@
 #include "profiling.h"
 #include "safe_strings.h"
 #include "power.h"  // For BatteryStatus
-#include <Preferences.h>
 #if LOG_MQTT_ENABLED
 #include "logging/log_mqtt.h"
 #endif
@@ -34,7 +35,8 @@ static const uint32_t COMMAND_COOLDOWN_MS = 1000;  // 1 second between commands
 
 // Helper to build MQTT topic (buffer-based to avoid heap fragmentation)
 static void build_topic_buf(char* out, size_t out_size, const char* suffix) {
-  if (out_size == 0) return;
+  if (out_size == 0)
+    return;
   if (g_mqtt_client_id[0] == '\0') {
     // Client ID not set - use fallback
     safe_snprintf_rt(out, out_size, "espsensor/unknown/%s", suffix ? suffix : "");
@@ -53,29 +55,31 @@ static String build_topic(const char* suffix) {
 void mqtt_begin() {
   // Client ID will be set externally via mqtt_set_client_id
   // to avoid WiFi dependency in this module
-  
+
   // Configure MQTT client
   g_mqtt.setBufferSize(MQTT_MAX_PACKET_SIZE);
-  
-  // Set MQTT server
-  #ifdef MQTT_HOST
+
+// Set MQTT server
+#ifdef MQTT_HOST
   g_mqtt.setServer(MQTT_HOST, MQTT_PORT);
-  #endif
-  
+#endif
+
   // Set up MQTT callback for commands and outdoor data
   // NOTE: Using C strings (not Arduino String) to avoid heap fragmentation
   g_mqtt.setCallback([](char* topic, byte* payload, unsigned int length) {
     // Null check for safety
-    if (!topic) return;
-    
+    if (!topic)
+      return;
+
     // Helper to check if topic ends with suffix (C string version - no heap allocation)
     auto topic_ends_with = [](const char* t, const char* suffix) -> bool {
       size_t tlen = strlen(t);
       size_t slen = strlen(suffix);
-      if (tlen < slen) return false;
+      if (tlen < slen)
+        return false;
       return strcmp(t + tlen - slen, suffix) == 0;
     };
-    
+
     // Rate limit command topics (prevents flooding/DoS attacks)
     // Data topics (temp, weather) are not rate limited
     if (strstr(topic, "/cmd/") != nullptr) {
@@ -86,17 +90,17 @@ void mqtt_begin() {
       }
       g_last_command_ms = now;
     }
-    
+
     // Handle diagnostic mode commands
     if (topic_ends_with(topic, "/cmd/diagnostic_mode")) {
       if (length > 0) {
-        char value = (char)payload[0];
+        char value = static_cast<char>(payload[0]);
         g_diagnostic_mode_requested = true;
         g_diagnostic_mode_request_value = (value == '1' || value == 't' || value == 'T');
       }
       return;
     }
-    
+
     // Handle sleep interval command (minimum 180s / 3 min to prevent sensor heating)
     if (topic_ends_with(topic, "/cmd/sleep_interval")) {
       if (length > 0 && length < 16) {
@@ -116,7 +120,7 @@ void mqtt_begin() {
       }
       return;
     }
-    
+
     // Handle device mode command (dev or production)
     if (topic_ends_with(topic, "/cmd/mode")) {
       if (length > 0 && length < 16) {
@@ -128,14 +132,14 @@ void mqtt_begin() {
       }
       return;
     }
-    
+
     // Handle status request command
     if (topic_ends_with(topic, "/cmd/status")) {
       extern void publish_device_status();
       publish_device_status();
       return;
     }
-    
+
     // Handle reboot command
     if (topic_ends_with(topic, "/cmd/reboot")) {
       Serial.println("[MQTT] Reboot command received");
@@ -144,33 +148,32 @@ void mqtt_begin() {
       esp_restart();
       return;
     }
-    
+
     // Handle screenshot command
     if (topic_ends_with(topic, "/cmd/screenshot")) {
-      #if USE_DISPLAY
+#if USE_DISPLAY
       display_capture_handle((const char*)payload, length);
-      #endif
+#endif
       return;
     }
-    
-    // Forward log commands to LogMQTT
-    #if LOG_MQTT_ENABLED
-    if (strstr(topic, "/cmd/clear_logs") != nullptr ||
-        strstr(topic, "/cmd/log_level") != nullptr ||
+
+// Forward log commands to LogMQTT
+#if LOG_MQTT_ENABLED
+    if (strstr(topic, "/cmd/clear_logs") != nullptr || strstr(topic, "/cmd/log_level") != nullptr ||
         strstr(topic, "/cmd/log_filter") != nullptr) {
       log_mqtt_handle_command(topic, (const uint8_t*)payload, length);
       return;
     }
-    #endif
+#endif
 
     // Handle debug commands
     if (strstr(topic, "/cmd/debug") != nullptr) {
       debug_commands_handle(topic, (const uint8_t*)payload, length);
       return;
     }
-    
-    // Handle outdoor weather data (alias topics)
-    #ifdef MQTT_SUB_BASE
+
+// Handle outdoor weather data (alias topics)
+#ifdef MQTT_SUB_BASE
     // Convert payload to string
     char value_str[64];
     if (length < sizeof(value_str)) {
@@ -180,11 +183,11 @@ void mqtt_begin() {
       // Payload too large - truncate and log warning
       memcpy(value_str, payload, sizeof(value_str) - 1);
       value_str[sizeof(value_str) - 1] = '\0';
-      Serial.printf("[MQTT] WARN: Payload truncated (%u bytes > %u max)\n",
-                    (unsigned)length, (unsigned)(sizeof(value_str) - 1));
+      Serial.printf("[MQTT] WARN: Payload truncated (%u bytes > %u max)\n", (unsigned)length,
+                    (unsigned)(sizeof(value_str) - 1));
       increment_error_stat("mqtt_truncation");
     }
-    
+
     // Handle temperature in Fahrenheit
     if (topic_ends_with(topic, "/temp_f")) {
       // Use strtof to properly detect parse errors (atof returns 0.0 for both error and valid "0")
@@ -197,37 +200,32 @@ void mqtt_begin() {
         g_outside.temperatureC = temp_c;
         g_outside.validTemp = true;
       }
-    }
-    // Handle temperature in Celsius (legacy)
-    else if (topic_ends_with(topic, "/temp")) {
+    } else if (topic_ends_with(topic, "/temp")) {
+      // Handle temperature in Celsius (legacy)
       char* endptr = nullptr;
       float temp_c = strtof(value_str, &endptr);
       if (endptr != value_str && isfinite(temp_c)) {
         g_outside.temperatureC = temp_c;
         g_outside.validTemp = true;
       }
-    }
-    // Handle weather condition text
-    else if (topic_ends_with(topic, "/condition")) {
+    } else if (topic_ends_with(topic, "/condition")) {
+      // Handle weather condition text
       snprintf(g_outside.weather, sizeof(g_outside.weather), "%s", value_str);
       g_outside.validWeather = true;
-    }
-    // Handle weather description (legacy)
-    else if (topic_ends_with(topic, "/weather")) {
+    } else if (topic_ends_with(topic, "/weather")) {
+      // Handle weather description (legacy)
       snprintf(g_outside.weather, sizeof(g_outside.weather), "%s", value_str);
       g_outside.validWeather = true;
-    }
-    // Handle weather condition code (currently not stored separately)
-    else if (topic_ends_with(topic, "/condition_code")) {
+    } else if (topic_ends_with(topic, "/condition_code")) {
+      // Handle weather condition code (currently not stored separately)
       // Weather code could be used to map to weather text if needed
       // For now, we rely on the condition text itself
-    }
-    // Handle weather ID (legacy - currently not stored separately)
-    else if (topic_ends_with(topic, "/weather_id")) {
-      // Weather ID could be used to map to weather text if needed  
+    } else if (topic_ends_with(topic, "/weather_id")) {
+      // Handle weather ID (legacy - currently not stored separately)
+      // Weather ID could be used to map to weather text if needed
       // For now, we rely on the weather text itself
     }
-    #endif
+#endif
   });
 }
 
@@ -252,12 +250,11 @@ bool mqtt_connect() {
 
   // Connect with authentication if configured
   bool connected = false;
-  #if defined(MQTT_USER) && defined(MQTT_PASS)
-  connected = g_mqtt.connect(g_mqtt_client_id, MQTT_USER, MQTT_PASS,
-                            lwt_topic, 0, true, "offline");
-  #else
+#if defined(MQTT_USER) && defined(MQTT_PASS)
+  connected = g_mqtt.connect(g_mqtt_client_id, MQTT_USER, MQTT_PASS, lwt_topic, 0, true, "offline");
+#else
   connected = g_mqtt.connect(g_mqtt_client_id, lwt_topic, 0, true, "offline");
-  #endif
+#endif
 
   if (connected) {
     // Publish online status
@@ -270,18 +267,19 @@ bool mqtt_connect() {
     // Build discovery payload with device info
     char discovery_payload[256];
     char ip_buf[16];
-    #if FEATURE_WIFI
+#if FEATURE_WIFI
     // Get IP address from WiFi manager
     extern String wifi_get_ip();
     String ip_str = wifi_get_ip();
     safe_strcpy(ip_buf, ip_str.c_str());
-    #else
+#else
     safe_strcpy(ip_buf, "0.0.0.0");
-    #endif
+#endif
 
-    snprintf(discovery_payload, sizeof(discovery_payload),
-             "{\"device_id\":\"%s\",\"ip\":\"%s\",\"version\":\"%s\",\"room\":\"%s\",\"uptime\":%lu}",
-             g_mqtt_client_id, ip_buf, FW_VERSION, ROOM_NAME, millis() / 1000);
+    snprintf(
+        discovery_payload, sizeof(discovery_payload),
+        "{\"device_id\":\"%s\",\"ip\":\"%s\",\"version\":\"%s\",\"room\":\"%s\",\"uptime\":%lu}",
+        g_mqtt_client_id, ip_buf, FW_VERSION, ROOM_NAME, millis() / 1000);
 
     // Publish discovery (not retained - will clear on disconnect via LWT)
     g_mqtt.publish(discovery_topic, discovery_payload, false);
@@ -294,33 +292,31 @@ bool mqtt_connect() {
     // Initialize debug commands
     DebugCommands::getInstance().setClientId(g_mqtt_client_id);
     DebugCommands::getInstance().begin();
-    
-    // Subscribe to outdoor weather data (alias topics)
-    #ifdef MQTT_SUB_BASE
+
+// Subscribe to outdoor weather data (alias topics)
+#ifdef MQTT_SUB_BASE
     String outdoor_base = String(MQTT_SUB_BASE);
     // Subscribe to alias topics for outdoor data
     String sub_topics[] = {
-      outdoor_base + "/temp_f",      // Temperature in Fahrenheit
-      outdoor_base + "/condition",   // Weather condition text
-      outdoor_base + "/condition_code", // Weather condition code
-      // Legacy topics for backward compatibility
-      outdoor_base + "/temp",        // Temperature in Celsius
-      outdoor_base + "/weather",     // Weather description
-      outdoor_base + "/weather_id"   // Weather ID
+        outdoor_base + "/temp_f",          // Temperature in Fahrenheit
+        outdoor_base + "/condition",       // Weather condition text
+        outdoor_base + "/condition_code",  // Weather condition code
+        // Legacy topics for backward compatibility
+        outdoor_base + "/temp",       // Temperature in Celsius
+        outdoor_base + "/weather",    // Weather description
+        outdoor_base + "/weather_id"  // Weather ID
     };
-    
+
     for (const String& topic : sub_topics) {
       g_mqtt.subscribe(topic.c_str());
     }
-    #endif
+#endif
   }
-  
+
   return connected;
 }
 
-bool mqtt_is_connected() {
-  return g_mqtt.connected();
-}
+bool mqtt_is_connected() { return g_mqtt.connected(); }
 
 void mqtt_disconnect() {
   if (g_mqtt.connected()) {
@@ -333,41 +329,39 @@ void mqtt_disconnect() {
 }
 
 void publish_device_status() {
-  if (!g_mqtt.connected()) return;
-  
+  if (!g_mqtt.connected())
+    return;
+
   // Get device mode and sleep interval
   extern const char* get_device_mode_str();
   extern uint32_t get_dev_mode_remaining_sec();
   extern uint32_t get_custom_sleep_interval();
-  
+
   const char* mode = get_device_mode_str();
   uint32_t dev_timeout_sec = get_dev_mode_remaining_sec();
   uint32_t sleep_interval = get_custom_sleep_interval();
-  if (sleep_interval == 0) sleep_interval = 600;  // Default 10 min
-  
+  if (sleep_interval == 0)
+    sleep_interval = 600;  // Default 10 min
+
   // Get battery status (read_battery_status() declared in power.h)
   BatteryStatus bs = read_battery_status();
-  
+
   // Build status JSON
   char topic_buf[96];
   build_topic_buf(topic_buf, sizeof(topic_buf), "status");
-  
+
   char payload[256];
   snprintf(payload, sizeof(payload),
-    "{\"mode\":\"%s\",\"sleep_interval_sec\":%lu,\"dev_mode_timeout_sec\":%lu,"
-    "\"uptime_sec\":%lu,\"battery_pct\":%d,\"heap_free\":%lu,\"fw_version\":\"%s\",\"room\":\"%s\"}",
-    mode,
-    (unsigned long)sleep_interval,
-    (unsigned long)dev_timeout_sec,
-    (unsigned long)(millis() / 1000),
-    bs.percent,
-    (unsigned long)ESP.getFreeHeap(),
-    FW_VERSION,
-    ROOM_NAME
-  );
-  
+           "{\"mode\":\"%s\",\"sleep_interval_sec\":%lu,\"dev_mode_timeout_sec\":%lu,"
+           "\"uptime_sec\":%lu,\"battery_pct\":%d,\"heap_free\":%lu,\"fw_version\":\"%s\",\"room\":"
+           "\"%s\"}",
+           mode, (unsigned long)sleep_interval, (unsigned long)dev_timeout_sec,
+           (unsigned long)(millis() / 1000), bs.percent, (unsigned long)ESP.getFreeHeap(),
+           FW_VERSION, ROOM_NAME);
+
   g_mqtt.publish(topic_buf, payload, false);
-  Serial.printf("[MQTT] Published device status: mode=%s, interval=%lus\n", mode, (unsigned long)sleep_interval);
+  Serial.printf("[MQTT] Published device status: mode=%s, interval=%lus\n", mode,
+                (unsigned long)sleep_interval);
 }
 
 void mqtt_set_client_id(const char* client_id) {
@@ -376,22 +370,20 @@ void mqtt_set_client_id(const char* client_id) {
   }
 }
 
-const char* mqtt_get_client_id() {
-  return g_mqtt_client_id;
-}
+const char* mqtt_get_client_id() { return g_mqtt_client_id; }
 
-void mqtt_set_server(const char* server, uint16_t port) {
-  g_mqtt.setServer(server, port);
-}
+void mqtt_set_server(const char* server, uint16_t port) { g_mqtt.setServer(server, port); }
 
 bool mqtt_publish_raw(const char* topic, const char* payload, bool retain) {
-  if (!g_mqtt.connected()) return false;
+  if (!g_mqtt.connected())
+    return false;
   return g_mqtt.publish(topic, payload, retain);
 }
 
 // Publishing implementations
 void mqtt_publish_inside(float tempC, float rhPct) {
-  if (!g_mqtt.connected()) return;
+  if (!g_mqtt.connected())
+    return;
 
   char topic_buf[96];
   char payload[64];
@@ -412,7 +404,8 @@ void mqtt_publish_inside(float tempC, float rhPct) {
 }
 
 void mqtt_publish_pressure(float pressureHPa) {
-  if (!g_mqtt.connected() || !isfinite(pressureHPa)) return;
+  if (!g_mqtt.connected() || !isfinite(pressureHPa))
+    return;
 
   char topic_buf[96];
   char payload[32];
@@ -422,7 +415,8 @@ void mqtt_publish_pressure(float pressureHPa) {
 }
 
 void mqtt_publish_battery(float voltage, int percent) {
-  if (!g_mqtt.connected()) return;
+  if (!g_mqtt.connected())
+    return;
 
   char topic_buf[96];
   char payload[32];
@@ -443,7 +437,8 @@ void mqtt_publish_battery(float voltage, int percent) {
 }
 
 void mqtt_publish_wifi_rssi(int rssiDbm) {
-  if (!g_mqtt.connected()) return;
+  if (!g_mqtt.connected())
+    return;
 
   char topic_buf[96];
   char payload[16];
@@ -453,7 +448,8 @@ void mqtt_publish_wifi_rssi(int rssiDbm) {
 }
 
 void mqtt_publish_status(const char* payload, bool retain) {
-  if (!g_mqtt.connected() || !payload) return;
+  if (!g_mqtt.connected() || !payload)
+    return;
 
   char topic_buf[96];
   build_topic_buf(topic_buf, sizeof(topic_buf), "status");
@@ -461,7 +457,8 @@ void mqtt_publish_status(const char* payload, bool retain) {
 }
 
 void mqtt_publish_debug_json(const char* payload, bool retain) {
-  if (!g_mqtt.connected() || !payload) return;
+  if (!g_mqtt.connected() || !payload)
+    return;
 
   char topic_buf[96];
   build_topic_buf(topic_buf, sizeof(topic_buf), "debug/json");
@@ -469,7 +466,8 @@ void mqtt_publish_debug_json(const char* payload, bool retain) {
 }
 
 void mqtt_publish_last_crash(const char* reason_or_null) {
-  if (!g_mqtt.connected()) return;
+  if (!g_mqtt.connected())
+    return;
 
   char topic_buf[96];
   build_topic_buf(topic_buf, sizeof(topic_buf), "debug/last_crash");
@@ -481,7 +479,8 @@ void mqtt_publish_last_crash(const char* reason_or_null) {
 }
 
 void mqtt_publish_debug_probe(const char* payload, bool retain) {
-  if (!g_mqtt.connected() || !payload) return;
+  if (!g_mqtt.connected() || !payload)
+    return;
 
   char topic_buf[96];
   build_topic_buf(topic_buf, sizeof(topic_buf), "debug/probe");
@@ -489,7 +488,8 @@ void mqtt_publish_debug_probe(const char* payload, bool retain) {
 }
 
 void mqtt_publish_boot_reason(const char* reason) {
-  if (!g_mqtt.connected() || !reason) return;
+  if (!g_mqtt.connected() || !reason)
+    return;
 
   char topic_buf[96];
   build_topic_buf(topic_buf, sizeof(topic_buf), "debug/boot_reason");
@@ -497,7 +497,8 @@ void mqtt_publish_boot_reason(const char* reason) {
 }
 
 void mqtt_publish_boot_count(uint32_t count) {
-  if (!g_mqtt.connected()) return;
+  if (!g_mqtt.connected())
+    return;
 
   char topic_buf[96];
   char payload[16];
@@ -507,7 +508,8 @@ void mqtt_publish_boot_count(uint32_t count) {
 }
 
 void mqtt_publish_crash_count(uint32_t count) {
-  if (!g_mqtt.connected()) return;
+  if (!g_mqtt.connected())
+    return;
 
   char topic_buf[96];
   char payload[16];
@@ -517,7 +519,8 @@ void mqtt_publish_crash_count(uint32_t count) {
 }
 
 void mqtt_publish_uptime(uint32_t uptime_sec) {
-  if (!g_mqtt.connected()) return;
+  if (!g_mqtt.connected())
+    return;
 
   char topic_buf[96];
   char payload[16];
@@ -527,7 +530,8 @@ void mqtt_publish_uptime(uint32_t uptime_sec) {
 }
 
 void mqtt_publish_wake_count(uint32_t count) {
-  if (!g_mqtt.connected()) return;
+  if (!g_mqtt.connected())
+    return;
 
   char topic_buf[96];
   char payload[16];
@@ -536,21 +540,22 @@ void mqtt_publish_wake_count(uint32_t count) {
   g_mqtt.publish(topic_buf, payload, true);
 }
 
-void mqtt_publish_memory_diagnostics(uint32_t free_heap, uint32_t min_heap,
-                                    uint32_t largest_block, float fragmentation_pct) {
-  if (!g_mqtt.connected()) return;
+void mqtt_publish_memory_diagnostics(uint32_t free_heap, uint32_t min_heap, uint32_t largest_block,
+                                     float fragmentation_pct) {
+  if (!g_mqtt.connected())
+    return;
 
   char topic_buf[96];
   char payload[128];
-  snprintf(payload, sizeof(payload),
-          "{\"free\":%u,\"min\":%u,\"largest\":%u,\"frag\":%.1f}",
-          free_heap, min_heap, largest_block, fragmentation_pct);
+  snprintf(payload, sizeof(payload), "{\"free\":%u,\"min\":%u,\"largest\":%u,\"frag\":%.1f}",
+           free_heap, min_heap, largest_block, fragmentation_pct);
   build_topic_buf(topic_buf, sizeof(topic_buf), "debug/memory");
   g_mqtt.publish(topic_buf, payload, true);
 }
 
 void mqtt_publish_diagnostic_mode(bool active) {
-  if (!g_mqtt.connected()) return;
+  if (!g_mqtt.connected())
+    return;
 
   char topic_buf[96];
   build_topic_buf(topic_buf, sizeof(topic_buf), "diagnostic_mode");
@@ -558,7 +563,8 @@ void mqtt_publish_diagnostic_mode(bool active) {
 }
 
 void mqtt_publish_publish_latency_ms(uint32_t publishLatencyMs) {
-  if (!g_mqtt.connected()) return;
+  if (!g_mqtt.connected())
+    return;
 
   char topic_buf[96];
   char payload[16];
@@ -568,27 +574,15 @@ void mqtt_publish_publish_latency_ms(uint32_t publishLatencyMs) {
 }
 
 // Outside readings management
-void mqtt_update_outside_readings(const OutsideReadings& readings) {
-  g_outside = readings;
-}
+void mqtt_update_outside_readings(const OutsideReadings& readings) { g_outside = readings; }
 
-OutsideReadings mqtt_get_outside_readings() {
-  return g_outside;
-}
+OutsideReadings mqtt_get_outside_readings() { return g_outside; }
 
 // Diagnostic mode
-bool mqtt_is_diagnostic_mode_requested() {
-  return g_diagnostic_mode_requested;
-}
+bool mqtt_is_diagnostic_mode_requested() { return g_diagnostic_mode_requested; }
 
-bool mqtt_get_diagnostic_mode_value() {
-  return g_diagnostic_mode_request_value;
-}
+bool mqtt_get_diagnostic_mode_value() { return g_diagnostic_mode_request_value; }
 
-void mqtt_clear_diagnostic_mode_request() {
-  g_diagnostic_mode_requested = false;
-}
+void mqtt_clear_diagnostic_mode_request() { g_diagnostic_mode_requested = false; }
 
-PubSubClient* mqtt_get_client() {
-  return &g_mqtt;
-}
+PubSubClient* mqtt_get_client() { return &g_mqtt; }

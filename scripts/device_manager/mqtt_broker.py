@@ -208,7 +208,7 @@ class SimpleMQTTBroker:
                 payload_bytes = payload
 
             # Publish message
-            result = self.client.publish(topic, payload_bytes, qos=qos, retain=retain)
+            self.client.publish(topic, payload_bytes, qos=qos, retain=retain)
 
             # Log outgoing message
             mqtt_msg = MQTTMessage(topic=topic, payload=payload_bytes, direction="out")

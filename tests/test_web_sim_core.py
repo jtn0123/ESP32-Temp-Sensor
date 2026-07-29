@@ -51,7 +51,7 @@ global.document = {
     getElementById: () => null,
     createElement: () => ({
         getContext: () => ({
-            measureText: (text) => ({ 
+            measureText: (text) => ({
                 width: text.length * 7,
                 actualBoundingBoxAscent: 10,
                 actualBoundingBoxDescent: 2
@@ -141,7 +141,7 @@ console.log(shortConditionLabel('Light Rain Showers'));
 function validateTextOverflow(text, rect, fontSize, weight = 'normal') {
     const canvas = {
         getContext: () => ({
-            measureText: (text) => ({ 
+            measureText: (text) => ({
                 width: text.length * 7,  // Approximate 7px per character
                 actualBoundingBoxAscent: fontSize * 0.8,
                 actualBoundingBoxDescent: fontSize * 0.2
@@ -153,10 +153,12 @@ function validateTextOverflow(text, rect, fontSize, weight = 'normal') {
     ctx.font = weight + ' ' + fontSize + 'px monospace';
     const metrics = ctx.measureText(text);
     const textWidth = metrics.width;
-    
-    const actualHeight = metrics.actualBoundingBoxAscent + metrics.actualBoundingBoxDescent || fontSize * 1.2;
+
+    const actualHeight =
+      metrics.actualBoundingBoxAscent + metrics.actualBoundingBoxDescent ||
+      fontSize * 1.2;
     const [x, y, w, h] = rect;
-    
+
     const issues = [];
     if (textWidth > w) {
         issues.push({
@@ -168,10 +170,10 @@ function validateTextOverflow(text, rect, fontSize, weight = 'normal') {
             overflow: textWidth - w
         });
     }
-    
+
     if (actualHeight > h) {
         issues.push({
-            type: 'overflow', 
+            type: 'overflow',
             dimension: 'height',
             text: text,
             textHeight: actualHeight,
@@ -179,7 +181,7 @@ function validateTextOverflow(text, rect, fontSize, weight = 'normal') {
             overflow: actualHeight - h
         });
     }
-    
+
     return issues;
 }
 
@@ -247,9 +249,10 @@ console.log(JSON.stringify(result3));
                     if match:
                         break
                 if match:
-                    assert (
-                        int(match.group(1)) == expected_value
-                    ), f"Region {region_name} mismatch: expected {expected_value}, got {match.group(1)}"
+                    assert int(match.group(1)) == expected_value, (
+                        f"Region {region_name} mismatch: "
+                        f"expected {expected_value}, got {match.group(1)}"
+                    )
                 # Skip if not found - constants may be defined differently
             else:
                 pattern = rf"let\s+{region_name}\s*=\s*\[([^\]]+)\]"
@@ -266,17 +269,17 @@ console.log(JSON.stringify(result3));
 function detectRegionCollisions(regions) {
     const collisions = [];
     const regionNames = Object.keys(regions);
-    
+
     for (let i = 0; i < regionNames.length; i++) {
         for (let j = i + 1; j < regionNames.length; j++) {
             const r1 = regions[regionNames[i]];
             const r2 = regions[regionNames[j]];
-            
+
             // Check if rectangles intersect
             const [x1, y1, w1, h1] = r1;
             const [x2, y2, w2, h2] = r2;
-            
-            if (!(x1 >= x2 + w2 || x2 >= x1 + w1 || 
+
+            if (!(x1 >= x2 + w2 || x2 >= x1 + w1 ||
                   y1 >= y2 + h2 || y2 >= y1 + h1)) {
                 collisions.push({
                     region1: regionNames[i],
@@ -287,7 +290,7 @@ function detectRegionCollisions(regions) {
             }
         }
     }
-    
+
     return collisions;
 }
 
@@ -357,7 +360,7 @@ function mapWeatherIcon(condition) {
         'thunderstorm': '⛈️',
         'tornado': '🌪️'
     };
-    
+
     const normalized = condition.toLowerCase().replace(/[\\s_]/g, '-');
     return iconMap[normalized] || '❓';
 }
@@ -392,12 +395,12 @@ function formatTemperature(value, unit = 'C') {
     if (value === null || value === undefined || value === '') {
         return '--';
     }
-    
+
     const num = parseFloat(value);
     if (isNaN(num)) {
         return '--';
     }
-    
+
     // Round to 1 decimal place
     const rounded = Math.round(num * 10) / 10;
     return rounded.toFixed(1) + '°' + unit;
@@ -431,12 +434,12 @@ function formatHumidity(value) {
     if (value === null || value === undefined || value === '') {
         return '--';
     }
-    
+
     const num = parseFloat(value);
     if (isNaN(num) || num < 0 || num > 100) {
         return '--';
     }
-    
+
     return Math.round(num) + '%';
 }
 
@@ -468,12 +471,12 @@ function formatPressure(value) {
     if (value === null || value === undefined || value === '') {
         return '--';
     }
-    
+
     const num = parseFloat(value);
     if (isNaN(num) || num < 800 || num > 1100) {
         return '--';
     }
-    
+
     return Math.round(num) + ' hPa';
 }
 
@@ -505,12 +508,12 @@ class TestCanvasRendering:
         test_code = """
 function validateDrawOperation(x, y, width, height, canvasWidth, canvasHeight) {
     const errors = [];
-    
+
     if (x < 0) errors.push('x < 0');
     if (y < 0) errors.push('y < 0');
     if (x + width > canvasWidth) errors.push('x + width > canvas width');
     if (y + height > canvasHeight) errors.push('y + height > canvas height');
-    
+
     return errors.length === 0 ? 'valid' : errors.join(', ');
 }
 
@@ -540,7 +543,7 @@ console.log(validateDrawOperation(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT, CANVAS_WIDT
 function applyThreshold(r, g, b, threshold = 176) {
     // Convert to grayscale
     const gray = 0.299 * r + 0.587 * g + 0.114 * b;
-    
+
     // Apply threshold for 1-bit display
     return gray >= threshold ? 255 : 0;
 }
@@ -617,7 +620,7 @@ console.log(classifyIssueSeverity({type: 'unknown'}));
         test_code = """
 function detectEmptyRegions(regions, renderedContent) {
     const empty = [];
-    
+
     for (const [name, rect] of Object.entries(regions)) {
         if (!renderedContent[name] || renderedContent[name].trim() === '') {
             empty.push({
@@ -628,7 +631,7 @@ function detectEmptyRegions(regions, renderedContent) {
             });
         }
     }
-    
+
     return empty;
 }
 

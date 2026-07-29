@@ -169,7 +169,7 @@ void renderUI();
 void renderUI() {
     // drawText: Hello at (0, 0)
     display.drawText("Hello", 0, 0);
-    
+
     // fillRect at (10, 10) size 50x30
     display.fillRect(10, 10, 50, 30);
 }
@@ -245,19 +245,6 @@ class TestOperationTranslation:
 
     def test_conditional_operations(self):
         """Test conditional operation generation"""
-        operations = [
-            {
-                "type": "drawText",
-                "condition": "hasTemp",
-                "params": {"text": "${temp}", "x": 10, "y": 20},
-            },
-            {
-                "type": "drawText",
-                "condition": "!hasTemp",
-                "params": {"text": "--", "x": 10, "y": 20},
-            },
-        ]
-
         # Expected C++ code structure
         expected_code = """
 if (hasTemp) {
@@ -423,6 +410,7 @@ class TestIconGeneration:
                 assert "icon" in op, "drawIcon should have icon name"
                 # Icon names should follow convention
                 assert "_" in op["icon"], "Icon names should use underscore separator"
+                assert op["icon"] in icons, f"Unknown icon reference: {op['icon']}"
 
     def test_icon_data_embedding(self):
         """Test icon data embedding in generated code"""
@@ -448,7 +436,7 @@ class TestErrorHandling:
         """Test handling of invalid operation types"""
         operations = [{"type": "invalidOperation", "params": {}}]
 
-        with tempfile.TemporaryDirectory() as tmpdir:
+        with tempfile.TemporaryDirectory():
             spec_file = create_test_ui_spec(operations)
 
             # Should handle gracefully or skip invalid operations
@@ -497,7 +485,7 @@ class TestErrorHandling:
                 try:
                     float(params["x"])
                     is_valid = True
-                except:
+                except (TypeError, ValueError):
                     is_valid = False
                 assert not is_valid or isinstance(
                     params["x"], (int, float)

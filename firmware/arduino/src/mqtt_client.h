@@ -42,8 +42,8 @@ void mqtt_publish_boot_count(uint32_t count);
 void mqtt_publish_crash_count(uint32_t count);
 void mqtt_publish_uptime(uint32_t uptime_sec);
 void mqtt_publish_wake_count(uint32_t count);
-void mqtt_publish_memory_diagnostics(uint32_t free_heap, uint32_t min_heap, 
-                                    uint32_t largest_block, float fragmentation_pct);
+void mqtt_publish_memory_diagnostics(uint32_t free_heap, uint32_t min_heap, uint32_t largest_block,
+                                     float fragmentation_pct);
 void mqtt_publish_diagnostic_mode(bool active);
 void mqtt_publish_publish_latency_ms(uint32_t publishLatencyMs);
 

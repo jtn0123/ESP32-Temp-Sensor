@@ -44,10 +44,10 @@ class TestBootDiagnostics:
 
         # Test crash detection logic
         for reason in crash_reasons:
-            assert self.is_crash_reset(reason) == True
+            assert self.is_crash_reset(reason)
 
         for reason in normal_reasons:
-            assert self.is_crash_reset(reason) == False
+            assert not self.is_crash_reset(reason)
 
     def test_boot_counter_reset_on_power_cycle(self):
         """Test that counters are reset on power-on reset."""
@@ -109,15 +109,15 @@ class TestBootDiagnostics:
         timestamps = [1000, 1005, 1009]  # Within 10 seconds
         boot_count = 3
 
-        assert self.check_rapid_reset_trigger(boot_count, timestamps[-1], timestamps[-2]) == True
+        assert self.check_rapid_reset_trigger(boot_count, timestamps[-1], timestamps[-2])
 
         # Test case: 3 resets but not within 10 seconds
         timestamps = [1000, 1005, 1020]  # Last reset is >10s after previous
-        assert self.check_rapid_reset_trigger(boot_count, timestamps[-1], timestamps[-2]) == False
+        assert not self.check_rapid_reset_trigger(boot_count, timestamps[-1], timestamps[-2])
 
         # Test case: Less than 3 resets
         boot_count = 2
-        assert self.check_rapid_reset_trigger(boot_count, 1009, 1005) == False
+        assert not self.check_rapid_reset_trigger(boot_count, 1009, 1005)
 
     def test_uptime_tracking(self):
         """Test cumulative uptime tracking across sleep cycles."""

@@ -129,7 +129,6 @@ class TestSimMockParity:
 
     def test_generated_js_matches_spec(self):
         """Verify ui_generated.js was generated from current ui_spec.json."""
-        spec_path = ROOT / "config" / "ui_spec.json"
         gen_js_path = ROOT / "web" / "sim" / "ui_generated.js"
 
         assert gen_js_path.exists(), "ui_generated.js missing - run gen_ui.py"

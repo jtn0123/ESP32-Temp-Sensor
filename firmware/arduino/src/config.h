@@ -113,7 +113,7 @@
 #define LOG_MQTT_RATE_LIMIT_MS 1000
 #endif
 
-// Status pixel configuration 
+// Status pixel configuration
 #ifndef USE_STATUS_PIXEL
 #define USE_STATUS_PIXEL 0
 #endif

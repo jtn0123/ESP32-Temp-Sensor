@@ -8,6 +8,8 @@ DerivePointerAlignment: false
 PointerAlignment: Left
 SortIncludes: false
 IncludeBlocks: Preserve
+# cpplint's whitespace/ending_newline also requires this
+InsertNewlineAtEOF: true
 
 # Ensure ESP-IDF C headers sort before C++ standard headers like <cstdio>
 IncludeCategories:

@@ -553,7 +553,15 @@
     try{
       const name = MDI_ICON_BY_CATEGORY[category];
       if (!name) return false;
-      const url = new URL(`icons/device_baked/50x50/${name}.png`, (typeof window!== 'undefined'? window.location.href : ''));
+      // The baked icons live in web/icons/, but the page is served from two
+      // different roots: scripts/start_simulator.py serves web/ (page at
+      // /sim/index.html), while the Playwright tests serve web/sim/ (page at
+      // /index.html). Neither single path resolves under both, so try each.
+      const base = (typeof window !== 'undefined' ? window.location.href : '');
+      const candidates = [
+        new URL(`../icons/device_baked/50x50/${name}.png`, base).href,
+        new URL(`icons/device_baked/50x50/${name}.png`, base).href,
+      ];
       const key = `baked::${name}::${w}x${h}`;
       const entry = __mdiCache.get(key);
       if (entry && entry.bitmaps && entry.bitmaps.get('img')){
@@ -570,9 +578,10 @@
         ctx.drawImage(img, dx, dy, drawW, drawH);
         return true;
       }
-      // Begin async load
+      // Begin async load, falling through the candidate paths on 404
       (async()=>{
         try{
+          let attempt = 0;
           const img = new Image();
           img.onload = ()=>{
             let e = __mdiCache.get(key); if (!e) e = { bitmaps: new Map() };
@@ -580,7 +589,11 @@
             __mdiCache.set(key, e);
             queueRedrawSoon();
           };
-          img.src = url.href;
+          img.onerror = ()=>{
+            attempt += 1;
+            if (attempt < candidates.length) img.src = candidates[attempt];
+          };
+          img.src = candidates[attempt];
         }catch(_){ }
       })();
       return false;

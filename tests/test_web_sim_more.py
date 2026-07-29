@@ -61,7 +61,7 @@ _TIME_METRICS_JS = (
 def test_canvas_is_binary_after_draw():
     from playwright.sync_api import sync_playwright
 
-    web_root = os.path.join(os.path.dirname(os.path.dirname(__file__)), "web", "sim")
+    web_root = os.path.join(os.path.dirname(os.path.dirname(__file__)), "web")
     port = _find_free_port()
     server = _start_http_server(web_root, port)
     try:
@@ -69,7 +69,7 @@ def test_canvas_is_binary_after_draw():
         with sync_playwright() as p:
             browser = p.chromium.launch()
             page = browser.new_page(viewport={"width": 250, "height": 122})
-            page.goto(f"http://127.0.0.1:{port}/index.html", wait_until="load")
+            page.goto(f"http://127.0.0.1:{port}/sim/index.html", wait_until="load")
             page.wait_for_timeout(300)
 
             # Sample a small grid across the canvas to ensure only 0 or 255 per channel
@@ -91,7 +91,7 @@ def test_canvas_is_binary_after_draw():
 def test_stress_mode_renders_without_overlap():
     from playwright.sync_api import sync_playwright
 
-    web_root = os.path.join(os.path.dirname(os.path.dirname(__file__)), "web", "sim")
+    web_root = os.path.join(os.path.dirname(os.path.dirname(__file__)), "web")
     port = _find_free_port()
     server = _start_http_server(web_root, port)
     try:
@@ -99,9 +99,13 @@ def test_stress_mode_renders_without_overlap():
         with sync_playwright() as p:
             browser = p.chromium.launch()
             page = browser.new_page(viewport={"width": 250, "height": 122})
-            page.goto(f"http://127.0.0.1:{port}/index.html", wait_until="load")
+            page.goto(f"http://127.0.0.1:{port}/sim/index.html", wait_until="load")
             page.wait_for_timeout(300)
 
+            # The toggles moved inside an "Advanced" <details> disclosure, so the
+            # checkbox has no layout box until it is expanded and Playwright
+            # correctly refuses to click it.
+            page.locator("details.advanced-toggles > summary").click()
             # Enable stress mode
             page.check("#stressMode")
             page.wait_for_timeout(300)
@@ -151,7 +155,7 @@ def test_icons_available_or_fallback():
 def test_header_time_right_aligned_and_name_truncated():
     from playwright.sync_api import sync_playwright
 
-    web_root = os.path.join(os.path.dirname(os.path.dirname(__file__)), "web", "sim")
+    web_root = os.path.join(os.path.dirname(os.path.dirname(__file__)), "web")
     port = _find_free_port()
     server = _start_http_server(web_root, port)
     try:
@@ -187,7 +191,7 @@ def test_header_time_right_aligned_and_name_truncated():
                 )
 
             page.route("**/sample_data.json", handle_route)
-            page.goto(f"http://127.0.0.1:{port}/index.html", wait_until="load")
+            page.goto(f"http://127.0.0.1:{port}/sim/index.html", wait_until="load")
             page.wait_for_timeout(300)
 
             # Compute actual time text placement as in sim.js and probe a pixel near its middle
@@ -255,7 +259,7 @@ def test_mock_vs_web_sim_pixel_diff(tmp_path):
     mock_img = md.render(data)
 
     # Capture web sim canvas pixels
-    web_root = os.path.join(os.path.dirname(os.path.dirname(__file__)), "web", "sim")
+    web_root = os.path.join(os.path.dirname(os.path.dirname(__file__)), "web")
     port = _find_free_port()
     server = _start_http_server(web_root, port)
     try:
@@ -263,7 +267,7 @@ def test_mock_vs_web_sim_pixel_diff(tmp_path):
         with sync_playwright() as p:
             browser = p.chromium.launch()
             page = browser.new_page(viewport={"width": 250, "height": 122})
-            page.goto(f"http://127.0.0.1:{port}/index.html", wait_until="load")
+            page.goto(f"http://127.0.0.1:{port}/sim/index.html", wait_until="load")
             page.wait_for_timeout(300)
 
             # Feed data via fetch override route

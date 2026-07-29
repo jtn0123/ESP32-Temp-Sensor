@@ -550,7 +550,10 @@ class UIValidationEngine:
         # Prefer exact pixel buffer from canvas
         try:
             data_url = page.evaluate(
-                "() => { const c = document.getElementById('epd'); return c ? c.toDataURL('image/png') : null; }"
+                (
+                    "() => { const c = document.getElementById('epd'); "
+                    "return c ? c.toDataURL('image/png') : null; }"
+                )
             )
             if isinstance(data_url, str) and data_url.startswith("data:image/png"):
                 import base64

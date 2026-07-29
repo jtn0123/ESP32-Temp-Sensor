@@ -71,30 +71,26 @@ void fuelgauge_sleep_between_wakes() {
 #endif
 
 #if USE_LC709203F
-void lc_wake_if_asleep() { 
-  /* LC709203F has no sleep API */ 
-}
+void lc_wake_if_asleep() { /* LC709203F has no sleep API */ }
 
 void lc_quickstart_if_cold_boot(esp_reset_reason_t reason) {
   (void)reason;
   // LC709203F does not expose quickstart; ensure it is configured
 }
 
-void lc_sleep_between_wakes() { 
-  /* no-op */ 
-}
+void lc_sleep_between_wakes() { /* no-op */ }
 #endif
 
 BatteryStatus read_battery_status() {
   BatteryStatus b;
-  
+
 #if USE_MAX17048
   static bool s_maxfg_attempted = false;
   if (!g_maxfg_initialized && !s_maxfg_attempted) {
     enable_i2c_power();
     ensure_i2c_initialized();
     s_maxfg_attempted = true;
-    
+
     if (g_maxfg.begin()) {
       g_maxfg_initialized = true;
       Serial.println("MAX17048 fuel gauge found");
@@ -105,12 +101,12 @@ BatteryStatus read_battery_status() {
       Serial.println("MAX17048 not found");
     }
   }
-  
+
   if (g_maxfg_initialized) {
     b.voltage = g_maxfg.cellVoltage();
     float pct = g_maxfg.cellPercent();
     b.percent = constrain(static_cast<int>(pct), 0, 100);
-    
+
     // Simple day estimate: 3000mAh / 50mA average = 60 hours = 2.5 days
     if (b.percent >= 0) {
       b.estimatedDays = (b.percent * 2.5) / 100;
@@ -124,7 +120,7 @@ BatteryStatus read_battery_status() {
     enable_i2c_power();
     ensure_i2c_initialized();
     s_lcfg_attempted = true;
-    
+
     if (g_lcfg.begin()) {
       g_lcfg_initialized = true;
       Serial.println("LC709203F fuel gauge found");
@@ -135,12 +131,12 @@ BatteryStatus read_battery_status() {
       Serial.println("LC709203F not found");
     }
   }
-  
+
   if (g_lcfg_initialized && !g_maxfg_initialized) {
     b.voltage = g_lcfg.cellVoltage();
     float pct = g_lcfg.cellPercent();
     b.percent = constrain(static_cast<int>(pct), 0, 100);
-    
+
     if (b.percent >= 0) {
       b.estimatedDays = (b.percent * 2.5) / 100;
     }
@@ -156,7 +152,7 @@ int estimate_battery_percent(float voltage) {
     return 0;
   if (voltage >= 4.2)
     return 100;
-    
+
   // Simplified LiPo discharge curve
   const float v_min = 3.2;
   const float v_max = 4.2;
@@ -168,7 +164,7 @@ int estimate_battery_percent(float voltage) {
 int estimate_battery_days(int percent, float mah_capacity, float ma_average) {
   if (percent < 0 || mah_capacity <= 0 || ma_average <= 0)
     return -1;
-    
+
   float hours = (mah_capacity * percent / 100.0) / ma_average;
   return static_cast<int>(hours / 24.0);
 }
@@ -176,19 +172,19 @@ int estimate_battery_days(int percent, float mah_capacity, float ma_average) {
 // Initialize power management
 void power_init() {
   Serial.println("Initializing power management...");
-  
+
   // Enable power rails
   enable_i2c_power();
-  
+
   // Initialize fuel gauge
   BatteryStatus initial = read_battery_status();
   if (initial.percent >= 0) {
-    Serial.printf("Battery: %.2fV, %d%%, ~%d days\n", 
-                  initial.voltage, initial.percent, initial.estimatedDays);
+    Serial.printf("Battery: %.2fV, %d%%, ~%d days\n", initial.voltage, initial.percent,
+                  initial.estimatedDays);
   } else {
     Serial.println("No battery gauge found");
   }
-  
+
   // Configure wakeup sources if needed
   // Wake interval will be configured when going to sleep
 }
@@ -231,113 +227,108 @@ static uint32_t g_dev_mode_start_ms = 0;
 static const uint32_t DEV_MODE_TIMEOUT_MS = 3600000UL;
 
 void set_custom_sleep_interval(uint32_t sec) {
-    // Enforce minimum 180 seconds (3 minutes) to prevent sensor heating
-    g_custom_sleep_interval_sec = (sec < 180) ? 180 : sec;
+  // Enforce minimum 180 seconds (3 minutes) to prevent sensor heating
+  g_custom_sleep_interval_sec = (sec < 180) ? 180 : sec;
 }
 
-uint32_t get_custom_sleep_interval() {
-    return g_custom_sleep_interval_sec;
-}
+uint32_t get_custom_sleep_interval() { return g_custom_sleep_interval_sec; }
 
 void set_device_mode(const char* mode) {
-    if (strcmp(mode, "dev") == 0 || strcmp(mode, "development") == 0) {
-        g_device_mode = 1;
-        g_dev_mode_start_ms = millis();
-        Serial.println("[Power] Device mode: DEVELOPMENT (1hr timeout)");
-    } else {
-        g_device_mode = 0;
-        g_dev_mode_start_ms = 0;
-        Serial.println("[Power] Device mode: PRODUCTION");
-    }
+  if (strcmp(mode, "dev") == 0 || strcmp(mode, "development") == 0) {
+    g_device_mode = 1;
+    g_dev_mode_start_ms = millis();
+    Serial.println("[Power] Device mode: DEVELOPMENT (1hr timeout)");
+  } else {
+    g_device_mode = 0;
+    g_dev_mode_start_ms = 0;
+    Serial.println("[Power] Device mode: PRODUCTION");
+  }
 }
 
 bool is_dev_mode() {
-    if (g_device_mode == 0) return false;
-    
-    // Check for auto-timeout
-    if (g_dev_mode_start_ms > 0) {
-        uint32_t elapsed = millis() - g_dev_mode_start_ms;
-        if (elapsed >= DEV_MODE_TIMEOUT_MS) {
-            Serial.println("[Power] Dev mode auto-expired, reverting to production");
-            g_device_mode = 0;
-            g_dev_mode_start_ms = 0;
-            return false;
-        }
+  if (g_device_mode == 0)
+    return false;
+
+  // Check for auto-timeout
+  if (g_dev_mode_start_ms > 0) {
+    uint32_t elapsed = millis() - g_dev_mode_start_ms;
+    if (elapsed >= DEV_MODE_TIMEOUT_MS) {
+      Serial.println("[Power] Dev mode auto-expired, reverting to production");
+      g_device_mode = 0;
+      g_dev_mode_start_ms = 0;
+      return false;
     }
-    return true;
+  }
+  return true;
 }
 
 uint32_t get_dev_mode_remaining_sec() {
-    if (!is_dev_mode() || g_dev_mode_start_ms == 0) return 0;
-    
-    uint32_t elapsed = millis() - g_dev_mode_start_ms;
-    if (elapsed >= DEV_MODE_TIMEOUT_MS) return 0;
-    
-    return (DEV_MODE_TIMEOUT_MS - elapsed) / 1000;
+  if (!is_dev_mode() || g_dev_mode_start_ms == 0)
+    return 0;
+
+  uint32_t elapsed = millis() - g_dev_mode_start_ms;
+  if (elapsed >= DEV_MODE_TIMEOUT_MS)
+    return 0;
+
+  return (DEV_MODE_TIMEOUT_MS - elapsed) / 1000;
 }
 
-const char* get_device_mode_str() {
-    return is_dev_mode() ? "dev" : "production";
-}
+const char* get_device_mode_str() { return is_dev_mode() ? "dev" : "production"; }
 
-static SleepConfig g_sleep_config = {
-    .normal_interval_sec = 300,           // 5 minutes
-    .low_battery_interval_sec = 600,      // 10 minutes
-    .critical_interval_sec = 1800,        // 30 minutes
-    .rapid_update_interval_sec = 60,      // 1 minute
-    .low_battery_threshold = 20,
-    .critical_battery_threshold = 5
-};
+static SleepConfig g_sleep_config = {.normal_interval_sec = 300,       // 5 minutes
+                                     .low_battery_interval_sec = 600,  // 10 minutes
+                                     .critical_interval_sec = 1800,    // 30 minutes
+                                     .rapid_update_interval_sec = 60,  // 1 minute
+                                     .low_battery_threshold = 20,
+                                     .critical_battery_threshold = 5};
 
-SleepConfig get_default_sleep_config() {
-    return g_sleep_config;
-}
+SleepConfig get_default_sleep_config() { return g_sleep_config; }
 
 bool is_temperature_changing_rapidly() {
-    // Get current inside temperature from state
-    float current_temp = get_last_inside_f();
+  // Get current inside temperature from state
+  float current_temp = get_last_inside_f();
 
-    if (isnan(g_last_temperature) || isnan(current_temp)) {
-        g_last_temperature = current_temp;
-        return false;
-    }
-
-    // Use fabsf() for float absolute value (abs() returns int, truncating the delta)
-    float delta = fabsf(current_temp - g_last_temperature);
+  if (isnan(g_last_temperature) || isnan(current_temp)) {
     g_last_temperature = current_temp;
+    return false;
+  }
 
-    return delta > 2.0f;  // More than 2°F change
+  // Use fabsf() for float absolute value (abs() returns int, truncating the delta)
+  float delta = fabsf(current_temp - g_last_temperature);
+  g_last_temperature = current_temp;
+
+  return delta > 2.0f;  // More than 2°F change
 }
 
 uint32_t calculate_optimal_sleep_interval(const SleepConfig& config) {
-    // If custom interval is set via MQTT, use it (overrides adaptive)
-    if (g_custom_sleep_interval_sec > 0) {
-        Serial.printf("[Power] Using custom sleep interval: %us\n", g_custom_sleep_interval_sec);
-        return g_custom_sleep_interval_sec;
-    }
+  // If custom interval is set via MQTT, use it (overrides adaptive)
+  if (g_custom_sleep_interval_sec > 0) {
+    Serial.printf("[Power] Using custom sleep interval: %us\n", g_custom_sleep_interval_sec);
+    return g_custom_sleep_interval_sec;
+  }
 
-    BatteryStatus bs = read_battery_status();
+  BatteryStatus bs = read_battery_status();
 
-    // Critical battery - maximum conservation
-    if (bs.percent >= 0 && bs.percent < config.critical_battery_threshold) {
-        Serial.printf("[Power] Critical battery (%d%%), using %us interval\n",
-                      bs.percent, config.critical_interval_sec);
-        return config.critical_interval_sec;
-    }
+  // Critical battery - maximum conservation
+  if (bs.percent >= 0 && bs.percent < config.critical_battery_threshold) {
+    Serial.printf("[Power] Critical battery (%d%%), using %us interval\n", bs.percent,
+                  config.critical_interval_sec);
+    return config.critical_interval_sec;
+  }
 
-    // Low battery - extended interval
-    if (bs.percent >= 0 && bs.percent < config.low_battery_threshold) {
-        Serial.printf("[Power] Low battery (%d%%), using %us interval\n",
-                      bs.percent, config.low_battery_interval_sec);
-        return config.low_battery_interval_sec;
-    }
+  // Low battery - extended interval
+  if (bs.percent >= 0 && bs.percent < config.low_battery_threshold) {
+    Serial.printf("[Power] Low battery (%d%%), using %us interval\n", bs.percent,
+                  config.low_battery_interval_sec);
+    return config.low_battery_interval_sec;
+  }
 
-    // Rapid temperature change - shorter interval for responsiveness
-    if (is_temperature_changing_rapidly()) {
-        Serial.println("[Power] Temperature changing rapidly, using short interval");
-        return config.rapid_update_interval_sec;
-    }
+  // Rapid temperature change - shorter interval for responsiveness
+  if (is_temperature_changing_rapidly()) {
+    Serial.println("[Power] Temperature changing rapidly, using short interval");
+    return config.rapid_update_interval_sec;
+  }
 
-    // Normal operation
-    return config.normal_interval_sec;
+  // Normal operation
+  return config.normal_interval_sec;
 }

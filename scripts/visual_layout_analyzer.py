@@ -279,7 +279,10 @@ class VisualLayoutAnalyzer:
                     else:
                         # Fallback: capture canvas directly
                         data_url = page.evaluate(
-                            "() => { const c = document.getElementById('epd'); return c ? c.toDataURL('image/png') : null; }"
+                            (
+                                "() => { const c = document.getElementById('epd'); "
+                                "return c ? c.toDataURL('image/png') : null; }"
+                            )
                         )
                         if data_url and data_url.startswith("data:image/png;base64,"):
                             b64_data = data_url.split(",", 1)[1]

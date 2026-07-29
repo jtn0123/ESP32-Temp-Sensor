@@ -61,7 +61,7 @@ def _save_artifacts(page, name: str = "sim") -> None:
 def test_layout_centering_and_clipping():
     from playwright.sync_api import sync_playwright
 
-    web_root = os.path.join(os.path.dirname(os.path.dirname(__file__)), "web", "sim")
+    web_root = os.path.join(os.path.dirname(os.path.dirname(__file__)), "web")
     port = _find_free_port()
     server = _start_http_server(web_root, port)
     try:
@@ -69,7 +69,7 @@ def test_layout_centering_and_clipping():
         with sync_playwright() as p:
             browser = p.chromium.launch()
             page = browser.new_page(viewport={"width": 700, "height": 400})
-            page.goto(f"http://127.0.0.1:{port}/index.html", wait_until="load")
+            page.goto(f"http://127.0.0.1:{port}/sim/index.html", wait_until="load")
             page.wait_for_timeout(300)
 
             # Ensure canvas logs exist
@@ -174,7 +174,7 @@ def test_layout_centering_and_clipping():
 def test_web_sim_backend_integration_full_reload():
     from playwright.sync_api import sync_playwright
 
-    web_root = os.path.join(os.path.dirname(os.path.dirname(__file__)), "web", "sim")
+    web_root = os.path.join(os.path.dirname(os.path.dirname(__file__)), "web")
     port = _find_free_port()
     server = _start_http_server(web_root, port)
     try:
@@ -226,7 +226,7 @@ def test_web_sim_backend_integration_full_reload():
 
             page.route("**/sample_data.json", handle_route)
 
-            page.goto(f"http://127.0.0.1:{port}/index.html", wait_until="load")
+            page.goto(f"http://127.0.0.1:{port}/sim/index.html", wait_until="load")
             page.wait_for_timeout(300)
 
             # Count non-white pixels in the bottom-right weather bar area
@@ -268,7 +268,7 @@ def test_web_sim_partial_refresh_only_updates_header_time():
     """
     from playwright.sync_api import sync_playwright
 
-    web_root = os.path.join(os.path.dirname(os.path.dirname(__file__)), "web", "sim")
+    web_root = os.path.join(os.path.dirname(os.path.dirname(__file__)), "web")
     port = _find_free_port()
     server = _start_http_server(web_root, port)
     try:
@@ -308,7 +308,7 @@ def test_web_sim_partial_refresh_only_updates_header_time():
 
             page.route("**/sample_data.json", handle_route)
 
-            page.goto(f"http://127.0.0.1:{port}/index.html", wait_until="load")
+            page.goto(f"http://127.0.0.1:{port}/sim/index.html", wait_until="load")
             page.wait_for_timeout(300)
 
             # Capture OUT_TEMP rectangle pixels before refresh
