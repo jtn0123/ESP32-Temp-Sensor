@@ -39,7 +39,11 @@ jobs:
         with:
           # Scanners need no authenticated git operations
           persist-credentials: false
-      
+          # The audit step below diffs against origin/<base>, which a shallow
+          # fetch does not create. Without this the job dies with
+          # "ambiguous argument 'origin/main..HEAD'" on every pull request.
+          fetch-depth: 0
+
       - name: Set up Python
         uses: actions/setup-python@v6
         with:

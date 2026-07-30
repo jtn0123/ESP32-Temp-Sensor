@@ -8,3 +8,11 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+
+  # web/manager is the only npm project in the repo. It was never declared here,
+  # yet PRs #14 and #15 arrived for it anyway, so its coverage was incidental
+  # rather than configured.
+  - package-ecosystem: "npm"
+    directory: "/web/manager"
+    schedule:
+      interval: "weekly"
