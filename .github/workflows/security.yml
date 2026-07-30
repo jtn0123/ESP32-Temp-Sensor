@@ -14,14 +14,16 @@ jobs:
     name: Gitleaks Secret Scan
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           # Scanners need no authenticated git operations
           persist-credentials: false
           fetch-depth: 0  # Fetch all history for scanning
       
+      # SHA-pinned per githubactions:S7637; the trailing comment records the
+      # human-readable version the hash corresponds to.
       - name: Run Gitleaks
-        uses: gitleaks/gitleaks-action@v2
+        uses: gitleaks/gitleaks-action@ff98106e4c7b2bc287b24eaf42907196329070c7 # v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       
@@ -35,7 +37,7 @@ jobs:
     name: Custom Security Audit
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           # Scanners need no authenticated git operations
           persist-credentials: false
@@ -45,7 +47,7 @@ jobs:
           fetch-depth: 0
 
       - name: Set up Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v7
         with:
           python-version: '3.11'
       
@@ -71,13 +73,15 @@ jobs:
     name: Dependency Security Check
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           # Scanners need no authenticated git operations
           persist-credentials: false
       
+      # Was @master, which silently tracked whatever landed on that branch —
+      # githubactions:S8544. Now SHA-pinned like the other third-party actions.
       - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
           scan-type: 'fs'
           scan-ref: '.'
@@ -94,7 +98,7 @@ jobs:
     name: Code Quality & Security Patterns
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           # Scanners need no authenticated git operations
           persist-credentials: false
