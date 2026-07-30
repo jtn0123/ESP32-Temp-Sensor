@@ -1,9 +1,14 @@
 #!/usr/bin/env python3
+import argparse
 import os
 
 from PIL import Image, ImageDraw
 
 SIZE = 24
+
+# Resolve repository root so output lands in <repo>/config/icons regardless of cwd
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DEFAULT_OUT_DIR = os.path.join(ROOT, "config", "icons")
 
 
 def new_icon():
@@ -11,8 +16,7 @@ def new_icon():
     return img, ImageDraw.Draw(img)
 
 
-def save(img, name):
-    out_dir = os.path.join("config", "icons")
+def save(img, name, out_dir):
     os.makedirs(out_dir, exist_ok=True)
     path = os.path.join(out_dir, f"{name}.png")
     img.save(path)
@@ -75,6 +79,13 @@ def partly():
 
 
 def main():
+    parser = argparse.ArgumentParser(description="Generate placeholder weather icon PNGs")
+    parser.add_argument(
+        "--out-dir",
+        default=DEFAULT_OUT_DIR,
+        help="Output directory for generated PNGs (default: <repo>/config/icons)",
+    )
+    args = parser.parse_args()
     mapping = {
         "clear": sun(),
         "sunny": sun(),
@@ -86,7 +97,7 @@ def main():
         "partly": partly(),
     }
     for name, img in mapping.items():
-        save(img, name)
+        save(img, name, args.out_dir)
 
 
 if __name__ == "__main__":

@@ -48,7 +48,7 @@ EXPECTED_ICON_HEADER_STRUCTURE = {
 }
 
 
-def test_icon_generation_pipeline():
+def test_icon_generation_pipeline(tmp_path):
     """Test the complete icon generation pipeline"""
 
     scripts_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "scripts")
@@ -57,12 +57,15 @@ def test_icon_generation_pipeline():
     gen_icons_script = os.path.join(scripts_dir, "gen_icons.py")
     if os.path.exists(gen_icons_script):
         try:
+            out_dir = tmp_path / "icons"
+            # cwd=scripts_dir is deliberate: output must not depend on cwd
+            # (a cwd-relative bug used to create scripts/config/icons/)
             result = subprocess.run(
                 [
                     sys.executable,
                     gen_icons_script,
-                    "--config",
-                    os.path.join(os.path.dirname(scripts_dir), "config", "icons"),
+                    "--out-dir",
+                    str(out_dir),
                 ],
                 capture_output=True,
                 text=True,
@@ -81,6 +84,14 @@ def test_icon_generation_pipeline():
             assert (
                 len(result.stdout) > 0 or len(result.stderr) == 0
             ), "No output from icon generation"
+
+            generated = sorted(p.name for p in out_dir.glob("*.png"))
+            assert generated, "No PNGs generated in --out-dir"
+
+            # Regression: must not write to a cwd-relative config/icons
+            assert not os.path.exists(
+                os.path.join(scripts_dir, "config")
+            ), "gen_icons.py wrote to scripts/config/ (cwd-relative output)"
 
         except subprocess.TimeoutExpired:
             pytest.fail("Icon generation timed out")
@@ -413,7 +424,7 @@ def test_weather_icon_mapping_completeness():
         assert found, f"No icon found for essential weather condition: {condition}"
 
 
-def test_icon_generation_determinism():
+def test_icon_generation_determinism(tmp_path):
     """Test that icon generation is deterministic (same input = same output)"""
 
     scripts_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "scripts")
@@ -423,10 +434,12 @@ def test_icon_generation_determinism():
     if not os.path.exists(gen_script):
         pytest.skip("gen_icons.py not found")
 
+    out1 = tmp_path / "run1"
+    out2 = tmp_path / "run2"
     try:
         # First run
         result1 = subprocess.run(
-            [sys.executable, gen_script],
+            [sys.executable, gen_script, "--out-dir", str(out1)],
             capture_output=True,
             text=True,
             cwd=scripts_dir,
@@ -435,7 +448,7 @@ def test_icon_generation_determinism():
 
         # Second run
         result2 = subprocess.run(
-            [sys.executable, gen_script],
+            [sys.executable, gen_script, "--out-dir", str(out2)],
             capture_output=True,
             text=True,
             cwd=scripts_dir,
@@ -455,9 +468,15 @@ def test_icon_generation_determinism():
             else:
                 assert False, f"Second icon generation failed: {result2.stderr}"
 
-        # Output should be identical (deterministic)
-        assert result1.stdout == result2.stdout
-        assert result1.stderr == result2.stderr
+        # Output should be identical (deterministic): same filenames, same bytes
+        files1 = sorted(p.name for p in out1.glob("*.png"))
+        files2 = sorted(p.name for p in out2.glob("*.png"))
+        assert files1 == files2, "Generated file sets differ between runs"
+        assert files1, "No PNGs generated"
+        for name in files1:
+            assert (out1 / name).read_bytes() == (
+                out2 / name
+            ).read_bytes(), f"Icon {name} differs between runs"
 
     except subprocess.TimeoutExpired:
         pytest.fail("Icon generation determinism test timed out")
