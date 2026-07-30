@@ -4,6 +4,7 @@ Security audit for staged files only - used by pre-commit hook.
 Only scans files that are about to be committed.
 """
 
+import json
 import os
 import re
 import subprocess
@@ -82,14 +83,39 @@ def get_staged_files():
     """Get list of files staged for commit.
 
     In CI there is no index to read: the Security Scan workflow diffs the pull
-    request against its base and passes the result in GIT_DIFF_CACHED_FILES.
-    Honour that when set, otherwise fall back to the real index for the
-    pre-commit hook. Without this branch the CI job audited an empty list and
-    always exited 0.
+    request against its base and hands the result over, falling back to the real
+    index here for the pre-commit hook. Without that the CI job audited an empty
+    list and always exited 0.
+
+    Two hand-off forms, in precedence order:
+
+    GIT_DIFF_CACHED_FILES_Z
+        Path to a NUL-delimited list, as written by `git diff -z`. Preferred,
+        and what CI uses, because it is the only form that survives every legal
+        git path -- NUL is the one byte a filename cannot contain, and it cannot
+        travel inside an environment variable, so the path to the list travels
+        instead.
+    GIT_DIFF_CACHED_FILES
+        A JSON array, or failing that a whitespace-separated string. The latter
+        loses any path containing a space -- "my secret.py" becomes two paths
+        that do not exist and the real file goes unaudited -- so it is accepted
+        only to keep hand-set values working.
     """
+    list_path = os.environ.get("GIT_DIFF_CACHED_FILES_Z")
+    if list_path:
+        with open(list_path, "rb") as handle:
+            raw = handle.read().decode("utf-8", "surrogateescape")
+        return [f for f in raw.split("\0") if f]
+
     override = os.environ.get("GIT_DIFF_CACHED_FILES")
     if override is not None:
-        return [f for f in override.split() if f]
+        try:
+            paths = json.loads(override)
+        except (ValueError, TypeError):
+            return [f for f in override.split() if f]
+        if isinstance(paths, list):
+            return [str(f) for f in paths if str(f)]
+        return [f for f in str(paths).split() if f]
 
     try:
         result = subprocess.run(

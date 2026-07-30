@@ -14,7 +14,7 @@ jobs:
     name: Gitleaks Secret Scan
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           # Scanners need no authenticated git operations
           persist-credentials: false
@@ -29,7 +29,7 @@ jobs:
       
       - name: Upload SARIF report
         if: failure()
-        uses: github/codeql-action/upload-sarif@v4
+        uses: github/codeql-action/upload-sarif@e4fba868fa4b1b91e1fdab776edc8cfbe6e9fb81 # v4.37.3
         with:
           sarif_file: results.sarif
 
@@ -37,7 +37,7 @@ jobs:
     name: Custom Security Audit
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           # Scanners need no authenticated git operations
           persist-credentials: false
@@ -47,7 +47,7 @@ jobs:
           fetch-depth: 0
 
       - name: Set up Python
-        uses: actions/setup-python@v7
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: '3.11'
       
@@ -58,7 +58,7 @@ jobs:
       
       # The script normally reads the git index, which is empty on a CI
       # checkout, so the range to audit is computed here and handed over in
-      # GIT_DIFF_CACHED_FILES. Every event type must set it: leaving it unset
+      # GIT_DIFF_CACHED_FILES_Z. Every event type must set it: leaving it unset
       # falls back to the empty index and the job passes without reading a
       # single file.
       - name: Run staged files security audit
@@ -74,20 +74,26 @@ jobs:
             range=""
           fi
 
+          # -z, and handed over as a file rather than a variable: whitespace is
+          # legal in git paths, so a space-separated list turns "my secret.py"
+          # into two paths that do not exist and the real file goes unaudited.
+          # NUL cannot travel inside an environment variable, so the variable
+          # carries the path to the NUL-delimited list instead of the list.
           if [ -n "$range" ]; then
-            files=$(git diff --name-only --diff-filter=ACM "$range" | tr '\n' ' ')
+            git diff -z --name-only --diff-filter=ACM "$range" > changed_files.z
           else
-            files=$(git ls-files | tr '\n' ' ')
+            git ls-files -z > changed_files.z
           fi
 
-          echo "Auditing $(echo "$files" | wc -w) changed file(s)"
-          GIT_DIFF_CACHED_FILES="$files" python scripts/security_audit_staged.py
+          echo "Auditing $(tr -cd '\0' < changed_files.z | wc -c) file(s)"
+          GIT_DIFF_CACHED_FILES_Z=changed_files.z \
+            python scripts/security_audit_staged.py
 
   dependency-check:
     name: Dependency Security Check
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           # Scanners need no authenticated git operations
           persist-credentials: false
@@ -104,7 +110,7 @@ jobs:
           severity: 'CRITICAL,HIGH'
       
       - name: Upload Trivy results to GitHub Security
-        uses: github/codeql-action/upload-sarif@v4
+        uses: github/codeql-action/upload-sarif@e4fba868fa4b1b91e1fdab776edc8cfbe6e9fb81 # v4.37.3
         with:
           sarif_file: 'trivy-results.sarif'
 
@@ -112,7 +118,7 @@ jobs:
     name: Code Quality & Security Patterns
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           # Scanners need no authenticated git operations
           persist-credentials: false
