@@ -151,7 +151,9 @@ class TestSimMockParity:
         rects = geometry.get("rects", geometry)
 
         # Verify expected rects exist
-        expected = ["HEADER_NAME", "INSIDE_TEMP", "OUT_TEMP", "FOOTER_STATUS", "FOOTER_WEATHER"]
+        # FOOTER_IP was FOOTER_STATUS; the old name survives only as a legacy
+        # #define in firmware/arduino/src/display_layout_aliases.h.
+        expected = ["HEADER_NAME", "INSIDE_TEMP", "OUT_TEMP", "FOOTER_IP", "FOOTER_WEATHER"]
         for name in expected:
             assert name in rects, f"Rect {name} missing from geometry"
 
@@ -197,7 +199,7 @@ class TestCoordinateBoundsValidation:
         # These regions should never overlap
         non_overlapping = [
             ("INSIDE_TEMP", "OUT_TEMP"),
-            ("FOOTER_STATUS", "FOOTER_WEATHER"),
+            ("FOOTER_IP", "FOOTER_WEATHER"),
             ("HEADER_NAME", "HEADER_TIME_CENTER"),
         ]
 

@@ -14,20 +14,22 @@ jobs:
     name: Gitleaks Secret Scan
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           # Scanners need no authenticated git operations
           persist-credentials: false
           fetch-depth: 0  # Fetch all history for scanning
       
+      # SHA-pinned per githubactions:S7637; the trailing comment records the
+      # human-readable version the hash corresponds to.
       - name: Run Gitleaks
-        uses: gitleaks/gitleaks-action@v2
+        uses: gitleaks/gitleaks-action@ff98106e4c7b2bc287b24eaf42907196329070c7 # v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       
       - name: Upload SARIF report
         if: failure()
-        uses: github/codeql-action/upload-sarif@v4
+        uses: github/codeql-action/upload-sarif@e4fba868fa4b1b91e1fdab776edc8cfbe6e9fb81 # v4.37.3
         with:
           sarif_file: results.sarif
 
@@ -35,7 +37,7 @@ jobs:
     name: Custom Security Audit
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           # Scanners need no authenticated git operations
           persist-credentials: false
@@ -45,7 +47,7 @@ jobs:
           fetch-depth: 0
 
       - name: Set up Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: '3.11'
       
@@ -54,30 +56,52 @@ jobs:
           python -m pip install --upgrade pip
           pip install pyyaml python-dotenv
       
+      # The script normally reads the git index, which is empty on a CI
+      # checkout, so the range to audit is computed here and handed over in
+      # GIT_DIFF_CACHED_FILES_Z. Every event type must set it: leaving it unset
+      # falls back to the empty index and the job passes without reading a
+      # single file.
       - name: Run staged files security audit
+        shell: bash
         run: |
-          # For CI, check all changed files in the PR
+          set -euo pipefail
           if [ "${{ github.event_name }}" = "pull_request" ]; then
-            # Get files changed in PR
-            git diff --name-only --diff-filter=ACM origin/${{ github.base_ref }}..HEAD > changed_files.txt
-            
-            # Mock git staged files for the script
-            export GIT_DIFF_CACHED_FILES=$(cat changed_files.txt | tr '\n' ' ')
+            range="origin/${{ github.base_ref }}..HEAD"
+          elif [ "$(git rev-list --count HEAD)" -gt 1 ]; then
+            # push / schedule: audit the tip commit
+            range="HEAD~1..HEAD"
+          else
+            range=""
           fi
-          
-          python scripts/security_audit_staged.py
+
+          # -z, and handed over as a file rather than a variable: whitespace is
+          # legal in git paths, so a space-separated list turns "my secret.py"
+          # into two paths that do not exist and the real file goes unaudited.
+          # NUL cannot travel inside an environment variable, so the variable
+          # carries the path to the NUL-delimited list instead of the list.
+          if [ -n "$range" ]; then
+            git diff -z --name-only --diff-filter=ACM "$range" > changed_files.z
+          else
+            git ls-files -z > changed_files.z
+          fi
+
+          echo "Auditing $(tr -cd '\0' < changed_files.z | wc -c) file(s)"
+          GIT_DIFF_CACHED_FILES_Z=changed_files.z \
+            python scripts/security_audit_staged.py
 
   dependency-check:
     name: Dependency Security Check
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           # Scanners need no authenticated git operations
           persist-credentials: false
       
+      # Was @master, which silently tracked whatever landed on that branch —
+      # githubactions:S8544. Now SHA-pinned like the other third-party actions.
       - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
           scan-type: 'fs'
           scan-ref: '.'
@@ -86,7 +110,7 @@ jobs:
           severity: 'CRITICAL,HIGH'
       
       - name: Upload Trivy results to GitHub Security
-        uses: github/codeql-action/upload-sarif@v4
+        uses: github/codeql-action/upload-sarif@e4fba868fa4b1b91e1fdab776edc8cfbe6e9fb81 # v4.37.3
         with:
           sarif_file: 'trivy-results.sarif'
 
@@ -94,7 +118,7 @@ jobs:
     name: Code Quality & Security Patterns
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           # Scanners need no authenticated git operations
           persist-credentials: false

@@ -1887,3 +1887,37 @@ button:not(:disabled):hover {
 .collapsible-section .status-card {
   min-height: 80px;
 }
+
+/* Simulator view - frames the /sim page served by the device manager */
+.sim-frame-controls {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.sim-frame-link {
+  color: #61dafb;
+  font-size: 0.85rem;
+  text-decoration: none;
+}
+
+.sim-frame-link:hover {
+  text-decoration: underline;
+}
+
+.sim-frame-wrapper {
+  border: 1px solid #333;
+  border-radius: 6px;
+  overflow: hidden;
+  background-color: #1e1e1e;
+}
+
+.sim-frame {
+  display: block;
+  width: 100%;
+  /* The simulator page is a fixed-width panel plus controls; this leaves room
+     for both without an inner scrollbar at typical window sizes. */
+  height: 720px;
+  border: 0;
+}

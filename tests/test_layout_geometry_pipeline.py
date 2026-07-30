@@ -46,7 +46,10 @@ class TestLayoutGeometryPipeline:
             "INSIDE_HUMIDITY",
             "OUT_TEMP",
             "OUT_HUMIDITY",
-            "FOOTER_STATUS",
+            # Was FOOTER_STATUS; renamed to FOOTER_IP in the geometry, with the
+            # old name kept only as a legacy #define in
+            # firmware/arduino/src/display_layout_aliases.h.
+            "FOOTER_IP",
             "FOOTER_WEATHER",
         ]
 
@@ -78,6 +81,11 @@ class TestLayoutGeometryPipeline:
             ("HEADER_NAME", "HEADER_TIME_CENTER"),  # Time can overlap with name
             ("INSIDE_HUMIDITY", "INSIDE_PRESSURE"),  # Pressure and humidity can overlap
             ("OUT_PRESSURE", "OUT_WIND"),  # Pressure and wind can overlap
+            # WEATHER_ICON [168, 90, 30, 32] shares its origin with
+            # FOOTER_WEATHER [168, 90, 76, 32] and is fully contained by it: the
+            # icon occupies the left of the footer's weather cell while the label
+            # is centred in the whole cell. Containment by design, not collision.
+            ("WEATHER_ICON", "FOOTER_WEATHER"),
         ]
 
         # Check for overlaps
@@ -193,8 +201,8 @@ class TestLayoutGeometryPipeline:
             assert y < 30, "Header should be near top"
 
         # Footer should be at bottom
-        if "FOOTER_STATUS" in rects:
-            x, y, w, h = rects["FOOTER_STATUS"]
+        if "FOOTER_IP" in rects:
+            x, y, w, h = rects["FOOTER_IP"]
             assert y > 80, "Footer should be near bottom"
 
         # Inside temp should be on left

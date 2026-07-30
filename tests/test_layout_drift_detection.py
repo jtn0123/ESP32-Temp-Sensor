@@ -223,9 +223,18 @@ def test_text_rect_sizing():
 
     # Test key text rectangles
     text_rect_tests = {
-        "HEADER_NAME": {"min_width": 100, "min_height": 10},
+        # 90, not 100: HEADER_TIME_CENTER starts at x=100 and HEADER_NAME starts
+        # at x=6, so 94 is the widest this rect can be without colliding -- a
+        # 100 minimum was unsatisfiable by construction. The header op declares
+        # truncate: ellipsis at 11px bold, so ~15 characters fit and longer room
+        # names degrade deliberately rather than overflowing.
+        "HEADER_NAME": {"min_width": 90, "min_height": 10},
         "INSIDE_TEMP": {"min_width": 80, "min_height": 20},
         "OUT_TEMP": {"min_width": 60, "min_height": 20},
+        # NOTE: no rect is named "STATUS", so the loop below skips this entry
+        # entirely. Left as-is rather than repointed at FOOTER_IP, which is 120
+        # wide and would fail a 200 minimum; the threshold would need deciding
+        # first.
         "STATUS": {"min_width": 200, "min_height": 8},
     }
 
@@ -256,7 +265,8 @@ def test_partial_update_regions():
         "INSIDE_TEMP",
         "OUT_TEMP",
         "HEADER_TIME_CENTER",
-        "FOOTER_STATUS",
+        # Renamed from FOOTER_STATUS; see display_layout_aliases.h.
+        "FOOTER_IP",
         "FOOTER_WEATHER",
     ]
 
