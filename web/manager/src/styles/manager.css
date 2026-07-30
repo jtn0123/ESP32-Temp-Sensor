@@ -2378,7 +2378,9 @@ button {
 /* Serial console: give the log area real height inside the app shell so an
    empty console doesn't collapse to a sliver. */
 .view-container .serial-console {
-  height: calc(100vh - 240px);
+  /* Full viewport minus the status bar (token) and the main-content
+     padding + view header above the console (~206px). */
+  height: calc(100vh - var(--statusbar-height) - 206px);
   min-height: 360px;
 }
 
