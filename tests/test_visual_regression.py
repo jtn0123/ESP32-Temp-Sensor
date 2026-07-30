@@ -28,11 +28,12 @@ try:
     import numpy as np
     from PIL import Image, ImageChops
     from playwright.sync_api import Page, sync_playwright
-except ImportError as e:
-    # Skip (not sys.exit) so a missing optional dep doesn't abort the whole
-    # pytest run with an INTERNALERROR during collection.
+except ModuleNotFoundError as e:
+    # Skip (not sys.exit) so an absent optional dep doesn't abort the whole
+    # pytest run with an INTERNALERROR during collection. Only missing modules
+    # skip; other ImportErrors from installed deps still fail loudly.
     pytest.skip(
-        f"Missing dependency: {e} (install with: pip install numpy pillow playwright)",
+        f"Missing dependency: {e.name} (install with: pip install numpy pillow playwright)",
         allow_module_level=True,
     )
 

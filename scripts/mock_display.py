@@ -295,8 +295,9 @@ def draw_layout(draw: ImageDraw.ImageDraw, data: dict):
     weather_x, weather_y = FOOTER_WEATHER[0], FOOTER_WEATHER[1]
     weather_w = FOOTER_WEATHER[2] - FOOTER_WEATHER[0]
 
-    cond_lower = str(data.get("weather", "")).lower()
-    cond_label = short_condition_label(str(data.get("weather", "Cloudy")))
+    weather_raw = str(data.get("weather", "Cloudy"))
+    cond_lower = weather_raw.lower()
+    cond_label = short_condition_label(weather_raw)
 
     # Draw weather icon centered in WEATHER_ICON region
     icon_cx = icon_x + icon_w // 2

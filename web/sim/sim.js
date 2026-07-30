@@ -2883,6 +2883,9 @@
           window.drawFromSpec(ctx, lastData, variant);
         }
         applyOneBitThreshold();
+        // Stamp the redraw so test settle-waits see this refresh (the direct
+        // drawFromSpec path bypasses draw(), which normally sets this).
+        window.__lastDrawAt = Date.now();
       }catch(e){ load(); }
     });
   }

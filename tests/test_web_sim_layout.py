@@ -336,9 +336,15 @@ def test_web_sim_partial_refresh_only_updates_header_time():
             )
             before = page.evaluate(js_read, OUT_TEMP)
 
-            # Click Refresh → fetches sample_data.json and redraws with new data
+            # Click Refresh → fetches sample_data.json and redraws with new
+            # data. Wait for a draw stamped AFTER the click (the refresh
+            # handler bumps __lastDrawAt), not just any earlier quiet period.
+            before_draw = page.evaluate("() => window.__lastDrawAt || 0")
             page.click("#refresh")
-            page.wait_for_timeout(400)
+            page.wait_for_function(
+                "(prev) => window.__lastDrawAt && window.__lastDrawAt > prev",
+                arg=before_draw,
+            )
 
             after = page.evaluate(js_read, OUT_TEMP)
 
