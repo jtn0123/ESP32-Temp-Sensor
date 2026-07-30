@@ -2287,7 +2287,7 @@
               const fpx = ((fonts[op.font||'small']||{}).px) || pxSmall;
               const weight = ((fonts[op.font||'small']||{}).weight) || 'normal';
               const raw = String(op.text||'');
-              const s = raw.replace(/\{([^}]+)\}/g, (_,k)=>{
+              const s = raw.replace(/\{([^{}]+)\}/g, (_,k)=>{
                 if (k === 'weather_short') return shortConditionLabel(data.weather || '');
                 return String(data[k]||'');
               });
@@ -2312,7 +2312,6 @@
                   actualBounds: { x: r[0], y: r[1], width: r[2], height: r[3] }
                 };
               }
-              const fpx = ((fonts['small']||{}).px) || pxSmall;
               let barX = r[0], barY = r[1], barW = r[2], barH = r[3];
               const isV2 = (function(){
                 try{
@@ -2793,6 +2792,14 @@
     }catch(e){}
   })();
 
+  // sample_data.json nests scenarios ({default:{...}, time_of_day:{...}});
+  // tests may route a flat payload instead — accept both shapes. Returns a
+  // shallow copy so callers can annotate it without mutating the source.
+  function unwrapSamplePayload(payload){
+    if (payload && typeof payload === 'object' && payload.default) return { ...payload.default };
+    return payload;
+  }
+
   async function load(){
     console.log('load() called');
     
@@ -2813,10 +2820,7 @@
     try{
       const res = await fetch('sample_data.json');
       if(!res.ok) throw new Error('fetch failed');
-      const payload = await res.json();
-      // sample_data.json nests scenarios ({default:{...}, time_of_day:{...}});
-      // tests may route a flat payload instead — accept both shapes.
-      const data = (payload && typeof payload === 'object' && payload.default) ? payload.default : payload;
+      const data = unwrapSamplePayload(await res.json());
       draw(data);
     } catch(e){ }
     // Wire region inspector controls
@@ -2868,8 +2872,7 @@
     refreshEl.addEventListener('click', async ()=>{
       try{
         const res = await fetch('sample_data.json');
-        const payload = await res.json();
-        const data = (payload && typeof payload === 'object' && payload.default) ? { ...payload.default } : payload;
+        const data = unwrapSamplePayload(await res.json());
         data.time = new Date().toTimeString().slice(0,5);
         lastData = data;
         // Partial redraw demo: clear header version rect and re-render spec variant

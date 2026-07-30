@@ -210,6 +210,7 @@ button:not(:disabled):hover {
 
 .console-output {
   flex: 1;
+  min-height: 200px;
   overflow-y: auto;
   background-color: #1e1e1e;
   border: 1px solid #444;
@@ -268,6 +269,10 @@ button:not(:disabled):hover {
 
 .console-input button {
   padding: 0.5rem 1.5rem;
+  background-color: var(--color-accent);
+  color: #1e1e1e;
+  border: none;
+  font-weight: 600;
 }
 
 /* Placeholder Panels */
@@ -2377,13 +2382,3 @@ button {
   min-height: 360px;
 }
 
-.console-output {
-  min-height: 200px;
-}
-
-.console-input button {
-  background-color: var(--color-accent);
-  color: #1e1e1e;
-  border: none;
-  font-weight: 600;
-}

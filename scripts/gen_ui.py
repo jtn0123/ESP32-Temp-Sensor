@@ -585,7 +585,7 @@ def emit_fw_ops_cpp(spec: Dict[str, Any]) -> str:
                 rect_xywh = rects.get(rname) if isinstance(rname, str) else None
                 try:
                     if op.get("x") is None and isinstance(rect_xywh, list) and len(rect_xywh) == 4:
-                        rx, ry, rw, rh = (int(v) for v in rect_xywh)
+                        rx, ry, _, rh = (int(v) for v in rect_xywh)
                         p0 = rx + 2
                         p1 = ry + max(0, (rh - glyph_h) // 2)
                         p2 = int(op.get("w", glyph_w))

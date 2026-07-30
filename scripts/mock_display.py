@@ -127,32 +127,28 @@ def draw_weather_icon(draw: ImageDraw.ImageDraw, box: tuple[int, int, int, int],
         draw.rectangle(((x0, y0), (x1, y1)), outline=0, width=1)
 
 
-def short_condition_label(weather: str) -> str:
-    """Short, user-facing weather label.
+# Keyword order matters: first match wins. Mirrors the web sim's
+# shortConditionLabel and the firmware's spec_short_condition so all three
+# renderers show the same footer text for the same condition string.
+_CONDITION_LABELS = (
+    (("night", "moon"), "Night"),
+    (("part",), "Partly"),
+    (("cloud", "overcast"), "Cloudy"),
+    (("storm", "thunder", "lightning"), "Storm"),
+    (("rain", "pour", "shower", "drizzle"), "Rain"),
+    (("hail",), "Hail"),
+    (("snow", "sleet"), "Snow"),
+    (("fog", "mist", "haze"), "Fog"),
+    (("wind",), "Wind"),
+)
 
-    Mirrors the web sim's shortConditionLabel and the firmware's
-    spec_short_condition (same keyword order) so all three renderers show
-    the same footer text for the same condition string.
-    """
+
+def short_condition_label(weather: str) -> str:
+    """Short, user-facing weather label (see _CONDITION_LABELS)."""
     c = (weather or "").lower()
-    if "night" in c or "moon" in c:
-        return "Night"
-    if "part" in c:
-        return "Partly"
-    if "cloud" in c or "overcast" in c:
-        return "Cloudy"
-    if "storm" in c or "thunder" in c or "lightning" in c:
-        return "Storm"
-    if "rain" in c or "pour" in c or "shower" in c or "drizzle" in c:
-        return "Rain"
-    if "hail" in c:
-        return "Hail"
-    if "snow" in c or "sleet" in c:
-        return "Snow"
-    if "fog" in c or "mist" in c or "haze" in c:
-        return "Fog"
-    if "wind" in c:
-        return "Wind"
+    for keywords, label in _CONDITION_LABELS:
+        if any(k in c for k in keywords):
+            return label
     return "Sunny"
 
 
