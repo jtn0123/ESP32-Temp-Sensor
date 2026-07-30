@@ -457,9 +457,12 @@ jobs:
       # PRs for it were passing on checks that never touched them. `npm ci`
       # catches lockfile/peer breakage and `npm run build` catches missing
       # modules and imports.
+      # --ignore-scripts so a dependency's postinstall cannot execute on the
+      # runner (githubactions:S6505). None of these packages need one: the build
+      # produces byte-identical output with and without it.
       - name: Install dependencies
         working-directory: web/manager
-        run: npm ci
+        run: npm ci --ignore-scripts
 
       - name: Build
         working-directory: web/manager
