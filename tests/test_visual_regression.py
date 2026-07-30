@@ -29,9 +29,12 @@ try:
     from PIL import Image, ImageChops
     from playwright.sync_api import Page, sync_playwright
 except ImportError as e:
-    print(f"Missing dependency: {e}")
-    print("Install with: pip install numpy pillow playwright")
-    sys.exit(1)
+    # Skip (not sys.exit) so a missing optional dep doesn't abort the whole
+    # pytest run with an INTERNALERROR during collection.
+    pytest.skip(
+        f"Missing dependency: {e} (install with: pip install numpy pillow playwright)",
+        allow_module_level=True,
+    )
 
 
 @dataclass

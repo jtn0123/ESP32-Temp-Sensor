@@ -11,6 +11,9 @@ types-pyserial
 
 # Testing
 pytest-playwright>=0.4.0
+# Needed by tests/test_device_manager_async.py (@pytest.mark.asyncio); those
+# tests only run where the device-manager deps (fastapi etc.) are installed.
+pytest-asyncio>=1.0
 
 # Code coverage (optional)
 pytest-cov>=4.0
