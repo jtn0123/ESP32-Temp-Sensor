@@ -94,6 +94,14 @@ def test_web_sim_screenshot_matches_golden_with_tolerance(tmp_path):
             canvas = page.locator("#epd")
             bytes_png = canvas.screenshot()
 
+            # Always save the current capture: CI uploads out/* as artifacts,
+            # so a golden mismatch there leaves behind the exact platform
+            # render needed to re-bless tests/golden_web_sim.png.
+            out_dir = os.path.join(ROOT, "out")
+            os.makedirs(out_dir, exist_ok=True)
+            with open(os.path.join(out_dir, "golden_web_sim_current.png"), "wb") as f:
+                f.write(bytes_png)
+
             import PIL.Image
 
             cur = PIL.Image.open(io.BytesIO(bytes_png))
