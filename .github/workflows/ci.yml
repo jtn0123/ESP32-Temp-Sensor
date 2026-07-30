@@ -428,3 +428,29 @@ jobs:
       - name: Run native unit tests
         working-directory: firmware/arduino
         run: pio test -e native -v
+
+  manager-build:
+    name: Device manager UI build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: web/manager/package-lock.json
+
+      # Nothing exercised web/manager before this job, so the Dependabot npm
+      # PRs for it were passing on checks that never touched them. `npm ci`
+      # catches lockfile/peer breakage and `npm run build` catches missing
+      # modules and imports.
+      - name: Install dependencies
+        working-directory: web/manager
+        run: npm ci
+
+      - name: Build
+        working-directory: web/manager
+        run: npm run build

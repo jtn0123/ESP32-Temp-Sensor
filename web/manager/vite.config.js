@@ -15,6 +15,18 @@ export default defineConfig({
         target: 'ws://localhost:8080',
         ws: true,
       },
+      // SimulatorView frames /sim/index.html, which the device manager serves
+      // from web/sim. The dev server's root is web/manager, so without these
+      // the iframe 404s in `npm run dev`. /icons is separate because the
+      // simulator resolves its icon URLs relative to the site root.
+      '/sim': {
+        target: 'http://localhost:8080',
+        changeOrigin: true,
+      },
+      '/icons': {
+        target: 'http://localhost:8080',
+        changeOrigin: true,
+      },
     },
   },
 })
