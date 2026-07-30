@@ -79,7 +79,18 @@ EXCLUSIONS = {
 
 
 def get_staged_files():
-    """Get list of files staged for commit."""
+    """Get list of files staged for commit.
+
+    In CI there is no index to read: the Security Scan workflow diffs the pull
+    request against its base and passes the result in GIT_DIFF_CACHED_FILES.
+    Honour that when set, otherwise fall back to the real index for the
+    pre-commit hook. Without this branch the CI job audited an empty list and
+    always exited 0.
+    """
+    override = os.environ.get("GIT_DIFF_CACHED_FILES")
+    if override is not None:
+        return [f for f in override.split() if f]
+
     try:
         result = subprocess.run(
             ["git", "diff", "--cached", "--name-only", "--diff-filter=ACM"],

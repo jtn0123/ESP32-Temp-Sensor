@@ -12,7 +12,10 @@ wifi:
   fast_connect: true
   ap:
     ssid: "room-node-setup"
-    password: "roomnode1234"
+    # Fallback setup hotspot. Anyone who joins it can read and rewrite the
+    # node's wifi config, so it belongs in secrets.yaml like the others rather
+    # than in a tracked file.
+    password: !secret ap_password
 
 api:
 logger:
