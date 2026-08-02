@@ -3,6 +3,7 @@
 
 #include <unity.h>
 
+#include <cfloat>
 #include <cmath>
 
 #include "../../src/fan_control_pure.h"
@@ -145,6 +146,21 @@ void test_infinite_input_is_failsafe(void) {
   }
 }
 
+// Finite-but-absurd operands whose subtraction overflows to infinity (a
+// corrupt payload can parse to +-FLT_MAX) must also fail safe: the operands
+// pass isfinite individually, so the delta needs its own check.
+void test_finite_operand_delta_overflow_is_failsafe(void) {
+  FanController c;
+  FanControlConfig cfg = fast_cfg();
+  c.tick(FLT_MAX, -FLT_MAX, true, 0, cfg);
+  TEST_ASSERT_EQUAL(static_cast<int>(FanState::kFailsafe), static_cast<int>(c.state));
+  TEST_ASSERT_EQUAL_UINT8(0, c.speed);
+  FanController c2;
+  c2.tick(-FLT_MAX, FLT_MAX, true, 0, cfg);
+  TEST_ASSERT_EQUAL(static_cast<int>(FanState::kFailsafe), static_cast<int>(c2.state));
+  TEST_ASSERT_EQUAL_UINT8(0, c2.speed);
+}
+
 // The delta flipping hot mid-vent stops the fan on that tick: LOCKOUT entry
 // bypasses the dwell and the slew, so hot air is not pulled in for minutes.
 void test_vent_to_lockout_is_immediate(void) {
@@ -233,6 +249,7 @@ int main(int argc, char** argv) {
   RUN_TEST(test_stale_data_snaps_to_failsafe);
   RUN_TEST(test_nan_input_is_failsafe);
   RUN_TEST(test_infinite_input_is_failsafe);
+  RUN_TEST(test_finite_operand_delta_overflow_is_failsafe);
   RUN_TEST(test_vent_to_lockout_is_immediate);
   RUN_TEST(test_target_parks_fan_until_warmed_past_hysteresis);
   RUN_TEST(test_lockout_standby_speed);

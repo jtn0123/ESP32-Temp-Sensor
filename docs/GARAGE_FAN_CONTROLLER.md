@@ -118,10 +118,14 @@ no separate capture hardware is required: `firmware/arduino/src/fan_probe_main.c
    pin headers tapping VBUS, GND, D+, D−. The stock controller stays connected and
    working; the probe only listens.
 2. Multimeter first: confirm VBUS ≈ 5 V from the fan, and check the D+/D− idle
-   levels. **Any line that idles above 3.3 V needs a divider on its tap** (10 kΩ
-   series / 15 kΩ to ground) — the ESP32 pins are not 5 V tolerant. A staircase
-   DC voltage while stepping speeds ⇒ analog control; the probe's QUIET report
-   prints the millivolt level per window either way.
+   levels. **Put a divider (10 kΩ series / 15 kΩ to ground) on every tap until
+   the signal's active-high level is confirmed ≤ 3.3 V** — an idle reading is
+   not proof: a line can idle low and swing to 5 V during a frame, and the
+   ESP32 pins are not 5 V tolerant. The divider costs nothing in signal
+   quality at these speeds; remove it only after a capture shows the swing is
+   3.3 V logic. A staircase DC voltage while stepping speeds ⇒ analog control;
+   the probe's QUIET report prints the millivolt level per window either way
+   (scale the reading by 5/3 while a divider is inline).
 3. Flash the probe: `pio run -e feather_esp32s2_fan_probe -t upload`, then
    `pio device monitor`. Taps go to A0/A1 (GPIO 18/17, overridable with
    `-DPROBE_PIN_A/-DPROBE_PIN_B`), grounds tied together. Every 2 s it prints,
@@ -174,8 +178,8 @@ Stability rules (the part that keeps it from hunting):
   changeable over MQTT — noise is the real ceiling, not the motor.
 - **Optional quiet hours:** a schedule that lowers `max_speed_cap` further at night.
 - **Stale data = safe state:** if either temperature is older than `stale_after`
-  (default 10 min) or the broker is unreachable, go to `failsafe_speed` (default 0).
-  The fan must never run on frozen data.
+  (default 10 min) or the broker is unreachable, the fan stops — speed 0,
+  hard-coded, deliberately not a tunable. The fan must never run on frozen data.
 
 All tunables (`delta_on`, `delta_full`, `min_speed`, `max_speed_cap`, `target_temp`,
 `standby_speed`, quiet hours, `stale_after`) live in retained MQTT config topics under

@@ -43,7 +43,8 @@ struct FanControlConfig {
   uint8_t min_speed = 1;      // TRICKLE speed and the bottom of the VENT ramp
   uint8_t max_speed_cap = 8;  // noise ceiling; the motor's 12 is not the limit
   uint8_t standby_speed = 0;  // LOCKOUT speed (0, or 1-2 for a minimum stir)
-  uint8_t failsafe_speed = 0;
+  // FAILSAFE speed is deliberately not configurable: it is always 0. A fan
+  // that has lost its data feed must stop, and no tunable may override that.
 
   // Inside temp at or below this parks the fan in TARGET. NAN disables.
   float target_temp = NAN;
@@ -114,8 +115,11 @@ struct FanController {
   FanState classify(float t_inside, float t_outside, bool fresh,
                     const FanControlConfig& cfg) const {
     // isfinite, not !isnan: an infinity would sail through the delta math and
-    // could park the policy in VENT at the cap on garbage data.
-    if (!fresh || !std::isfinite(t_inside) || !std::isfinite(t_outside))
+    // could park the policy in VENT at the cap on garbage data. The delta is
+    // checked too, because two finite-but-absurd operands (e.g. +-FLT_MAX from
+    // a corrupt payload) can overflow the subtraction to infinity.
+    if (!fresh || !std::isfinite(t_inside) || !std::isfinite(t_outside) ||
+        !std::isfinite(t_inside - t_outside))
       return FanState::kFailsafe;
 
     if (!std::isnan(cfg.target_temp)) {
@@ -143,7 +147,7 @@ struct FanController {
     uint8_t cap = (cfg.max_speed_cap > FAN_SPEED_MAX_HW) ? FAN_SPEED_MAX_HW : cfg.max_speed_cap;
     switch (state) {
       case FanState::kFailsafe:
-        return (cfg.failsafe_speed > cap) ? cap : cfg.failsafe_speed;
+        return 0;  // always: no configuration may keep a blind fan running
       case FanState::kTarget:
         return 0;
       case FanState::kLockout:

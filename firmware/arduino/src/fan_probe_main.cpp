@@ -4,11 +4,12 @@
 // ESP32 as its own logic analyzer (docs/GARAGE_FAN_CONTROLLER.md).
 //
 // Wiring: pass the fan-to-controller cable through a breakout, tap the two
-// data conductors to PROBE_PIN_A / PROBE_PIN_B and share ground. MEASURE THE
-// LINES WITH A MULTIMETER FIRST: these GPIOs are not 5 V tolerant, so a line
-// that idles above 3.3 V needs a divider (10k series / 15k to ground) on each
-// tap. Leave the stock controller connected and working -- this sketch only
-// listens.
+// data conductors to PROBE_PIN_A / PROBE_PIN_B and share ground. Put a divider
+// (10k series / 15k to ground) on EVERY tap until a capture proves the
+// active-high level is <= 3.3 V: these GPIOs are not 5 V tolerant, and an
+// idle-low line can still swing to 5 V during a frame, so a multimeter idle
+// reading alone clears nothing. Leave the stock controller connected and
+// working -- this sketch only listens.
 //
 // Every 2 seconds it prints, per channel: the edge count, min/max pulse
 // widths, the classifier's verdict (UART baud / PWM period+duty / quiet /
@@ -100,8 +101,8 @@ void setup() {
   Serial.begin(115200);
   delay(2000);  // let the USB CDC console attach
   Serial.println("fan link probe: tap D+/D- of the fan control cable, share GND.");
-  Serial.println("Lines above 3.3V need a divider. Step the stock controller 0-12");
-  Serial.println("and note what changes per speed.");
+  Serial.println("Keep a divider on every tap until a capture proves 3.3V logic.");
+  Serial.println("Step the stock controller 0-12 and note what changes per speed.");
 
   g_ch_a.pin = PROBE_PIN_A;
   g_ch_b.pin = PROBE_PIN_B;
