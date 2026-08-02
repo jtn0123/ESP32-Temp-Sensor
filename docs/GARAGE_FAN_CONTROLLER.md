@@ -82,19 +82,32 @@ differs. The firmware should isolate that behind a tiny `FanActuator` interface
 
 ## Phase 0 — Sniffing the control link (the one unknown)
 
+The repo ships a probe firmware that makes the ESP32 its own logic analyzer, so
+no separate capture hardware is required: `firmware/arduino/src/fan_probe_main.cpp`
+(sketch) + `fan_link_probe.h` (natively-tested signal classifier).
+
 1. Make a **pass-through breakout**: USB-C breakout board (fan side) + USB-A/C
    breakout (controller side), all four conductors jumpered straight through, with
-   pin headers tapping VBUS, GND, D+, D−.
-2. Multimeter first: confirm VBUS ≈ 5 V from the fan, and watch D+/D− DC levels while
-   stepping speed 0 → 12 in MANUAL mode. A staircase voltage ⇒ analog. A constant
-   ~1.5–3.3 V that a meter can't resolve ⇒ digital, go to step 3.
-3. Logic analyzer (any $12 8-channel Saleae clone + sigrok/PulseView) on D+ and D−.
-   Press buttons, capture, decode as UART at the usual suspects (9600/19200/115200
-   8N1). PWM is instantly obvious on sight.
-4. Record: frame bytes per speed 0–12, on/off, and whether the fan talks back
-   (temp/humidity readout for the display would prove bidirectional traffic).
-5. Save captures + findings to `docs/fan_link_captures/` so the protocol is
-   documented in-repo.
+   pin headers tapping VBUS, GND, D+, D−. The stock controller stays connected and
+   working; the probe only listens.
+2. Multimeter first: confirm VBUS ≈ 5 V from the fan, and check the D+/D− idle
+   levels. **Any line that idles above 3.3 V needs a divider on its tap** (10 kΩ
+   series / 15 kΩ to ground) — the ESP32 pins are not 5 V tolerant. A staircase
+   DC voltage while stepping speeds ⇒ analog control; the probe's QUIET report
+   prints the millivolt level per window either way.
+3. Flash the probe: `pio run -e feather_esp32s2_fan_probe -t upload`, then
+   `pio device monitor`. Taps go to A0/A1 (GPIO 18/17, overridable with
+   `-DPROBE_PIN_A/-DPROBE_PIN_B`), grounds tied together. Every 2 s it prints,
+   per line, the edge count and a verdict: `UART? baud~9600`, `PWM? period/duty`,
+   `QUIET idle=...mV`, or `UNKNOWN` with raw min/max pulse widths.
+4. Step the stock controller 0 → 12 in MANUAL mode and record the verdict line
+   per speed: a duty% that tracks speed ⇒ PWM; bursts on each button press ⇒
+   UART (capture the byte timing per speed); a changing idle mV ⇒ analog.
+   Traffic on the second line would prove the fan talks back.
+5. Save findings (and any monitor logs) to `docs/fan_link_captures/` so the
+   protocol is documented in-repo. A $12 sigrok logic analyzer remains the
+   fallback for decoding exact UART frame bytes if the probe's timing report
+   isn't enough.
 
 Deliverable: a one-page protocol note that turns Option A from "probably" into "known".
 

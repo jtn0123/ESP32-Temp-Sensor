@@ -533,7 +533,8 @@ jobs:
             -e native_link_recovery \
             -e native_boot_health \
             -e native_spec_render \
-            -e native_fan_control
+            -e native_fan_control \
+            -e native_fan_link_probe
 
   manager-build:
     name: Device manager UI build
