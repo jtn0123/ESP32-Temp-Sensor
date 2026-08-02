@@ -49,7 +49,8 @@ struct FanControlConfig {
   float target_temp = NAN;
 
   // Minimum time between state changes, so boundary noise cannot flap the
-  // fan. FAILSAFE entry is exempt: safety does not wait.
+  // fan. FAILSAFE and LOCKOUT entry are exempt: safety does not wait, and a
+  // venting fan must stop pulling hot air the moment the delta flips.
   uint32_t dwell_ms = 5UL * 60UL * 1000UL;
 
   // Speed slews at most one step per this interval (default +-2/minute), so
@@ -77,9 +78,10 @@ struct FanController {
     FanState desired = classify(t_inside, t_outside, fresh, cfg);
 
     if (desired != state) {
-      // FAILSAFE enters immediately; everything else waits out the dwell.
+      // FAILSAFE and LOCKOUT enter immediately; everything else waits out the
+      // dwell. Exit from either still dwells, so a boundary cannot flap.
       bool dwell_over = !have_change_ms || (now_ms - last_change_ms) >= cfg.dwell_ms;
-      if (desired == FanState::kFailsafe || dwell_over) {
+      if (desired == FanState::kFailsafe || desired == FanState::kLockout || dwell_over) {
         state = desired;
         have_change_ms = true;
         last_change_ms = now_ms;
@@ -88,8 +90,9 @@ struct FanController {
 
     uint8_t goal = goal_speed(t_inside, t_outside, cfg);
 
-    if (state == FanState::kFailsafe) {
-      // Snap: a fan running blind gets stopped now, not slewed down.
+    if (state == FanState::kFailsafe || state == FanState::kLockout) {
+      // Snap: a fan running blind, or pulling hotter air in, gets stopped
+      // now, not slewed down.
       speed = goal;
       have_slew_ms = false;
       return speed;
@@ -110,7 +113,9 @@ struct FanController {
   // hysteresis so a reading dancing on a boundary cannot flip the state.
   FanState classify(float t_inside, float t_outside, bool fresh,
                     const FanControlConfig& cfg) const {
-    if (!fresh || std::isnan(t_inside) || std::isnan(t_outside))
+    // isfinite, not !isnan: an infinity would sail through the delta math and
+    // could park the policy in VENT at the cap on garbage data.
+    if (!fresh || !std::isfinite(t_inside) || !std::isfinite(t_outside))
       return FanState::kFailsafe;
 
     if (!std::isnan(cfg.target_temp)) {

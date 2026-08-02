@@ -127,7 +127,9 @@ Stability rules (the part that keeps it from hunting):
 - **Hysteresis:** exit VENT at `delta_on − 1 °F`, not `delta_on`. Enter LOCKOUT at
   `delta ≤ 0`, exit at `delta ≥ +1 °F`.
 - **Dwell:** minimum 5 min between state changes; speed steps limited to ±2 per
-  minute so ramps are gradual, not lurching.
+  minute so ramps are gradual, not lurching. Entering LOCKOUT or the failsafe
+  state is exempt from both — the fan stops immediately when the delta flips
+  hot or the data goes bad; only spinning *up* is damped.
 - **Quiet cap:** `max_speed_cap` (default **8** of 12) is a first-class setting,
   changeable over MQTT — noise is the real ceiling, not the motor.
 - **Optional quiet hours:** a schedule that lowers `max_speed_cap` further at night.

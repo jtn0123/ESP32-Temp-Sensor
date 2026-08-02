@@ -129,6 +129,40 @@ void test_nan_input_is_failsafe(void) {
   TEST_ASSERT_EQUAL_UINT8(0, c.speed);
 }
 
+// So is an infinity: it passes isnan, but the delta math it feeds is garbage.
+// Both signs, both inputs.
+void test_infinite_input_is_failsafe(void) {
+  const float bad[] = {INFINITY, -INFINITY};
+  FanControlConfig cfg = fast_cfg();
+  for (int i = 0; i < 2; i++) {
+    FanController in_bad, out_bad;
+    in_bad.tick(bad[i], 80.0f, true, 0, cfg);
+    TEST_ASSERT_EQUAL(static_cast<int>(FanState::kFailsafe), static_cast<int>(in_bad.state));
+    TEST_ASSERT_EQUAL_UINT8(0, in_bad.speed);
+    out_bad.tick(90.0f, bad[i], true, 0, cfg);
+    TEST_ASSERT_EQUAL(static_cast<int>(FanState::kFailsafe), static_cast<int>(out_bad.state));
+    TEST_ASSERT_EQUAL_UINT8(0, out_bad.speed);
+  }
+}
+
+// The delta flipping hot mid-vent stops the fan on that tick: LOCKOUT entry
+// bypasses the dwell and the slew, so hot air is not pulled in for minutes.
+void test_vent_to_lockout_is_immediate(void) {
+  FanController c;
+  FanControlConfig cfg = fast_cfg();
+  uint32_t now = 0;
+  for (int i = 0; i < 40; i++) {
+    now += cfg.slew_ms;
+    c.tick(95.0f, 80.0f, true, now, cfg);
+  }
+  TEST_ASSERT_EQUAL(static_cast<int>(FanState::kVent), static_cast<int>(c.state));
+  TEST_ASSERT_EQUAL_UINT8(cfg.max_speed_cap, c.speed);
+  // 1ms later the outside reads hotter than inside: full stop, this tick.
+  uint8_t s = c.tick(95.0f, 96.0f, true, now + 1, cfg);
+  TEST_ASSERT_EQUAL(static_cast<int>(FanState::kLockout), static_cast<int>(c.state));
+  TEST_ASSERT_EQUAL_UINT8(0, s);
+}
+
 // Target reached: inside is cool enough, stop running the fan for sport.
 // Exit needs target + hysteresis so the boundary cannot flap.
 void test_target_parks_fan_until_warmed_past_hysteresis(void) {
@@ -198,6 +232,8 @@ int main(int argc, char** argv) {
   RUN_TEST(test_dwell_defers_state_change);
   RUN_TEST(test_stale_data_snaps_to_failsafe);
   RUN_TEST(test_nan_input_is_failsafe);
+  RUN_TEST(test_infinite_input_is_failsafe);
+  RUN_TEST(test_vent_to_lockout_is_immediate);
   RUN_TEST(test_target_parks_fan_until_warmed_past_hysteresis);
   RUN_TEST(test_lockout_standby_speed);
   RUN_TEST(test_cap_clamped_to_hardware_max);
