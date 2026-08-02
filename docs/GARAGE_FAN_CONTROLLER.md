@@ -82,6 +82,33 @@ differs. The firmware should isolate that behind a tiny `FanActuator` interface
 
 ## Phase 0 — Sniffing the control link (the one unknown)
 
+### Step zero: the five-minute "is it real USB?" test (no soldering)
+
+A USB connector does not guarantee USB protocol — the passive-extension note in
+the manual suggests the jack is just a cheap 4-pin plug for 5 V + a proprietary
+signal. Rule it out before building anything:
+
+1. Unplug the wall controller from the fan cable.
+2. Plug the **controller** into a **computer** with an ordinary USB-A-to-C cable.
+3. Check for enumeration: `lsusb` (Linux), `system_profiler SPUSBDataType`
+   (macOS), or Device Manager (Windows).
+
+If a device enumerates, this IS real USB: record the VID/PID and descriptors,
+and the actuator becomes a USB host implementation (the ESP32-S2 has OTG host
+support) instead of a bit-banged signal. If nothing shows up — the expected
+outcome — proceed with the GPIO tap below.
+
+**Never plug the fan's cable into a computer.** The fan drives 5 V out on
+VBUS; back-feeding a host port can kill it. The controller side is a passive
+load and is safe.
+
+Note the Feather cannot run this test through its own USB-C port as-is: that
+port is wired as a USB *device* (the one you flash through). Device-to-device
+gives silence regardless of what the controller speaks, which is why the probe
+below uses GPIO pins instead.
+
+### The GPIO tap
+
 The repo ships a probe firmware that makes the ESP32 its own logic analyzer, so
 no separate capture hardware is required: `firmware/arduino/src/fan_probe_main.cpp`
 (sketch) + `fan_link_probe.h` (natively-tested signal classifier).
