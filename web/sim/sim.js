@@ -6,9 +6,15 @@
   })();
   function dbg(...args){
     if (!SIM_DEBUG) return;
-    // Strip newlines from string args so data can't forge log lines (S5145)
-    const safe = args.map((a) => typeof a === 'string' ? a.replace(/[\n\r]/g, ' ') : a);
-    console.log(...safe);
+    // Serialize every arg and strip newlines so logged data (which can come
+    // from MQTT payloads or fetched JSON) can't forge log lines (S5145).
+    const safe = args.map((a) => {
+      let s;
+      if (typeof a === 'string') s = a;
+      else { try { s = JSON.stringify(a); } catch (e) { s = String(a); } }
+      return String(s).replace(/[\n\r]/g, ' ');
+    });
+    console.log(safe.join(' '));
   }
 
 
@@ -1259,7 +1265,7 @@
         // Sparklines draw from op.series arrays; treat that as the data
         // dependency so plots aren't "expected" on nodes with no history.
         if (op.op === 'sparkline') {
-          const series = data && data[op.series];
+          const series = data?.[op.series];
           if (Array.isArray(series) && series.length) expected.add(op.rect);
           return;
         }
