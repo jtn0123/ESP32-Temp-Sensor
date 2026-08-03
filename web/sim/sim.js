@@ -4,7 +4,12 @@
     try { return window.localStorage && localStorage.getItem('simDebug') === '1'; }
     catch(e){ return false; }
   })();
-  function dbg(){ if (SIM_DEBUG) console.log.apply(console, arguments); }
+  function dbg(...args){
+    if (!SIM_DEBUG) return;
+    // Strip newlines from string args so data can't forge log lines (S5145)
+    const safe = args.map((a) => typeof a === 'string' ? a.replace(/[\n\r]/g, ' ') : a);
+    console.log(...safe);
+  }
 
 
   // Data state manager for decoupling data from rendering
@@ -723,87 +728,84 @@
     return issues;
   }
   
+  // Overlapping rect pairs that are intentional in the v1/v2 layouts
+  const ALLOWED_COLLISIONS = new Set([
+    'INSIDE_LABEL_BOX,INSIDE_TEMP',
+    'INSIDE_TEMP,INSIDE_TEMP_INNER',
+    'INSIDE_TEMP,INSIDE_TEMP_BADGE',
+    'OUT_LABEL_BOX,OUT_TEMP',
+    'OUT_TEMP,OUT_TEMP_INNER',
+    'OUT_TEMP,OUT_TEMP_BADGE',
+    'FOOTER_WEATHER,WEATHER_ICON',
+    'FOOTER_STATUS,INSIDE_PRESSURE'
+  ]);
+
+  // Region importance weights for collision severity
+  const REGION_IMPORTANCE = {
+    'INSIDE_TEMP': 10,
+    'OUT_TEMP': 10,
+    'HEADER_NAME': 8,
+    'INSIDE_HUMIDITY': 7,
+    'OUT_HUMIDITY': 6,
+    'FOOTER_STATUS': 5,
+    'FOOTER_WEATHER': 5
+  };
+
+  function rectOverlap(r1, r2) {
+    const [x1, y1, w1, h1] = r1;
+    const [x2, y2, w2, h2] = r2;
+    const w = Math.max(0, Math.min(x1 + w1, x2 + w2) - Math.max(x1, x2));
+    const h = Math.max(0, Math.min(y1 + h1, y2 + h2) - Math.max(y1, y2));
+    return { x: Math.max(x1, x2), y: Math.max(y1, y2), w, h };
+  }
+
+  function collisionSeverity(pct, name1, name2) {
+    const importance = Math.max(REGION_IMPORTANCE[name1] || 1, REGION_IMPORTANCE[name2] || 1);
+    if (pct > 75) return 'critical';
+    if (pct > 50 || (pct > 25 && importance >= 8)) return 'error';
+    if (pct > 20 || (pct > 10 && importance >= 6)) return 'warning';
+    if (pct > 5) return 'info';
+    return null; // Very minor overlap - not worth reporting
+  }
+
+  function collisionIssue(name1, name2, r1, r2, background) {
+    const ov = rectOverlap(r1, r2);
+    if (ov.w <= 0 || ov.h <= 0) return null;
+    const pair = [name1, name2].sort().join(',');
+    if (ALLOWED_COLLISIONS.has(pair)) return null;
+
+    const area = ov.w * ov.h;
+    const smaller = Math.min(r1[2] * r1[3], r2[2] * r2[3]);
+    const pct = (area / smaller) * 100;
+
+    // A background band/frame fully containing a content rect is
+    // intentional layering (v3 header band, tab fills), not a collision.
+    const containerName = (r1[2] * r1[3]) >= (r2[2] * r2[3]) ? name1 : name2;
+    if (area === smaller && background.has(containerName)) return null;
+
+    const severity = collisionSeverity(pct, name1, name2);
+    if (!severity) return null;
+
+    return {
+      type: 'collision',
+      severity: severity,
+      region: pair,
+      description: `${name1} and ${name2} overlap by ${pct.toFixed(1)}% (${ov.w}x${ov.h}px)`,
+      rect: [ov.x, ov.y, ov.w, ov.h],
+      suggestion: pct > 50 ? 'Major overlap - adjust layout spacing' :
+                 pct > 25 ? 'Significant overlap - consider reducing element sizes' :
+                 'Minor overlap - may be intentional for visual effect'
+    };
+  }
+
   function validateCollisions(rects, backgroundRects) {
     const issues = [];
     const background = backgroundRects || new Set();
-    const allowed = new Set([
-      'INSIDE_TEMP,INSIDE_LABEL_BOX',
-      'INSIDE_LABEL_BOX,INSIDE_TEMP',
-      'INSIDE_TEMP,INSIDE_TEMP_INNER',
-      'INSIDE_TEMP_INNER,INSIDE_TEMP',
-      'INSIDE_TEMP,INSIDE_TEMP_BADGE',
-      'INSIDE_TEMP_BADGE,INSIDE_TEMP',
-      'OUT_TEMP,OUT_LABEL_BOX',
-      'OUT_LABEL_BOX,OUT_TEMP',
-      'OUT_TEMP,OUT_TEMP_INNER',
-      'OUT_TEMP_INNER,OUT_TEMP',
-      'OUT_TEMP,OUT_TEMP_BADGE',
-      'OUT_TEMP_BADGE,OUT_TEMP',
-      'FOOTER_WEATHER,WEATHER_ICON',
-      'WEATHER_ICON,FOOTER_WEATHER',
-      'FOOTER_STATUS,INSIDE_PRESSURE',
-      'INSIDE_PRESSURE,FOOTER_STATUS'
-    ]);
-    
-    // Region importance weights for severity calculation
-    const regionImportance = {
-      'INSIDE_TEMP': 10,
-      'OUT_TEMP': 10,
-      'HEADER_NAME': 8,
-      'INSIDE_HUMIDITY': 7,
-      'OUT_HUMIDITY': 6,
-      'FOOTER_STATUS': 5,
-      'FOOTER_WEATHER': 5
-    };
-    
     const names = Object.keys(rects);
     for (let i = 0; i < names.length; i++) {
       for (let j = i + 1; j < names.length; j++) {
-        const name1 = names[i], name2 = names[j];
-        const r1 = rects[name1], r2 = rects[name2];
-        const [x1, y1, w1, h1] = r1;
-        const [x2, y2, w2, h2] = r2;
-        
-        const overlapX = Math.max(0, Math.min(x1 + w1, x2 + w2) - Math.max(x1, x2));
-        const overlapY = Math.max(0, Math.min(y1 + h1, y2 + h2) - Math.max(y1, y2));
-        
-        if (overlapX > 0 && overlapY > 0) {
-          const pair = [name1, name2].sort().join(',');
-          if (!allowed.has(pair)) {
-            const area = overlapX * overlapY;
-            const smaller = Math.min(w1 * h1, w2 * h2);
-            const pct = (area / smaller) * 100;
-
-            // A background band/frame fully containing a content rect is
-            // intentional layering (v3 header band, tab fills), not a collision.
-            const containerName = (w1 * h1) >= (w2 * h2) ? name1 : name2;
-            if (area === smaller && background.has(containerName)) continue;
-            
-            // Calculate importance factor
-            const importance1 = regionImportance[name1] || 1;
-            const importance2 = regionImportance[name2] || 1;
-            const maxImportance = Math.max(importance1, importance2);
-            
-            // Adjust severity based on overlap percentage and importance
-            let severity;
-            if (pct > 75) severity = 'critical';
-            else if (pct > 50 || (pct > 25 && maxImportance >= 8)) severity = 'error';
-            else if (pct > 20 || (pct > 10 && maxImportance >= 6)) severity = 'warning';
-            else if (pct > 5) severity = 'info';
-            else continue; // Skip very minor overlaps
-            
-            issues.push({
-              type: 'collision',
-              severity: severity,
-              region: pair,
-              description: `${name1} and ${name2} overlap by ${pct.toFixed(1)}% (${overlapX}x${overlapY}px)`,
-              rect: [Math.max(x1, x2), Math.max(y1, y2), overlapX, overlapY],
-              suggestion: pct > 50 ? 'Major overlap - adjust layout spacing' : 
-                         pct > 25 ? 'Significant overlap - consider reducing element sizes' :
-                         'Minor overlap - may be intentional for visual effect'
-            });
-          }
-        }
+        const issue = collisionIssue(names[i], names[j], rects[names[i]], rects[names[j]], background);
+        if (issue) issues.push(issue);
       }
     }
     return issues;
@@ -1223,7 +1225,7 @@
   function activeVariantRectNames() {
     try {
       const spec = window.UI_SPEC;
-      if (!spec || !spec.variants || !spec.components) return null;
+      if (!spec?.variants || !spec.components) return null;
       const variant = QS.get('variant') || spec.defaultVariant;
       const comps = spec.variants[variant];
       if (!comps) return null;
@@ -1232,7 +1234,7 @@
         if (op.rect) names.add(op.rect);
       }));
       return names.size ? names : null;
-    } catch (e) { return null; }
+    } catch (e) { dbg('activeVariantRectNames failed', e); return null; }
   }
 
   // Split the active variant's rects into content targets (text, temps,
@@ -1243,7 +1245,7 @@
   function classifyVariantRects(data) {
     try {
       const spec = window.UI_SPEC;
-      if (!spec || !spec.variants || !spec.components) return null;
+      if (!spec?.variants || !spec.components) return null;
       const variant = QS.get('variant') || spec.defaultVariant;
       const comps = spec.variants[variant];
       if (!comps) return null;
@@ -1254,8 +1256,15 @@
         if (SPEC_BACKGROUND_OPS.has(op.op)) { background.add(op.rect); return; }
         if (!SPEC_CONTENT_OPS.has(op.op)) return;
         if (op.when && !specFieldHas(op.when, data)) return;
+        // Sparklines draw from op.series arrays; treat that as the data
+        // dependency so plots aren't "expected" on nodes with no history.
+        if (op.op === 'sparkline') {
+          const series = data && data[op.series];
+          if (Array.isArray(series) && series.length) expected.add(op.rect);
+          return;
+        }
         const raw = String(op.text || op.value || '');
-        const fields = [...raw.matchAll(/\{([a-zA-Z_][\w]*)(?::[^}]*)?\}/g)].map(m => m[1]);
+        const fields = [...raw.matchAll(/\{([a-zA-Z_]\w*)(?::[^}]*)?\}/g)].map(m => m[1]);
         if (fields.length) {
           const resolves = fields.some(f => f === 'fw_version'
             || (data && specFieldHasValue(data[f]))
@@ -1265,7 +1274,7 @@
         expected.add(op.rect);
       }));
       return { expected, background: new Set([...background].filter(r => !expected.has(r))) };
-    } catch (e) { return null; }
+    } catch (e) { dbg('classifyVariantRects failed', e); return null; }
   }
 
   function runValidation() {
@@ -1283,7 +1292,7 @@
       if (variantRects && !variantRects.has(name)) return;
       rectsToValidate[name] = rect;
     });
-    validationIssues.push(...validateCollisions(rectsToValidate, variantRoles && variantRoles.background));
+    validationIssues.push(...validateCollisions(rectsToValidate, variantRoles?.background));
     
     // Check rendered content for overflow and incomplete data
     for (const [regionName, content] of Object.entries(renderedContent)) {
@@ -1467,7 +1476,7 @@
     // (Rects belonging to *other* variants are fine and stay quiet.)
     try {
       const spec = window.UI_SPEC;
-      if (spec && spec.variants && spec.components) {
+      if (spec?.variants && spec.components) {
         const referenced = new Set();
         Object.values(spec.variants).forEach(comps => comps.forEach(cn =>
           (spec.components[cn] || []).forEach(op => { if (op.rect) referenced.add(op.rect); })));
@@ -1483,7 +1492,7 @@
           });
         }
       }
-    } catch (e) {}
+    } catch (e) { dbg('unused-region check failed', e); }
     
     // Check for missing data fields with better categorization
     if (missingDataFields.size > 0) {
@@ -2125,6 +2134,13 @@
               ctx.strokeStyle = '#000';
               ctx.strokeRect(r[0]-1, r[1]-1, r[2]+2, r[3]+2);
               const arr = data[op.series]; if (!Array.isArray(arr) || arr.length < 1) break;
+              // Record the draw for validation (fontSize 0 = non-text sentinel,
+              // same convention as the weather icon) so the empty-region check
+              // doesn't flag plot rects that did render.
+              renderedContent[op.rect] = {
+                text: 'sparkline', fontSize: 0,
+                actualBounds: { x: r[0], y: r[1], width: r[2], height: r[3] }
+              };
               const groupKeys = String(op.series).startsWith('hist_temp')
                 ? ['hist_temp_in','hist_temp_out'] : ['hist_rh_in','hist_rh_out'];
               let mn=Infinity, mx=-Infinity;
@@ -3538,7 +3554,7 @@ Keyboard Shortcuts:
       };
       wire('regionInspector');
       wire('validationPanel');
-    }catch(e){}
+    }catch(e){ dbg('panel open-state wiring failed', e); }
   })();
 
   // Debug overlay system for visual debugging
