@@ -9,7 +9,6 @@
   // Performance metrics
   const perfMetrics = {
     renderTimes: [],
-    fps: 0,
     avgRenderTime: 0,
     lastFrameTime: performance.now(),
     frameCount: 0
@@ -222,14 +221,13 @@
     panel.id = 'advancedDebugPanel';
     panel.innerHTML = `
       <details id="advancedDebugDetails" class="card">
-        <summary>🔧 Advanced Debug Tools</summary>
+        <summary>Advanced Debug Tools</summary>
         <div class="debug-body">
           <fieldset class="fieldset">
-            <legend>⚡ Performance</legend>
-            <div id="perfMonitor" class="muted" style="font-family:monospace;font-size:11px;">
-              <div>FPS: <span id="debugFPS">0</span></div>
-              <div>Render: <span id="debugRenderTime">0</span>ms</div>
-              <div>Frames: <span id="debugFrameCount">0</span></div>
+            <legend>Performance</legend>
+            <div id="perfMonitor" class="muted" style="font-family:var(--font-mono);font-size:11px;">
+              <div>Last render: <span id="debugRenderTime">0</span>ms</div>
+              <div>Frames drawn: <span id="debugFrameCount">0</span></div>
             </div>
             <button id="perfReset">Reset</button>
             <label>
@@ -238,7 +236,7 @@
           </fieldset>
 
           <fieldset class="fieldset">
-            <legend>🎯 Debug Overlay</legend>
+            <legend>Debug Overlay</legend>
             <label>
               <input type="checkbox" id="debugOverlayEnabled"> Enable Overlay
             </label>
@@ -269,10 +267,10 @@
           </fieldset>
 
           <fieldset class="fieldset">
-            <legend>🌡️ Live Simulation</legend>
+            <legend>Live Simulation</legend>
             <div style="margin-bottom:6px;">
-              <button id="liveSimStart" class="sim-btn">▶ Start</button>
-              <button id="liveSimStop" class="sim-btn" disabled>⏹ Stop</button>
+              <button id="liveSimStart" class="sim-btn">Start</button>
+              <button id="liveSimStop" class="sim-btn" disabled>Stop</button>
               <span id="liveSimStatus" class="muted" style="margin-left:8px;">Stopped</span>
             </div>
             <div class="form-row" style="margin-bottom:4px;">
@@ -319,7 +317,7 @@
           </fieldset>
 
           <fieldset class="fieldset">
-            <legend>🎬 Realistic Scenarios</legend>
+            <legend>Realistic Scenarios</legend>
             <select id="realisticPreset" style="width:100%;margin-bottom:4px;">
               <option value="">Select a preset...</option>
               <optgroup label="Time of Day">
@@ -353,7 +351,7 @@
           </fieldset>
 
           <fieldset class="fieldset">
-            <legend>🧪 Test Scenarios</legend>
+            <legend>Test Scenarios</legend>
             <select id="scenarioCategory" style="width:100%;margin-bottom:4px;">
               <option value="">Select category...</option>
             </select>
@@ -366,7 +364,7 @@
           </fieldset>
 
           <fieldset class="fieldset">
-            <legend>✏️ Data Editor</legend>
+            <legend>Data Editor</legend>
             <div id="dataFields" style="max-height:200px;overflow-y:auto;"></div>
             <button id="applyData">Apply Changes</button>
             <button id="resetData">Reset</button>
@@ -375,7 +373,7 @@
           </fieldset>
 
           <fieldset class="fieldset">
-            <legend>👁️ Visual Testing</legend>
+            <legend>Visual Testing</legend>
             <div class="toolbar-row">
               <button id="captureBaseline">Capture Baseline</button>
               <button id="compareVisual">Compare</button>
@@ -389,13 +387,13 @@
           </fieldset>
 
           <fieldset class="fieldset">
-            <legend>📷 Device Comparison</legend>
+            <legend>Device Comparison</legend>
             <div style="margin-bottom:6px;">
               <input type="file" id="deviceScreenshot" accept="image/*" style="font-size:11px;max-width:150px;">
               <button id="clearDeviceScreenshot" disabled>Clear</button>
             </div>
             <div style="margin-bottom:6px;">
-              <button id="captureFromDevice" title="Capture screenshot from connected device via MQTT">📸 Capture from Device</button>
+              <button id="captureFromDevice" title="Capture screenshot from connected device via MQTT">Capture from Device</button>
               <input type="text" id="targetDeviceId" placeholder="Device ID (optional)" style="font-size:11px;max-width:120px;" title="Leave empty to use current MQTT device ID">
               <span id="captureStatus" style="font-size:11px;margin-left:6px;"></span>
             </div>
@@ -414,7 +412,7 @@
           </fieldset>
 
           <fieldset class="fieldset">
-            <legend>📡 Remote Commands</legend>
+            <legend>Remote Commands</legend>
             <div style="margin-bottom:8px;">
               <select id="remoteCommand" style="max-width:150px;">
                 <option value="">Select command...</option>
@@ -445,7 +443,7 @@
           </fieldset>
 
           <fieldset class="fieldset">
-            <legend>🎨 Icon Tester</legend>
+            <legend>Icon Tester</legend>
             <div class="icon-grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px;">
               <button class="icon-test" data-weather="sunny">☀️</button>
               <button class="icon-test" data-weather="partly-cloudy">⛅</button>
@@ -465,7 +463,7 @@
           </fieldset>
 
           <fieldset class="fieldset">
-            <legend>📐 Region Metrics</legend>
+            <legend>Region Metrics</legend>
             <div style="margin-bottom:6px;">
               <label><input type="checkbox" id="showRegionMetrics"> Show metrics overlay</label>
               <label style="margin-left:8px;"><input type="checkbox" id="highlightOverflow"> Highlight overflow</label>
@@ -479,14 +477,14 @@
           </fieldset>
 
           <fieldset class="fieldset">
-            <legend>🔍 State Inspector</legend>
+            <legend>State Inspector</legend>
             <div id="stateInspector"></div>
             <button id="refreshState">Refresh</button>
             <button id="copyState">Copy</button>
           </fieldset>
 
           <fieldset class="fieldset">
-            <legend>📝 Debug Console</legend>
+            <legend>Debug Console</legend>
             <div id="debugConsole" class="console"></div>
             <button id="clearConsole">Clear</button>
             <label>
@@ -525,33 +523,24 @@
     return defaults[field] || '';
   }
 
-  // Update performance metrics
+  // Update performance metrics. The sim draws on demand (not per animation
+  // frame), so the honest numbers are the duration of the last draw and how
+  // many draws have happened - not FPS or time-between-draws.
   function updatePerformance() {
-    const now = performance.now();
-    const frameTime = now - perfMetrics.lastFrameTime;
-    
     perfMetrics.frameCount++;
-    perfMetrics.renderTimes.push(frameTime);
-    
-    // Keep last 60 frames
+    const renderMs = (window.__renderTimings && window.__renderTimings.lastFrameMs) || window.__lastRenderMs || 0;
+    perfMetrics.renderTimes.push(renderMs);
     if (perfMetrics.renderTimes.length > 60) {
       perfMetrics.renderTimes.shift();
     }
-    
-    // Calculate metrics
-    perfMetrics.fps = Math.round(1000 / frameTime);
     perfMetrics.avgRenderTime = perfMetrics.renderTimes.reduce((a, b) => a + b, 0) / perfMetrics.renderTimes.length;
-    
-    // Update display
-    const fpsEl = document.getElementById('debugFPS');
+
     const renderEl = document.getElementById('debugRenderTime');
     const countEl = document.getElementById('debugFrameCount');
-    
-    if (fpsEl) fpsEl.textContent = perfMetrics.fps;
-    if (renderEl) renderEl.textContent = perfMetrics.avgRenderTime.toFixed(2);
+    if (renderEl) renderEl.textContent = renderMs.toFixed(1);
     if (countEl) countEl.textContent = perfMetrics.frameCount;
-    
-    perfMetrics.lastFrameTime = now;
+
+    perfMetrics.lastFrameTime = performance.now();
   }
 
   // Log to debug console
@@ -977,13 +966,10 @@
     document.getElementById('perfReset')?.addEventListener('click', () => {
       perfMetrics.renderTimes = [];
       perfMetrics.frameCount = 0;
-      perfMetrics.fps = 0;
       perfMetrics.avgRenderTime = 0;
       perfMetrics.lastFrameTime = performance.now();
-      const fpsEl = document.getElementById('debugFPS');
       const renderEl = document.getElementById('debugRenderTime');
       const countEl = document.getElementById('debugFrameCount');
-      if (fpsEl) fpsEl.textContent = '0';
       if (renderEl) renderEl.textContent = '0';
       if (countEl) countEl.textContent = '0';
       debugLog('Performance metrics reset', 'info');

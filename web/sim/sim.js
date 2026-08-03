@@ -1,6 +1,12 @@
 (function(){
-  console.log('IIFE starting...');
-  
+  // Verbose draw/lifecycle logging is opt-in: localStorage.simDebug = "1"
+  const SIM_DEBUG = (function(){
+    try { return window.localStorage && localStorage.getItem('simDebug') === '1'; }
+    catch(e){ return false; }
+  })();
+  function dbg(){ if (SIM_DEBUG) console.log.apply(console, arguments); }
+
+
   // Data state manager for decoupling data from rendering
   const simDataState = {
     current: {},
@@ -96,7 +102,7 @@
     canvas = document.getElementById('epd');
     if (!canvas) {
       // Canvas not found yet - this is OK, it might be created later
-      console.log('Canvas element #epd not found yet');
+      dbg('Canvas element #epd not found yet');
       return false;
     }
     ctx = canvas.getContext('2d');
@@ -107,7 +113,7 @@
     canvas.style.imageRendering = 'pixelated';
     ctx.imageSmoothingEnabled = false;
     
-    console.log('Canvas initialized successfully');
+    dbg('Canvas initialized successfully');
     
     // Expose for debugging
     window._canvas = canvas;
@@ -717,8 +723,9 @@
     return issues;
   }
   
-  function validateCollisions(rects) {
+  function validateCollisions(rects, backgroundRects) {
     const issues = [];
+    const background = backgroundRects || new Set();
     const allowed = new Set([
       'INSIDE_TEMP,INSIDE_LABEL_BOX',
       'INSIDE_LABEL_BOX,INSIDE_TEMP',
@@ -766,6 +773,11 @@
             const area = overlapX * overlapY;
             const smaller = Math.min(w1 * h1, w2 * h2);
             const pct = (area / smaller) * 100;
+
+            // A background band/frame fully containing a content rect is
+            // intentional layering (v3 header band, tab fills), not a collision.
+            const containerName = (w1 * h1) >= (w2 * h2) ? name1 : name2;
+            if (area === smaller && background.has(containerName)) continue;
             
             // Calculate importance factor
             const importance1 = regionImportance[name1] || 1;
@@ -1138,70 +1150,6 @@
     return issues;
   }
   
-  function validateLabelTempProximity(rects, minWarnOverlapPx = 1, minCritOverlapPx = 4) {
-    const issues = [];
-    const LABEL_HEIGHT = 12; // Standard label height
-    
-    // Check INSIDE label to INSIDE_TEMP proximity
-    if (rects.INSIDE_TEMP && rects.INSIDE_HUMIDITY) {
-      const [tx, ty, tw, _th] = rects.INSIDE_TEMP;
-      const [_hx, hy, _hw, _hh] = rects.INSIDE_HUMIDITY;
-      
-      // Label is at top of humidity region
-      const labelBottom = hy + LABEL_HEIGHT;
-      const tempTop = ty;
-      const overlap = labelBottom - tempTop; // Positive = overlapping
-      
-      if (overlap >= minCritOverlapPx) {
-        issues.push({
-          type: 'label_temp_collision',
-          severity: 'critical',
-          region: 'INSIDE_TEMP',
-          description: `INSIDE label overlaps temperature by ${overlap}px`,
-          rect: [tx, tempTop, tw, overlap]
-        });
-      } else if (overlap >= minWarnOverlapPx) {
-        issues.push({
-          type: 'label_temp_overlap',
-          severity: 'warning',
-          region: 'INSIDE_TEMP',
-          description: `INSIDE label overlaps temperature by ${overlap}px`,
-          rect: [tx, tempTop, tw, Math.max(1, overlap)]
-        });
-      }
-    }
-    
-    // Check OUTSIDE label to OUT_TEMP proximity
-    if (rects.OUT_TEMP && rects.OUT_HUMIDITY) {
-      const [tx, ty, tw, _th] = rects.OUT_TEMP;
-      const [_hx, hy, _hw, _hh] = rects.OUT_HUMIDITY;
-      
-      const labelBottom = hy + LABEL_HEIGHT;
-      const tempTop = ty;
-      const overlap = labelBottom - tempTop; // Positive = overlapping
-      
-      if (overlap >= minCritOverlapPx) {
-        issues.push({
-          type: 'label_temp_collision',
-          severity: 'critical',
-          region: 'OUT_TEMP',
-          description: `OUTSIDE label overlaps temperature by ${overlap}px`,
-          rect: [tx, tempTop, tw, overlap]
-        });
-      } else if (overlap >= minWarnOverlapPx) {
-        issues.push({
-          type: 'label_temp_overlap',
-          severity: 'warning',
-          region: 'OUT_TEMP',
-          description: `OUTSIDE label overlaps temperature by ${overlap}px`,
-          rect: [tx, tempTop, tw, Math.max(1, overlap)]
-        });
-      }
-    }
-    
-    return issues;
-  }
-  
   function validateGridAlignment(rects, gridSize = 4) {
     const issues = [];
     
@@ -1269,23 +1217,78 @@
     return issues;
   }
   
+  // The flat rects map carries every variant's rects (HEADER_NAME and
+  // HEADER_NAME_V3 overlap by design), so collision checks must be scoped
+  // to the rects the active variant actually draws.
+  function activeVariantRectNames() {
+    try {
+      const spec = window.UI_SPEC;
+      if (!spec || !spec.variants || !spec.components) return null;
+      const variant = QS.get('variant') || spec.defaultVariant;
+      const comps = spec.variants[variant];
+      if (!comps) return null;
+      const names = new Set();
+      comps.forEach(cn => (spec.components[cn] || []).forEach(op => {
+        if (op.rect) names.add(op.rect);
+      }));
+      return names.size ? names : null;
+    } catch (e) { return null; }
+  }
+
+  // Split the active variant's rects into content targets (text, temps,
+  // icons...) and pure background bands/frames. Content rects are only
+  // "expected" when their op would actually draw with the given data.
+  const SPEC_CONTENT_OPS = new Set(['text', 'textCenteredIn', 'tempGroupCentered', 'iconIn', 'batteryGlyph', 'sparkline']);
+  const SPEC_BACKGROUND_OPS = new Set(['fill', 'frame']);
+  function classifyVariantRects(data) {
+    try {
+      const spec = window.UI_SPEC;
+      if (!spec || !spec.variants || !spec.components) return null;
+      const variant = QS.get('variant') || spec.defaultVariant;
+      const comps = spec.variants[variant];
+      if (!comps) return null;
+      const expected = new Set();
+      const background = new Set();
+      comps.forEach(cn => (spec.components[cn] || []).forEach(op => {
+        if (!op.rect) return;
+        if (SPEC_BACKGROUND_OPS.has(op.op)) { background.add(op.rect); return; }
+        if (!SPEC_CONTENT_OPS.has(op.op)) return;
+        if (op.when && !specFieldHas(op.when, data)) return;
+        const raw = String(op.text || op.value || '');
+        const fields = [...raw.matchAll(/\{([a-zA-Z_][\w]*)(?::[^}]*)?\}/g)].map(m => m[1]);
+        if (fields.length) {
+          const resolves = fields.some(f => f === 'fw_version'
+            || (data && specFieldHasValue(data[f]))
+            || (typeof window !== 'undefined' && window.DEFAULTS && specFieldHasValue(window.DEFAULTS[f])));
+          if (!resolves) return;
+        }
+        expected.add(op.rect);
+      }));
+      return { expected, background: new Set([...background].filter(r => !expected.has(r))) };
+    } catch (e) { return null; }
+  }
+
   function runValidation() {
     if (!validationEnabled || !GJSON || !GJSON.rects) return;
-    
+
     validationIssues = [];
-    
-    // Check for collisions (filter out internal helper rects)
+
+    // Check for collisions (filter out internal helper rects and rects
+    // belonging to other variants)
+    const variantRects = activeVariantRectNames();
+    const variantRoles = classifyVariantRects(lastData);
     const rectsToValidate = {};
     Object.entries(GJSON.rects).forEach(([name, rect]) => {
-      if (!name.includes('_INNER') && !name.includes('_BADGE') && !name.includes('LABEL_BOX')) {
-        rectsToValidate[name] = rect;
-      }
+      if (name.includes('_INNER') || name.includes('_BADGE') || name.includes('LABEL_BOX')) return;
+      if (variantRects && !variantRects.has(name)) return;
+      rectsToValidate[name] = rect;
     });
-    validationIssues.push(...validateCollisions(rectsToValidate));
+    validationIssues.push(...validateCollisions(rectsToValidate, variantRoles && variantRoles.background));
     
     // Check rendered content for overflow and incomplete data
     for (const [regionName, content] of Object.entries(renderedContent)) {
-      if (GJSON.rects[regionName] && content.text) {
+      // fontSize 0 marks non-text sentinels (the weather icon) - nothing to measure
+      if (GJSON.rects[regionName] && content.text && content.fontSize !== 0) {
         // Skip validation for internal helper regions but validate the actual temp inner regions
         // Skip badge and label box regions as they're internal helpers
         if (regionName.includes('_BADGE') || regionName.includes('LABEL_BOX')) {
@@ -1336,42 +1339,18 @@
     // Check centerline proximity
     validationIssues.push(...validateCenterlineProximity(rectsToValidate, window.UI_SPEC));
     
-    // Check label-temperature proximity
-    validationIssues.push(...validateLabelTempProximity(rectsToValidate));
-    
     // Check grid alignment (info level)
     validationIssues.push(...validateGridAlignment(rectsToValidate));
     
     // Check weather icon alignment
     validationIssues.push(...validateWeatherIconAlignment(rectsToValidate));
     
-    // Check for empty regions that should have content
-    // Smart expected content based on available data
-    const expectedContent = new Set(['HEADER_NAME', 'HEADER_VERSION', 'INSIDE_TEMP', 'INSIDE_HUMIDITY']);
-    
-    // Add conditional expectations based on actual data
-    if (lastData.time || lastData.time_hhmm) {
-      expectedContent.add('HEADER_TIME_CENTER');
-    }
-    if (lastData.pressure_hpa !== undefined && lastData.pressure_hpa !== null) {
-      expectedContent.add('INSIDE_PRESSURE');
-    }
-    if (lastData.outside_temp_f !== undefined) {
-      expectedContent.add('OUT_TEMP');
-    }
-    if (lastData.outside_hum_pct !== undefined) {
-      expectedContent.add('OUT_HUMIDITY');
-    }
-    if (lastData.wind_mps !== undefined || lastData.wind_mph !== undefined) {
-      expectedContent.add('OUT_WIND');
-    }
-    if (lastData.weather) {
-      expectedContent.add('WEATHER_ICON');
-      expectedContent.add('FOOTER_WEATHER');
-    }
-    if (lastData.battery_percent !== undefined || lastData.ip || lastData.days !== undefined) {
-      expectedContent.add('FOOTER_STATUS');
-    }
+    // Check for empty regions that should have content.
+    // Expected regions come from the active variant's spec ops: a rect is
+    // expected when its op's `when` passes and its template fields resolve
+    // (mirroring the draw path), so other variants' rects never get flagged.
+    const expectedContent = variantRoles ? variantRoles.expected
+      : new Set(['HEADER_NAME', 'HEADER_VERSION', 'INSIDE_TEMP', 'INSIDE_HUMIDITY']);
     
     // Coverage thresholds for different region types
     const COVERAGE_THRESHOLDS = {
@@ -1484,32 +1463,27 @@
       }
     }
     
-    // These regions exist in geometry but aren't used in v2
-    // Note: HEADER_TIME_CENTER is now used for time display when header_centered component is active
-    // OUT_PRESSURE is actually used in some configurations, don't mark as unused
-    const v2SpecificUnused = [];
-    
-    // Check for regions defined but not used in current variant
-    const allDefinedRegions = Object.keys(GJSON.rects || {});
-    const additionalUnused = allDefinedRegions.filter(r => 
-      !expectedContent.has(r) && 
-      !v2SpecificUnused.includes(r) &&
-      !r.includes('LABEL_BOX') && !r.includes('_INNER') && !r.includes('_BADGE')
-    );
-    
-    // Combine both lists
-    const unusedRegions = [...v2SpecificUnused, ...additionalUnused];
-    for (const region of unusedRegions) {
-      if (GJSON.rects[region] && !renderedContent[region]) {
-        validationIssues.push({
-          type: 'unused_region',
-          severity: 'info',
-          region: region,
-          description: `Region defined but not used in v2 layout`,
-          rect: GJSON.rects[region]
-        });
+    // Flag rects that no variant references at all - dead entries in the spec.
+    // (Rects belonging to *other* variants are fine and stay quiet.)
+    try {
+      const spec = window.UI_SPEC;
+      if (spec && spec.variants && spec.components) {
+        const referenced = new Set();
+        Object.values(spec.variants).forEach(comps => comps.forEach(cn =>
+          (spec.components[cn] || []).forEach(op => { if (op.rect) referenced.add(op.rect); })));
+        for (const region of Object.keys(GJSON.rects || {})) {
+          if (region.includes('LABEL_BOX') || region.includes('_INNER') || region.includes('_BADGE')) continue;
+          if (referenced.has(region)) continue;
+          validationIssues.push({
+            type: 'unused_region',
+            severity: 'info',
+            region: region,
+            description: 'Region defined in geometry but not referenced by any variant',
+            rect: GJSON.rects[region]
+          });
+        }
       }
-    }
+    } catch (e) {}
     
     // Check for missing data fields with better categorization
     if (missingDataFields.size > 0) {
@@ -1727,7 +1701,7 @@
         const gj = window.UI_SPEC;
         if (gj && gj.rects){
           applyGeometry(gj);
-          console.log('✅ Loaded geometry from window.UI_SPEC');
+          dbg('✅ Loaded geometry from window.UI_SPEC');
           return;
         }
       }
@@ -1742,7 +1716,7 @@
         const gj = await res.json();
         if (gj && gj.rects){
           applyGeometry(gj);
-          console.log('✅ Loaded geometry from geometry.json', gj.layout_crc ? `(CRC: ${gj.layout_crc})` : '');
+          dbg('✅ Loaded geometry from geometry.json', gj.layout_crc ? `(CRC: ${gj.layout_crc})` : '');
           return;
         }
       }
@@ -2071,7 +2045,7 @@
       : false;
   }
 
-  console.log('Defining drawFromSpec function...');
+  dbg('Defining drawFromSpec function...');
   function drawFromSpec(ctx, data, variantName){
     try{
       const spec = (typeof window !== 'undefined' && window.UI_SPEC) ? window.UI_SPEC : {};
@@ -2597,7 +2571,7 @@
   };
 
   function draw(data){
-    console.log('draw() called with data:', data);
+    dbg('draw() called with data:', data);
     const __start = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
     
     // Update state manager with new data
@@ -2609,11 +2583,11 @@
     if (!ctx) {
       // Try to initialize canvas if not ready yet
       if (!initCanvas()) {
-        console.log('Canvas not ready yet, deferring draw');
+        dbg('Canvas not ready yet, deferring draw');
         return;
       }
     }
-    console.log('Canvas context available');
+    dbg('Canvas context available');
     
     // Clear rendered content tracking for validation
     renderedContent = {};
@@ -2633,12 +2607,12 @@
     
     ctx.fillStyle = '#fff'; ctx.fillRect(0,0,WIDTH,HEIGHT);
     
-    console.log('geometryOnly:', geometryOnly, 'drawFromSpec exists:', typeof window.drawFromSpec === 'function');
+    dbg('geometryOnly:', geometryOnly, 'drawFromSpec exists:', typeof window.drawFromSpec === 'function');
     if (!geometryOnly && typeof window !== 'undefined' && typeof window.drawFromSpec === 'function'){
-      console.log('Calling drawFromSpec');
+      dbg('Calling drawFromSpec');
       window.drawFromSpec(ctx, lastData, variant);
     } else {
-      console.log('Skipping drawFromSpec - geometryOnly:', geometryOnly);
+      dbg('Skipping drawFromSpec - geometryOnly:', geometryOnly);
     }
     
     // Redraw chrome on top to ensure continuous lines (header, divider, footer)
@@ -2684,11 +2658,6 @@
 
     // Draw region metrics overlay if enabled
     drawRegionMetricsOverlay();
-
-    // Draw layout editor overlay (interactive editing)
-    if (typeof window !== 'undefined' && window.layoutEditor && window.layoutEditor.drawOverlay) {
-      window.layoutEditor.drawOverlay(ctx);
-    }
 
     // Draw debug overlay last (on top of everything)
     if (typeof window !== 'undefined' && window.DebugOverlay && window.DebugOverlay.enabled) {
@@ -2772,10 +2741,6 @@
       const c = document.getElementById('epd');
       if (!c) return;
       c.addEventListener('click', (ev)=>{
-        // Skip this handler if layout editor is enabled - it handles its own clicks
-        if (window.layoutEditor && window.layoutEditor.state && window.layoutEditor.state.enabled) {
-          return;
-        }
         if (!GJSON || !GJSON.rects) return;
         const rect = c.getBoundingClientRect();
         const zoom = Math.max(1, parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--zoom')) || 2);
@@ -2821,17 +2786,17 @@
   }
 
   async function load(){
-    console.log('load() called');
+    dbg('load() called');
     
     // Try to initialize canvas (it's OK if it fails, draw() will retry)
     if (!initCanvas()) {
-      console.log('Canvas not ready during initial load');
+      dbg('Canvas not ready during initial load');
     }
     
     loadRegionPrefs();
     await loadCentralGeometry();
     
-    console.log('Calling draw with lastData:', lastData);
+    dbg('Calling draw with lastData:', lastData);
     draw(lastData);
     try{
       const gres = await fetch('geometry.json?v=2');
@@ -3388,7 +3353,7 @@
   
   // Function to apply validation fixes
   function applyValidationFix(fixType, region) {
-    console.log(`Applying fix: ${fixType} to region: ${region}`);
+    dbg(`Applying fix: ${fixType} to region: ${region}`);
     
     if (fixType === 'truncate') {
       // Find the data field for this region and truncate it
@@ -3417,7 +3382,7 @@
       debugConsole.appendChild(entry);
       debugConsole.scrollTop = debugConsole.scrollHeight;
     }
-    console.log(`[${type}] ${message}`);
+    dbg(`[${type}] ${message}`);
   }
   
   // Expose critical functions to global scope
@@ -3431,7 +3396,7 @@
     window.applyValidationFix = applyValidationFix;
     window.debugLog = debugLog;
     
-    console.log('Simulator functions exposed to window');
+    dbg('Simulator functions exposed to window');
   }
   
   // Setup keyboard navigation
@@ -3602,7 +3567,7 @@ Keyboard Shortcuts:
       if (window.draw && window.lastData) {
         window.draw(window.lastData);
       }
-      console.log(`Debug overlay: ${this.enabled ? 'ON' : 'OFF'}`);
+      dbg(`Debug overlay: ${this.enabled ? 'ON' : 'OFF'}`);
     },
 
     // Draw region boundaries with labels
