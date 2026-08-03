@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>ESP32 eInk Room Node — Display Simulator</title>
-    <link rel="stylesheet" href="style.css?v=4" />
+    <link rel="stylesheet" href="style.css?v=7" />
     <style>
       /* Minimal responsive sizing (kept for tests), real sizing via CSS vars */
       @media (max-width: 600px){ canvas#epd { width: 300px; height: 146px; } }
@@ -13,8 +13,16 @@
   <body>
     <div class="wrap">
       <header class="page-header">
-        <h1>Display Simulator (250×122) <span id="statusPill" class="status-pill" title="Simulator status" role="status" aria-live="polite">Not Ready</span> <span id="syncIndicator" class="sync-indicator" style="display:none;" aria-live="polite"></span></h1>
-        <div class="subtitle">ESP32 eInk Room Node <button id="themeToggle" class="theme-toggle" title="Toggle dark/light mode" aria-label="Toggle theme">☀️</button></div>
+        <div class="page-title">
+          <h1>ESP32 Room Node</h1>
+          <span class="title-sep" aria-hidden="true"></span>
+          <span class="title-sub">Display simulator · 250×122 tri-color eInk</span>
+        </div>
+        <div class="page-status">
+          <output id="statusPill" class="status-pill" title="Simulator status" aria-live="polite">Not Ready</output>
+          <span id="syncIndicator" class="sync-indicator" style="display:none;" aria-live="polite"></span>
+          <button id="themeToggle" class="theme-toggle" title="Toggle dark/light mode" aria-label="Toggle theme">☀️</button>
+        </div>
       </header>
 
       <div class="layout">
@@ -25,7 +33,8 @@
 
           <div class="toolbar" role="toolbar" aria-label="Simulator controls">
             <div class="toolbar-row">
-              <button id="refresh" aria-label="Refresh display">Refresh</button>
+              <button id="refresh" class="btn-accent" aria-label="Refresh display">Refresh</button>
+              <span class="tb-sep" aria-hidden="true"></span>
               <label title="Display variant">Variant
                 <select id="variantSel" aria-label="Select layout variant"></select>
               </label>
@@ -38,15 +47,17 @@
                   <option value="long_city">Very long city name</option>
                 </select>
               </label>
-              <label title="Zoom canvas">
+              <span class="tb-sep" aria-hidden="true"></span>
+              <label class="zoom-ctl" title="Zoom canvas">
                 Zoom
-                <input type="range" id="zoom" min="1" max="4" step="0.5" value="2" style="width:140px;" aria-label="Zoom level" aria-valuemin="1" aria-valuemax="4" aria-valuenow="2" />
-                <span id="zoomValue" aria-live="polite">2×</span>
+                <input type="range" id="zoom" min="1" max="4" step="0.5" value="2" aria-label="Zoom level" aria-valuemin="1" aria-valuemax="4" aria-valuenow="2" />
+                <span id="zoomValue" class="zoom-value" aria-live="polite">2×</span>
               </label>
+              <span class="tb-spacer" aria-hidden="true"></span>
               <button id="screenshot" title="Download canvas as PNG" aria-label="Download screenshot">Screenshot</button>
               <button id="copyShot" title="Copy canvas PNG to clipboard" aria-label="Copy screenshot">Copy</button>
+              <button id="resetUI" class="btn-quiet" title="Reset UI preferences" aria-label="Reset UI settings">Reset UI</button>
               <span id="actionToast" class="action-toast" aria-live="polite" aria-atomic="true"></span>
-              <button id="resetUI" title="Reset UI preferences" aria-label="Reset UI settings">Reset UI</button>
             </div>
 
             <div class="toolbar-row toggles" aria-label="Overlays">
@@ -179,14 +190,11 @@
     <script src="vendor/mqtt.min.js"></script>
     <script src="mqtt-client.js"></script>
     <script src="mqtt-ui.js"></script>
-    <script src="device-bridge.js"></script>
     <script src="ui_generated.js?v=10"></script>
     <script src="realistic-data.js?v=1"></script>
-    <script src="sim.js?v=23"></script>
-    <script src="debug-panel.js?v=2"></script>
-    <script src="layout-editor.js?v=20251205h"></script>
+    <script src="sim.js?v=26"></script>
+    <script src="debug-panel.js?v=3"></script>
     <div id="globalToast" class="global-toast" role="status" aria-live="polite" aria-atomic="true"></div>
   </body>
-  </html>
-
+</html>
 
