@@ -9,4 +9,4 @@ esptool>=4.6.0
 python-multipart>=0.0.6
 
 # mDNS device discovery
-zeroconf>=0.131.0
+zeroconf>=0.150.0
