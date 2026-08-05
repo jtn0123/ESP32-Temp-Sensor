@@ -18,4 +18,4 @@ fastapi>=0.100  # Imported by device_manager tests (tests/test_device_manager_as
 pytest-asyncio>=1.0
 
 # Code coverage (optional)
-pytest-cov>=4.0
+pytest-cov>=7.1.0
