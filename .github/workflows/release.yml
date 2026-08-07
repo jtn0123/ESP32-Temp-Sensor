@@ -5,9 +5,18 @@ on:
     tags:
       - 'v*.*.*'
 
+# Default-deny for the whole workflow; the release job re-grants the write it
+# needs below. Without this, jobs inherit the repository default, which can be
+# read/write.
+permissions:
+  contents: read
+
 jobs:
   build-release:
     runs-on: ubuntu-latest
+    permissions:
+      # softprops/action-gh-release creates a release against this repo.
+      contents: write
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
