@@ -1,6 +1,6 @@
 # ESP32 Device Manager Backend Dependencies
 fastapi>=0.141.1
-uvicorn[standard]>=0.23.0
+uvicorn[standard]>=0.52.3
 websockets>=11.0
 pyserial>=3.5
 paho-mqtt>=1.6.0
