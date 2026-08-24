@@ -8,6 +8,14 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+    # github/codeql-action ships as four separate sub-actions - init,
+    # autobuild, analyze and upload-sarif - and CodeQL fails unless every
+    # step in a workflow is on the same version. One PR per sub-action can
+    # therefore never go green. Group them so the family moves together.
+    groups:
+      codeql-action:
+        patterns:
+          - "github/codeql-action*"
 
   # web/manager is the only npm project in the repo. It was never declared here,
   # yet PRs #14 and #15 arrived for it anyway, so its coverage was incidental
