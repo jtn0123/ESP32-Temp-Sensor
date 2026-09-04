@@ -4,7 +4,7 @@ pyyaml>=6.0.3
 pyserial>=3.5
 paho-mqtt>=1.6,<2.2
 cairosvg>=2.9.0,<3
-numpy>=1.24
+numpy>=2.5.2
 python-dotenv>=1.2.3  # For secure credential management
 playwright>=1.40.0  # For web simulator testing
 
