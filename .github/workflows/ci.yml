@@ -17,6 +17,24 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  python-dependency-compatibility:
+    name: Python dependency compatibility (${{ matrix.python }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: ['3.11', '3.13']
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Install the supported dependency graph
+        run: python -m pip install --require-hashes -r requirements-ci.lock
+      - name: Check NumPy runtime and schema tooling
+        run: |
+          python -c "import numpy as np; print(np.__version__); assert np.mean(np.array([20., 22.])) == 21."
+          python -m pytest -q tests/test_ui_spec_schema.py tests/test_geometry_schema.py
+
   validate-json:
     name: Validate UI/geometry JSON
     runs-on: ubuntu-latest

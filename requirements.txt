@@ -5,7 +5,9 @@ pyserial>=3.5
 websockets>=17.1  # MQTT simulator bridge and its connection regression test
 paho-mqtt>=1.6,<2.2
 cairosvg>=2.9.0,<3
-numpy>=1.24
+# NumPy 2.5 requires Python 3.12; keep the newest supported line on 3.11.
+numpy>=2.4.6,<2.5; python_version < "3.12"
+numpy>=2.5.2; python_version >= "3.12"
 python-dotenv>=1.2.3  # For secure credential management
 playwright>=1.40.0  # For web simulator testing
 
