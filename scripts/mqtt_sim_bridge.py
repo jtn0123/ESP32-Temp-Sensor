@@ -98,7 +98,7 @@ class MQTTWebSocketBridge:
             # Remove disconnected clients
             self.ws_clients -= disconnected
 
-    async def handle_ws_client(self, websocket, path):
+    async def handle_ws_client(self, websocket):
         """Handle WebSocket client connection."""
         self.ws_clients.add(websocket)
         client_id = id(websocket)
