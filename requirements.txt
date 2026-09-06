@@ -2,6 +2,7 @@ pytest>=9.1.1,<10
 pillow>=10,<13
 pyyaml>=6.0.3
 pyserial>=3.5
+websockets>=17.1  # MQTT simulator bridge and its connection regression test
 paho-mqtt>=1.6,<2.2
 cairosvg>=2.9.0,<3
 numpy>=1.24
