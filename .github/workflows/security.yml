@@ -8,6 +8,10 @@ on:
   schedule:
     # Run weekly security scan
     - cron: '0 0 * * 0'
+  # Manual runs scan full history like the weekly schedule does (push and
+  # pull_request runs only scan the new commits), so a gitleaks config change
+  # can be checked against all of history without waiting for Sunday.
+  workflow_dispatch:
 
 # Default-deny for the whole workflow; jobs that upload SARIF re-grant
 # security-events: write below. Without this, jobs inherit the repository
