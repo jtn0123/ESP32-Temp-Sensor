@@ -45,15 +45,30 @@ regexes = [
     '''\$\{[A-Z_]+\}''',       # ${MQTT_PASSWORD} style indirection
     '''\$[A-Z_]{3,}''',        # $MQTT_PASS style indirection
     '''["']?:\?[A-Z_ ]+not set''',  # ${VAR:?VAR not set} shell guards
+    '''^\.\.\.''',                  # -DOTA_PASSWORD=... ellipsis in docs/comments
+    '''(?i)^(mqtt|wifi)_pass(word)?$''',  # value is just the generic name, e.g. MQTT_PASSWORD="mqtt_pass"
 ]
 
-# Bare shell-style assignment of a credential: PASS=hunter2, MQPASS=<digits>,
+# Bare shell-style assignment of a credential: MQPASS=<digits>,
 # MQTT_PASSWORD=..., BROKER_PASS=... Unquoted or quoted, any variable name
 # ending in PASS/PASSWD/PASSWORD/SECRET/TOKEN.
+#
+# Shaped to the syntax it targets, so it does not fire on ordinary code:
+#  - Upper-case variable names only (shell/env convention). With (?i) it also
+#    matched `pass = MQTT_PASS;`, `mqtt_pass=args.mqtt_pass` and minified
+#    vendor JS, and every weekly full-history scan failed on those.
+#  - No whitespace around '=': shell and .env syntax forbid it, while C enums
+#    (`ERR_WIFI_INVALID_PASSWORD = 103`) and code assignments use it.
+#  - Value of at least 4 characters, so `OTA_REQUIRE_PASSWORD=0` feature flags
+#    and `PASS=0` counters are not reported as secrets.
+#  - Values starting with '<' are `<PASS>` placeholders, like '$' indirection.
+#  - A backtick ends the value: it closes a Markdown code span (`X_PASSWORD=0`)
+#    and in shell starts command substitution, never a literal secret.
+# Quoted assignments in code are still covered by the mqtt-/wifi-password rules.
 [[rules]]
 id = "bare-credential-assignment"
 description = "Bare credential assignment (shell/env style)"
-regex = '''(?i)\b[A-Z0-9_]*(?:PASS(?:WD|WORD)?|SECRET|TOKEN)\s*=\s*["']?([^\s"'#$][^\s"'#]*)'''
+regex = '''\b[A-Z0-9_]*(?:PASS(?:WD|WORD)?|SECRET|TOKEN)=["']?([^\s"'#$<`][^\s"'#`]{3,})'''
 secretGroup = 1
 keywords = ["pass", "secret", "token"]
 
@@ -62,7 +77,8 @@ keywords = ["pass", "secret", "token"]
 [[rules]]
 id = "mqtt-client-password-flag"
 description = "MQTT client password passed on the command line"
-regex = '''mosquitto_(?:pub|sub|rr)\b[^\n|]*?\s-P\s+["']?([^\s"'$][^\s"']*)'''
+# A value starting with '<' is a `-P '<PASS>'` doc placeholder.
+regex = '''mosquitto_(?:pub|sub|rr)\b[^\n|]*?\s-P\s+["']?([^\s"'$<][^\s"']*)'''
 secretGroup = 1
 keywords = ["mosquitto_pub", "mosquitto_sub", "mosquitto_rr"]
 
