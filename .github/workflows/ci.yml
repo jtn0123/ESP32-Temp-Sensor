@@ -62,7 +62,7 @@ jobs:
 
       - name: Upload validation logs
         if: ${{ always() }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: json-validation-logs
           path: json-validate.txt
@@ -98,7 +98,7 @@ jobs:
         run: python scripts/mock_display.py
 
       - name: Upload generated artifacts
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: generated-assets
           if-no-files-found: warn
@@ -168,7 +168,7 @@ jobs:
 
       - name: Upload test artifacts
         if: ${{ always() }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: python-tests-artifacts
           if-no-files-found: ignore
@@ -221,7 +221,7 @@ jobs:
 
       - name: Upload web-sim artifacts
         if: ${{ always() }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: web-sim-artifacts
           if-no-files-found: ignore
@@ -300,7 +300,7 @@ jobs:
 
       - name: Upload build artifacts
         if: ${{ always() }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: pio-build
           if-no-files-found: warn
@@ -402,7 +402,7 @@ jobs:
 
       - name: Upload MQTT logs
         if: ${{ always() }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: mqtt-logs
           if-no-files-found: warn
@@ -485,7 +485,7 @@ jobs:
 
       - name: Upload lint logs
         if: ${{ always() }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: lint-logs-${{ matrix.tool }}
           if-no-files-found: ignore
