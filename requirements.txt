@@ -1,5 +1,5 @@
 pytest>=9.1.1,<10
-pillow>=10,<13
+pillow>=13.0.0,<14
 pyyaml>=6.0.3
 pyserial>=3.5
 websockets>=17.3  # MQTT simulator bridge and its connection regression test
