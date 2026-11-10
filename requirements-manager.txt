@@ -4,7 +4,7 @@ uvicorn[standard]>=0.54.0
 websockets>=17.3
 pyserial>=3.5
 paho-mqtt>=2.1.0
-Pillow>=10.0.0
+Pillow>=13.0.0
 esptool>=4.6.0
 python-multipart>=0.0.32
 
